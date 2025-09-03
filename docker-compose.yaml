@@ -1,0 +1,54 @@
+services:
+  php:
+    image: registry.deepblue.technology/library/php:8.4.11-0-dev
+    environment:
+      PHP_IDE_CONFIG: "serverName=be_training_project02"
+      DOCKERHOST: "host.docker.internal"
+      XDEBUG_CONFIG: "client_host=host.docker.internal"
+    volumes:
+      - unix-socks:/var/run
+      - ./app/:/var/www/html
+
+  nginx:
+    image: registry.deepblue.technology/library/nginx:1.28.0-1
+    ports:
+      - "8001:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./app:/var/www/html
+      - unix-socks:/var/run
+    depends_on:
+      php:
+        condition: service_started
+
+  mysql:
+      image: mysql:8.0
+      environment:
+        MYSQL_DATABASE: testphp_db
+        MYSQL_USER: dev_user
+        MYSQL_PASSWORD: devuser123
+        MYSQL_ROOT_PASSWORD: root123
+      ports:
+        - "3310:3306"
+      volumes:
+        - mysql_data:/var/lib/mysql
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    ports:
+      - "9081:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 100M
+    depends_on:
+      - mysql
+
+volumes:
+  db_data:
+  unix-socks:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+
+  mysql_data:
