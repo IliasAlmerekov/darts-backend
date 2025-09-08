@@ -1,1 +1,7 @@
-<h1>{{ greeting }}</h1>
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    <div class="container d-flex justify-content-center align-items-center style=min-height: 100vh;">
+        <a href="/gameLink" type="button" class="btn btn-primary">Create Room</a>
+    </div>
+{% endblock %}
