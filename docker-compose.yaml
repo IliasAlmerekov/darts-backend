@@ -44,6 +44,17 @@ services:
     depends_on:
       - mysql
 
+#  keycloak:
+#    image: quay.io/keycloak/keycloak:latest
+#    environment:
+#      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+#      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+#      KC_LOG_LEVEL: INFO
+#    command:
+#      - start-dev
+#    ports:
+#      - "8180:8080"
+
 volumes:
   db_data:
   unix-socks:
