@@ -1,7 +1,9 @@
 {% extends 'base.html.twig' %}
 
 {% block body %}
-    <div class="container d-flex justify-content-center align-items-center style=min-height: 100vh;">
-        <a href="/gameLink" type="button" class="btn btn-primary">Create Room</a>
+    <div class="container d-flex justify-content-center align-items-center">
+        <form action="{{ path('create_room') }}" method="post">
+            <button type="submit" class="btn btn-primary">Create Room</button>
+        </form>
     </div>
 {% endblock %}

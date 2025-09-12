@@ -1,35 +1,47 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Register{% endblock %}
-
 {% block body %}
     <div class="container mt-5">
-        <div class="row justify-content-center">
+        <div class="row justify-content-center align-items-center">
             <div class="col-md-6 col-lg-5">
                 <div class="card shadow">
                     <div class="card-body p-4">
                         <h1>Register</h1>
-
+                        {{ form_start(registrationForm) }}
                         {{ form_errors(registrationForm) }}
                         <div class="mb-3">
                             {{ form_label(registrationForm.email, 'Email', {'label_attr': {'class': 'form-label'}}) }}
                             <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-envelope"></i></span>
                                 {{ form_widget(registrationForm.email, {'attr': {'class': 'form-control'}}) }}
                             </div>
                             {{ form_help(registrationForm.email) }}
                             {{ form_errors(registrationForm.email) }}
                         </div>
-                        {{ form_row(registrationForm.plainPassword, {
-                            label: 'Password'
-                        }) }}
-                        {{ form_row(registrationForm.agreeTerms) }}
+                        <div class="mb-3">
+                            {{ form_label(registrationForm.plainPassword, 'Password', {'label_attr': {'class': 'form-label'}}) }}
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                                {{ form_widget(registrationForm.plainPassword, {'attr': {'class': 'form-control'}}) }}
+                            </div>
+                            {{ form_help(registrationForm.plainPassword) }}
+                            {{ form_errors(registrationForm.plainPassword) }}
+                        </div>
 
-                        <div class="d-flex">
-                            <button type="submit" class="btn">Register</button>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                {{ form_widget(registrationForm.agreeTerms, {'attr': {'class': 'form-check-input'}}) }}
+                                {{ form_label(registrationForm.agreeTerms, null, {'label_attr': {'class': 'form-check-label'}}) }}
+                            </div>
+                            {{ form_help(registrationForm.agreeTerms) }}
+                            {{ form_errors(registrationForm.agreeTerms) }}
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" class="btn btn-lg btn-primary">Register</button>
                             <div class="d-flex align-items-center ms-3">
                                 <a href="/login"> Already have an account? </a>
                             </div>
-
                         </div>
                         {{ form_end(registrationForm) }}
                     </div>

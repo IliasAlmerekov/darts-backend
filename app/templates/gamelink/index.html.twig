@@ -1,7 +1,17 @@
 {% extends 'base.html.twig' %}
 
 {% block body %}
-    <h1>
-        <a href="/login">anmelden</a>
-    </h1>
+    <div class="container d-flex justify-content-center align-items-center">
+        <div class="text-center p-4">
+            <h1 class="mb-4">Spielraum beitreten</h1>
+
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="input-group">
+                        <input type="text" class="form-control text-center" value="http://localhost:8001/login/{{ gameId }}" id="roomLink" readonly>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}

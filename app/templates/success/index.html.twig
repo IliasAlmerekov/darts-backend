@@ -5,6 +5,34 @@
         <div class="mb-3">
             You are logged in as {{ app.user.userIdentifier }}, <a href="{{ path('app_logout') }}">Logout</a>
         </div>
+
+        {% if is_granted('ROLE_ADMIN') %}
+            <div class="p-3">
+                <div class="card mt-4 border-0 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-people me-2"></i>Wartende Spieler
+                        </h5>
+                        <div class="d-flex justify-content-center align-items-center gap-3 mt-3">
+                            <div class="avatar bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                ?
+                            </div>
+                            <div class="avatar bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                ?
+                            </div>
+                            <div class="avatar bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                ?
+                            </div>
+                            <div class="avatar bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                ?
+                            </div>
+                        </div>
+                        <p class="text-muted small mt-3 mb-0">0 von 4 Spielern bereit</p>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
     {% else %}
         <div class="mb-3">
             You are not logged in <a href="{{ path('app_login') }}">Login</a>
