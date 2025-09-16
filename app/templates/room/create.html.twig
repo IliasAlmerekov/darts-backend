@@ -1,0 +1,9 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    <div class="container d-flex justify-content-center align-items-center">
+        <form action="{{ path('room_create') }}" method="post">
+            <button type="submit" class="btn btn-primary">Create Room</button>
+        </form>
+    </div>
+{% endblock %}

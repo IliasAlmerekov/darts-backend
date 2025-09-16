@@ -19,10 +19,10 @@ class GamePlayers
     #[ORM\Column]
     private ?int $playerId = null;
 
-    #[ORM\Column]
+    #[ORM\Column(nullable: true)]
     private ?int $position = null;
 
-    #[ORM\Column]
+    #[ORM\Column(nullable: true)]
     private ?int $score = null;
 
     public function getGameId(): ?int

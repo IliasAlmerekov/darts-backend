@@ -6,8 +6,7 @@
             <div class="col-md-6 col-lg-5">
                 <div class="card shadow">
                     <div class="card-body p-4">
-                        <form action="{{ path('app_game_join') }}" method="post">
-                            <input type="hidden" name="game_id" value="{{ app.request.attributes.get('id') }}">
+                        <form method="post">
                             {% if error %}
                                 <div
                                     class="alert alert-danger">{{ error.messageKey|trans(error.messageData, 'security') }}</div>

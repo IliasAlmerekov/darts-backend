@@ -1,0 +1,14 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    <h1>Games</h1>
+
+    <ul>
+        {% for game in games %}
+            <a href="/room/{{ game.gameId }}">{{ game.gameId }}</a>
+        {% endfor %}
+    </ul>
+    <div>
+        <a href="/room/create">create a room</a>
+    </div>
+{% endblock %}

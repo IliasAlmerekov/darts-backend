@@ -1,0 +1,7 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    <h1>Games</h1>
+    <h1>{{ game[0].gameId }}</h1>
+    <h1>{{ game[0].date|date('Y-m-d H:i:s') }}</h1>
+{% endblock %}
