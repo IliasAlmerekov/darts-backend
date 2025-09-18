@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Game;
+use App\Repository\GamePlayersRepository;
 use App\Repository\GameRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -13,13 +14,28 @@ use Symfony\Component\HttpFoundation\Request;
 class GameRoomController extends AbstractController
 {
     #[Route(path: '/room', name: 'room_list')]
-    public function index(GameRepository $gameRepository): Response
+    public function index(GameRepository $gameRepository, GamePlayersRepository $gamePlayersRepository): Response
     {
         $games = $gameRepository->findAll();
+        $playerCounts = [];
+
+        foreach ($games as $game) {
+            $gameId = $game->getGameId();
+
+            $count = $gamePlayersRepository->count(['gameId' => $gameId]);
+
+            $playerCounts[$gameId] = $count;
+        }
 
         return $this->render('room/list.html.twig', [
             'games' => $games,
+            'playerCounts' => $playerCounts,
         ]);
+    }
+    #[Route(path: '/room/waiting', name: 'waiting_room')]
+    public function waitingRoom(): Response
+    {
+        return $this->render('room/waiting.html.twig', []);
     }
 
     #[Route(path: '/room/create', name: 'room_create', methods: ['POST', 'GET'])]

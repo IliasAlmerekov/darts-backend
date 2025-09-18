@@ -15,27 +15,25 @@ class HomeController extends AbstractController
     #[Route('/', name: 'home', methods: ['GET'])]
     public function index(): Response
     {
-        return $this->render(
-            'home/index.html.twig', []
-        );
+        return $this->redirectToRoute('app_login');
     }
-    #[Route('/create-room', name: 'create_room', methods: ['POST'])]
-    public function createRoom(EntityManagerInterface $entityManager): Response
-    {
-        $game = new Game();
-        $game->setDate(new \DateTime());
-
-        $entityManager->persist($game);
-        $entityManager->flush();
-
-        return $this->redirectToRoute('gameLink', ['id' => $game->getGameId()]);
-    }
-
-    #[Route('/success', name: 'success')]
-    public function successfullLogin(): Response
-    {
-        return $this->render(
-            'success/index.html.twig', []
-        );
-    }
+//    #[Route('/create-room', name: 'create_room', methods: ['POST'])]
+//    public function createRoom(EntityManagerInterface $entityManager): Response
+//    {
+//        $game = new Game();
+//        $game->setDate(new \DateTime());
+//
+//        $entityManager->persist($game);
+//        $entityManager->flush();
+//
+//        return $this->redirectToRoute('gameLink', ['id' => $game->getGameId()]);
+//    }
+//
+//    #[Route('/success', name: 'success')]
+//    public function successfullLogin(): Response
+//    {
+//        return $this->render(
+//            'success/index.html.twig', []
+//        );
+//    }
 }

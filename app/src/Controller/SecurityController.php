@@ -26,29 +26,15 @@ class SecurityController extends AbstractController
         ]);
     }
 
-//    #[Route(path: '/game/join', name: 'app_game_join', methods: ['POST'])]
-//    public function joinGame(Request $request, EntityManagerInterface $entityManager): Response
-//    {
-//        $gameId = $request->request->get('login_game_id');
-//        $user = $this->getUser();
-//
-//        if (!$user) {
-//            throw $this->createAccessDeniedException('Sie müssen angemeldet sein');
-//        }
-//
-//        $gamePlayer = new GamePlayers();
-//        $gamePlayer->setGameId($gameId);
-//        $gamePlayer->setPlayerId($user->getId());
-//
-//        $entityManager->persist($gamePlayer);
-//        $entityManager->flush();
-//
-//        return $this->redirectToRoute('success');
-//    }
-
     #[Route('/login/success', name: 'login_success')]
     public function loginSuccess( Request $request, EntityManagerInterface $entityManager, InvitationRepository $invitationRepository,): Response
     {
+        $user = $this->getUser();
+
+        if ($user && in_array('ROLE_ADMIN', $user->getRoles())) {
+            return $this->redirectToRoute('room_list');
+        }
+
         $session = $request->getSession();
         if ($session->has('invitation_uuid')) {
             $uuid = $session->get('invitation_uuid');
@@ -63,8 +49,12 @@ class SecurityController extends AbstractController
 
             $entityManager->persist($gamePlayer);
             $entityManager->flush();
+            $session->remove('invitation_uuid');
+            return $this->redirectToRoute('waiting_room');
         }
-        return $this->redirectToRoute('room_list');
+        return $this->render('player/stats.html.twig', [
+            'message' => 'Player stats coming soon'
+        ]);
     }
 
     #[Route(path: '/logout', name: 'app_logout')]

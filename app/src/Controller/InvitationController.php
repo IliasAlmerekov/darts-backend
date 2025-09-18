@@ -3,7 +3,9 @@
 namespace App\Controller;
 
 use App\Entity\Invitation;
+use App\Repository\GamePlayersRepository;
 use App\Repository\InvitationRepository;
+use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -15,7 +17,7 @@ use Symfony\Component\Uid\Uuid;
 class InvitationController extends AbstractController
 {
     #[Route('/invite/create/{id}', name: 'create_invitation')]
-    public function createInvitation(int $id, EntityManagerInterface $entityManager, InvitationRepository $invitationRepository): Response
+    public function createInvitation(int $id, EntityManagerInterface $entityManager, InvitationRepository $invitationRepository, GamePlayersRepository $gamePlayersRepository, UserRepository $userRepository): Response
     {
         $invitation = $invitationRepository->findOneBy(['gameId' => $id]);
 
@@ -29,10 +31,17 @@ class InvitationController extends AbstractController
             $entityManager->flush();
         }
 
+        $players = $gamePlayersRepository->findBy(['gameId' => $id]);
+
+        $playerIds = array_map(fn($player) => $player->getPlayerId(), $players);
+
+        $users = $userRepository->findBy(['id' => $playerIds]);
+
         $invitationLink = $this->generateUrl('join_invitation', ['uuid' => $invitation->getUuid()], UrlGeneratorInterface::ABSOLUTE_URL);
 
         return $this->render('invitation/index.html.twig', [
             'invitationLink' => $invitationLink,
+            'users' => $users,
         ]);
     }
 
