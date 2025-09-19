@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\GamePlayers;
+use App\Repository\GamePlayersRepository;
 use App\Repository\InvitationRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -16,6 +17,12 @@ class SecurityController extends AbstractController
     #[Route(path: '/login', name: 'app_login', methods: ['GET', 'POST'])]
     public function login(AuthenticationUtils $authenticationUtils, Request $request): Response
     {
+        $user = $this->getUser();
+
+        if($user){
+            return $this->redirectToRoute('login_success');
+        }
+
         $error = $authenticationUtils->getLastAuthenticationError();
 
         $lastUsername = $authenticationUtils->getLastUsername();
@@ -27,7 +34,7 @@ class SecurityController extends AbstractController
     }
 
     #[Route('/login/success', name: 'login_success')]
-    public function loginSuccess( Request $request, EntityManagerInterface $entityManager, InvitationRepository $invitationRepository,): Response
+    public function loginSuccess( Request $request, EntityManagerInterface $entityManager, InvitationRepository $invitationRepository, GamePlayersRepository $gamePlayersRepository): Response
     {
         $user = $this->getUser();
 
@@ -42,7 +49,9 @@ class SecurityController extends AbstractController
             $gameId = $invitation->getGameId();
             $user = $this->getUser();
             $userId = $user->getId();
-
+            if ($gamePlayersRepository->findOneBy(['gameId' => $gameId, 'playerId' => $userId])) {
+                return $this->redirectToRoute('waiting_room');
+            }
             $gamePlayer = new GamePlayers();
             $gamePlayer->setGameId($gameId);
             $gamePlayer->setPlayerId($userId);

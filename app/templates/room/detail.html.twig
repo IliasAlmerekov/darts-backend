@@ -1,7 +1,14 @@
 {% extends 'base.html.twig' %}
 
 {% block body %}
-    <h1>Games</h1>
-    <h1>{{ game[0].gameId }}</h1>
-    <h1>{{ game[0].date|date('Y-m-d H:i:s') }}</h1>
+    <div class="container">
+        <h1>Games</h1>
+        <h1>{{ game[0].gameId }}</h1>
+        <h1>{{ game[0].date|date('d-m-Y') }}</h1>
+        <div class="mt-4">
+            <a href="{{ path('room_list') }}" class="btn btn-primary">
+                <i class="fas fa-sign-out-alt me-1"></i> Zurück
+            </a>
+        </div>
+    </div>
 {% endblock %}

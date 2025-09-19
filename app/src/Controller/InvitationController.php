@@ -50,7 +50,7 @@ class InvitationController extends AbstractController
     {
         $invitation = $invitationRepository->findOneBy(['uuid' => $uuid]);
         if (!$invitation) {
-            dd('Invitation not found');
+            return $this->render('invitation/not_found.html.twig');
         }
         $request->getSession()->set('invitation_uuid', $uuid);
 
