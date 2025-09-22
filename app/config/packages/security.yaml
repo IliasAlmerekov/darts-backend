@@ -16,7 +16,7 @@ security:
         main:
             lazy: true
             provider: app_user_provider
-            access_denied_handler: App\Security\AccessDeniedHandler
+#           access_denied_handler: App\Security\AccessDeniedHandler
             form_login:
                 login_path: app_login
                 check_path: app_login
@@ -39,6 +39,8 @@ security:
         - { path: /room/waiting, roles: ROLE_PLAYER }
         - { path: ^/room, roles: ROLE_ADMIN }
         - { path: ^/invite/create/, roles: ROLE_ADMIN }
+        - { path: ^/login, roles: PUBLIC_ACCESS}
+        - { path: ^/register, roles: PUBLIC_ACCESS}
 
 when@test:
     security:

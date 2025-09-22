@@ -31,13 +31,22 @@ class GameRepository extends ServiceEntityRepository
     //        ;
     //    }
 
-    //    public function findOneBySomeField($value): ?Game
-    //    {
-    //        return $this->createQueryBuilder('g')
-    //            ->andWhere('g.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+        public function findOneByGameId(int $gameId): ?Game
+        {
+            return $this->createQueryBuilder('g')
+                ->andWhere('g.gameId = :gameId')
+                ->setParameter('gameId', $gameId)
+                ->getQuery()
+                ->getOneOrNullResult();
+        }
+
+    public function findHighestGameId(): ?int
+    {
+        $result = $this->createQueryBuilder('g')
+            ->select('MAX(g.gameId)')
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return $result ? (int)$result : null;
+    }
 }

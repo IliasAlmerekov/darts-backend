@@ -1,0 +1,11 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    <div class="container d-flex justify-content-center mt-4">
+        <div class="error-page">
+            <h1 class="d-flex justify-content-center" style="font-size: 100px">404</h1>
+            <p>Die von Ihnen gesuchte Seite wurde nicht gefunden. Die URL existiert nicht oder wurde möglicherweise verschoben.</p>
+            <a class="d-flex justify-content-center btn btn-primary"  href="{{ path('app_login') }}">Home</a>
+        </div>
+    </div>
+{% endblock %}
