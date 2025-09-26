@@ -14,22 +14,29 @@ use Symfony\Component\HttpFoundation\Request;
 class GameRoomController extends AbstractController
 {
     #[Route(path: '/room', name: 'room_list')]
-    public function index(GameRepository $gameRepository, GamePlayersRepository $gamePlayersRepository): Response
+    public function index(GameRepository $gameRepository, GamePlayersRepository $gamePlayersRepository, Request $request): Response
     {
-        $games = $gameRepository->findAll();
-        $playerCounts = [];
+        $page = $request->query->getInt('page', 1);
+        $limit = 9;
+        $offset = ($page - 1) * $limit;
 
+        $totalGames = $gameRepository->count([]);
+        $totalPages = ceil($totalGames / $limit);
+
+        $games = $gameRepository->findBy([], null, $limit, $offset);
+
+        $playerCounts = [];
         foreach ($games as $game) {
             $gameId = $game->getGameId();
-
             $count = $gamePlayersRepository->count(['gameId' => $gameId]);
-
             $playerCounts[$gameId] = $count;
         }
 
         return $this->render('room/list.html.twig', [
             'games' => $games,
             'playerCounts' => $playerCounts,
+            'currentPage' => $page,
+            'totalPages' => $totalPages,
         ]);
     }
     #[Route(path: '/room/waiting', name: 'waiting_room')]
@@ -50,16 +57,18 @@ class GameRoomController extends AbstractController
             return $this->redirectToRoute('create_invitation', ['id' => $game->getGameId()]);
         }
 
-        return $this->render('room/create.html.twig', []);
+        return $this->render('room', []);
     }
 
     #[Route(path: '/room/{id}', name: 'room_details', methods: ['GET'])]
-    public function roomDetails(int $id, GameRepository $gameRepository): Response
+    public function roomDetails(int $id, GameRepository $gameRepository, GamePlayersRepository $gamePlayersRepository): Response
     {
         $game = $gameRepository->findBy(['gameId' => $id]);
+        $count = $gamePlayersRepository->count(['gameId' => $id]);
 
         return $this->render('room/detail.html.twig', [
             'game' => $game,
+            'count' => $count,
         ]);
     }
 }

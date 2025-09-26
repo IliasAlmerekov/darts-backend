@@ -6,51 +6,79 @@
             <div class="col">
                 <div class="d-flex justify-content-between align-items-center">
                     <h1 class="mb-0">Spielräume</h1>
-                    <a href="/room/create" class="btn btn-primary">
-                        <i class="bi bi-plus-circle me-2"></i>Neuen Raum erstellen
-                    </a>
+                    <div class="d-flex align-items-center gap-3">
+                        {% if totalPages > 1 %}
+                            <nav aria-label="Seiten Navigation">
+                                <ul class="pagination mb-0">
+                                    <li class="page-item {{ currentPage == 1 ? 'disabled' : '' }}">
+                                        <a class="page-link" href="{{ path('room_list', {'page': currentPage - 1}) }}"
+                                           aria-label="Zurück">
+                                            <span aria-hidden="true" >&laquo;</span>
+                                            <span class="visually-hidden">Zurück</span>
+                                        </a>
+                                    </li>
+
+                                    <li class="page-item disabled">
+                                        <span class="page-link">{{ currentPage }} / {{ totalPages }}</span>
+                                    </li>
+
+                                    <li class="page-item {{ currentPage == totalPages ? 'disabled' : '' }}">
+                                        <a class="page-link" href="{{ path('room_list', {'page': currentPage + 1}) }}"
+                                           aria-label="Weiter">
+                                            <span aria-hidden="true">&raquo;</span>
+                                            <span class="visually-hidden">Weiter</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        {% endif %}
+
+                        <form action="{{ path('room_create') }}" method="post">
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-plus-circle me-2"></i>Neuen Raum erstellen</button>
+                        </form>
+                    </div>
                 </div>
                 <hr>
             </div>
         </div>
 
-        {% if games|length > 0 %}
-            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-                {% for game in games %}
-                    {% set gameId = game.id ?? game.gameId %}
-                    <div class="col">
-                        <div class="card h-100 shadow-sm">
-                            <div class="card-body">
-                                <h5 class="card-title">Spiel #{{ gameId }}</h5>
-                                <p class="card-text">
+    {% if games|length > 0 %}
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            {% for game in games %}
+                {% set gameId = game.id ?? game.gameId %}
+                <div class="col">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title">Spiel #{{ gameId }}</h5>
+                            <p class="card-text">
                             <span class="badge bg-info">
                                 <i class="bi bi-people-fill me-1"></i>
                                 {{ playerCounts[gameId] ?? 0 }} Spieler
                             </span>
-                                    {% if game.date is defined and game.date %}
-                                        <span class="badge bg-secondary ms-2">
+                                {% if game.date is defined and game.date %}
+                                    <span class="badge bg-secondary ms-2">
                                     <i class="bi bi-calendar me-1"></i>
                                     {{ game.date|date('d.m.Y') }}
                                 </span>
-                                    {% endif %}
-                                </p>
-                                <p class="card-text text-muted">
-                                    <small>ID: {{ gameId }}</small>
-                                </p>
-                            </div>
-                            <div class="card-footer bg-transparent border-top-0">
-                                <a href="/room/{{ gameId }}" class="btn btn-outline-primary w-100">
-                                    <i class="bi bi-info-circle me-2"></i>Raum Details </a>
-                            </div>
+                                {% endif %}
+                            </p>
+                            <p class="card-text text-muted">
+                                <small>ID: {{ gameId }}</small>
+                            </p>
+                        </div>
+                        <div class="card-footer bg-transparent border-top-0">
+                            <a href="/room/{{ gameId }}" class="btn btn-outline-primary w-100">
+                                <i class="bi bi-info-circle me-2"></i>Raum Details </a>
                         </div>
                     </div>
-                {% endfor %}
-            </div>
-        {% else %}
-            <div class="alert alert-info">
-                <i class="bi bi-info-circle me-2"></i>Keine Spielräume gefunden. Erstelle einen neuen Raum, um zu
-                beginnen.
-            </div>
-        {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>Keine Spielräume gefunden. Erstelle einen neuen Raum, um zu
+            beginnen.
+        </div>
+    {% endif %}
     </div>
 {% endblock %}
