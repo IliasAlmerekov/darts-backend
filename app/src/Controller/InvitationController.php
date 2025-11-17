@@ -17,7 +17,7 @@ use Symfony\Component\Uid\Uuid;
 class InvitationController extends AbstractController
 {
     #[Route('/invite/create/{id}', name: 'create_invitation')]
-    public function createInvitation(int $id, EntityManagerInterface $entityManager, InvitationRepository $invitationRepository, GamePlayersRepository $gamePlayersRepository, UserRepository $userRepository): Response
+    public function createInvitation(int $id, Request $request, EntityManagerInterface $entityManager, InvitationRepository $invitationRepository, GamePlayersRepository $gamePlayersRepository, UserRepository $userRepository): Response
     {
         $invitation = $invitationRepository->findOneBy(['gameId' => $id]);
 
@@ -39,9 +39,9 @@ class InvitationController extends AbstractController
 
         $invitationLink = $this->generateUrl('join_invitation', ['uuid' => $invitation->getUuid()], UrlGeneratorInterface::ABSOLUTE_URL);
 
-        return $this->render('invitation/index.html.twig', [
+        return $this->render('invitation/create.html.twig', [
             'invitationLink' => $invitationLink,
-            'users' => $users,
+            'users' => $users
         ]);
     }
 

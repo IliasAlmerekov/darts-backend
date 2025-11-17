@@ -19,7 +19,7 @@ class SecurityController extends AbstractController
     {
         $user = $this->getUser();
 
-        if($user){
+        if ($user) {
             return $this->redirectToRoute('login_success');
         }
 
@@ -34,38 +34,63 @@ class SecurityController extends AbstractController
     }
 
     #[Route('/login/success', name: 'login_success')]
-    public function loginSuccess( Request $request, EntityManagerInterface $entityManager, InvitationRepository $invitationRepository, GamePlayersRepository $gamePlayersRepository): Response
+    public function loginSuccess(
+        Request $request,
+        EntityManagerInterface $entityManager,
+        InvitationRepository $invitationRepository,
+        GamePlayersRepository $gamePlayersRepository
+    ): Response
     {
         $user = $this->getUser();
 
+        // Admin redirect
         if ($user && in_array('ROLE_ADMIN', $user->getRoles())) {
-            return $this->redirectToRoute('room_list');
+            return $this->json([
+                'success' => true,
+                'roles' => $user->getStoredRoles(),
+                'id' => $user->getId(),
+                'username' => $user->getUserIdentifier(),
+                'redirect' => '/start'
+            ]);
         }
 
+        // Invitation redirect + Logic
         $session = $request->getSession();
         if ($session->has('invitation_uuid')) {
             $uuid = $session->get('invitation_uuid');
             $invitation = $invitationRepository->findOneBy(['uuid' => $uuid]);
             $gameId = $invitation->getGameId();
-            $user = $this->getUser();
             $userId = $user->getId();
-            if ($gamePlayersRepository->findOneBy(['gameId' => $gameId, 'playerId' => $userId])) {
-                return $this->redirectToRoute('waiting_room');
-            }
-            $gamePlayer = new GamePlayers();
-            $gamePlayer->setGameId($gameId);
-            $gamePlayer->setPlayerId($userId);
 
-            $entityManager->persist($gamePlayer);
-            $entityManager->flush();
+            // Add player to game if not already in
+            if (!$gamePlayersRepository->findOneBy(['gameId' => $gameId, 'playerId' => $userId])) {
+                $gamePlayer = new GamePlayers();
+                $gamePlayer->setGameId($gameId);
+                $gamePlayer->setPlayerId($userId);
+                $entityManager->persist($gamePlayer);
+                $entityManager->flush();
+            }
+
             $session->remove('invitation_uuid');
-            return $this->redirectToRoute('waiting_room');
+
+            return $this->json([
+                'success' => true,
+                'roles' => $user->getStoredRoles(),
+                'id' => $user->getId(),
+                'username' => $user->getUserIdentifier(),
+                'redirect' => '/room/waiting'
+            ]);
         }
-        return $this->render('player/stats.html.twig', [
-            'message' => 'Player stats coming soon'
+
+        // Default player redirect
+        return $this->json([
+            'success' => true,
+            'roles' => $user->getStoredRoles(),
+            'id' => $user->getId(),
+            'username' => $user->getUserIdentifier(),
+            'redirect' => '/player/stats'
         ]);
     }
-
     #[Route(path: '/logout', name: 'app_logout')]
     public function logout(): void
     {
