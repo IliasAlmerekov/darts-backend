@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\GamePlayers;
+use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -15,6 +16,41 @@ class GamePlayersRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, GamePlayers::class);
     }
+
+    /**
+     * Find players with user information for a specific game
+     * @param int $gameId
+     * @return array
+     */
+    public function findPlayersWithUserInfo(int $gameId): array
+    {
+        // The GamePlayers entity stores only the playerId (int) rather than a relation.
+        // Join the User entity by matching gamePlayer.playerId to u.id.
+        return $this->createQueryBuilder('gamePlayer')
+            ->select('gamePlayer.playerId as id', 'u.email as name')
+            ->innerJoin(User::class, 'u', 'WITH', 'u.id = gamePlayer.playerId')
+            ->andWhere('gamePlayer.gameId = :gameId')
+            ->setParameter('gameId', $gameId)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Check if player already joined the game
+     * @param int $gameId
+     * @param int $playerId
+     * @return bool
+     */
+    public function isPlayerInGame(int $gameId, int $playerId): bool
+    {
+        $count = $this->count([
+            'gameId' => $gameId,
+            'playerId' => $playerId
+        ]);
+
+        return $count > 0;
+    }
+
 
     //    /**
     //     * @return GamePlayers[] Returns an array of GamePlayers objects
