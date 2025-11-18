@@ -20,7 +20,7 @@ security:
             form_login:
                 login_path: app_login
                 check_path: app_login
-                enable_csrf: true
+                enable_csrf: false # irgendwann wieder auf true setzen
                 default_target_path: login_success
             logout:
                 path: app_logout
