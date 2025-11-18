@@ -29,9 +29,9 @@ class Invitation
         return $this->uuid;
     }
 
-    public function setUuid(string $uuid): static
+    public function setUuid(\Symfony\Component\Uid\UuidV4|string $uuid): static
     {
-        $this->uuid = $uuid;
+        $this->uuid = (string) $uuid;
 
         return $this;
     }
