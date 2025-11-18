@@ -18,7 +18,7 @@ use Symfony\Component\HttpFoundation\Request;
  */
 class GameRoomController extends AbstractController
 {
-    #[Route(path: '/room', name: 'room_list')]
+    #[Route(path: 'api/room', name: 'room_list')]
     public function index(GameRepository $gameRepository, GamePlayersRepository $gamePlayersRepository, Request $request): Response
     {
         $page = $request->query->getInt('page', 1);
@@ -45,7 +45,7 @@ class GameRoomController extends AbstractController
         ]);
     }
 
-    #[Route(path: '/room/waiting', name: 'waiting_room')]
+    #[Route(path: 'api/room/waiting', name: 'waiting_room')]
     public function waitingRoom(): Response
     {
         return $this->render('room/waiting.html.twig', []);
