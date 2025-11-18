@@ -1,8 +1,10 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Entity\GamePlayers;
 use App\Entity\Invitation;
+use App\Entity\User;
 use App\Repository\GamePlayersRepository;
 use App\Repository\InvitationRepository;
 use App\Repository\UserRepository;
@@ -14,14 +16,28 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Uid\Uuid;
 
+/**
+ * This class handles invitation related actions such as creating invitations,
+ * joining via invitation links, and processing invitations.
+ * also get as JSON responses for API requests.
+ */
 class InvitationController extends AbstractController
 {
-    #[Route('/invite/create/{id}', name: 'create_invitation')]
-    public function createInvitation(int $id, EntityManagerInterface $entityManager, InvitationRepository $invitationRepository, GamePlayersRepository $gamePlayersRepository, UserRepository $userRepository): Response
+    /**
+     * @param int $id
+     * @param Request $request
+     * @param EntityManagerInterface $entityManager
+     * @param InvitationRepository $invitationRepository
+     * @param GamePlayersRepository $gamePlayersRepository
+     * @param UserRepository $userRepository
+     * @return Response
+     */
+    #[Route('api/invite/create/{id}', name: 'create_invitation')]
+    public function createInvitation(int $id, Request $request, EntityManagerInterface $entityManager, InvitationRepository $invitationRepository, GamePlayersRepository $gamePlayersRepository, UserRepository $userRepository): Response
     {
         $invitation = $invitationRepository->findOneBy(['gameId' => $id]);
 
-        if ($invitation === null) {
+        if (null === $invitation) {
             $uuid = Uuid::v4();
             $invitation = new Invitation();
             $invitation->setUuid($uuid);
@@ -39,13 +55,21 @@ class InvitationController extends AbstractController
 
         $invitationLink = $this->generateUrl('join_invitation', ['uuid' => $invitation->getUuid()], UrlGeneratorInterface::ABSOLUTE_URL);
 
-        return $this->render('invitation/index.html.twig', [
+        if (str_contains($request->headers->get('Accept', ''), 'application/json')) {
+            return $this->json([
+                'success' => true,
+                'gameId' => $id,
+                'invitationLink' => $invitationLink
+            ]);
+        }
+
+        return $this->render('invitation/create.html.twig', [
             'invitationLink' => $invitationLink,
-            'users' => $users,
+            'users' => $users
         ]);
     }
 
-    #[Route('/invite/join/{uuid}', name: 'join_invitation')]
+    #[Route('api/invite/join/{uuid}', name: 'join_invitation')]
     public function joinInvitation(string $uuid, InvitationRepository $invitationRepository, Request $request): Response
     {
         $invitation = $invitationRepository->findOneBy(['uuid' => $uuid]);
@@ -53,7 +77,40 @@ class InvitationController extends AbstractController
             return $this->render('invitation/not_found.html.twig');
         }
         $request->getSession()->set('invitation_uuid', $uuid);
+        $request->getSession()->set('game_id', $invitation->getGameId());
 
         return $this->redirectToRoute('app_login');
+    }
+
+    #[Route('api/invite/process', name: 'process_invitation')]
+    public function processInvitation(
+        Request $request,
+        GamePlayersRepository $gamePlayersRepository,
+        EntityManagerInterface $entityManager
+    ): Response
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->redirectToRoute('app_login');
+        }
+        $gameId = $request->getSession()->get('game_id');
+
+        if (!$gameId) {
+            return $this->redirectToRoute('room_list');
+        }
+
+        if (!$gamePlayersRepository->isPlayerInGame($gameId, $user->getId())) {
+            $gamePlayer = new GamePlayers();
+            $gamePlayer->setGameId($gameId);
+            $gamePlayer->setPlayerId($user->getId());
+
+            $entityManager->persist($gamePlayer);
+            $entityManager->flush();
+        }
+
+        $request->getSession()->remove('invitation_uuid');
+        $request->getSession()->remove('game_id');
+
+        return $this->redirectToRoute('waiting_room');
     }
 }
