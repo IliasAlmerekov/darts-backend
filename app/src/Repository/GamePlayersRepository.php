@@ -27,7 +27,7 @@ class GamePlayersRepository extends ServiceEntityRepository
         // The GamePlayers entity stores only the playerId (int) rather than a relation.
         // Join the User entity by matching gamePlayer.playerId to u.id.
         return $this->createQueryBuilder('gamePlayer')
-            ->select('gamePlayer.playerId as id', 'u.email as name')
+            ->select('gamePlayer.playerId as id', 'u.username as name')
             ->innerJoin(User::class, 'u', 'WITH', 'u.id = gamePlayer.playerId')
             ->andWhere('gamePlayer.gameId = :gameId')
             ->setParameter('gameId', $gameId)

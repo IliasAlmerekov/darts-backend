@@ -23,7 +23,16 @@ use Symfony\Component\Uid\Uuid;
  */
 class InvitationController extends AbstractController
 {
-    #[Route('/invite/create/{id}', name: 'create_invitation')]
+    /**
+     * @param int $id
+     * @param Request $request
+     * @param EntityManagerInterface $entityManager
+     * @param InvitationRepository $invitationRepository
+     * @param GamePlayersRepository $gamePlayersRepository
+     * @param UserRepository $userRepository
+     * @return Response
+     */
+    #[Route('api/invite/create/{id}', name: 'create_invitation')]
     public function createInvitation(int $id, Request $request, EntityManagerInterface $entityManager, InvitationRepository $invitationRepository, GamePlayersRepository $gamePlayersRepository, UserRepository $userRepository): Response
     {
         $invitation = $invitationRepository->findOneBy(['gameId' => $id]);
@@ -60,7 +69,7 @@ class InvitationController extends AbstractController
         ]);
     }
 
-    #[Route('/invite/join/{uuid}', name: 'join_invitation')]
+    #[Route('api/invite/join/{uuid}', name: 'join_invitation')]
     public function joinInvitation(string $uuid, InvitationRepository $invitationRepository, Request $request): Response
     {
         $invitation = $invitationRepository->findOneBy(['uuid' => $uuid]);
@@ -73,7 +82,7 @@ class InvitationController extends AbstractController
         return $this->redirectToRoute('app_login');
     }
 
-    #[Route('/invite/process', name: 'process_invitation')]
+    #[Route('api/invite/process', name: 'process_invitation')]
     public function processInvitation(
         Request $request,
         GamePlayersRepository $gamePlayersRepository,

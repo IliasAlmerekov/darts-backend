@@ -44,14 +44,14 @@ class GameRoomController extends AbstractController
             'totalPages' => $totalPages,
         ]);
     }
-    
+
     #[Route(path: '/room/waiting', name: 'waiting_room')]
     public function waitingRoom(): Response
     {
         return $this->render('room/waiting.html.twig', []);
     }
 
-    #[Route(path: '/room/create', name: 'room_create', methods: ['POST', 'GET'])]
+    #[Route(path: 'api/room/create', name: 'room_create', methods: ['POST', 'GET'])]
     public function roomCreate(Request $request, EntityManagerInterface $entityManager): Response
     {
         if ($request->isMethod('POST')) {
@@ -75,7 +75,7 @@ class GameRoomController extends AbstractController
         return $this->render('room', []);
     }
 
-    #[Route(path: '/room/{id}', name: 'room_details', methods: ['GET'])]
+    #[Route(path: 'api/room/{id}', name: 'room_details', methods: ['GET'])]
     public function roomDetails(
         int $id,
         GameRepository $gameRepository,
