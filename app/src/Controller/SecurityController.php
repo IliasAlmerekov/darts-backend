@@ -71,14 +71,12 @@ class SecurityController extends AbstractController
                 $entityManager->flush();
             }
 
-            $session->remove('invitation_uuid');
-
             return $this->json([
                 'success' => true,
                 'roles' => $user->getStoredRoles(),
                 'id' => $user->getId(),
                 'username' => $user->getUserIdentifier(),
-                'redirect' => '/room/waiting'
+                'redirect' => '/joined'
             ]);
         }
 

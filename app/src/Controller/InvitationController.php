@@ -53,7 +53,7 @@ class InvitationController extends AbstractController
 
         $users = $userRepository->findBy(['id' => $playerIds]);
 
-        $invitationLink = $this->generateUrl('join_invitation', ['uuid' => $invitation->getUuid()], UrlGeneratorInterface::ABSOLUTE_URL);
+        $invitationLink = $this->generateUrl('join_invitation', ['uuid' => $invitation->getUuid()], UrlGeneratorInterface::ABSOLUTE_PATH);
 
         if (str_contains($request->headers->get('Accept', ''), 'application/json')) {
             return $this->json([
@@ -63,7 +63,7 @@ class InvitationController extends AbstractController
             ]);
         }
 
-        return $this->render('invitation/create.html.twig', [
+        return $this->render('invitation/index.html.twig', [
             'invitationLink' => $invitationLink,
             'users' => $users
         ]);
@@ -76,10 +76,13 @@ class InvitationController extends AbstractController
         if (!$invitation) {
             return $this->render('invitation/not_found.html.twig');
         }
-        $request->getSession()->set('invitation_uuid', $uuid);
-        $request->getSession()->set('game_id', $invitation->getGameId());
+        $session = $request->getSession();
 
-        return $this->redirectToRoute('app_login');
+        $session->remove('invitation_uuid');
+        $session->set('invitation_uuid', $uuid);
+        $session->set('game_id', $invitation->getGameId());
+
+        return $this->redirect('http://localhost:5173/');
     }
 
     #[Route('api/invite/process', name: 'process_invitation')]

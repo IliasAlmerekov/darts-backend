@@ -13,28 +13,56 @@ use Symfony\Component\Routing\Attribute\Route;
 
 class RegistrationController extends AbstractController
 {
-    #[Route('api/register', name: 'app_register')]
+    #[Route('/api/register', name: 'app_register', methods: ['POST'])]
     public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher, EntityManagerInterface $entityManager): Response
     {
+
+        $data = json_decode($request->getContent(), true);
+
+        if (json_last_error() !== JSON_ERROR_NONE || !is_array($data)) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Ungültiger JSON-Body. Bitte überprüfe das Datenformat.',
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
         $user = new User();
         $form = $this->createForm(RegistrationFormType::class, $user);
-        $form->handleRequest($request);
+
+        $form->submit($data);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var string $plainPassword */
-            $plainPassword = $form->get('plainPassword')->getData();
 
-            $user->setUsername($form->get('username')->getData());
+            $plainPassword = $form->get('plainPassword')->getData();
+            $username = $form->get('username')->getData();
+            $email = $form->get('email')->getData();
+
+            $user->setUsername($username);
+            $user->setEmail($email);
             $user->setPassword($userPasswordHasher->hashPassword($user, $plainPassword));
             $user->setRoles(['ROLE_PLAYER']);
+
             $entityManager->persist($user);
             $entityManager->flush();
 
-            return $this->redirectToRoute('app_login');
+            return $this->json([
+                'success' => true,
+                'message' => 'Registrierung erfolgreich',
+                'redirect' => '/'
+            ], Response::HTTP_CREATED);
         }
 
-        return $this->render('registration/register.html.twig', [
-            'registrationForm' => $form,
-        ]);
+        $errors = [];
+        foreach ($form->getErrors(true) as $error) {
+            $origin = $error->getOrigin();
+            $fieldName = $origin ? $origin->getName() : 'global';
+            $errors[$fieldName][] = $error->getMessage();
+        }
+
+        return $this->json([
+            'success' => false,
+            'message' => 'Registrierung fehlgeschlagen. Bitte überprüfe deine Eingaben.',
+            'errors' => $errors,
+        ], Response::HTTP_BAD_REQUEST);
     }
 }
