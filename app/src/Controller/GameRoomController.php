@@ -76,7 +76,7 @@ class GameRoomController extends AbstractController
             return $this->redirectToRoute('create_invitation', ['id' => $game->getGameId()]);
         }
 
-        return $this->render('room', []);
+        return $this->render('room/create.html.twig', []);
     }
 
     #[Route(path: 'api/room/{id}', name: 'room_details', methods: ['GET'])]
