@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Repository\RoundThrowsRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: RoundThrowsRepository::class)]
@@ -28,17 +29,20 @@ class RoundThrows
     #[ORM\Column]
     private ?int $value = null;
 
-    #[ORM\Column]
-    private ?bool $isBust = null;
+    #[ORM\Column(options: ['default' => false])]
+    private bool $isBust = false;
 
-    #[ORM\Column]
-    private ?bool $isDouble = null;
+    #[ORM\Column(options: ['default' => false])]
+    private bool $isDouble = false;
 
-    #[ORM\Column(nullable: true)]
-    private ?bool $isTriple = null;
+    #[ORM\Column(options: ['default' => false])]
+    private bool $isTriple = false;
 
     #[ORM\Column]
     private ?int $score = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
+    private ?\DateTimeInterface $timestamp = null;
 
     public function getGameId(): ?int
     {
@@ -100,7 +104,7 @@ class RoundThrows
         return $this;
     }
 
-    public function isBust(): ?bool
+    public function isBust(): bool
     {
         return $this->isBust;
     }
@@ -112,7 +116,7 @@ class RoundThrows
         return $this;
     }
 
-    public function isDouble(): ?bool
+    public function isDouble(): bool
     {
         return $this->isDouble;
     }
@@ -124,12 +128,12 @@ class RoundThrows
         return $this;
     }
 
-    public function isTriple(): ?bool
+    public function isTriple(): bool
     {
         return $this->isTriple;
     }
 
-    public function setIsTriple(?bool $isTriple): static
+    public function setIsTriple(bool $isTriple): static
     {
         $this->isTriple = $isTriple;
 
@@ -144,6 +148,18 @@ class RoundThrows
     public function setScore(int $score): static
     {
         $this->score = $score;
+
+        return $this;
+    }
+
+    public function getTimestamp(): ?\DateTimeInterface
+    {
+        return $this->timestamp;
+    }
+
+    public function setTimestamp(\DateTimeInterface $timestamp): static
+    {
+        $this->timestamp = $timestamp;
 
         return $this;
     }

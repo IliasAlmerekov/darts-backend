@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Repository\RoundRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: RoundRepository::class)]
@@ -18,6 +19,12 @@ class Round
 
     #[ORM\Column]
     private ?int $roundNumber = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $startedAt = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $finishedAt = null;
 
     public function getRoundId(): ?int
     {
@@ -51,6 +58,30 @@ class Round
     public function setRoundNumber(int $roundNumber): static
     {
         $this->roundNumber = $roundNumber;
+
+        return $this;
+    }
+
+    public function getStartedAt(): ?\DateTimeInterface
+    {
+        return $this->startedAt;
+    }
+
+    public function setStartedAt(?\DateTimeInterface $startedAt): static
+    {
+        $this->startedAt = $startedAt;
+
+        return $this;
+    }
+
+    public function getFinishedAt(): ?\DateTimeInterface
+    {
+        return $this->finishedAt;
+    }
+
+    public function setFinishedAt(?\DateTimeInterface $finishedAt): static
+    {
+        $this->finishedAt = $finishedAt;
 
         return $this;
     }
