@@ -86,7 +86,7 @@ class SecurityController extends AbstractController
             'roles' => $user->getStoredRoles(),
             'id' => $user->getId(),
             'username' => $user->getUserIdentifier(),
-            'redirect' => '/player/stats'
+            'redirect' => '/playerprofile'
         ]);
     }
     #[Route(path: 'api/logout', name: 'app_logout')]
