@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Enum\GameStatus;
 use App\Repository\GameRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -23,8 +24,17 @@ class Game
     #[ORM\Column(type: Types::DATE_MUTABLE)]
     private ?\DateTime $date = null;
 
-    #[ORM\Column(nullable: true)]
-    private ?bool $status = null;
+    #[ORM\Column(options: ['default' => 301])]
+    private ?int $startScore = null;
+
+    #[ORM\Column(options: ['default' => false])]
+    private bool $doubleOut = false;
+
+    #[ORM\Column(options: ['default' => false])]
+    private bool $tripleOut = false;
+
+    #[ORM\Column(enumType: GameStatus::class, options: ['default' => GameStatus::Lobby->value])]
+    private GameStatus $status = GameStatus::Lobby;
 
     #[ORM\Column(nullable: true)]
     private ?int $round = null;
@@ -65,12 +75,48 @@ class Game
         return $this;
     }
 
-    public function isStatus(): ?bool
+    public function getStartScore(): ?int
+    {
+        return $this->startScore;
+    }
+
+    public function setStartScore(?int $startScore): static
+    {
+        $this->startScore = $startScore;
+
+        return $this;
+    }
+
+    public function isDoubleOut(): bool
+    {
+        return $this->doubleOut;
+    }
+
+    public function setDoubleOut(bool $doubleOut): static
+    {
+        $this->doubleOut = $doubleOut;
+
+        return $this;
+    }
+
+    public function isTripleOut(): bool
+    {
+        return $this->tripleOut;
+    }
+
+    public function setTripleOut(bool $tripleOut): static
+    {
+        $this->tripleOut = $tripleOut;
+
+        return $this;
+    }
+
+    public function getStatus(): GameStatus
     {
         return $this->status;
     }
 
-    public function setStatus(bool $status): static
+    public function setStatus(GameStatus $status): static
     {
         $this->status = $status;
 
