@@ -38,7 +38,18 @@ final class Version20251121130030 extends AbstractMigration
         $this->addSql('ALTER TABLE game MODIFY triple_out TINYINT(1) DEFAULT 0 NOT NULL');
 
         if ($gameTable->hasColumn('status')) {
-            $this->addSql("ALTER TABLE game MODIFY status VARCHAR(255) DEFAULT 'lobby' NOT NULL");
+            $this->addSql("ALTER TABLE game ADD status_new VARCHAR(255) DEFAULT NULL");
+
+// Migrate data
+            $this->addSql("UPDATE game SET status_new = CASE
+    WHEN status = 1 THEN 'active'
+    WHEN status = 0 THEN 'lobby'
+    ELSE 'lobby'
+END");
+
+// Drop old and rename new
+            $this->addSql("ALTER TABLE game DROP COLUMN status");
+            $this->addSql("ALTER TABLE game CHANGE status_new status VARCHAR(255) DEFAULT 'lobby' NOT NULL");
         }
 
         $gamePlayersTable = $schemaManager->introspectTable('game_players');
