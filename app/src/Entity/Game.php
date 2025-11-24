@@ -24,8 +24,8 @@ class Game
     #[ORM\Column(type: Types::DATE_MUTABLE)]
     private ?\DateTime $date = null;
 
-    #[ORM\Column(options: ['default' => 301])]
-    private ?int $startScore = null;
+    #[ORM\Column(options: ['default' => 301], nullable: true)]
+    private int $startScore = 301;
 
     #[ORM\Column(options: ['default' => false])]
     private bool $doubleOut = false;
@@ -75,12 +75,12 @@ class Game
         return $this;
     }
 
-    public function getStartScore(): ?int
+    public function getStartScore(): int
     {
         return $this->startScore;
     }
 
-    public function setStartScore(?int $startScore): static
+    public function setStartScore(int $startScore): static
     {
         $this->startScore = $startScore;
 

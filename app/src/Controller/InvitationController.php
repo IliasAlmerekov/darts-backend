@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Controller;
 
@@ -60,7 +62,7 @@ class InvitationController extends AbstractController
                 'success' => true,
                 'gameId' => $id,
                 'invitationLink' => $invitationLink
-            ]);
+            ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
         }
 
         return $this->render('invitation/index.html.twig', [
@@ -90,8 +92,7 @@ class InvitationController extends AbstractController
         Request $request,
         GamePlayersRepository $gamePlayersRepository,
         EntityManagerInterface $entityManager
-    ): Response
-    {
+    ): Response {
         $user = $this->getUser();
         if (!$user instanceof User) {
             return $this->redirectToRoute('app_login');
