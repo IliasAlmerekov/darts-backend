@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 use Symfony\Component\HttpFoundation\Request;
+
 class SecurityController extends AbstractController
 {
     #[Route(path: 'api/login', name: 'app_login', methods: ['GET', 'POST'])]
@@ -39,8 +40,7 @@ class SecurityController extends AbstractController
         EntityManagerInterface $entityManager,
         InvitationRepository $invitationRepository,
         GamePlayersRepository $gamePlayersRepository
-    ): Response
-    {
+    ): Response {
         $user = $this->getUser();
 
         // Admin redirect
@@ -51,7 +51,7 @@ class SecurityController extends AbstractController
                 'id' => $user->getId(),
                 'username' => $user->getUserIdentifier(),
                 'redirect' => '/start'
-            ]);
+            ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
         }
 
         // Invitation redirect + Logic
@@ -77,8 +77,9 @@ class SecurityController extends AbstractController
                 'id' => $user->getId(),
                 'username' => $user->getUserIdentifier(),
                 'redirect' => '/joined'
-            ]);
+            ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
         }
+        
 
         // Default player redirect
         return $this->json([
