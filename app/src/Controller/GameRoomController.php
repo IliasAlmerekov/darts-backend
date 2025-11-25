@@ -54,12 +54,6 @@ class GameRoomController extends AbstractController
         ]);
     }
 
-    #[Route(path: 'api/room/waiting', name: 'waiting_room')]
-    public function waitingRoom(): Response
-    {
-        return $this->render('room/waiting.html.twig', []);
-    }
-
     #[Route(path: 'api/room/create', name: 'room_create', methods: ['POST', 'GET'])]
     public function roomCreate(Request $request, EntityManagerInterface $entityManager): Response
     {
