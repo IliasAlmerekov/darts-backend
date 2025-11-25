@@ -3,30 +3,25 @@
 namespace App\Controller;
 
 use App\Dto\UpdateGameDto;
-use App\Entity\RoundThrows;
 use App\Enum\GameStatus;
-use App\Repository\RoundThrowsRepository;
+use App\Service\GameSetupService;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\HttpFoundation\Request;
 use App\Repository\GameRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 
 final class GameController extends AbstractController
 {
-    /**
-     * @throws \JsonException
-     */
-    #[Route('/api/game/{gameId}', name: 'app_game_start', methods: ['POST'])]
-    public function index(
-        int                    $gameId,
-        UpdateGameDto          $dto,
-        GameRepository         $gameRepository,
-        Request                $request,
+    #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'])]
+    public function start(
+        int $gameId,
+        #[MapRequestPayload] UpdateGameDto $dto,
+        GameRepository $gameRepository,
         EntityManagerInterface $entityManager,
-    ): Response
-    {
+        GameSetupService $gameSetupService,
+    ): Response {
         $game = $gameRepository->find($gameId);
 
         if (!$game) {
@@ -36,50 +31,37 @@ final class GameController extends AbstractController
             );
         }
 
-        try {
-            $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
 
-            if (empty($data)) {
-                return $this->json(
-                    ['error' => 'No data provided'],
-                    Response::HTTP_BAD_REQUEST
-                );
-            }
-
-            if ($dto->status !== null) {
-                if (is_string($data['status'])) {
-                    $game->setStatus(GameStatus::from($data['status']));
-                } elseif ($data['status'] instanceof GameStatus) {
-                    $game->setStatus($dto->status);
-                }
-            }
-
-            if ($dto->round !== null) {
-                $game->setRound($dto->round);
-            }
-
-            if ($dto->startscore !== null) {
-                $game->setStartScore($dto->startscore);
-            }
-
-            if ($dto->doubleout !== null) {
-                $game->setDoubleOut($dto->doubleout);
-            }
-
-            if ($dto->tripleout !== null) {
-                $game->setTripleOut($dto->tripleout);
-            }
-
-            $entityManager->flush();
-
-            return $this->json($game, context: ['groups' => 'game:read']);
-        } catch (\JsonException $e) {
-            return $this->json(
-                ['error' => 'Invalid JSON'],
-                Response::HTTP_BAD_REQUEST
-            );
+        if ($dto->status === null) {
+            $game->setStatus(GameStatus::Started);
+        } else {
+            $game->setStatus($dto->status);
         }
+
+        if ($dto->round !== null) {
+            $game->setRound($dto->round);
+        }
+
+        if ($dto->startscore !== null) {
+            $game->setStartScore($dto->startscore);
+        }
+
+        if ($dto->doubleout !== null) {
+            $game->setDoubleOut($dto->doubleout);
+        }
+
+        if ($dto->tripleout !== null) {
+            $game->setTripleOut($dto->tripleout);
+        }
+
+        $gameSetupService->applyInitialScoresAndPositions($game);
+
+        $entityManager->flush();
+
+        return $this->json($game, context: ['groups' => 'game:read']);
     }
+}
+
 
 //    /**
 //     * @throws \JsonException
@@ -141,4 +123,3 @@ final class GameController extends AbstractController
 //        $roundThrows->setIsBust($isBust);
 //        $entityManager->flush();
 //    }
-}
