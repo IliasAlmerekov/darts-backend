@@ -14,14 +14,17 @@ class RoundThrows
     #[ORM\Column]
     private ?int $throwId = null;
 
-    #[ORM\Column]
-    private ?int $gameId = null;
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: false, referencedColumnName: 'game_id')]
+    private ?Game $game = null;
 
-    #[ORM\Column]
-    private ?int $roundId = null;
+    #[ORM\ManyToOne(inversedBy: 'roundThrows')]
+    #[ORM\JoinColumn(nullable: false, referencedColumnName: 'round_id')]
+    private ?Round $round = null;
 
-    #[ORM\Column]
-    private ?int $playerId = null;
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?User $player = null;
 
     #[ORM\Column]
     private ?int $throwNumber = null;
@@ -44,38 +47,38 @@ class RoundThrows
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $timestamp = null;
 
-    public function getGameId(): ?int
+    public function getGame(): ?Game
     {
-        return $this->gameId;
+        return $this->game;
     }
 
-    public function setGameId(int $gameId): static
+    public function setGame(?Game $game): static
     {
-        $this->gameId = $gameId;
+        $this->game = $game;
 
         return $this;
     }
 
-    public function getRoundId(): ?int
+    public function getRound(): ?Round
     {
-        return $this->roundId;
+        return $this->round;
     }
 
-    public function setRoundId(int $roundId): static
+    public function setRound(?Round $round): static
     {
-        $this->roundId = $roundId;
+        $this->round = $round;
 
         return $this;
     }
 
-    public function getPlayerId(): ?int
+    public function getPlayer(): ?User
     {
-        return $this->playerId;
+        return $this->player;
     }
 
-    public function setPlayerId(int $playerId): static
+    public function setPlayer(?User $player): static
     {
-        $this->playerId = $playerId;
+        $this->player = $player;
 
         return $this;
     }
