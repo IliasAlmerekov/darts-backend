@@ -1,9 +1,10 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Service;
 
 use App\Dto\StartGameRequest;
 use App\Entity\Game;
+use App\Entity\Round;
 use App\Enum\GameStatus;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -31,6 +32,15 @@ class GameStartService
 
         if ($dto->tripleOut !== null) {
             $game->setTripleOut($dto->tripleOut);
+        }
+
+        // Initialize first round if none exists
+        if ($game->getRounds()->isEmpty()) {
+            $round = new Round();
+            $round->setRoundNumber(1);
+            $round->setStartedAt(new \DateTime());
+            $game->addRound($round);
+            $game->setRound(1);
         }
 
         $this->gameSetupService->applyInitialScoresAndPositions($game, $dto->playerPositions);

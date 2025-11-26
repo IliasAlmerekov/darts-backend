@@ -3,11 +3,13 @@
 namespace App\Service;
 
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Repository\RoundThrowsRepository;
 
 class SseStreamService
 {
     public function __construct(
-        private GameRoomService $gameRoomService
+        private GameRoomService $gameRoomService,
+        private RoundThrowsRepository $roundThrowsRepository
     )
     {
     }
@@ -18,6 +20,7 @@ class SseStreamService
             set_time_limit(0);
             $eventId = 0;
             $lastPayload = null;
+            $lastThrowId = null;
 
             echo ": init\n\n";
             @ob_flush();
@@ -37,6 +40,22 @@ class SseStreamService
                     echo 'id: ' . $eventId . "\n";
                     echo "event: players\n";
                     echo 'data: ' . $payload . "\n\n";
+                    @ob_flush();
+                    @flush();
+                }
+
+                $latestThrow = $this->roundThrowsRepository->findLatestForGame($gameId);
+                if ($latestThrow && $latestThrow['id'] !== $lastThrowId) {
+                    $lastThrowId = $latestThrow['id'];
+                    $eventId++;
+
+                    if ($latestThrow['timestamp'] instanceof \DateTimeInterface) {
+                        $latestThrow['timestamp'] = $latestThrow['timestamp']->format(\DateTimeInterface::ATOM);
+                    }
+
+                    echo 'id: ' . $eventId . "\n";
+                    echo "event: throw\n";
+                    echo 'data: ' . json_encode($latestThrow) . "\n\n";
                     @ob_flush();
                     @flush();
                 }
