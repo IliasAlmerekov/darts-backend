@@ -1,0 +1,68 @@
+<?php
+
+namespace App\Service;
+
+use App\Entity\Invitation;
+use App\Enum\GameStatus;
+use App\Repository\InvitationRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Uid\Uuid;
+
+class RematchService
+{
+    public function __construct(
+        private GameRoomService         $gameRoomService,
+        private PlayerManagementService $playerManagementService,
+        private InvitationRepository    $invitationRepository,
+        private EntityManagerInterface  $entityManager,
+        private UrlGeneratorInterface   $urlGenerator
+    )
+    {
+    }
+
+    public function createRematch(int $oldGameId): array
+    {
+        $oldGame = $this->gameRoomService->findGameById($oldGameId);
+
+        if (!$oldGame) {
+            return ['success' => false, 'message' => 'Previous game not found'];
+        }
+
+        $newGame = $this->gameRoomService->createGame();
+        $newGame->setStatus(GameStatus::Started);
+        $newGame->setRound(1);
+        $newGameId = $newGame->getGameId();
+
+        $this->playerManagementService->copyPlayers($oldGameId, $newGameId);
+
+        $invitationLink = $this->createInvitation($newGameId);
+
+        return [
+            'success' => true,
+            'gameId' => $newGameId,
+            'invitationLink' => $invitationLink,
+        ];
+    }
+
+    private function createInvitation(int $gameId): string
+    {
+        $invitation = $this->invitationRepository->findOneBy(['gameId' => $gameId]);
+
+        if (null === $invitation) {
+            $uuid = Uuid::v4();
+            $invitation = new Invitation();
+            $invitation->setUuid($uuid);
+            $invitation->setGameId($gameId);
+
+            $this->entityManager->persist($invitation);
+            $this->entityManager->flush();
+        }
+
+        return $this->urlGenerator->generate(
+            'join_invitation',
+            ['uuid' => $invitation->getUuid()],
+            UrlGeneratorInterface::ABSOLUTE_PATH
+        );
+    }
+}
