@@ -80,11 +80,12 @@ class GameRoomController extends AbstractController
 
     #[Route(path: 'api/room/{id}', name: 'room_details', methods: ['GET'])]
     public function roomDetails(
-        int $id,
-        GameRepository $gameRepository,
+        int                   $id,
+        GameRepository        $gameRepository,
         GamePlayersRepository $gamePlayersRepository,
-        Request $request
-    ): Response {
+        Request               $request
+    ): Response
+    {
         $game = $gameRepository->find($id);
         if (!$game) {
             throw $this->createNotFoundException('Game not found');
@@ -120,7 +121,7 @@ class GameRoomController extends AbstractController
         // get from JSON body
         $payload = json_decode($request->getContent(), true);
         if (is_array($payload) && isset($payload['playerId'])) {
-            $playerId = (int) $payload['playerId'];
+            $playerId = (int)$payload['playerId'];
             if ($playerId > 0) {
                 return $playerId;
             }
@@ -138,11 +139,12 @@ class GameRoomController extends AbstractController
 
     #[Route(path: '/api/room/{id}', name: 'room_player_leave', methods: ['DELETE'])]
     public function playerLeave(
-        int $id,
-        GamePlayersRepository $gamePlayersRepository,
-        Request $request,
+        int                    $id,
+        GamePlayersRepository  $gamePlayersRepository,
+        Request                $request,
         EntityManagerInterface $entityManager
-    ): Response {
+    ): Response
+    {
         $playerId = $this->resolvePlayerId($request);
 
         if (null === $playerId) {
@@ -174,14 +176,14 @@ class GameRoomController extends AbstractController
     }
 
 
-
     #[Route(path: 'api/room/{id}/stream', name: 'room_stream', methods: ['GET'])]
     public function roomStream(
-        int $id,
-        GameRepository $gameRepository,
+        int                   $id,
+        GameRepository        $gameRepository,
         GamePlayersRepository $gamePlayersRepository,
-        Request $request
-    ): StreamedResponse {
+        Request               $request
+    ): StreamedResponse
+    {
         // Release the session lock so other requests from the same user are not blocked by this long-lived stream
         if ($request->hasSession()) {
             $request->getSession()->save();
@@ -244,15 +246,16 @@ class GameRoomController extends AbstractController
     }
 
     #[Route(path: 'api/room/{id}/rematch', name: 'room_rematch', methods: ['POST'])]
-public function rematch(
-    int $id,
-        GameRepository $gameRepository,
-        GamePlayersRepository $gamePlayersRepository,
-        InvitationRepository $invitationRepository,
+    public function rematch(
+        int                    $id,
+        GameRepository         $gameRepository,
+        GamePlayersRepository  $gamePlayersRepository,
+        InvitationRepository   $invitationRepository,
         EntityManagerInterface $entityManager,
-        Request $request,
-        UrlGeneratorInterface $urlGenerator
-    ): Response {
+        Request                $request,
+        UrlGeneratorInterface  $urlGenerator
+    ): Response
+    {
         // search old game
         $oldGame = $gameRepository->find($id);
         if (!$oldGame) {
