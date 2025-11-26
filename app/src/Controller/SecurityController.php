@@ -59,14 +59,19 @@ class SecurityController extends AbstractController
         if ($session->has('invitation_uuid')) {
             $uuid = $session->get('invitation_uuid');
             $invitation = $invitationRepository->findOneBy(['uuid' => $uuid]);
+
+            if ($invitation === null) {
+                return $this->json(['error' => 'Invitation not found'], Response::HTTP_NOT_FOUND);
+            }
+
             $gameId = $invitation->getGameId();
             $userId = $user->getId();
 
             // Add player to game if not already in
-            if (!$gamePlayersRepository->findOneBy(['gameId' => $gameId, 'playerId' => $userId])) {
+            if (!$gamePlayersRepository->findOneBy(['game' => $gameId, 'player' => $userId])) {
                 $gamePlayer = new GamePlayers();
-                $gamePlayer->setGameId($gameId);
-                $gamePlayer->setPlayerId($userId);
+                $gamePlayer->setGame($entityManager->getReference(\App\Entity\Game::class, $gameId));
+                $gamePlayer->setPlayer($entityManager->getReference(\App\Entity\User::class, $userId));
                 $entityManager->persist($gamePlayer);
                 $entityManager->flush();
             }

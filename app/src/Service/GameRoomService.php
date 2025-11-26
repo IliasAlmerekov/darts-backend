@@ -48,7 +48,7 @@ class GameRoomService
 
     public function getPlayerCount(int $gameId): int
     {
-        return $this->gamePlayersRepository->count(['gameId' => $gameId]);
+        return $this->gamePlayersRepository->count(['game' => $gameId]);
     }
 
     public function getPlayersWithUserInfo(int $gameId): array

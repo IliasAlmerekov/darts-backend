@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\Entity\GamePlayers;
 use App\Entity\Invitation;
 use App\Entity\User;
+use App\Entity\Game;
 use App\Repository\GamePlayersRepository;
 use App\Repository\InvitationRepository;
 use App\Repository\UserRepository;
@@ -49,9 +50,9 @@ class InvitationController extends AbstractController
             $entityManager->flush();
         }
 
-        $players = $gamePlayersRepository->findBy(['gameId' => $id]);
+        $players = $gamePlayersRepository->findByGameId($id);
 
-        $playerIds = array_map(fn($player) => $player->getPlayerId(), $players);
+        $playerIds = array_map(fn($player) => $player->getPlayer()?->getId(), $players);
 
         $users = $userRepository->findBy(['id' => $playerIds]);
 
@@ -105,8 +106,8 @@ class InvitationController extends AbstractController
 
         if (!$gamePlayersRepository->isPlayerInGame($gameId, $user->getId())) {
             $gamePlayer = new GamePlayers();
-            $gamePlayer->setGameId($gameId);
-            $gamePlayer->setPlayerId($user->getId());
+            $gamePlayer->setGame($entityManager->getReference(\App\Entity\Game::class, $gameId));
+            $gamePlayer->setPlayer($entityManager->getReference(User::class, $user->getId()));
 
             $entityManager->persist($gamePlayer);
             $entityManager->flush();

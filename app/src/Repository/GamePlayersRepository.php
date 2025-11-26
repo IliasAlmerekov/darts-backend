@@ -24,12 +24,10 @@ class GamePlayersRepository extends ServiceEntityRepository
      */
     public function findPlayersWithUserInfo(int $gameId): array
     {
-        // The GamePlayers entity stores only the playerId (int) rather than a relation.
-        // Join the User entity by matching gamePlayer.playerId to u.id.
         return $this->createQueryBuilder('gamePlayer')
-            ->select('gamePlayer.playerId as id', 'u.username as name')
-            ->innerJoin(User::class, 'u', 'WITH', 'u.id = gamePlayer.playerId')
-            ->andWhere('gamePlayer.gameId = :gameId')
+            ->select('u.id as id', 'u.username as name')
+            ->innerJoin('gamePlayer.player', 'u')
+            ->andWhere('gamePlayer.game = :gameId')
             ->setParameter('gameId', $gameId)
             ->getQuery()
             ->getResult();
@@ -44,11 +42,23 @@ class GamePlayersRepository extends ServiceEntityRepository
     public function isPlayerInGame(int $gameId, int $playerId): bool
     {
         $count = $this->count([
-            'gameId' => $gameId,
-            'playerId' => $playerId
+            'game' => $gameId,
+            'player' => $playerId
         ]);
 
         return $count > 0;
+    }
+
+    /**
+     * @return GamePlayers[]
+     */
+    public function findByGameId(int $gameId): array
+    {
+        return $this->createQueryBuilder('gp')
+            ->andWhere('gp.game = :gameId')
+            ->setParameter('gameId', $gameId)
+            ->getQuery()
+            ->getResult();
     }
 
 
