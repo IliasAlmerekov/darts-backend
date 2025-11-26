@@ -2,10 +2,9 @@
 
 namespace App\Controller;
 
-use App\Dto\UpdateGameDto;
-use App\Enum\GameStatus;
-use App\Service\GameSetupService;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Dto\StartGameRequest;
+use App\Service\GameStartService;
+use InvalidArgumentException;
 use App\Repository\GameRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -17,10 +16,9 @@ final class GameController extends AbstractController
     #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'])]
     public function start(
         int $gameId,
-        #[MapRequestPayload] UpdateGameDto $dto,
+        #[MapRequestPayload] StartGameRequest $dto,
         GameRepository $gameRepository,
-        EntityManagerInterface $entityManager,
-        GameSetupService $gameSetupService,
+        GameStartService $gameStartService,
     ): Response {
         $game = $gameRepository->find($gameId);
 
@@ -31,32 +29,14 @@ final class GameController extends AbstractController
             );
         }
 
-
-        if ($dto->status === null) {
-            $game->setStatus(GameStatus::Started);
-        } else {
-            $game->setStatus($dto->status);
+        try {
+            $gameStartService->start($game, $dto);
+        } catch (InvalidArgumentException $e) {
+            return $this->json(
+                ['error' => $e->getMessage()],
+                Response::HTTP_BAD_REQUEST
+            );
         }
-
-        if ($dto->round !== null) {
-            $game->setRound($dto->round);
-        }
-
-        if ($dto->startscore !== null) {
-            $game->setStartScore($dto->startscore);
-        }
-
-        if ($dto->doubleout !== null) {
-            $game->setDoubleOut($dto->doubleout);
-        }
-
-        if ($dto->tripleout !== null) {
-            $game->setTripleOut($dto->tripleout);
-        }
-
-        $gameSetupService->applyInitialScoresAndPositions($game);
-
-        $entityManager->flush();
 
         return $this->json($game, context: ['groups' => 'game:read']);
     }

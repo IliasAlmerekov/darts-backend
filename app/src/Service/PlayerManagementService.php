@@ -18,8 +18,8 @@ class PlayerManagementService
     public function removePlayer(int $gameId, int $playerId): bool
     {
         $gamePlayer = $this->gamePlayersRepository->findOneBy([
-            'gameId' => $gameId,
-            'playerId' => $playerId,
+            'game' => $gameId,
+            'player' => $playerId,
         ]);
 
         if (null === $gamePlayer) {
@@ -35,8 +35,8 @@ class PlayerManagementService
     public function addPlayer(int $gameId, int $playerId): GamePlayers
     {
         $gamePlayer = new GamePlayers();
-        $gamePlayer->setGameId($gameId);
-        $gamePlayer->setPlayerId($playerId);
+        $gamePlayer->setGame($this->entityManager->getReference(\App\Entity\Game::class, $gameId));
+        $gamePlayer->setPlayer($this->entityManager->getReference(\App\Entity\User::class, $playerId));
 
         $this->entityManager->persist($gamePlayer);
         $this->entityManager->flush();
@@ -46,10 +46,13 @@ class PlayerManagementService
 
     public function copyPlayers(int $fromGameId, int $toGameId): void
     {
-        $oldGamePlayers = $this->gamePlayersRepository->findBy(['gameId' => $fromGameId]);
+        $oldGamePlayers = $this->gamePlayersRepository->findByGameId($fromGameId);
 
         foreach ($oldGamePlayers as $oldGamePlayer) {
-            $this->addPlayer($toGameId, $oldGamePlayer->getPlayerId());
+            $player = $oldGamePlayer->getPlayer();
+            if ($player !== null) {
+                $this->addPlayer($toGameId, $player->getId());
+            }
         }
     }
 }
