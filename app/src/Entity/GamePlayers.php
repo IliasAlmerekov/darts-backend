@@ -13,11 +13,13 @@ class GamePlayers
     #[ORM\Column]
     private ?int $gamePlayerId = null;
 
-    #[ORM\Column]
-    private ?int $gameId = null;
+    #[ORM\ManyToOne(inversedBy: 'gamePlayers')]
+    #[ORM\JoinColumn(nullable: false, referencedColumnName: 'game_id')]
+    private ?Game $game = null;
 
-    #[ORM\Column]
-    private ?int $playerId = null;
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?User $player = null;
 
     #[ORM\Column(nullable: true)]
     private ?int $position = null;
@@ -25,26 +27,26 @@ class GamePlayers
     #[ORM\Column(nullable: true)]
     private ?int $score = null;
 
-    public function getGameId(): ?int
+    public function getGame(): ?Game
     {
-        return $this->gameId;
+        return $this->game;
     }
 
-    public function setGameId(int $gameId): static
+    public function setGame(?Game $game): static
     {
-        $this->gameId = $gameId;
+        $this->game = $game;
 
         return $this;
     }
 
-    public function getPlayerId(): ?int
+    public function getPlayer(): ?User
     {
-        return $this->playerId;
+        return $this->player;
     }
 
-    public function setPlayerId(int $playerId): static
+    public function setPlayer(?User $player): static
     {
-        $this->playerId = $playerId;
+        $this->player = $player;
 
         return $this;
     }

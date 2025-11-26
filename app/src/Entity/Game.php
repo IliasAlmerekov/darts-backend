@@ -4,6 +4,8 @@ namespace App\Entity;
 
 use App\Enum\GameStatus;
 use App\Repository\GameRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -18,8 +20,8 @@ class Game
     #[ORM\Column(nullable: true)]
     private ?int $type = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $winner = null;
+    #[ORM\ManyToOne]
+    private ?User $winner = null;
 
     #[ORM\Column(type: Types::DATE_MUTABLE)]
     private ?\DateTime $date = null;
@@ -36,8 +38,24 @@ class Game
     #[ORM\Column(enumType: GameStatus::class, options: ['default' => GameStatus::Lobby->value])]
     private GameStatus $status = GameStatus::Lobby;
 
+    #[ORM\OneToMany(mappedBy: 'game', targetEntity: GamePlayers::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $gamePlayers;
+
+    #[ORM\OneToMany(mappedBy: 'game', targetEntity: Round::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $rounds;
+
+    #[ORM\OneToOne(cascade: ['persist', 'remove'])]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?Invitation $invitation = null;
+
     #[ORM\Column(nullable: true)]
     private ?int $round = null;
+
+    public function __construct()
+    {
+        $this->gamePlayers = new ArrayCollection();
+        $this->rounds = new ArrayCollection();
+    }
 
     public function getType(): ?int
     {
@@ -51,12 +69,12 @@ class Game
         return $this;
     }
 
-    public function getWinner(): ?string
+    public function getWinner(): ?User
     {
         return $this->winner;
     }
 
-    public function setWinner(?string $winner): static
+    public function setWinner(?User $winner): static
     {
         $this->winner = $winner;
 
@@ -131,6 +149,72 @@ class Game
     public function setRound(int $round): static
     {
         $this->round = $round;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, GamePlayers>
+     */
+    public function getGamePlayers(): Collection
+    {
+        return $this->gamePlayers;
+    }
+
+    public function addGamePlayer(GamePlayers $gamePlayer): static
+    {
+        if (!$this->gamePlayers->contains($gamePlayer)) {
+            $this->gamePlayers->add($gamePlayer);
+            $gamePlayer->setGame($this);
+        }
+
+        return $this;
+    }
+
+    public function removeGamePlayer(GamePlayers $gamePlayer): static
+    {
+        if ($this->gamePlayers->removeElement($gamePlayer)) {
+            // orphanRemoval will delete the record; owning side is GamePlayers::game
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Round>
+     */
+    public function getRounds(): Collection
+    {
+        return $this->rounds;
+    }
+
+    public function addRound(Round $round): static
+    {
+        if (!$this->rounds->contains($round)) {
+            $this->rounds->add($round);
+            $round->setGame($this);
+        }
+
+        return $this;
+    }
+
+    public function removeRound(Round $round): static
+    {
+        if ($this->rounds->removeElement($round)) {
+            // orphanRemoval will delete on flush
+        }
+
+        return $this;
+    }
+
+    public function getInvitation(): ?Invitation
+    {
+        return $this->invitation;
+    }
+
+    public function setInvitation(?Invitation $invitation): static
+    {
+        $this->invitation = $invitation;
 
         return $this;
     }
