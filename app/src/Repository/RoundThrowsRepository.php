@@ -16,28 +16,56 @@ class RoundThrowsRepository extends ServiceEntityRepository
         parent::__construct($registry, RoundThrows::class);
     }
 
-    //    /**
-    //     * @return PlayerThrows[] Returns an array of PlayerThrows objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('p')
-    //            ->andWhere('p.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('p.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    /**
+     * Latest throw for game (scalar data)
+     */
+    public function findLatestForGame(int $gameId): ?array
+    {
+        return $this->createQueryBuilder('rt')
+            ->select(
+                'rt.throwId AS id',
+                'rt.throwNumber AS throwNumber',
+                'rt.value AS value',
+                'rt.isDouble AS isDouble',
+                'rt.isTriple AS isTriple',
+                'rt.isBust AS isBust',
+                'rt.score AS score',
+                'rt.timestamp AS timestamp',
+                'r.roundNumber AS roundNumber',
+                'u.id AS playerId',
+                'u.username AS playerName'
+            )
+            ->innerJoin('rt.round', 'r')
+            ->innerJoin('rt.player', 'u')
+            ->andWhere('rt.game = :gameId')
+            ->setParameter('gameId', $gameId)
+            ->orderBy('rt.throwId', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 
-    //    public function findOneBySomeField($value): ?PlayerThrows
-    //    {
-    //        return $this->createQueryBuilder('p')
-    //            ->andWhere('p.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+    public function findEntityLatestForGame(int $gameId): ?RoundThrows
+    {
+        return $this->createQueryBuilder('rt')
+            ->andWhere('rt.game = :gameId')
+            ->setParameter('gameId', $gameId)
+            ->orderBy('rt.throwId', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    public function findLatestForGameAndPlayer(int $gameId, int $playerId): ?RoundThrows
+    {
+        return $this->createQueryBuilder('rt')
+            ->andWhere('rt.game = :gameId')
+            ->andWhere('rt.player = :playerId')
+            ->setParameter('gameId', $gameId)
+            ->setParameter('playerId', $playerId)
+            ->orderBy('rt.throwId', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }
