@@ -2,16 +2,26 @@
 
 namespace App\Controller;
 
+use App\Dto\GameFinishDto;
 use App\Dto\StartGameRequest;
+<<<<<<< Updated upstream
 use App\Dto\ThrowRequest;
+=======
+use App\Entity\Game;
+use App\Enum\GameStatus;
+use App\Repository\UserRepository;
+use App\Service\GameFinishService;
+>>>>>>> Stashed changes
 use App\Service\GameStartService;
 use App\Service\GameThrowService;
 use InvalidArgumentException;
 use App\Repository\GameRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 /**
  * @throws InvalidArgumentException
@@ -47,6 +57,7 @@ final class GameController extends AbstractController
         return $this->json($game, context: ['groups' => 'game:read']);
     }
 
+<<<<<<< Updated upstream
     /**
      * @throws InvalidArgumentException
      * This function records a throw for a player in a game.
@@ -94,5 +105,52 @@ final class GameController extends AbstractController
         $gameThrowService->undoLastThrow($game);
 
         return $this->json($game, context: ['groups' => 'game:read']);
+=======
+    #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['POST'])]
+    public function finished(
+        int $gameId,
+        Request $request,
+        GameFinishService $gameFinishService,
+        ValidatorInterface $validator
+    ): Response {
+        try {
+            $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
+            $dto = GameFinishDto::fromArray($data);
+
+            $errors = $validator->validate($dto);
+            if (count($errors) > 0) {
+                return $this->json(
+                    ['errors' => (string) $errors],
+                    Response::HTTP_BAD_REQUEST
+                );
+            }
+
+            $game = $gameFinishService->finishGame(
+                $gameId,
+                $dto->winnerId,
+                $dto->finishedAt
+            );
+
+            if (!$game) {
+                return $this->json(
+                    ['error' => 'Game not found'],
+                    Response::HTTP_NOT_FOUND
+                );
+            }
+
+            return $this->json($game, context: ['groups' => 'game:read']);
+
+        } catch (\JsonException $e) {
+            return $this->json(
+                ['error' => 'Invalid JSON'],
+                Response::HTTP_BAD_REQUEST
+            );
+        } catch (\Throwable $e) {
+            return $this->json(
+                ['error' => 'An error occurred: ' . $e->getMessage()],
+                Response::HTTP_INTERNAL_SERVER_ERROR
+            );
+        }
+>>>>>>> Stashed changes
     }
 }
