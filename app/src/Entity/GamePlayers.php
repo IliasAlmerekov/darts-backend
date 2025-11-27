@@ -27,6 +27,9 @@ class GamePlayers
     #[ORM\Column(nullable: true)]
     private ?int $score = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?bool $isWinner = null;
+
     public function getGame(): ?Game
     {
         return $this->game;
@@ -83,6 +86,18 @@ class GamePlayers
     public function setGamePlayerId(int $gamePlayerId): static
     {
         $this->gamePlayerId = $gamePlayerId;
+
+        return $this;
+    }
+
+    public function isWinner(): ?bool
+    {
+        return $this->isWinner;
+    }
+
+    public function setIsWinner(?bool $isWinner): static
+    {
+        $this->isWinner = $isWinner;
 
         return $this;
     }

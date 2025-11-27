@@ -51,6 +51,9 @@ class Game
     #[ORM\Column(nullable: true)]
     private ?int $round = null;
 
+    #[ORM\Column(type: Types::TIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $finishedAt = null;
+
     public function __construct()
     {
         $this->gamePlayers = new ArrayCollection();
@@ -227,6 +230,18 @@ class Game
     public function setGameId(int $gameId): static
     {
         $this->gameId = $gameId;
+
+        return $this;
+    }
+
+    public function getFinishedAt(): ?\DateTimeImmutable
+    {
+        return $this->finishedAt;
+    }
+
+    public function setFinishedAt(?\DateTimeImmutable $finishedAt): static
+    {
+        $this->finishedAt = $finishedAt;
 
         return $this;
     }
