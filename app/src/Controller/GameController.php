@@ -1,8 +1,9 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Dto\GameFinishDto;
 use App\Dto\StartGameRequest;
 use App\Dto\ThrowRequest;
 use App\Service\GameFinishService;
@@ -14,7 +15,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 /**
  * @throws InvalidArgumentException
@@ -100,13 +100,11 @@ final class GameController extends AbstractController
     }
 
 
-    #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['POST'])]
+    #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['GET'])]
     public function finished(
         int $gameId,
-        #[MapRequestPayload] ?GameFinishDto $dto,
         GameRepository $gameRepository,
         GameFinishService $gameFinishService,
-        ValidatorInterface $validator
     ): Response {
         $game = $gameRepository->find($gameId);
 
@@ -117,18 +115,10 @@ final class GameController extends AbstractController
             );
         }
 
-        $errors = $validator->validate($dto ?? new GameFinishDto());
-        if (count($errors) > 0) {
-            return $this->json(
-                ['errors' => (string) $errors],
-                Response::HTTP_BAD_REQUEST
-            );
-        }
-
         try {
             $result = $gameFinishService->finishGame(
                 $game,
-                $dto?->finishedAt
+                null
             );
         } catch (\Throwable $e) {
             return $this->json(

@@ -34,15 +34,8 @@ class GameFinishService
 
     private function buildFinishedPlayersList(int $gameId): array
     {
-        $roundAverages = $this->roundThrowsRepository->getRoundAveragesForGame($gameId);
-        $avgMap = [];
-        foreach ($roundAverages as $row) {
-            $avgMap[(int) $row['playerId']][] = [
-                'roundNumber' => (int) $row['roundNumber'],
-                'average' => (float) $row['average'],
-            ];
-        }
-
+        $roundsPlayedMap = $this->roundThrowsRepository->getRoundsPlayedForGame($gameId);
+        $totalScoresMap = $this->roundThrowsRepository->getTotalScoreForGame($gameId);
         $players = $this->gamePlayersRepository->findByGameId($gameId);
 
         usort($players, static function (GamePlayers $a, GamePlayers $b): int {
@@ -68,12 +61,16 @@ class GameFinishService
         foreach ($players as $player) {
             $user = $player->getPlayer();
             $playerId = $user?->getId();
+            $roundsPlayed = $playerId !== null ? ($roundsPlayedMap[$playerId] ?? 0) : 0;
+            $totalScore = $playerId !== null ? ($totalScoresMap[$playerId] ?? 0.0) : 0.0;
+            $roundAverage = $roundsPlayed > 0 ? $totalScore / $roundsPlayed : 0.0;
+
             $result[] = [
                 'playerId' => $playerId,
                 'username' => $user?->getUsername(),
                 'position' => $player->getPosition(),
-                'score' => $player->getScore(),
-                'roundAverages' => $playerId !== null ? ($avgMap[$playerId] ?? []) : [],
+                'roundsPlayed' => $roundsPlayed,
+                'roundAverage' => $roundAverage,
             ];
         }
 
