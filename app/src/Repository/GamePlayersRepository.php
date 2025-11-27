@@ -61,6 +61,20 @@ class GamePlayersRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /**
+     * Counts how many players in a game have already finished (score == 0).
+     */
+    public function countFinishedPlayers(int $gameId): int
+    {
+        return (int) $this->createQueryBuilder('gp')
+            ->select('COUNT(gp.gamePlayerId)')
+            ->andWhere('gp.game = :gameId')
+            ->andWhere('gp.score = 0')
+            ->setParameter('gameId', $gameId)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
 
     //    /**
     //     * @return GamePlayers[] Returns an array of GamePlayers objects
