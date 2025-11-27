@@ -81,11 +81,54 @@ class RoundThrowsRepository extends ServiceEntityRepository
                 'AVG(rt.value) AS average'
             )
             ->innerJoin('rt.round', 'r')
-            ->andWhere('rt.game = :gameId')
+            ->andWhere('IDENTITY(rt.game) = :gameId')
             ->setParameter('gameId', $gameId)
             ->groupBy('playerId', 'r.roundNumber')
             ->orderBy('r.roundNumber', 'ASC')
             ->getQuery()
             ->getArrayResult();
+    }
+
+    /**
+     * Counts how many distinct rounds each player has played in a game.
+     */
+    public function getRoundsPlayedForGame(int $gameId): array
+    {
+        $rows = $this->createQueryBuilder('rt')
+            ->select('IDENTITY(rt.player) AS playerId', 'COUNT(DISTINCT r.roundNumber) AS roundsPlayed')
+            ->innerJoin('rt.round', 'r')
+            ->andWhere('IDENTITY(rt.game) = :gameId')
+            ->setParameter('gameId', $gameId)
+            ->groupBy('playerId')
+            ->getQuery()
+            ->getArrayResult();
+
+        $map = [];
+        foreach ($rows as $row) {
+            $map[(int) $row['playerId']] = (int) $row['roundsPlayed'];
+        }
+
+        return $map;
+    }
+
+    /**
+     * Sum of thrown values per player in a game.
+     */
+    public function getTotalScoreForGame(int $gameId): array
+    {
+        $rows = $this->createQueryBuilder('rt')
+            ->select('IDENTITY(rt.player) AS playerId', 'SUM(rt.value) AS totalValue')
+            ->andWhere('IDENTITY(rt.game) = :gameId')
+            ->setParameter('gameId', $gameId)
+            ->groupBy('playerId')
+            ->getQuery()
+            ->getArrayResult();
+
+        $map = [];
+        foreach ($rows as $row) {
+            $map[(int) $row['playerId']] = (float) $row['totalValue'];
+        }
+
+        return $map;
     }
 }
