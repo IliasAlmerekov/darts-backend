@@ -82,8 +82,12 @@ class GameThrowService
             } else {
                 $player->setScore($newScore);
                 $roundThrow->setScore($newScore);
-                if ($newScore === 0) {
-                    $game->setWinner($player->getPlayer());
+                if ($newScore === 0 && $currentScore > 0) {
+                    $finishedPlayers = $this->gamePlayersRepository->countFinishedPlayers((int) $game->getGameId());
+                    $player->setPosition($finishedPlayers + 1);
+                    if ($finishedPlayers === 0) {
+                        $game->setWinner($player->getPlayer());
+                    }
                 }
             }
         }

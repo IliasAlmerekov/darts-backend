@@ -68,4 +68,24 @@ class RoundThrowsRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
     }
+
+    /**
+     * Returns average throw value per round for each player in a game.
+     */
+    public function getRoundAveragesForGame(int $gameId): array
+    {
+        return $this->createQueryBuilder('rt')
+            ->select(
+                'IDENTITY(rt.player) AS playerId',
+                'r.roundNumber AS roundNumber',
+                'AVG(rt.value) AS average'
+            )
+            ->innerJoin('rt.round', 'r')
+            ->andWhere('rt.game = :gameId')
+            ->setParameter('gameId', $gameId)
+            ->groupBy('playerId', 'r.roundNumber')
+            ->orderBy('r.roundNumber', 'ASC')
+            ->getQuery()
+            ->getArrayResult();
+    }
 }
