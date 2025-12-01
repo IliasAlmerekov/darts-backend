@@ -37,7 +37,23 @@ class GameRoomController extends AbstractController
     public function roomCreate(Request $request, EntityManagerInterface $entityManager): Response
     {
         if ($request->isMethod('POST')) {
-            $game = $this->gameRoomService->createGame();
+            $payload = json_decode($request->getContent(), true);
+            $previousGameId = null;
+            $selectedPlayers = null;
+            $excludedPlayers = null;
+            if (is_array($payload) && isset($payload['previousGameId'])) {
+                $previousGameId = (int) $payload['previousGameId'];
+                if (isset($payload['playerIds']) && is_array($payload['playerIds'])) {
+                    $selectedPlayers = array_values(array_filter(array_map('intval', $payload['playerIds'])));
+                }
+                if (isset($payload['excludePlayerIds']) && is_array($payload['excludePlayerIds'])) {
+                    $excludedPlayers = array_values(array_filter(array_map('intval', $payload['excludePlayerIds'])));
+                }
+            } elseif ($request->query->has('previousGameId')) {
+                $previousGameId = $request->query->getInt('previousGameId');
+            }
+
+            $game = $this->gameRoomService->createGameWithPreviousPlayers($previousGameId ?: null, $selectedPlayers, $excludedPlayers);
 
             if (str_contains($request->headers->get('Accept', ''), 'application/json')) {
                 return $this->json([

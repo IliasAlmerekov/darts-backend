@@ -16,6 +16,17 @@ class RoundRepository extends ServiceEntityRepository
         parent::__construct($registry, Round::class);
     }
 
+    public function countFinishedRounds(int $gameId): int
+    {
+        return (int) $this->createQueryBuilder('r')
+            ->select('COUNT(DISTINCT r.roundNumber)')
+            ->andWhere('r.game = :gameId')
+            ->andWhere('r.finishedAt IS NOT NULL')
+            ->setParameter('gameId', $gameId)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
     //    /**
     //     * @return Round[] Returns an array of Round objects
     //     */

@@ -4,6 +4,7 @@ namespace App\Service;
 
 use App\Entity\Invitation;
 use App\Enum\GameStatus;
+use App\Service\GameFinishService;
 use App\Repository\InvitationRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -14,6 +15,7 @@ class RematchService
     public function __construct(
         private GameRoomService         $gameRoomService,
         private PlayerManagementService $playerManagementService,
+        private GameFinishService       $gameFinishService,
         private InvitationRepository    $invitationRepository,
         private EntityManagerInterface  $entityManager,
         private UrlGeneratorInterface   $urlGenerator
@@ -30,18 +32,20 @@ class RematchService
         }
 
         $newGame = $this->gameRoomService->createGame();
-        $newGame->setStatus(GameStatus::Started);
-        $newGame->setRound(1);
+        $newGame->setStatus(GameStatus::Lobby);
+        $newGame->setRound(null);
         $newGameId = $newGame->getGameId();
 
         $this->playerManagementService->copyPlayers($oldGameId, $newGameId);
 
         $invitationLink = $this->createInvitation($newGameId);
+        $finishedPlayers = $this->gameFinishService->finishGame($oldGame);
 
         return [
             'success' => true,
             'gameId' => $newGameId,
             'invitationLink' => $invitationLink,
+            'finishedPlayers' => $finishedPlayers,
         ];
     }
 
