@@ -192,4 +192,21 @@ class RoundThrowsRepository extends ServiceEntityRepository
             ->getQuery()
             ->getArrayResult();
     }
+
+    /**
+     * Counts distinct players who have finished rounds in finished games.
+     */
+    public function countPlayersWithFinishedRounds(): int
+    {
+        return (int) $this->createQueryBuilder('rt')
+            ->select('COUNT(DISTINCT u.id)')
+            ->innerJoin('rt.player', 'u')
+            ->innerJoin('rt.game', 'g')
+            ->innerJoin('rt.round', 'r')
+            ->andWhere('g.status = :status')
+            ->andWhere('r.finishedAt IS NOT NULL')
+            ->setParameter('status', GameStatus::Finished)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
 }

@@ -6,10 +6,12 @@ namespace App\Controller;
 
 use App\Dto\StartGameRequest;
 use App\Dto\ThrowRequest;
+use App\Enum\GameStatus;
 use App\Service\GameFinishService;
 use App\Service\GameStartService;
 use App\Service\GameStatisticsService;
 use App\Service\GameThrowService;
+use App\Repository\RoundThrowsRepository;
 use InvalidArgumentException;
 use App\Repository\GameRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -131,11 +133,52 @@ final class GameController extends AbstractController
         return $this->json($result, context: ['groups' => 'game:read']);
     }
 
+    #[Route('/api/games/overview', name: 'app_games_overview', methods: ['GET'])]
+    public function gamesOverview(
+        Request $request,
+        GameRepository $gameRepository,
+        GameFinishService $gameFinishService,
+    ): Response {
+        $limit = max(1, min(100, $request->query->getInt('limit', 20)));
+        $offset = max(0, $request->query->getInt('offset', 0));
+
+        $games = $gameRepository->createQueryBuilder('g')
+            ->andWhere('g.status = :status')
+            ->setParameter('status', GameStatus::Finished)
+            ->orderBy('g.finishedAt', 'DESC')
+            ->setFirstResult($offset)
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        $items = [];
+        foreach ($games as $game) {
+            $stats = $gameFinishService->getGameStats($game);
+
+            $items[] = [
+                'id' => $stats['gameId'],
+                'date' => $stats['date']?->format(\DateTimeInterface::ATOM),
+                'finishedAt' => $stats['finishedAt']?->format(\DateTimeInterface::ATOM),
+                'playersCount' => count($stats['finishedPlayers']),
+                'winnerName' => $stats['winner']['username'] ?? null,
+                'winnerId' => $stats['winner']['id'] ?? null,
+                'winnerRounds' => $stats['winnerRoundsPlayed'],
+            ];
+        }
+
+        return $this->json([
+            'limit' => $limit,
+            'offset' => $offset,
+            'items' => $items,
+        ]);
+    }
+
   
     #[Route('/api/players/stats', name: 'app_players_stats', methods: ['GET'])]
     public function playerStats(
         Request $request,
         GameStatisticsService $gameStatisticsService,
+        RoundThrowsRepository $roundThrowsRepository,
     ): Response {
         $limit = max(1, min(100, $request->query->getInt('limit', 20)));
         $offset = max(0, $request->query->getInt('offset', 0));
@@ -145,7 +188,12 @@ final class GameController extends AbstractController
 
         $stats = $gameStatisticsService->getPlayerStats($limit, $offset, $sortField, $sortDirection);
 
-        return $this->json($stats, context: ['groups' => 'stats:read']);
+        return $this->json([
+            'limit' => $limit,
+            'offset' => $offset,
+            'total' => $roundThrowsRepository->countPlayersWithFinishedRounds(),
+            'items' => $stats,
+        ], context: ['groups' => 'stats:read']);
     }
 
     private function parseSort(string $sort): array
