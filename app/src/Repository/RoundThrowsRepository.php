@@ -113,6 +113,30 @@ class RoundThrowsRepository extends ServiceEntityRepository
     }
 
     /**
+     * Returns the last round number each player participated in for a game.
+     *
+     * @return array<int,int>
+     */
+    public function getLastRoundNumberForGame(int $gameId): array
+    {
+        $rows = $this->createQueryBuilder('rt')
+            ->select('IDENTITY(rt.player) AS playerId', 'MAX(r.roundNumber) AS lastRound')
+            ->innerJoin('rt.round', 'r')
+            ->andWhere('IDENTITY(rt.game) = :gameId')
+            ->setParameter('gameId', $gameId)
+            ->groupBy('playerId')
+            ->getQuery()
+            ->getArrayResult();
+
+        $map = [];
+        foreach ($rows as $row) {
+            $map[(int) $row['playerId']] = (int) $row['lastRound'];
+        }
+
+        return $map;
+    }
+
+    /**
      * Sum of thrown values per player in a game.
      */
     public function getTotalScoreForGame(int $gameId): array
