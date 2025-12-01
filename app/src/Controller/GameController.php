@@ -8,10 +8,12 @@ use App\Dto\StartGameRequest;
 use App\Dto\ThrowRequest;
 use App\Service\GameFinishService;
 use App\Service\GameStartService;
+use App\Service\GameStatisticsService;
 use App\Service\GameThrowService;
 use InvalidArgumentException;
 use App\Repository\GameRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
@@ -99,7 +101,6 @@ final class GameController extends AbstractController
         return $this->json($game, context: ['groups' => 'game:read']);
     }
 
-
     #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['GET'])]
     public function finished(
         int $gameId,
@@ -128,5 +129,48 @@ final class GameController extends AbstractController
         }
 
         return $this->json($result, context: ['groups' => 'game:read']);
+    }
+
+  
+    #[Route('/api/players/stats', name: 'app_players_stats', methods: ['GET'])]
+    public function playerStats(
+        Request $request,
+        GameStatisticsService $gameStatisticsService,
+    ): Response {
+        $limit = max(1, min(100, $request->query->getInt('limit', 20)));
+        $offset = max(0, $request->query->getInt('offset', 0));
+
+        $sortParam = (string) $request->query->get('sort', 'average:desc');
+        [$sortField, $sortDirection] = $this->parseSort($sortParam);
+
+        $stats = $gameStatisticsService->getPlayerStats($limit, $offset, $sortField, $sortDirection);
+
+        return $this->json($stats, context: ['groups' => 'stats:read']);
+    }
+
+    private function parseSort(string $sort): array
+    {
+        $field = 'average';
+        $direction = 'desc';
+
+        if (str_contains($sort, ':')) {
+            [$candidateField, $candidateDirection] = explode(':', $sort, 2);
+            $field = strtolower(trim($candidateField)) ?: $field;
+            $direction = strtolower(trim($candidateDirection)) ?: $direction;
+        } elseif ($sort !== '') {
+            $field = strtolower(trim($sort));
+        }
+
+        if (!in_array($field, ['average', 'gamesplayed'], true)) {
+            $field = 'average';
+        }
+
+        $direction = $direction === 'asc' ? 'ASC' : 'DESC';
+
+        if ($field === 'gamesplayed') {
+            $field = 'gamesPlayed';
+        }
+
+        return [$field, $direction];
     }
 }

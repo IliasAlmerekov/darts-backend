@@ -180,7 +180,14 @@ class GameThrowService
             ]);
 
             if ($countForPlayer < 3) {
-                return; // noch nicht alle Spieler haben 3 Würfe gemacht
+                $latestThrow = $this->roundThrowsRepository->findOneBy(
+                    ['round' => $currentRound, 'player' => $player],
+                    ['throwNumber' => 'DESC']
+                );
+
+                if ($latestThrow === null || !$latestThrow->isBust()) {
+                    return; // noch nicht alle Spieler haben 3 Würfe gemacht
+                }
             }
         }
 

@@ -44,13 +44,19 @@ class PlayerManagementService
         return $gamePlayer;
     }
 
-    public function copyPlayers(int $fromGameId, int $toGameId): void
+    /**
+     * Copy players from one game to another. If a filter list is provided, only those players are copied.
+     *
+     * @param list<int>|null $playerIds
+     */
+    public function copyPlayers(int $fromGameId, int $toGameId, ?array $playerIds = null): void
     {
         $oldGamePlayers = $this->gamePlayersRepository->findByGameId($fromGameId);
+        $filter = $playerIds !== null ? array_map('intval', $playerIds) : null;
 
         foreach ($oldGamePlayers as $oldGamePlayer) {
             $player = $oldGamePlayer->getPlayer();
-            if ($player !== null) {
+            if ($player !== null && ($filter === null || in_array($player->getId(), $filter, true))) {
                 $this->addPlayer($toGameId, $player->getId());
             }
         }

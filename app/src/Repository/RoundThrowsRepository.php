@@ -2,6 +2,7 @@
 
 namespace App\Repository;
 
+use App\Enum\GameStatus;
 use App\Entity\RoundThrows;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -117,7 +118,10 @@ class RoundThrowsRepository extends ServiceEntityRepository
     public function getTotalScoreForGame(int $gameId): array
     {
         $rows = $this->createQueryBuilder('rt')
-            ->select('IDENTITY(rt.player) AS playerId', 'SUM(rt.value) AS totalValue')
+            ->select(
+                'IDENTITY(rt.player) AS playerId',
+                "SUM(CASE WHEN rt.isBust = true THEN 0 ELSE rt.value END) AS totalValue"
+            )
             ->andWhere('IDENTITY(rt.game) = :gameId')
             ->setParameter('gameId', $gameId)
             ->groupBy('playerId')
@@ -130,5 +134,38 @@ class RoundThrowsRepository extends ServiceEntityRepository
         }
 
         return $map;
+    }
+
+    /**
+     * Aggregated player statistics over finished games and finished rounds.
+     *
+     * @return array<int, array{playerId:int, username:string, gamesPlayed:string, totalValue:string, roundsFinished:string, scoreAverage:string|null}>
+     */
+    public function getPlayerStatistics(int $limit, int $offset, string $sortField = 'average', string $direction = 'DESC'): array
+    {
+        $orderColumn = $sortField === 'gamesPlayed' ? 'gamesPlayed' : 'scoreAverage';
+        $direction = strtoupper($direction) === 'ASC' ? 'ASC' : 'DESC';
+
+        return $this->createQueryBuilder('rt')
+            ->select(
+                'u.id AS playerId',
+                'u.username AS username',
+                'COUNT(DISTINCT g.gameId) AS gamesPlayed',
+                "SUM(CASE WHEN rt.isBust = true THEN 0 ELSE rt.value END) AS totalValue",
+                'COUNT(DISTINCT r.roundId) AS roundsFinished',
+                "(SUM(CASE WHEN rt.isBust = true THEN 0 ELSE rt.value END) / NULLIF(COUNT(DISTINCT r.roundId), 0)) AS scoreAverage"
+            )
+            ->innerJoin('rt.player', 'u')
+            ->innerJoin('rt.game', 'g')
+            ->innerJoin('rt.round', 'r')
+            ->andWhere('g.status = :status')
+            ->andWhere('r.finishedAt IS NOT NULL')
+            ->setParameter('status', GameStatus::Finished)
+            ->groupBy('u.id', 'u.username')
+            ->orderBy($orderColumn, $direction)
+            ->setFirstResult($offset)
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getArrayResult();
     }
 }
