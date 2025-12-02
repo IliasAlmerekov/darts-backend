@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Service;
 
@@ -21,8 +23,7 @@ class GameThrowService
         private readonly RoundRepository $roundRepository,
         private readonly RoundThrowsRepository $roundThrowsRepository,
         private readonly EntityManagerInterface $entityManager,
-    ) {
-    }
+    ) {}
 
     public function recordThrow(Game $game, ThrowRequest $dto): void
     {
@@ -58,8 +59,7 @@ class GameThrowService
             $finalValue = $baseValue * 2;
         }
 
-        $isBust = (bool) ($dto->isBust ?? false);
-        $currentScore = $player->getScore() ?? 0;
+        $currentScore = $player->getScore() ?? $game->getStartScore();
 
         $roundThrow = new RoundThrows();
         $roundThrow->setGame($game);
@@ -69,35 +69,65 @@ class GameThrowService
         $roundThrow->setValue($finalValue);
         $roundThrow->setIsDouble($isDouble);
         $roundThrow->setIsTriple($isTriple);
+
+        // Berechne den neuen Score
+        $newScore = $currentScore - $finalValue;
+        $wouldFinishGame = ($newScore === 0);
+
+        // Hole Game-Mode Einstellungen
+        $isDoubleOutMode = $game->isDoubleOut();
+        $isTripleOutMode = $game->isTripleOut();
+
+        // bust regeln
+        $isBust =
+            // Score unter 0
+            ($newScore < 0) ||
+
+            // Score = 1 bei Double-Out oder Triple-Out
+            (($isDoubleOutMode || $isTripleOutMode) && $newScore === 1) ||
+
+            // Score = 2 bei Triple-Out
+            ($isTripleOutMode && $newScore === 2) ||
+
+            // Finish ohne Double bei Double-Out
+            ($wouldFinishGame && $isDoubleOutMode && !$isDouble) ||
+
+            // Finish ohne Triple bei Triple-Out
+            ($wouldFinishGame && $isTripleOutMode && !$isTriple);
+
         $roundThrow->setIsBust($isBust);
 
         if ($isBust) {
-            $roundThrow->setScore($currentScore);
+            // bei bust Score auf Stand vor der Runde zurücksetzen
+            $previousThrowsInRound = $this->roundThrowsRepository->findBy([
+                'round' => $round,
+                'player' => $player->getPlayer(),
+            ]);
+
+            $pointsScoredInRound = 0;
+            foreach ($previousThrowsInRound as $prevThrow) {
+                if (!$prevThrow->isBust()) {
+                    $pointsScoredInRound += $prevThrow->getValue();
+                }
+            }
+
+            $resetScore = $currentScore + $pointsScoredInRound;
+            $roundThrow->setScore($resetScore);
+            $player->setScore($resetScore);
         } else {
-            $newScore = $currentScore - $finalValue;
-            if ($newScore < 0) {
-                $isBust = true;
-                $roundThrow->setIsBust(true);
-                $roundThrow->setScore($currentScore);
-            } else {
-                $player->setScore($newScore);
-                $roundThrow->setScore($newScore);
-                if ($newScore === 0 && $currentScore > 0) {
-                    $finishedPlayers = $this->gamePlayersRepository->countFinishedPlayers((int) $game->getGameId());
-                    $player->setPosition($finishedPlayers + 1);
-                    if ($finishedPlayers === 0) {
-                        $game->setWinner($player->getPlayer());
-                    }
+            // Kein Bust: Score normal aktualisieren
+            $player->setScore($newScore);
+            $roundThrow->setScore($newScore);
+
+            // Check ob Spieler gewonnen hat
+            if ($newScore === 0 && $currentScore > 0) {
+                $finishedPlayers = $this->gamePlayersRepository->countFinishedPlayers((int) $game->getGameId());
+                $player->setPosition($finishedPlayers + 1);
+                if ($finishedPlayers === 0) {
+                    $game->setWinner($player->getPlayer());
                 }
             }
         }
-
-        $roundThrow->setTimestamp(new \DateTime());
-
-        $this->entityManager->persist($roundThrow);
-        $this->entityManager->flush();
-
-        $this->maybeAdvanceRound($game, $round);
     }
 
     public function undoLastThrow(Game $game): void

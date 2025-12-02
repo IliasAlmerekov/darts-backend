@@ -66,6 +66,7 @@ final class GameController extends AbstractController
         #[MapRequestPayload] ThrowRequest $dto,
         GameRepository $gameRepository,
         GameThrowService $gameThrowService,
+        GameService $gameService
     ): Response {
         $game = $gameRepository->find($gameId);
 
@@ -82,7 +83,8 @@ final class GameController extends AbstractController
             return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
         }
 
-        return $this->json($game, context: ['groups' => 'game:read']);
+        $gameDto = $gameService->createGameDto($game);
+        return $this->json($gameDto);
     }
 
     #[Route('/api/game/{gameId}/throw', name: 'app_game_throw_undo', methods: ['DELETE'])]
@@ -90,6 +92,7 @@ final class GameController extends AbstractController
         int $gameId,
         GameRepository $gameRepository,
         GameThrowService $gameThrowService,
+        GameService $gameService
     ): Response {
         $game = $gameRepository->find($gameId);
 
@@ -101,8 +104,8 @@ final class GameController extends AbstractController
         }
 
         $gameThrowService->undoLastThrow($game);
-
-        return $this->json($game, context: ['groups' => 'game:read']);
+        $gameDto = $gameService->createGameDto($game);
+        return $this->json($gameDto);
     }
 
     #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['GET'])]
