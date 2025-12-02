@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\Dto\StartGameRequest;
 use App\Dto\ThrowRequest;
 use App\Enum\GameStatus;
+use App\Service\GameService;
 use App\Service\GameFinishService;
 use App\Service\GameStartService;
 use App\Service\GameStatisticsService;
@@ -15,6 +16,7 @@ use App\Repository\RoundThrowsRepository;
 use InvalidArgumentException;
 use App\Repository\GameRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
@@ -221,5 +223,31 @@ final class GameController extends AbstractController
         }
 
         return [$field, $direction];
+    }
+
+    #[Route('/api/game/{gameId}', name: 'app_game_state', methods: ['GET'])]
+    public function getGameState(
+        int $gameId,
+        GameRepository $gameRepository,
+        GameService $gameService
+    ): JsonResponse {
+        // Spiel aus der Datenbank abrufen
+        $game = $gameRepository->find($gameId);
+
+        // Überprüfen, ob das Spiel existiert
+        if (!$game) {
+            return $this->json(
+                ['error' => 'Game not found'],
+                JsonResponse::HTTP_NOT_FOUND
+            );
+        }
+        // GameService verwenden, um das GameResponseDto zu erstellen
+        // hier berechnen wir, sammeln die Wurfdaten, bauen Spielerliste mit allen Infos
+        $gameDto = $gameService->createGameDto($game);
+
+        // Das DTO als JSON-Antwort zurückgeben
+        // wir konvertieren das DTO automatisch in JSON
+        // alle public werden zu JSON Feldern
+        return $this->json($gameDto);
     }
 }
