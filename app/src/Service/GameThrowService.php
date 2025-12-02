@@ -8,6 +8,7 @@ use App\Dto\ThrowRequest;
 use App\Entity\Game;
 use App\Entity\Round;
 use App\Entity\RoundThrows;
+use App\Enum\GameStatus;
 use App\Repository\GamePlayersRepository;
 use App\Repository\RoundRepository;
 use App\Repository\RoundThrowsRepository;
@@ -123,8 +124,31 @@ class GameThrowService
             if ($newScore === 0 && $currentScore > 0) {
                 $finishedPlayers = $this->gamePlayersRepository->countFinishedPlayers((int) $game->getGameId());
                 $player->setPosition($finishedPlayers + 1);
+
                 if ($finishedPlayers === 0) {
                     $game->setWinner($player->getPlayer());
+                }
+
+                $activePlayers = 0;
+                foreach ($game->getGamePlayers() as $gamePlayer) {
+                    $playerScore = $gamePlayer->getScore() ?? $game->getStartScore();
+                    if ($playerScore > 0) {
+                        $activePlayers++;
+                    }
+                }
+                if ($activePlayers <= 1) {
+                    $game->setStatus(GameStatus::Finished);
+                    $game->setFinishedAt(new \DateTimeImmutable());
+
+                    if ($activePlayers === 1) {
+                        $finishedPlayers = $this->gamePlayersRepository->countFinishedPlayers((int) $game->getGameId());
+                        foreach ($game->getGamePlayers() as $gamePlayer) {
+                            $playerScore = $gamePlayer->getScore() ?? $game->getStartScore();
+                            if ($playerScore > 0 && $gamePlayer->getPosition() === null) {
+                                $gamePlayer->setPosition($finishedPlayers + 1);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -153,6 +177,41 @@ class GameThrowService
 
             if ($game->getWinner()?->getId() === $player->getId()) {
                 $game->setWinner(null);
+            }
+        }
+
+        // Alle Spieler-Positionen neu berechnen basierend auf aktuellen Scores
+        foreach ($game->getGamePlayers() as $gamePlayer) {
+            $currentPlayerScore = $gamePlayer->getScore() ?? $game->getStartScore();
+
+            // Wenn Score > 0, dann ist Spieler nicht fertig → Position zurücksetzen
+            if ($currentPlayerScore > 0 && $gamePlayer->getPosition() !== null) {
+                $gamePlayer->setPosition(0);
+            }
+        }
+
+        // Winner neu ermitteln: Der Spieler mit Position 1 (falls vorhanden)
+        $winnerPlayer = $this->gamePlayersRepository->findOneBy([
+            'game' => $game->getGameId(),
+            'position' => 1
+        ]);
+
+        $game->setWinner($winnerPlayer?->getPlayer());
+
+        // Game-Status zurücksetzen falls nötig
+        if ($game->getStatus() === GameStatus::Finished) {
+            $activePlayers = 0;
+            foreach ($game->getGamePlayers() as $gamePlayer) {
+                $playerScore = $gamePlayer->getScore() ?? $game->getStartScore();
+                if ($playerScore > 0) {
+                    $activePlayers++;
+                }
+            }
+
+            // Wenn wieder mehr als 1 Spieler aktiv ist, Status auf Started setzen
+            if ($activePlayers > 1) {
+                $game->setStatus(GameStatus::Started);
+                $game->setFinishedAt(null);
             }
         }
 
