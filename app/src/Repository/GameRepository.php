@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Game;
+use App\Enum\GameStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -31,14 +32,14 @@ class GameRepository extends ServiceEntityRepository
     //        ;
     //    }
 
-        public function findOneByGameId(int $gameId): ?Game
-        {
-            return $this->createQueryBuilder('g')
-                ->andWhere('g.gameId = :gameId')
-                ->setParameter('gameId', $gameId)
-                ->getQuery()
-                ->getOneOrNullResult();
-        }
+    public function findOneByGameId(int $gameId): ?Game
+    {
+        return $this->createQueryBuilder('g')
+            ->andWhere('g.gameId = :gameId')
+            ->setParameter('gameId', $gameId)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 
     public function findHighestGameId(): ?int
     {
@@ -48,5 +49,14 @@ class GameRepository extends ServiceEntityRepository
             ->getSingleScalarResult();
 
         return $result ? (int)$result : null;
+    }
+
+    public function countFinishedGames(): int{
+        return (int) $this->createQueryBuilder('g')
+            ->select('COUNT(g.gameId)')
+            ->andWhere('g.status = :status')
+            ->setParameter('status', GameStatus::Finished)
+            ->getQuery()
+            ->getSingleScalarResult();
     }
 }
