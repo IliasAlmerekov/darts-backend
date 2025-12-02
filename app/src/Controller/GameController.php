@@ -139,13 +139,13 @@ final class GameController extends AbstractController
         GameRepository $gameRepository,
         GameFinishService $gameFinishService,
     ): Response {
-        $limit = max(1, min(100, $request->query->getInt('limit', 20)));
+        $limit = max(1, min(100, $request->query->getInt('limit', 100)));
         $offset = max(0, $request->query->getInt('offset', 0));
 
         $games = $gameRepository->createQueryBuilder('g')
             ->andWhere('g.status = :status')
             ->setParameter('status', GameStatus::Finished)
-            ->orderBy('g.finishedAt', 'DESC')
+            ->orderBy('g.gameId', 'DESC')
             ->setFirstResult($offset)
             ->setMaxResults($limit)
             ->getQuery()
@@ -170,10 +170,11 @@ final class GameController extends AbstractController
             'limit' => $limit,
             'offset' => $offset,
             'items' => $items,
+            'total' => $gameRepository->countFinishedGames(),
         ]);
     }
 
-  
+
     #[Route('/api/players/stats', name: 'app_players_stats', methods: ['GET'])]
     public function playerStats(
         Request $request,

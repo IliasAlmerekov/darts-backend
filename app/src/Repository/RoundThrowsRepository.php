@@ -159,7 +159,6 @@ class RoundThrowsRepository extends ServiceEntityRepository
 
         return $map;
     }
-
     /**
      * Aggregated player statistics over finished games and finished rounds.
      *
