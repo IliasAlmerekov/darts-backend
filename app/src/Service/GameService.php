@@ -1,11 +1,10 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace App\Service;
 
 use App\Dto\GameResponseDto;
 use App\Dto\PlayerResponseDto;
+use App\Dto\ThrowResponseDto;
 use App\Entity\Game;
 use App\Repository\RoundRepository;
 use App\Repository\RoundThrowsRepository;
@@ -13,24 +12,26 @@ use App\Repository\RoundThrowsRepository;
 /**
  * This class is responsible for creating GameResponseDto objects from Game entities.
  */
-class GameService
+readonly class GameService
 {
     public function __construct(
-        private readonly RoundRepository $roundRepository,
-        private readonly RoundThrowsRepository $roundThrowsRepository,
-    ) {}
+        private RoundRepository       $roundRepository,
+        private RoundThrowsRepository $roundThrowsRepository,
+    )
+    {
+    }
 
 
     /**
      * Calculates and returns the id of the active player for the given game.
-     * 
+     *
      * Logic:
      * Players will be sorted by their position in the game.
      * The player is active if:
      * - He has not yet reached a score of 0 (not won)
      * - He has thrown less than 3 times in the current round
      * - He is not bust in the current round
-     * 
+     *
      * @param Game $game The game entity
      * @return int|null The id of the active player or null if no active player found
      */
@@ -86,11 +87,10 @@ class GameService
             }
         }
 
-        // Wenn wir hier ankommen: Alle Spieler haben 3 Würfe oder sind bust
+        // Wenn wir hier ankommen: Alle Spieler haben 3 Würfe oder sind bust.
         // Die Runde ist zu Ende, kein Spieler ist aktiv
         return null;
     }
-
 
 
     public function createGameDto(Game $game): GameResponseDto
@@ -131,22 +131,22 @@ class GameService
 
                 // Baue Array mit den einzelnen Würfen
                 foreach ($throws as $throw) {
-                    $currentRoundThrows[] = [
-                        'value' => $throw->getValue(),
-                        'isDouble' => $throw->isDouble(),
-                        'isTriple' => $throw->isTriple(),
-                        'isBust' => $throw->isBust(),
-                    ];
+                    $currentRoundThrows[] = new ThrowResponseDto(
+                        value: $throw->getValue(),
+                        isDouble: $throw->isDouble(),
+                        isTriple: $throw->isTriple(),
+                        isBust: $throw->isBust(),
+                    );
                 }
 
-                // Check ob der letzte Wurf ein Bust war
+                // Check, ob der letzte Wurf ein Bust war
                 if ($throwsThisRound > 0) {
                     $lastThrow = end($throws);
                     $isBust = $lastThrow->isBust();
                 }
             }
 
-            // Baue roundHistory: Alle Runden mit Würfen für diesen Spieler
+            // Baue roundHistory: alle Runden mit Würfen für diesen Spieler
             $allRounds = $this->roundRepository->findBy(
                 ['game' => $game],
                 ['roundNumber' => 'ASC']
@@ -159,15 +159,15 @@ class GameService
                 ], ['throwNumber' => 'ASC']);
 
                 if (count($roundThrows) > 0) {
-                    $throws = [];
-                    foreach ($roundThrows as $throw) {
-                        $throws[] = [
-                            'value' => $throw->getValue(),
-                            'isDouble' => $throw->isDouble(),
-                            'isTriple' => $throw->isTriple(),
-                            'isBust' => $throw->isBust(),
-                        ];
-                    }
+                    $throws = array_map(
+                        fn($throw) => new ThrowResponseDto(
+                            value: $throw->getValue(),
+                            isDouble: $throw->isDouble(),
+                            isTriple: $throw->isTriple(),
+                            isBust: $throw->isBust(),
+                        ),
+                        $roundThrows
+                    );
 
                     $roundHistory[] = [
                         'round' => $round->getRoundNumber(),

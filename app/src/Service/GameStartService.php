@@ -6,14 +6,17 @@ use App\Dto\StartGameRequest;
 use App\Entity\Game;
 use App\Entity\Round;
 use App\Enum\GameStatus;
+use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
+use InvalidArgumentException;
 
-class GameStartService
+readonly class GameStartService
 {
     public function __construct(
-        private readonly GameSetupService $gameSetupService,
-        private readonly EntityManagerInterface $entityManager,
-    ) {
+        private GameSetupService       $gameSetupService,
+        private EntityManagerInterface $entityManager,
+    )
+    {
     }
 
     public function start(Game $game, StartGameRequest $dto): void
@@ -34,11 +37,11 @@ class GameStartService
             $game->setTripleOut($dto->tripleOut);
         }
 
-        // Initialize first round if none exists
+        // Initialize the first round if none exists
         if ($game->getRounds()->isEmpty()) {
             $round = new Round();
             $round->setRoundNumber(1);
-            $round->setStartedAt(new \DateTime());
+            $round->setStartedAt(new DateTime());
             $game->addRound($round);
             $game->setRound(1);
         }
@@ -53,11 +56,11 @@ class GameStartService
         $count = $game->getGamePlayers()->count();
 
         if ($count < 2 || $count > 10) {
-            throw new \InvalidArgumentException('Game must have between 2 and 10 players to start.');
+            throw new InvalidArgumentException('Game must have between 2 and 10 players to start.');
         }
 
         if ($dto->playerPositions !== null && $count !== count($dto->playerPositions)) {
-            throw new \InvalidArgumentException('Player positions count must match players in game.');
+            throw new InvalidArgumentException('Player positions count must match players in game.');
         }
     }
 }

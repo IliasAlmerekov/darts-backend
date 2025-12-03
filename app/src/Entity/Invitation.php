@@ -1,10 +1,15 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Entity;
 
 use App\Repository\InvitationRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Uid\UuidV4;
 
+/**
+ * @ORM\Entity(repositoryClass: InvitationRepository::class)
+ * This class represents an invitation to join a game.
+ */
 #[ORM\Entity(repositoryClass: InvitationRepository::class)]
 class Invitation
 {
@@ -29,9 +34,9 @@ class Invitation
         return $this->uuid;
     }
 
-    public function setUuid(\Symfony\Component\Uid\UuidV4|string $uuid): static
+    public function setUuid(UuidV4|string $uuid): static
     {
-        $this->uuid = (string) $uuid;
+        $this->uuid = (string)$uuid;
 
         return $this;
     }

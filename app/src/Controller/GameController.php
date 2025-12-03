@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace App\Controller;
 
@@ -13,6 +11,7 @@ use App\Service\GameStartService;
 use App\Service\GameStatisticsService;
 use App\Service\GameThrowService;
 use App\Repository\RoundThrowsRepository;
+use DateTimeInterface;
 use InvalidArgumentException;
 use App\Repository\GameRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -21,6 +20,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
+use Throwable;
 
 /**
  * @throws InvalidArgumentException
@@ -30,11 +30,12 @@ final class GameController extends AbstractController
 {
     #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'])]
     public function start(
-        int $gameId,
+        int                                   $gameId,
         #[MapRequestPayload] StartGameRequest $dto,
-        GameRepository $gameRepository,
-        GameStartService $gameStartService,
-    ): Response {
+        GameRepository                        $gameRepository,
+        GameStartService                      $gameStartService,
+    ): Response
+    {
         $game = $gameRepository->find($gameId);
 
         if (!$game) {
@@ -62,12 +63,13 @@ final class GameController extends AbstractController
      */
     #[Route('/api/game/{gameId}/throw', name: 'app_game_throw', methods: ['POST'])]
     public function throw(
-        int $gameId,
+        int                               $gameId,
         #[MapRequestPayload] ThrowRequest $dto,
-        GameRepository $gameRepository,
-        GameThrowService $gameThrowService,
-        GameService $gameService
-    ): Response {
+        GameRepository                    $gameRepository,
+        GameThrowService                  $gameThrowService,
+        GameService                       $gameService
+    ): Response
+    {
         $game = $gameRepository->find($gameId);
 
         if (!$game) {
@@ -89,11 +91,12 @@ final class GameController extends AbstractController
 
     #[Route('/api/game/{gameId}/throw', name: 'app_game_throw_undo', methods: ['DELETE'])]
     public function undoThrow(
-        int $gameId,
-        GameRepository $gameRepository,
+        int              $gameId,
+        GameRepository   $gameRepository,
         GameThrowService $gameThrowService,
-        GameService $gameService
-    ): Response {
+        GameService      $gameService
+    ): Response
+    {
         $game = $gameRepository->find($gameId);
 
         if (!$game) {
@@ -110,10 +113,11 @@ final class GameController extends AbstractController
 
     #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['GET'])]
     public function finished(
-        int $gameId,
-        GameRepository $gameRepository,
+        int               $gameId,
+        GameRepository    $gameRepository,
         GameFinishService $gameFinishService,
-    ): Response {
+    ): Response
+    {
         $game = $gameRepository->find($gameId);
 
         if (!$game) {
@@ -125,10 +129,9 @@ final class GameController extends AbstractController
 
         try {
             $result = $gameFinishService->finishGame(
-                $game,
-                null
+                $game
             );
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return $this->json(
                 ['error' => 'An error occurred: ' . $e->getMessage()],
                 Response::HTTP_INTERNAL_SERVER_ERROR
@@ -140,12 +143,13 @@ final class GameController extends AbstractController
 
     #[Route('/api/games/overview', name: 'app_games_overview', methods: ['GET'])]
     public function gamesOverview(
-        Request $request,
-        GameRepository $gameRepository,
+        Request           $request,
+        GameRepository    $gameRepository,
         GameFinishService $gameFinishService,
-    ): Response {
+    ): Response
+    {
         $limit = max(1, min(100, $request->query->getInt('limit', 100)));
-        $offset = max(0, $request->query->getInt('offset', 0));
+        $offset = max(0, $request->query->getInt('offset'));
 
         $games = $gameRepository->createQueryBuilder('g')
             ->andWhere('g.status = :status')
@@ -162,8 +166,8 @@ final class GameController extends AbstractController
 
             $items[] = [
                 'id' => $stats['gameId'],
-                'date' => $stats['date']?->format(\DateTimeInterface::ATOM),
-                'finishedAt' => $stats['finishedAt']?->format(\DateTimeInterface::ATOM),
+                'date' => $stats['date']?->format(DateTimeInterface::ATOM),
+                'finishedAt' => $stats['finishedAt']?->format(DateTimeInterface::ATOM),
                 'playersCount' => count($stats['finishedPlayers']),
                 'winnerName' => $stats['winner']['username'] ?? null,
                 'winnerId' => $stats['winner']['id'] ?? null,
@@ -182,14 +186,15 @@ final class GameController extends AbstractController
 
     #[Route('/api/players/stats', name: 'app_players_stats', methods: ['GET'])]
     public function playerStats(
-        Request $request,
+        Request               $request,
         GameStatisticsService $gameStatisticsService,
         RoundThrowsRepository $roundThrowsRepository,
-    ): Response {
+    ): Response
+    {
         $limit = max(1, min(100, $request->query->getInt('limit', 20)));
-        $offset = max(0, $request->query->getInt('offset', 0));
+        $offset = max(0, $request->query->getInt('offset'));
 
-        $sortParam = (string) $request->query->get('sort', 'average:desc');
+        $sortParam = (string)$request->query->get('sort', 'average:desc');
         [$sortField, $sortDirection] = $this->parseSort($sortParam);
 
         $stats = $gameStatisticsService->getPlayerStats($limit, $offset, $sortField, $sortDirection);
@@ -230,10 +235,11 @@ final class GameController extends AbstractController
 
     #[Route('/api/game/{gameId}', name: 'app_game_state', methods: ['GET'])]
     public function getGameState(
-        int $gameId,
+        int            $gameId,
         GameRepository $gameRepository,
-        GameService $gameService
-    ): JsonResponse {
+        GameService    $gameService
+    ): JsonResponse
+    {
         // Spiel aus der Datenbank abrufen
         $game = $gameRepository->find($gameId);
 
@@ -241,16 +247,16 @@ final class GameController extends AbstractController
         if (!$game) {
             return $this->json(
                 ['error' => 'Game not found'],
-                JsonResponse::HTTP_NOT_FOUND
+                Response::HTTP_NOT_FOUND
             );
         }
-        // GameService verwenden, um das GameResponseDto zu erstellen
-        // hier berechnen wir, sammeln die Wurfdaten, bauen Spielerliste mit allen Infos
+        // GameService verwenden, um das GameResponseDto zu erstellen,
+        // hier berechnen wir, sammeln die Wurfdaten, bauen Spielerliste mit allen Informationen
         $gameDto = $gameService->createGameDto($game);
 
-        // Das DTO als JSON-Antwort zurückgeben
-        // wir konvertieren das DTO automatisch in JSON
-        // alle public werden zu JSON Feldern
+        // Das DTO als JSON-Antwort zurückgeben,
+        // wir konvertieren das DTO automatisch in JSON,
+        // alle public werden zu JSON-Feldern
         return $this->json($gameDto);
     }
 }

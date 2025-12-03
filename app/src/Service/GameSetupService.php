@@ -1,9 +1,13 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Service;
 
 use App\Entity\Game;
 
+/**
+ * Service to handle game setup.
+ * This class is responsible for setting up the initial game state.
+ */
 class GameSetupService
 {
     /**

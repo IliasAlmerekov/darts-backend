@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace App\Controller;
 
@@ -9,7 +7,6 @@ use App\Service\GameRoomService;
 use App\Service\PlayerManagementService;
 use App\Service\RematchService;
 use App\Service\SseStreamService;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -18,23 +15,23 @@ use Symfony\Component\HttpFoundation\Request;
 
 
 /**
- * This class handles game room related actions such as listing rooms,
+ * This class handles game-room-related actions such as listing rooms,
  * creating rooms, and viewing room details.
- * also get as JSON responses for API requests.
+ * Also get as JSON responses for API requests.
  */
 class GameRoomController extends AbstractController
 {
     public function __construct(
-        private GameRoomService         $gameRoomService,
-        private PlayerManagementService $playerManagementService,
-        private RematchService          $rematchService,
-        private SseStreamService        $sseStreamService
+        private readonly GameRoomService         $gameRoomService,
+        private readonly PlayerManagementService $playerManagementService,
+        private readonly RematchService          $rematchService,
+        private readonly SseStreamService $sseStreamService
     )
     {
     }
 
     #[Route(path: 'api/room/create', name: 'room_create', methods: ['POST', 'GET'])]
-    public function roomCreate(Request $request, EntityManagerInterface $entityManager): Response
+    public function roomCreate(Request $request): Response
     {
         if ($request->isMethod('POST')) {
             $payload = json_decode($request->getContent(), true);
@@ -42,7 +39,7 @@ class GameRoomController extends AbstractController
             $selectedPlayers = null;
             $excludedPlayers = null;
             if (is_array($payload) && isset($payload['previousGameId'])) {
-                $previousGameId = (int) $payload['previousGameId'];
+                $previousGameId = (int)$payload['previousGameId'];
                 if (isset($payload['playerIds']) && is_array($payload['playerIds'])) {
                     $selectedPlayers = array_values(array_filter(array_map('intval', $payload['playerIds'])));
                 }
@@ -65,7 +62,7 @@ class GameRoomController extends AbstractController
             return $this->redirectToRoute('create_invitation', ['id' => $game->getGameId()]);
         }
 
-        return $this->render('room/create.html.twig', []);
+        return $this->render('room/create.html.twig');
     }
 
     private function resolvePlayerId(Request $request): ?int
@@ -85,7 +82,7 @@ class GameRoomController extends AbstractController
             }
         }
 
-        // get from current user
+        // get from the current user
         $user = $this->getUser();
         if ($user instanceof User) {
             return $user->getId();

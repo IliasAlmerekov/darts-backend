@@ -1,22 +1,28 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Entity\Game;
 use App\Entity\GamePlayers;
+use App\Entity\User;
 use App\Repository\GamePlayersRepository;
 use App\Repository\InvitationRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Exception\ORMException;
+use LogicException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 use Symfony\Component\HttpFoundation\Request;
 
+/**
+ * Controller to handle user login and logout.
+ */
 class SecurityController extends AbstractController
 {
     #[Route(path: 'api/login', name: 'app_login', methods: ['GET', 'POST'])]
-    public function login(AuthenticationUtils $authenticationUtils, Request $request): Response
+    public function login(AuthenticationUtils $authenticationUtils): Response
     {
         $user = $this->getUser();
 
@@ -36,15 +42,21 @@ class SecurityController extends AbstractController
 
     #[Route('api/login/success', name: 'login_success')]
     public function loginSuccess(
-        Request $request,
+        Request                $request,
         EntityManagerInterface $entityManager,
-        InvitationRepository $invitationRepository,
-        GamePlayersRepository $gamePlayersRepository
-    ): Response {
+        InvitationRepository   $invitationRepository,
+        GamePlayersRepository  $gamePlayersRepository
+    ): Response
+    {
         $user = $this->getUser();
 
+        // Ensure a user is an instance of a User entity
+        if (!$user instanceof User) {
+            return $this->json(['error' => 'User not authenticated'], Response::HTTP_UNAUTHORIZED);
+        }
+
         // Admin redirect
-        if ($user && in_array('ROLE_ADMIN', $user->getRoles())) {
+        if (in_array('ROLE_ADMIN', $user->getRoles())) {
             return $this->json([
                 'success' => true,
                 'roles' => $user->getStoredRoles(),
@@ -67,13 +79,19 @@ class SecurityController extends AbstractController
             $gameId = $invitation->getGameId();
             $userId = $user->getId();
 
-            // Add player to game if not already in
-            if (!$gamePlayersRepository->findOneBy(['game' => $gameId, 'player' => $userId])) {
-                $gamePlayer = new GamePlayers();
-                $gamePlayer->setGame($entityManager->getReference(\App\Entity\Game::class, $gameId));
-                $gamePlayer->setPlayer($entityManager->getReference(\App\Entity\User::class, $userId));
-                $entityManager->persist($gamePlayer);
-                $entityManager->flush();
+            try {
+                // Add player to game if not already in
+                if (!$gamePlayersRepository->findOneBy(['game' => $gameId, 'player' => $userId])) {
+                    $gamePlayer = new GamePlayers();
+                    $gamePlayer->setGame($entityManager->getReference(Game::class, $gameId));
+                    $gamePlayer->setPlayer($entityManager->getReference(User::class, $userId));
+                    $entityManager->persist($gamePlayer);
+                    $entityManager->flush();
+                }
+            } catch (ORMException) {
+                return $this->json([
+                    'error' => 'Database error occurred while adding player to game'
+                ], Response::HTTP_INTERNAL_SERVER_ERROR);
             }
 
             return $this->json([
@@ -84,7 +102,7 @@ class SecurityController extends AbstractController
                 'redirect' => '/joined'
             ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
         }
-        
+
 
         // Default player redirect
         return $this->json([
@@ -95,9 +113,10 @@ class SecurityController extends AbstractController
             'redirect' => '/playerprofile'
         ]);
     }
+
     #[Route(path: 'api/logout', name: 'app_logout')]
     public function logout(): void
     {
-        throw new \LogicException('This method can be blank - it will be intercepted by the logout key on your firewall.');
+        throw new LogicException('This method can be blank - it will be intercepted by the logout key on your firewall.');
     }
 }

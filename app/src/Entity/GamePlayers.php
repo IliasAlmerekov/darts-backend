@@ -1,10 +1,14 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Entity;
 
 use App\Repository\GamePlayersRepository;
 use Doctrine\ORM\Mapping as ORM;
 
+/**
+ * @ORM\Entity(repositoryClass: GamePlayersRepository::class)
+ * This class represents the association between a Game and its Players.
+ */
 #[ORM\Entity(repositoryClass: GamePlayersRepository::class)]
 class GamePlayers
 {
@@ -14,7 +18,7 @@ class GamePlayers
     private ?int $gamePlayerId = null;
 
     #[ORM\ManyToOne(inversedBy: 'gamePlayers')]
-    #[ORM\JoinColumn(nullable: false, referencedColumnName: 'game_id')]
+    #[ORM\JoinColumn(referencedColumnName: 'game_id', nullable: false)]
     private ?Game $game = null;
 
     #[ORM\ManyToOne]
