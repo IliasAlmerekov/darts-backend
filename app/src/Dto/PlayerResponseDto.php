@@ -14,7 +14,9 @@ class PlayerResponseDto
         public bool $isBust,
         public ?int $position = null,
         public int $throwsInCurrentRound = 0,
-        public array $currentRoundThrows = [], // [{ value: 20, isDouble: true, isBust: false }, ...]
+        /** @var list<ThrowResponseDto> */
+        public array $currentRoundThrows = [],
+        /** @var list<array{round:int, throws:list<ThrowResponseDto>}> */
         public array $roundHistory = [],
     ) {}
 }
