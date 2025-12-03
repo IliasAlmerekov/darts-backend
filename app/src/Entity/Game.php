@@ -149,7 +149,7 @@ class Game
         return $this->round;
     }
 
-    public function setRound(int $round): static
+    public function setRound(?int $round): static
     {
         $this->round = $round;
 

@@ -118,18 +118,61 @@ class GameService
 
             $throwsThisRound = 0;
             $isBust = false;
+            $currentRoundThrows = [];
+            $roundHistory = [];
 
             if ($roundEntity) {
                 $throws = $this->roundThrowsRepository->findBy([
-                    'round' => $roundEntity, 
+                    'round' => $roundEntity,
                     'player' => $user
-                ]);
+                ], ['throwNumber' => 'ASC']);
+
                 $throwsThisRound = count($throws);
+
+                // Baue Array mit den einzelnen Würfen
+                foreach ($throws as $throw) {
+                    $currentRoundThrows[] = [
+                        'value' => $throw->getValue(),
+                        'isDouble' => $throw->isDouble(),
+                        'isTriple' => $throw->isTriple(),
+                        'isBust' => $throw->isBust(),
+                    ];
+                }
 
                 // Check ob der letzte Wurf ein Bust war
                 if ($throwsThisRound > 0) {
                     $lastThrow = end($throws);
                     $isBust = $lastThrow->isBust();
+                }
+            }
+
+            // Baue roundHistory: Alle Runden mit Würfen für diesen Spieler
+            $allRounds = $this->roundRepository->findBy(
+                ['game' => $game],
+                ['roundNumber' => 'ASC']
+            );
+
+            foreach ($allRounds as $round) {
+                $roundThrows = $this->roundThrowsRepository->findBy([
+                    'round' => $round,
+                    'player' => $user
+                ], ['throwNumber' => 'ASC']);
+
+                if (count($roundThrows) > 0) {
+                    $throws = [];
+                    foreach ($roundThrows as $throw) {
+                        $throws[] = [
+                            'value' => $throw->getValue(),
+                            'isDouble' => $throw->isDouble(),
+                            'isTriple' => $throw->isTriple(),
+                            'isBust' => $throw->isBust(),
+                        ];
+                    }
+
+                    $roundHistory[] = [
+                        'round' => $round->getRoundNumber(),
+                        'throws' => $throws
+                    ];
                 }
             }
 
@@ -145,7 +188,9 @@ class GameService
                 isActive: $isActive,
                 isBust: $isBust,
                 position: $gamePlayer->getPosition(),
-                throwsInCurrentRound: $throwsThisRound
+                throwsInCurrentRound: $throwsThisRound,
+                currentRoundThrows: $currentRoundThrows,
+                roundHistory: $roundHistory
             );
         }
 

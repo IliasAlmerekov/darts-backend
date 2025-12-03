@@ -70,7 +70,7 @@ class GameThrowService
         $roundThrow->setValue($finalValue);
         $roundThrow->setIsDouble($isDouble);
         $roundThrow->setIsTriple($isTriple);
-
+        $roundThrow->setTimestamp(new \DateTime());
         // Berechne den neuen Score
         $newScore = $currentScore - $finalValue;
         $wouldFinishGame = ($newScore === 0);
@@ -152,6 +152,11 @@ class GameThrowService
                 }
             }
         }
+
+        $this->entityManager->persist($roundThrow);
+        $this->entityManager->flush();
+
+        $this->maybeAdvanceRound($game, $round);
     }
 
     public function undoLastThrow(Game $game): void

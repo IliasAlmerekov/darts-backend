@@ -14,6 +14,7 @@ class PlayerResponseDto
         public bool $isBust,
         public ?int $position = null,
         public int $throwsInCurrentRound = 0,
+        public array $currentRoundThrows = [], // [{ value: 20, isDouble: true, isBust: false }, ...]
         public array $roundHistory = [],
     ) {}
 }
