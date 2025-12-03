@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Service;
 
@@ -8,36 +8,42 @@ use App\Enum\GameStatus;
 use App\Repository\GamePlayersRepository;
 use App\Repository\RoundRepository;
 use App\Repository\RoundThrowsRepository;
+use DateTimeImmutable;
+use DateTimeInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
-class GameFinishService
+/**
+ * Service to handle finishing games.
+ * This class is responsible for updating the game status and recalculating the positions of the players.
+ */
+readonly class GameFinishService
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
-        private readonly GamePlayersRepository $gamePlayersRepository,
-        private readonly RoundThrowsRepository $roundThrowsRepository,
-        private readonly RoundRepository $roundRepository,
+        private EntityManagerInterface $entityManager,
+        private GamePlayersRepository  $gamePlayersRepository,
+        private RoundThrowsRepository  $roundThrowsRepository,
+        private RoundRepository        $roundRepository,
     )
     {
     }
 
-    public function finishGame(Game $game, ?\DateTimeInterface $finishedAt = null): array
+    public function finishGame(Game $game, ?DateTimeInterface $finishedAt = null): array
     {
         $game->setStatus(GameStatus::Finished);
-        $game->setFinishedAt($finishedAt ?? new \DateTimeImmutable());
+        $game->setFinishedAt($finishedAt ?? new DateTimeImmutable());
 
         $this->recalculatePositions($game);
 
         $this->entityManager->flush();
 
-        $finishedRounds = $this->roundRepository->countFinishedRounds((int) $game->getGameId());
+        $finishedRounds = $this->roundRepository->countFinishedRounds((int)$game->getGameId());
 
-        return $this->buildFinishedPlayersList((int) $game->getGameId(), $finishedRounds);
+        return $this->buildFinishedPlayersList((int)$game->getGameId(), $finishedRounds);
     }
 
     private function recalculatePositions(Game $game): void
     {
-        $players = $this->gamePlayersRepository->findByGameId((int) $game->getGameId());
+        $players = $this->gamePlayersRepository->findByGameId((int)$game->getGameId());
 
         usort($players, static function (GamePlayers $a, GamePlayers $b): int {
             $scoreA = $a->getScore() ?? PHP_INT_MAX;
@@ -57,7 +63,7 @@ class GameFinishService
 
     public function getGameStats(Game $game): array
     {
-        $gameId = (int) $game->getGameId();
+        $gameId = (int)$game->getGameId();
         $finishedRounds = $this->roundRepository->countFinishedRounds($gameId);
         $roundsPlayedMap = $this->roundThrowsRepository->getRoundsPlayedForGame($gameId);
         $totalScoresMap = $this->roundThrowsRepository->getTotalScoreForGame($gameId);

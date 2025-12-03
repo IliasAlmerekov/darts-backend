@@ -1,28 +1,26 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\Invitation;
 use App\Entity\User;
-use App\Entity\Game;
 use App\Repository\GamePlayersRepository;
 use App\Repository\InvitationRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Exception\ORMException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Uid\Uuid;
 
 /**
- * This class handles invitation related actions such as creating invitations,
+ * This class handles invitation-related actions such as creating invitations,
  * joining via invitation links, and processing invitations.
- * also get as JSON responses for API requests.
+ * Also get as JSON responses for API requests.
  */
 class InvitationController extends AbstractController
 {
@@ -56,7 +54,7 @@ class InvitationController extends AbstractController
 
         $users = $userRepository->findBy(['id' => $playerIds]);
 
-        $invitationLink = $this->generateUrl('join_invitation', ['uuid' => $invitation->getUuid()], UrlGeneratorInterface::ABSOLUTE_PATH);
+        $invitationLink = $this->generateUrl('join_invitation', ['uuid' => $invitation->getUuid()]);
 
         if (str_contains($request->headers->get('Accept', ''), 'application/json')) {
             return $this->json([
@@ -88,12 +86,16 @@ class InvitationController extends AbstractController
         return $this->redirect('http://localhost:5173/');
     }
 
+    /**
+     * @throws ORMException
+     */
     #[Route('api/invite/process', name: 'process_invitation')]
     public function processInvitation(
-        Request $request,
-        GamePlayersRepository $gamePlayersRepository,
+        Request                $request,
+        GamePlayersRepository  $gamePlayersRepository,
         EntityManagerInterface $entityManager
-    ): Response {
+    ): Response
+    {
         $user = $this->getUser();
         if (!$user instanceof User) {
             return $this->redirectToRoute('app_login');
@@ -106,7 +108,7 @@ class InvitationController extends AbstractController
 
         if (!$gamePlayersRepository->isPlayerInGame($gameId, $user->getId())) {
             $gamePlayer = new GamePlayers();
-            $gamePlayer->setGame($entityManager->getReference(\App\Entity\Game::class, $gameId));
+            $gamePlayer->setGame($entityManager->getReference(Game::class, $gameId));
             $gamePlayer->setPlayer($entityManager->getReference(User::class, $user->getId()));
 
             $entityManager->persist($gamePlayer);

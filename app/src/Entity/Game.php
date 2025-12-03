@@ -1,14 +1,20 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Entity;
 
 use App\Enum\GameStatus;
 use App\Repository\GameRepository;
+use DateTime;
+use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
+/**
+ * @ORM\Entity(repositoryClass: GameRepository::class)
+ * This class represents a game
+ */
 #[ORM\Entity(repositoryClass: GameRepository::class)]
 class Game
 {
@@ -24,9 +30,9 @@ class Game
     private ?User $winner = null;
 
     #[ORM\Column(type: Types::DATE_MUTABLE)]
-    private ?\DateTime $date = null;
+    private ?DateTime $date = null;
 
-    #[ORM\Column(options: ['default' => 301], nullable: true)]
+    #[ORM\Column(nullable: true, options: ['default' => 301])]
     private int $startScore = 301;
 
     #[ORM\Column(options: ['default' => false])]
@@ -38,10 +44,10 @@ class Game
     #[ORM\Column(enumType: GameStatus::class, options: ['default' => GameStatus::Lobby->value])]
     private GameStatus $status = GameStatus::Lobby;
 
-    #[ORM\OneToMany(mappedBy: 'game', targetEntity: GamePlayers::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OneToMany(targetEntity: GamePlayers::class, mappedBy: 'game', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $gamePlayers;
 
-    #[ORM\OneToMany(mappedBy: 'game', targetEntity: Round::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OneToMany(targetEntity: Round::class, mappedBy: 'game', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $rounds;
 
     #[ORM\OneToOne(cascade: ['persist', 'remove'])]
@@ -52,7 +58,7 @@ class Game
     private ?int $round = null;
 
     #[ORM\Column(type: Types::TIME_IMMUTABLE, nullable: true)]
-    private ?\DateTimeImmutable $finishedAt = null;
+    private ?DateTimeImmutable $finishedAt = null;
 
     public function __construct()
     {
@@ -84,12 +90,12 @@ class Game
         return $this;
     }
 
-    public function getDate(): ?\DateTime
+    public function getDate(): ?DateTime
     {
         return $this->date;
     }
 
-    public function setDate(\DateTime $date): static
+    public function setDate(DateTime $date): static
     {
         $this->date = $date;
 
@@ -176,9 +182,6 @@ class Game
 
     public function removeGamePlayer(GamePlayers $gamePlayer): static
     {
-        if ($this->gamePlayers->removeElement($gamePlayer)) {
-            // orphanRemoval will delete the record; owning side is GamePlayers::game
-        }
 
         return $this;
     }
@@ -203,9 +206,6 @@ class Game
 
     public function removeRound(Round $round): static
     {
-        if ($this->rounds->removeElement($round)) {
-            // orphanRemoval will delete on flush
-        }
 
         return $this;
     }
@@ -234,12 +234,12 @@ class Game
         return $this;
     }
 
-    public function getFinishedAt(): ?\DateTimeImmutable
+    public function getFinishedAt(): ?DateTimeImmutable
     {
         return $this->finishedAt;
     }
 
-    public function setFinishedAt(?\DateTimeImmutable $finishedAt): static
+    public function setFinishedAt(?DateTimeImmutable $finishedAt): static
     {
         $this->finishedAt = $finishedAt;
 

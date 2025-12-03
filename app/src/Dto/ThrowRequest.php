@@ -1,9 +1,13 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Dto;
 
 use Symfony\Component\Validator\Constraints as Assert;
 
+/**
+ * @psalm-immutable
+ * This class is used to serialize a throw request
+ */
 class ThrowRequest
 {
     #[Assert\NotNull]

@@ -1,12 +1,14 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace App\Dto;
 
 use Symfony\Component\Serializer\Attribute\SerializedName;
 use Symfony\Component\Validator\Constraints as Assert;
 
+/**
+ * @psalm-immutable
+ * This class is used to serialize game start request
+ */
 class StartGameRequest
 {
     #[Assert\Choice(choices: [101, 201, 301, 401, 501])]

@@ -1,9 +1,9 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace App\Dto;
-
+/**
+ * This class is used to serialize player stats
+ */
 class PlayerResponseDto
 {
     public function __construct(

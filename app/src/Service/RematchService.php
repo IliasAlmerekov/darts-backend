@@ -1,16 +1,20 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Service;
 
 use App\Entity\Invitation;
 use App\Enum\GameStatus;
-use App\Service\GameFinishService;
 use App\Repository\InvitationRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Exception\ORMException;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Uid\Uuid;
 
-class RematchService
+/**
+ * Service to handle rematches.
+ * This class is responsible for creating a new game and copying players from the old game.
+ */
+readonly class RematchService
 {
     public function __construct(
         private GameRoomService         $gameRoomService,
@@ -23,6 +27,9 @@ class RematchService
     {
     }
 
+    /**
+     * @throws ORMException
+     */
     public function createRematch(int $oldGameId): array
     {
         $oldGame = $this->gameRoomService->findGameById($oldGameId);
@@ -65,8 +72,7 @@ class RematchService
 
         return $this->urlGenerator->generate(
             'join_invitation',
-            ['uuid' => $invitation->getUuid()],
-            UrlGeneratorInterface::ABSOLUTE_PATH
+            ['uuid' => $invitation->getUuid()]
         );
     }
 }

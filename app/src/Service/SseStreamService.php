@@ -1,14 +1,19 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Service;
 
+use DateTimeInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use App\Repository\RoundThrowsRepository;
 
-class SseStreamService
+/**
+ * Service to create SSE streams for players and throws.
+ * This class is responsible for sending updates to the client via SSE.
+ */
+ readonly class SseStreamService
 {
     public function __construct(
-        private GameRoomService $gameRoomService,
+        private GameRoomService                $gameRoomService,
         private RoundThrowsRepository $roundThrowsRepository
     )
     {
@@ -49,8 +54,8 @@ class SseStreamService
                     $lastThrowId = $latestThrow['id'];
                     $eventId++;
 
-                    if ($latestThrow['timestamp'] instanceof \DateTimeInterface) {
-                        $latestThrow['timestamp'] = $latestThrow['timestamp']->format(\DateTimeInterface::ATOM);
+                    if ($latestThrow['timestamp'] instanceof DateTimeInterface) {
+                        $latestThrow['timestamp'] = $latestThrow['timestamp']->format(DateTimeInterface::ATOM);
                     }
 
                     echo 'id: ' . $eventId . "\n";

@@ -1,11 +1,12 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace App\Dto;
 
 use Symfony\Component\Serializer\Annotation\Groups;
 
+/**
+ * This class is used to serialize player stats
+ */
 class PlayerStatsDto
 {
     #[Groups(['stats:read'])]

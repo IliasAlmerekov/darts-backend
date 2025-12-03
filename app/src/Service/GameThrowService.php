@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace App\Service;
 
@@ -12,19 +10,25 @@ use App\Enum\GameStatus;
 use App\Repository\GamePlayersRepository;
 use App\Repository\RoundRepository;
 use App\Repository\RoundThrowsRepository;
+use DateTime;
+use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
+use InvalidArgumentException;
 
 /**
  * Service to handle recording of game throws.
+ * This class is responsible for updating the game state and recalculating the positions of the players.
  */
-class GameThrowService
+readonly class GameThrowService
 {
     public function __construct(
-        private readonly GamePlayersRepository $gamePlayersRepository,
-        private readonly RoundRepository $roundRepository,
-        private readonly RoundThrowsRepository $roundThrowsRepository,
-        private readonly EntityManagerInterface $entityManager,
-    ) {}
+        private GamePlayersRepository  $gamePlayersRepository,
+        private RoundRepository        $roundRepository,
+        private RoundThrowsRepository  $roundThrowsRepository,
+        private EntityManagerInterface $entityManager,
+    )
+    {
+    }
 
     public function recordThrow(Game $game, ThrowRequest $dto): void
     {
@@ -34,7 +38,7 @@ class GameThrowService
         ]);
 
         if ($player === null) {
-            throw new \InvalidArgumentException('Player not found in this game');
+            throw new InvalidArgumentException('Player not found in this game');
         }
 
         $round = $this->getCurrentRound($game);
@@ -45,15 +49,15 @@ class GameThrowService
         ]);
 
         if ($playerThrowsThisRound >= 3) {
-            throw new \InvalidArgumentException('This player has already thrown 3 times in the current round.');
+            throw new InvalidArgumentException('This player has already thrown 3 times in the current round.');
         }
 
         $throwNumber = $playerThrowsThisRound + 1;
 
         $baseValue = $dto->value ?? 0;
         $finalValue = $baseValue;
-        $isDouble = (bool) ($dto->isDouble ?? false);
-        $isTriple = (bool) ($dto->isTriple ?? false);
+        $isDouble = $dto->isDouble ?? false;
+        $isTriple = $dto->isTriple ?? false;
         if ($isTriple) {
             $finalValue = $baseValue * 3;
         } elseif ($isDouble) {
@@ -70,7 +74,7 @@ class GameThrowService
         $roundThrow->setValue($finalValue);
         $roundThrow->setIsDouble($isDouble);
         $roundThrow->setIsTriple($isTriple);
-        $roundThrow->setTimestamp(new \DateTime());
+        $roundThrow->setTimestamp(new DateTime());
         // Berechne den neuen Score
         $newScore = $currentScore - $finalValue;
         $wouldFinishGame = ($newScore === 0);
@@ -99,7 +103,7 @@ class GameThrowService
         $roundThrow->setIsBust($isBust);
 
         if ($isBust) {
-            // bei bust Score auf Stand vor der Runde zurücksetzen
+            // Bei bust Score auf Stand vor der Runde zurücksetzen
             $previousThrowsInRound = $this->roundThrowsRepository->findBy([
                 'round' => $round,
                 'player' => $player->getPlayer(),
@@ -120,9 +124,9 @@ class GameThrowService
             $player->setScore($newScore);
             $roundThrow->setScore($newScore);
 
-            // Check ob Spieler gewonnen hat
+            // Check, ob der Spieler gewonnen hat
             if ($newScore === 0 && $currentScore > 0) {
-                $finishedPlayers = $this->gamePlayersRepository->countFinishedPlayers((int) $game->getGameId());
+                $finishedPlayers = $this->gamePlayersRepository->countFinishedPlayers((int)$game->getGameId());
                 $player->setPosition($finishedPlayers + 1);
 
                 if ($finishedPlayers === 0) {
@@ -138,10 +142,10 @@ class GameThrowService
                 }
                 if ($activePlayers <= 1) {
                     $game->setStatus(GameStatus::Finished);
-                    $game->setFinishedAt(new \DateTimeImmutable());
+                    $game->setFinishedAt(new DateTimeImmutable());
 
                     if ($activePlayers === 1) {
-                        $finishedPlayers = $this->gamePlayersRepository->countFinishedPlayers((int) $game->getGameId());
+                        $finishedPlayers = $this->gamePlayersRepository->countFinishedPlayers((int)$game->getGameId());
                         foreach ($game->getGamePlayers() as $gamePlayer) {
                             $playerScore = $gamePlayer->getScore() ?? $game->getStartScore();
                             if ($playerScore > 0 && $gamePlayer->getPosition() === null) {
@@ -176,9 +180,7 @@ class GameThrowService
             $previousThrow = $this->roundThrowsRepository->findLatestForGameAndPlayer($game->getGameId(), $player->getId());
             $playerScore = $previousThrow?->getScore() ?? $game->getStartScore();
             $gamePlayer = $this->gamePlayersRepository->findOneBy(['game' => $game->getGameId(), 'player' => $player->getId()]);
-            if ($gamePlayer) {
-                $gamePlayer->setScore($playerScore);
-            }
+            $gamePlayer?->setScore($playerScore);
 
             if ($game->getWinner()?->getId() === $player->getId()) {
                 $game->setWinner(null);
@@ -189,13 +191,13 @@ class GameThrowService
         foreach ($game->getGamePlayers() as $gamePlayer) {
             $currentPlayerScore = $gamePlayer->getScore() ?? $game->getStartScore();
 
-            // Wenn Score > 0, dann ist Spieler nicht fertig → Position zurücksetzen
+            // Wenn Score > 0, dann ist der Spieler nicht fertig → Position zurücksetzen
             if ($currentPlayerScore > 0 && $gamePlayer->getPosition() !== null) {
                 $gamePlayer->setPosition(0);
             }
         }
 
-        // Winner neu ermitteln: Der Spieler mit Position 1 (falls vorhanden)
+        // Winner neu ermitteln: der Spieler mit Position 1 (falls vorhanden)
         $winnerPlayer = $this->gamePlayersRepository->findOneBy([
             'game' => $game->getGameId(),
             'position' => 1
@@ -203,7 +205,7 @@ class GameThrowService
 
         $game->setWinner($winnerPlayer?->getPlayer());
 
-        // Game-Status zurücksetzen falls nötig
+        // Game-Status zurücksetzen, falls nötig
         if ($game->getStatus() === GameStatus::Finished) {
             $activePlayers = 0;
             foreach ($game->getGamePlayers() as $gamePlayer) {
@@ -228,7 +230,7 @@ class GameThrowService
             ->getQuery()
             ->getSingleScalarResult();
 
-        $game->setRound($latestRoundNumber ? (int) $latestRoundNumber : $lastThrowRoundNumber);
+        $game->setRound($latestRoundNumber ? (int)$latestRoundNumber : $lastThrowRoundNumber);
 
         $this->entityManager->flush();
     }
@@ -246,7 +248,7 @@ class GameThrowService
             $round = new Round();
             $round->setRoundNumber($roundNumber);
             $round->setGame($game);
-            $round->setStartedAt(new \DateTime());
+            $round->setStartedAt(new DateTime());
             $this->entityManager->persist($round);
             $game->addRound($round);
         }
@@ -261,7 +263,7 @@ class GameThrowService
             return;
         }
 
-        // wir prüfenen, ob alle Spieler 3 Würfe gemacht haben 
+        // Wir prüfen, ob alle Spieler 3 Würfe gemacht haben
         foreach ($game->getGamePlayers() as $gp) {
             $player = $gp->getPlayer();
             if ($player === null) {
@@ -280,13 +282,13 @@ class GameThrowService
                 );
 
                 if ($latestThrow === null || !$latestThrow->isBust()) {
-                    return; // noch nicht alle Spieler haben 3 Würfe gemacht
+                    return; // Noch nicht alle Spieler haben 3 Würfe gemacht
                 }
             }
         }
 
         // Alle Spieler haben 3 Würfe gemacht — wir gehen zur nächsten Runde über
-        $currentRound->setFinishedAt(new \DateTime());
+        $currentRound->setFinishedAt(new DateTime());
 
         $nextRoundNumber = ($game->getRound() ?? $currentRound->getRoundNumber()) + 1;
         $game->setRound($nextRoundNumber);
@@ -294,7 +296,7 @@ class GameThrowService
         $nextRound = new Round();
         $nextRound->setRoundNumber($nextRoundNumber);
         $nextRound->setGame($game);
-        $nextRound->setStartedAt(new \DateTime());
+        $nextRound->setStartedAt(new DateTime());
         $game->addRound($nextRound);
 
         $this->entityManager->flush();

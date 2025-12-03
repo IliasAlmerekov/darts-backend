@@ -1,11 +1,16 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Entity;
 
 use App\Repository\RoundThrowsRepository;
+use DateTimeInterface;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
+/**
+ * @ORM\Entity(repositoryClass: RoundThrowsRepository::class)
+ * This class represents a round throw.
+ */
 #[ORM\Entity(repositoryClass: RoundThrowsRepository::class)]
 class RoundThrows
 {
@@ -15,11 +20,11 @@ class RoundThrows
     private ?int $throwId = null;
 
     #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: false, referencedColumnName: 'game_id')]
+    #[ORM\JoinColumn(referencedColumnName: 'game_id', nullable: false)]
     private ?Game $game = null;
 
     #[ORM\ManyToOne(inversedBy: 'roundThrows')]
-    #[ORM\JoinColumn(nullable: false, referencedColumnName: 'round_id')]
+    #[ORM\JoinColumn(referencedColumnName: 'round_id', nullable: false)]
     private ?Round $round = null;
 
     #[ORM\ManyToOne]
@@ -45,7 +50,7 @@ class RoundThrows
     private ?int $score = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
-    private ?\DateTimeInterface $timestamp = null;
+    private ?DateTimeInterface $timestamp = null;
 
     public function getGame(): ?Game
     {
@@ -155,12 +160,12 @@ class RoundThrows
         return $this;
     }
 
-    public function getTimestamp(): ?\DateTimeInterface
+    public function getTimestamp(): ?DateTimeInterface
     {
         return $this->timestamp;
     }
 
-    public function setTimestamp(\DateTimeInterface $timestamp): static
+    public function setTimestamp(DateTimeInterface $timestamp): static
     {
         $this->timestamp = $timestamp;
 

@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Entity;
 
@@ -8,6 +8,10 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
+/**
+ * @ORM\Entity(repositoryClass: UserRepository::class)
+ * This class represents a registered user.
+ */
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_USERNAME', fields: ['username'])]
@@ -92,7 +96,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function getStoredRoles(): array
     {
-        return $this->roles; // Returns only roles from database
+        return $this->roles; // Returns only roles from a database
     }
 
     /**

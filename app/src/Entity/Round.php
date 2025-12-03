@@ -1,13 +1,18 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Entity;
 
 use App\Repository\RoundRepository;
+use DateTimeInterface;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
+/**
+ * @ORM\Entity(repositoryClass: RoundRepository::class)
+ * This class represents a round of a game.
+ */
 #[ORM\Entity(repositoryClass: RoundRepository::class)]
 class Round
 {
@@ -17,19 +22,19 @@ class Round
     private ?int $roundId = null;
 
     #[ORM\ManyToOne(inversedBy: 'rounds')]
-    #[ORM\JoinColumn(nullable: false, referencedColumnName: 'game_id')]
+    #[ORM\JoinColumn(referencedColumnName: 'game_id', nullable: false)]
     private ?Game $game = null;
 
     #[ORM\Column]
     private ?int $roundNumber = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
-    private ?\DateTimeInterface $startedAt = null;
+    private ?DateTimeInterface $startedAt = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
-    private ?\DateTimeInterface $finishedAt = null;
+    private ?DateTimeInterface $finishedAt = null;
 
-    #[ORM\OneToMany(mappedBy: 'round', targetEntity: RoundThrows::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OneToMany(targetEntity: RoundThrows::class, mappedBy: 'round', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $roundThrows;
 
     public function __construct()
@@ -73,24 +78,24 @@ class Round
         return $this;
     }
 
-    public function getStartedAt(): ?\DateTimeInterface
+    public function getStartedAt(): ?DateTimeInterface
     {
         return $this->startedAt;
     }
 
-    public function setStartedAt(?\DateTimeInterface $startedAt): static
+    public function setStartedAt(?DateTimeInterface $startedAt): static
     {
         $this->startedAt = $startedAt;
 
         return $this;
     }
 
-    public function getFinishedAt(): ?\DateTimeInterface
+    public function getFinishedAt(): ?DateTimeInterface
     {
         return $this->finishedAt;
     }
 
-    public function setFinishedAt(?\DateTimeInterface $finishedAt): static
+    public function setFinishedAt(?DateTimeInterface $finishedAt): static
     {
         $this->finishedAt = $finishedAt;
 
@@ -118,7 +123,7 @@ class Round
     public function removeRoundThrow(RoundThrows $roundThrow): static
     {
         if ($this->roundThrows->removeElement($roundThrow)) {
-            // orphanRemoval will delete on flush
+            // orphanRemoval will delete on a flush
         }
 
         return $this;

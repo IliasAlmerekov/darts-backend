@@ -1,10 +1,14 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Entity;
 
 use App\Repository\PlayerStatsRepository;
 use Doctrine\ORM\Mapping as ORM;
 
+/**
+ * @ORM\Entity(repositoryClass: PlayerStatsRepository::class)
+ * This class represents the statistics of a player.
+ */
 #[ORM\Entity(repositoryClass: PlayerStatsRepository::class)]
 class PlayerStats
 {
