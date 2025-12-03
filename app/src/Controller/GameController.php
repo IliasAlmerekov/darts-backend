@@ -18,8 +18,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Serializer\SerializerInterface;
 use Throwable;
 
 /**
@@ -31,11 +31,13 @@ final class GameController extends AbstractController
     #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'])]
     public function start(
         int                                   $gameId,
-        #[MapRequestPayload] StartGameRequest $dto,
+        Request                               $request,
         GameRepository                        $gameRepository,
         GameStartService                      $gameStartService,
-    ): Response
-    {
+        SerializerInterface                   $serializer,
+    ): Response {
+        $dto = $serializer->deserialize($request->getContent(), StartGameRequest::class, 'json');
+
         $game = $gameRepository->find($gameId);
 
         if (!$game) {
@@ -64,12 +66,14 @@ final class GameController extends AbstractController
     #[Route('/api/game/{gameId}/throw', name: 'app_game_throw', methods: ['POST'])]
     public function throw(
         int                               $gameId,
-        #[MapRequestPayload] ThrowRequest $dto,
+        Request                           $request,
         GameRepository                    $gameRepository,
         GameThrowService                  $gameThrowService,
-        GameService                       $gameService
-    ): Response
-    {
+        GameService                       $gameService,
+        SerializerInterface               $serializer,
+    ): Response {
+        $dto = $serializer->deserialize($request->getContent(), ThrowRequest::class, 'json');
+
         $game = $gameRepository->find($gameId);
 
         if (!$game) {
@@ -95,8 +99,7 @@ final class GameController extends AbstractController
         GameRepository   $gameRepository,
         GameThrowService $gameThrowService,
         GameService      $gameService
-    ): Response
-    {
+    ): Response {
         $game = $gameRepository->find($gameId);
 
         if (!$game) {
@@ -116,8 +119,7 @@ final class GameController extends AbstractController
         int               $gameId,
         GameRepository    $gameRepository,
         GameFinishService $gameFinishService,
-    ): Response
-    {
+    ): Response {
         $game = $gameRepository->find($gameId);
 
         if (!$game) {
@@ -146,8 +148,7 @@ final class GameController extends AbstractController
         Request           $request,
         GameRepository    $gameRepository,
         GameFinishService $gameFinishService,
-    ): Response
-    {
+    ): Response {
         $limit = max(1, min(100, $request->query->getInt('limit', 100)));
         $offset = max(0, $request->query->getInt('offset'));
 
@@ -189,8 +190,7 @@ final class GameController extends AbstractController
         Request               $request,
         GameStatisticsService $gameStatisticsService,
         RoundThrowsRepository $roundThrowsRepository,
-    ): Response
-    {
+    ): Response {
         $limit = max(1, min(100, $request->query->getInt('limit', 20)));
         $offset = max(0, $request->query->getInt('offset'));
 
@@ -238,8 +238,7 @@ final class GameController extends AbstractController
         int            $gameId,
         GameRepository $gameRepository,
         GameService    $gameService
-    ): JsonResponse
-    {
+    ): JsonResponse {
         // Spiel aus der Datenbank abrufen
         $game = $gameRepository->find($gameId);
 
