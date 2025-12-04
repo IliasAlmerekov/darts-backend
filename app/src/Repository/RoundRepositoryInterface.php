@@ -9,13 +9,14 @@ interface RoundRepositoryInterface
     /**
      * @param array<string, mixed> $criteria
      * @param array<string, string>|null $orderBy
+     * @return Round|object|null
      */
-    public function findOneBy(array $criteria, ?array $orderBy = null): ?Round;
+    public function findOneBy(array $criteria, ?array $orderBy = null): ?object;
 
     /**
      * @param array<string, mixed> $criteria
      * @param array<string, string>|null $orderBy
-     * @return Round[]
+     * @return Round[]|array<object>
      */
     public function findBy(array $criteria, ?array $orderBy = null, $limit = null, $offset = null): array;
 
