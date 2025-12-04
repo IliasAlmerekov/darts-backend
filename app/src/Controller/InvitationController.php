@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Controller;
 
@@ -34,28 +36,28 @@ final class InvitationController extends AbstractController
      * @return Response
      */
     #[Route('api/invite/create/{id}', name: 'create_invitation')]
-    public function createInvitation(int $id, Request $request, EntityManagerInterface $entityManager, InvitationRepository $invitationRepository, GamePlayersRepository $gamePlayersRepository, UserRepository $userRepository): Response
-    {
+    public function createInvitation(
+        int $id,
+        Request $request,
+        EntityManagerInterface $entityManager,
+        InvitationRepository $invitationRepository,
+        GamePlayersRepository $gamePlayersRepository,
+        UserRepository $userRepository
+    ): Response {
         $invitation = $invitationRepository->findOneBy(['gameId' => $id]);
-
         if (null === $invitation) {
             $uuid = Uuid::v4();
             $invitation = new Invitation();
             $invitation->setUuid($uuid);
             $invitation->setGameId($id);
-
             $entityManager->persist($invitation);
             $entityManager->flush();
         }
 
         $players = $gamePlayersRepository->findByGameId($id);
-
         $playerIds = array_map(fn($player) => $player->getPlayer()?->getId(), $players);
-
         $users = $userRepository->findBy(['id' => $playerIds]);
-
         $invitationLink = $this->generateUrl('join_invitation', ['uuid' => $invitation->getUuid()]);
-
         if (str_contains($request->headers->get('Accept') ?? '', 'application/json')) {
             return $this->json([
                 'success' => true,
@@ -78,11 +80,9 @@ final class InvitationController extends AbstractController
             return $this->render('invitation/not_found.html.twig');
         }
         $session = $request->getSession();
-
         $session->remove('invitation_uuid');
         $session->set('invitation_uuid', $uuid);
         $session->set('game_id', $invitation->getGameId());
-
         return $this->redirect('http://localhost:5173/');
     }
 
@@ -91,17 +91,15 @@ final class InvitationController extends AbstractController
      */
     #[Route('api/invite/process', name: 'process_invitation')]
     public function processInvitation(
-        Request                $request,
-        GamePlayersRepository  $gamePlayersRepository,
+        Request $request,
+        GamePlayersRepository $gamePlayersRepository,
         EntityManagerInterface $entityManager
-    ): Response
-    {
+    ): Response {
         $user = $this->getUser();
         if (!$user instanceof User) {
             return $this->redirectToRoute('app_login');
         }
         $gameId = $request->getSession()->get('game_id');
-
         if (!$gameId) {
             return $this->redirectToRoute('room_list');
         }
@@ -115,14 +113,12 @@ final class InvitationController extends AbstractController
             $gamePlayer = new GamePlayers();
             $gamePlayer->setGame($entityManager->getReference(Game::class, $gameId));
             $gamePlayer->setPlayer($entityManager->getReference(User::class, $userId));
-
             $entityManager->persist($gamePlayer);
             $entityManager->flush();
         }
 
         $request->getSession()->remove('invitation_uuid');
         $request->getSession()->remove('game_id');
-
         return $this->redirectToRoute('waiting_room');
     }
 }

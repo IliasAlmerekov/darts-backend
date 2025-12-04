@@ -1,6 +1,9 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Dto;
+
 /**
  * This class is used to serialize player stats
  */
@@ -13,10 +16,9 @@ final class PlayerResponseDto
         public bool $isActive,
         public bool $isBust,
         public ?int $position = null,
-        public int $throwsInCurrentRound = 0,
-        /** @var list<ThrowResponseDto> */
-        public array $currentRoundThrows = [],
-        /** @var list<array{round:int, throws:list<ThrowResponseDto>}> */
+        public int $throwsInCurrentRound = 0, /** @var list<ThrowResponseDto> */
+        public array $currentRoundThrows = [], /** @var list<array{round:int, throws:list<ThrowResponseDto>}> */
         public array $roundHistory = [],
-    ) {}
+    ) {
+    }
 }

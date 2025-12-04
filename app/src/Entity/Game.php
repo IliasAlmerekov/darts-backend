@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Entity;
 
@@ -44,7 +46,12 @@ class Game
     #[ORM\Column(enumType: GameStatus::class, options: ['default' => GameStatus::Lobby->value])]
     private GameStatus $status = GameStatus::Lobby;
 
-    #[ORM\OneToMany(targetEntity: GamePlayers::class, mappedBy: 'game', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OneToMany(
+        targetEntity: GamePlayers::class,
+        mappedBy: 'game',
+        cascade: ['persist', 'remove'],
+        orphanRemoval: true
+    )]
     private Collection $gamePlayers;
 
     #[ORM\OneToMany(targetEntity: Round::class, mappedBy: 'game', cascade: ['persist', 'remove'], orphanRemoval: true)]
@@ -182,6 +189,12 @@ class Game
 
     public function removeGamePlayer(GamePlayers $gamePlayer): static
     {
+        if ($this->gamePlayers->removeElement($gamePlayer)) {
+            // set the owning side to null (unless already changed)
+            if ($gamePlayer->getGame() === $this) {
+                $gamePlayer->setGame(null);
+            }
+        }
 
         return $this;
     }
@@ -206,6 +219,12 @@ class Game
 
     public function removeRound(Round $round): static
     {
+        if ($this->rounds->removeElement($round)) {
+            // set the owning side to null (unless already changed)
+            if ($round->getGame() === $this) {
+                $round->setGame(null);
+            }
+        }
 
         return $this;
     }

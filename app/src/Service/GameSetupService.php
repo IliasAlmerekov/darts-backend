@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Service;
 
@@ -16,10 +18,8 @@ final class GameSetupService
     public function applyInitialScoresAndPositions(Game $game, ?array $playerPositions = null): void
     {
         $players = $game->getGamePlayers();
-
         $startScore = $game->getStartScore();
-
-        /** @var array<int, int> $positionMap */
+/** @var array<int, int> $positionMap */
         $positionMap = [];
         if ($playerPositions !== null) {
             foreach ($playerPositions as $index => $playerId) {
@@ -31,7 +31,6 @@ final class GameSetupService
 
         foreach ($players as $index => $player) {
             $player->setScore($startScore);
-
             $playerId = $player->getPlayer()?->getId();
             if ($playerId !== null && isset($positionMap[$playerId])) {
                 $player->setPosition($positionMap[$playerId]);

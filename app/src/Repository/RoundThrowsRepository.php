@@ -162,10 +162,21 @@ final class RoundThrowsRepository extends ServiceEntityRepository
     /**
      * Aggregated player statistics over finished games and finished rounds.
      *
-     * @return array<int, array{playerId:int, username:string, gamesPlayed:string, totalValue:string, roundsFinished:string, scoreAverage:string|null}>
+     * @return array<int, array{
+     *     playerId:int,
+     *     username:string,
+     *     gamesPlayed:string,
+     *     totalValue:string,
+     *     roundsFinished:string,
+     *     scoreAverage:string|null
+     * }>
      */
-    public function getPlayerStatistics(int $limit, int $offset, string $sortField = 'average', string $direction = 'DESC'): array
-    {
+    public function getPlayerStatistics(
+        int $limit,
+        int $offset,
+        string $sortField = 'average',
+        string $direction = 'DESC'
+    ): array {
         $orderColumn = $sortField === 'gamesPlayed' ? 'gamesPlayed' : 'scoreAverage';
         $direction = strtoupper($direction) === 'ASC' ? 'ASC' : 'DESC';
 
@@ -176,7 +187,8 @@ final class RoundThrowsRepository extends ServiceEntityRepository
                 'COUNT(DISTINCT g.gameId) AS gamesPlayed',
                 "SUM(CASE WHEN rt.isBust = true THEN 0 ELSE rt.value END) AS totalValue",
                 'COUNT(DISTINCT r.roundId) AS roundsFinished',
-                "(SUM(CASE WHEN rt.isBust = true THEN 0 ELSE rt.value END) / NULLIF(COUNT(DISTINCT r.roundId), 0)) AS scoreAverage"
+                "(SUM(CASE WHEN rt.isBust = true THEN 0 ELSE rt.value END) / "
+                . "NULLIF(COUNT(DISTINCT r.roundId), 0)) AS scoreAverage"
             )
             ->innerJoin('rt.player', 'u')
             ->innerJoin('rt.game', 'g')

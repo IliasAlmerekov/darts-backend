@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Entity;
 
@@ -16,22 +18,16 @@ class PlayerStats
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $playerId = null;
-
     #[ORM\Column(nullable: true)]
     private ?int $wins = null;
-
     #[ORM\Column]
     private ?int $winPercentage = null;
-
     #[ORM\Column(nullable: true)]
     private ?int $roundAverage = null;
-
     #[ORM\Column(nullable: true)]
     private ?int $highestCheckout = null;
-
     #[ORM\Column(nullable: true)]
     private ?int $gamesPlayed = null;
-
     public function getPlayerId(): ?int
     {
         return $this->playerId;
@@ -40,7 +36,6 @@ class PlayerStats
     public function setPlayerId(int $playerId): static
     {
         $this->playerId = $playerId;
-
         return $this;
     }
 
@@ -52,7 +47,6 @@ class PlayerStats
     public function setWins(?int $wins): static
     {
         $this->wins = $wins;
-
         return $this;
     }
 
@@ -64,7 +58,6 @@ class PlayerStats
     public function setWinPercentage(int $winPercentage): static
     {
         $this->winPercentage = $winPercentage;
-
         return $this;
     }
 
@@ -76,7 +69,6 @@ class PlayerStats
     public function setRoundAverage(?int $roundAverage): static
     {
         $this->roundAverage = $roundAverage;
-
         return $this;
     }
 
@@ -88,7 +80,6 @@ class PlayerStats
     public function setHighestCheckout(?int $highestCheckout): static
     {
         $this->highestCheckout = $highestCheckout;
-
         return $this;
     }
 
@@ -100,7 +91,6 @@ class PlayerStats
     public function setGamesPlayed(?int $gamesPlayed): static
     {
         $this->gamesPlayed = $gamesPlayed;
-
         return $this;
     }
 }

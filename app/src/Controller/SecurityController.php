@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Controller;
 
@@ -25,15 +27,12 @@ final class SecurityController extends AbstractController
     public function login(AuthenticationUtils $authenticationUtils): Response
     {
         $user = $this->getUser();
-
         if ($user) {
             return $this->redirectToRoute('login_success');
         }
 
         $error = $authenticationUtils->getLastAuthenticationError();
-
         $lastUsername = $authenticationUtils->getLastUsername();
-
         return $this->render('security/login.html.twig', [
             'last_username' => $lastUsername,
             'error' => $error,
@@ -42,15 +41,13 @@ final class SecurityController extends AbstractController
 
     #[Route('api/login/success', name: 'login_success')]
     public function loginSuccess(
-        Request                $request,
+        Request $request,
         EntityManagerInterface $entityManager,
-        InvitationRepository   $invitationRepository,
-        GamePlayersRepository  $gamePlayersRepository
-    ): Response
-    {
+        InvitationRepository $invitationRepository,
+        GamePlayersRepository $gamePlayersRepository
+    ): Response {
         $user = $this->getUser();
-
-        // Ensure a user is an instance of a User entity
+// Ensure a user is an instance of a User entity
         if (!$user instanceof User) {
             return $this->json(['error' => 'User not authenticated'], Response::HTTP_UNAUTHORIZED);
         }
@@ -71,16 +68,14 @@ final class SecurityController extends AbstractController
         if ($session->has('invitation_uuid')) {
             $uuid = $session->get('invitation_uuid');
             $invitation = $invitationRepository->findOneBy(['uuid' => $uuid]);
-
             if ($invitation === null) {
                 return $this->json(['error' => 'Invitation not found'], Response::HTTP_NOT_FOUND);
             }
 
             $gameId = $invitation->getGameId();
             $userId = $user->getId();
-
             try {
-                // Add player to game if not already in
+    // Add player to game if not already in
                 if (!$gamePlayersRepository->findOneBy(['game' => $gameId, 'player' => $userId])) {
                     $gamePlayer = new GamePlayers();
                     $gamePlayer->setGame($entityManager->getReference(Game::class, $gameId));
@@ -90,7 +85,7 @@ final class SecurityController extends AbstractController
                 }
             } catch (ORMException) {
                 return $this->json([
-                    'error' => 'Database error occurred while adding player to game'
+                'error' => 'Database error occurred while adding player to game'
                 ], Response::HTTP_INTERNAL_SERVER_ERROR);
             }
 
@@ -117,6 +112,8 @@ final class SecurityController extends AbstractController
     #[Route(path: 'api/logout', name: 'app_logout')]
     public function logout(): void
     {
-        throw new LogicException('This method can be blank - it will be intercepted by the logout key on your firewall.');
+        throw new LogicException(
+            'This method can be blank - it will be intercepted by the logout key on your firewall.'
+        );
     }
 }

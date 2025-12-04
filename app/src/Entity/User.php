@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Entity;
 
@@ -23,26 +25,20 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
-
-
     #[ORM\Column(length: 30)]
     private ?string $username = null;
-
     #[ORM\Column(length: 180)]
     private ?string $email = null;
-
-    /**
+/**
      * @var list<string> The user roles
      */
     #[ORM\Column]
     private array $roles = [];
-
-    /**
+/**
      * @var string The hashed password
      */
     #[ORM\Column]
     private ?string $password = null;
-
     public function getId(): ?int
     {
         return $this->id;
@@ -56,7 +52,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setUsername(string $username): static
     {
         $this->username = $username;
-
         return $this;
     }
 
@@ -68,7 +63,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setEmail(string $email): static
     {
         $this->email = $email;
-
         return $this;
     }
 
@@ -91,15 +85,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getRoles(): array
     {
         $roles = $this->roles;
-
         $roles[] = 'ROLE_USER';
-
         return array_unique($roles);
     }
 
     public function getStoredRoles(): array
     {
-        return $this->roles; // Returns only roles from a database
+        return $this->roles;
+// Returns only roles from a database
     }
 
     /**
@@ -108,7 +101,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setRoles(array $roles): static
     {
         $this->roles = $roles;
-
         return $this;
     }
 
@@ -124,7 +116,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setPassword(string $password): static
     {
         $this->password = $password;
-
         return $this;
     }
 
@@ -134,8 +125,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function __serialize(): array
     {
         $data = (array) $this;
-        $data["\0".self::class."\0password"] = hash('crc32c', $this->password ?? '');
-
+        $data["\0" . self::class . "\0password"] = hash('crc32c', $this->password ?? '');
         return $data;
     }
 

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Entity;
 
@@ -20,23 +22,22 @@ class Round
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $roundId = null;
-
     #[ORM\ManyToOne(inversedBy: 'rounds')]
     #[ORM\JoinColumn(referencedColumnName: 'game_id', nullable: false)]
     private ?Game $game = null;
-
     #[ORM\Column]
     private ?int $roundNumber = null;
-
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?DateTimeInterface $startedAt = null;
-
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?DateTimeInterface $finishedAt = null;
-
-    #[ORM\OneToMany(targetEntity: RoundThrows::class, mappedBy: 'round', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OneToMany(
+        targetEntity: RoundThrows::class,
+        mappedBy: 'round',
+        cascade: ['persist', 'remove'],
+        orphanRemoval: true
+    )]
     private Collection $roundThrows;
-
     public function __construct()
     {
         $this->roundThrows = new ArrayCollection();
@@ -50,7 +51,6 @@ class Round
     public function setRoundId(int $roundId): static
     {
         $this->roundId = $roundId;
-
         return $this;
     }
 
@@ -62,7 +62,6 @@ class Round
     public function setGame(?Game $game): static
     {
         $this->game = $game;
-
         return $this;
     }
 
@@ -74,19 +73,17 @@ class Round
     public function setRoundNumber(int $roundNumber): static
     {
         $this->roundNumber = $roundNumber;
-
         return $this;
     }
 
+    /** @psalm-suppress PossiblyUnusedMethod Doctrine getter может не вызываться напрямую */
     public function getStartedAt(): ?DateTimeInterface
     {
         return $this->startedAt;
     }
-
     public function setStartedAt(?DateTimeInterface $startedAt): static
     {
         $this->startedAt = $startedAt;
-
         return $this;
     }
 
@@ -98,7 +95,6 @@ class Round
     public function setFinishedAt(?DateTimeInterface $finishedAt): static
     {
         $this->finishedAt = $finishedAt;
-
         return $this;
     }
 
@@ -123,7 +119,7 @@ class Round
     public function removeRoundThrow(RoundThrows $roundThrow): static
     {
         if ($this->roundThrows->removeElement($roundThrow)) {
-            // orphanRemoval will delete on a flush
+// orphanRemoval will delete on a flush
         }
 
         return $this;
