@@ -10,13 +10,13 @@ namespace App\Dto;
 final class PlayerResponseDto
 {
     /**
-     * @param int                                                    $id
-     * @param string                                                 $name
-     * @param int                                                    $score
-     * @param bool                                                   $isActive
-     * @param bool                                                   $isBust
-     * @param int|null                                               $position
-     * @param int                                                    $throwsInCurrentRound
+     * @param int                                                   $id
+     * @param string                                                $name
+     * @param int                                                   $score
+     * @param bool                                                  $isActive
+     * @param bool                                                  $isBust
+     * @param int|null                                              $position
+     * @param int                                                   $throwsInCurrentRound
      * @param list<ThrowResponseDto>                                $currentRoundThrows
      * @param list<array{round:int, throws:list<ThrowResponseDto>}> $roundHistory
      */
