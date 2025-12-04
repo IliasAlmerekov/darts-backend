@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Entity;
 
@@ -17,13 +19,10 @@ class Invitation
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
-
     #[ORM\Column(length: 255, unique: true)]
     private ?string $uuid = null;
-
     #[ORM\Column]
     private ?int $gameId = null;
-
     public function getId(): ?int
     {
         return $this->id;
@@ -37,7 +36,6 @@ class Invitation
     public function setUuid(UuidV4|string $uuid): static
     {
         $this->uuid = (string)$uuid;
-
         return $this;
     }
 
@@ -49,7 +47,6 @@ class Invitation
     public function setGameId(int $gameId): static
     {
         $this->gameId = $gameId;
-
         return $this;
     }
 }

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Repository;
 
@@ -48,7 +50,6 @@ final class GameRepository extends ServiceEntityRepository
             ->select('MAX(g.gameId)')
             ->getQuery()
             ->getSingleScalarResult();
-
         return $result ? (int)$result : null;
     }
 

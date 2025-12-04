@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Service;
 
@@ -7,9 +9,7 @@ use App\Repository\RoundThrowsRepository;
 
 final readonly class GameStatisticsService
 {
-    public function __construct(
-        private RoundThrowsRepository $roundThrowsRepository,
-    )
+    public function __construct(private RoundThrowsRepository $roundThrowsRepository,)
     {
     }
 
@@ -19,12 +19,11 @@ final readonly class GameStatisticsService
     public function getPlayerStats(int $limit, int $offset, string $sortField, string $sortDirection): array
     {
         $rows = $this->roundThrowsRepository->getPlayerStatistics($limit, $offset, $sortField, $sortDirection);
-
         return array_map(static function (array $row): PlayerStatsDto {
+
             $rounds = (int)$row['roundsFinished'];
             $total = (float)$row['totalValue'];
             $average = $rounds > 0 ? $total / (float)$rounds : 0.0;
-
             return new PlayerStatsDto(
                 (int)$row['playerId'],
                 (string)$row['username'],

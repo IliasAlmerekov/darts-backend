@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Service;
 
@@ -16,10 +18,9 @@ use Doctrine\ORM\Exception\ORMException;
 final readonly class PlayerManagementService
 {
     public function __construct(
-        private GamePlayersRepository  $gamePlayersRepository,
+        private GamePlayersRepository $gamePlayersRepository,
         private EntityManagerInterface $entityManager
-    )
-    {
+    ) {
     }
 
     public function removePlayer(int $gameId, int $playerId): bool
@@ -28,14 +29,12 @@ final readonly class PlayerManagementService
             'game' => $gameId,
             'player' => $playerId,
         ]);
-
         if (null === $gamePlayer) {
             return false;
         }
 
         $this->entityManager->remove($gamePlayer);
         $this->entityManager->flush();
-
         return true;
     }
 
@@ -47,10 +46,8 @@ final readonly class PlayerManagementService
         $gamePlayer = new GamePlayers();
         $gamePlayer->setGame($this->entityManager->getReference(Game::class, $gameId));
         $gamePlayer->setPlayer($this->entityManager->getReference(User::class, $playerId));
-
         $this->entityManager->persist($gamePlayer);
         $this->entityManager->flush();
-
         return $gamePlayer;
     }
 
@@ -64,7 +61,6 @@ final readonly class PlayerManagementService
     {
         $oldGamePlayers = $this->gamePlayersRepository->findByGameId($fromGameId);
         $filter = $playerIds !== null ? array_map('intval', $playerIds) : null;
-
         foreach ($oldGamePlayers as $oldGamePlayer) {
             $player = $oldGamePlayer->getPlayer();
             $playerId = $player?->getId();

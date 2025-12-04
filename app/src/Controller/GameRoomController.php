@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Controller;
 
@@ -13,7 +15,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\HttpFoundation\Request;
 
-
 /**
  * This class handles game-room-related actions such as listing rooms,
  * creating rooms, and viewing room details.
@@ -22,12 +23,11 @@ use Symfony\Component\HttpFoundation\Request;
 final class GameRoomController extends AbstractController
 {
     public function __construct(
-        private readonly GameRoomService         $gameRoomService,
+        private readonly GameRoomService $gameRoomService,
         private readonly PlayerManagementService $playerManagementService,
-        private readonly RematchService          $rematchService,
+        private readonly RematchService $rematchService,
         private readonly SseStreamService $sseStreamService
-    )
-    {
+    ) {
     }
 
     #[Route(path: 'api/room/create', name: 'room_create', methods: ['POST', 'GET'])]
@@ -50,8 +50,11 @@ final class GameRoomController extends AbstractController
                 $previousGameId = $request->query->getInt('previousGameId');
             }
 
-            $game = $this->gameRoomService->createGameWithPreviousPlayers($previousGameId !== 0 ? $previousGameId : null, $selectedPlayers, $excludedPlayers);
-
+            $game = $this->gameRoomService->createGameWithPreviousPlayers(
+                $previousGameId !== 0 ? $previousGameId : null,
+                $selectedPlayers,
+                $excludedPlayers
+            );
             if (str_contains($request->headers->get('Accept') ?? '', 'application/json')) {
                 return $this->json([
                     'success' => true,
@@ -96,7 +99,6 @@ final class GameRoomController extends AbstractController
     public function playerLeave(int $id, Request $request): Response
     {
         $playerId = $this->resolvePlayerId($request);
-
         if (null === $playerId) {
             return $this->json([
                 'success' => false,
@@ -105,7 +107,6 @@ final class GameRoomController extends AbstractController
         }
 
         $removed = $this->playerManagementService->removePlayer($id, $playerId);
-
         if (!$removed) {
             return $this->json([
                 'success' => false,
@@ -138,10 +139,6 @@ final class GameRoomController extends AbstractController
     public function rematch(int $id): Response
     {
         $result = $this->rematchService->createRematch($id);
-
-        return $this->json(
-            $result,
-            $result['success'] ? Response::HTTP_CREATED : Response::HTTP_NOT_FOUND
-        );
+        return $this->json($result, $result['success'] ? Response::HTTP_CREATED : Response::HTTP_NOT_FOUND);
     }
 }

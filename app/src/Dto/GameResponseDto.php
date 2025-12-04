@@ -1,6 +1,9 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Dto;
+
 /**
  * @psalm-immutable
  * This class is used to serialize game stats
@@ -12,10 +15,10 @@ final class GameResponseDto
         public string $status,
         public int $currentRound,
         public ?int $activePlayerId,
-        public int $currentThrowCount,
-        /** @var PlayerResponseDto[] */
+        public int $currentThrowCount, /** @var PlayerResponseDto[] */
         public array $players,
         public ?int $winnerId,
         public array $settings,
-    ) {}
+    ) {
+    }
 }

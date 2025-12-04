@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Controller;
 
@@ -17,11 +19,13 @@ use Symfony\Component\Routing\Attribute\Route;
 final class RegistrationController extends AbstractController
 {
     #[Route('/api/register', name: 'app_register', methods: ['POST'])]
-    public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher, EntityManagerInterface $entityManager): Response
-    {
+    public function register(
+        Request $request,
+        UserPasswordHasherInterface $userPasswordHasher,
+        EntityManagerInterface $entityManager
+    ): Response {
 
         $data = json_decode($request->getContent(), true);
-
         if (json_last_error() !== JSON_ERROR_NONE || !is_array($data)) {
             return $this->json([
                 'success' => false,
@@ -31,23 +35,17 @@ final class RegistrationController extends AbstractController
 
         $user = new User();
         $form = $this->createForm(RegistrationFormType::class, $user);
-
         $form->submit($data);
-
         if ($form->isSubmitted() && $form->isValid()) {
-
             $plainPassword = $form->get('plainPassword')->getData();
             $username = $form->get('username')->getData();
             $email = $form->get('email')->getData();
-
             $user->setUsername($username);
             $user->setEmail($email);
             $user->setPassword($userPasswordHasher->hashPassword($user, $plainPassword));
             $user->setRoles(['ROLE_PLAYER']);
-
             $entityManager->persist($user);
             $entityManager->flush();
-
             return $this->json([
                 'success' => true,
                 'message' => 'Registrierung erfolgreich',
@@ -57,7 +55,7 @@ final class RegistrationController extends AbstractController
 
         $errors = [];
         foreach ($form->getErrors(true) as $error) {
-            // FormError always has getOrigin() and getMessage() methods
+        // FormError always has getOrigin() and getMessage() methods
             /** @var \Symfony\Component\Form\FormError $error */
             $origin = $error->getOrigin();
             $fieldName = $origin !== null ? $origin->getName() : 'global';

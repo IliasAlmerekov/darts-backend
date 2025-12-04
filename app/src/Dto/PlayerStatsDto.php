@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Dto;
 
@@ -11,16 +13,12 @@ final class PlayerStatsDto
 {
     #[Groups(['stats:read'])]
     public int $playerId;
-
     #[Groups(['stats:read'])]
     public string $name;
-
     #[Groups(['stats:read'])]
     public int $gamesPlayed;
-
     #[Groups(['stats:read'])]
     public float $scoreAverage;
-
     public function __construct(int $playerId, string $name, int $gamesPlayed, float $scoreAverage)
     {
         $this->playerId = $playerId;

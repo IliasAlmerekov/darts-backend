@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Service;
 
@@ -13,35 +15,31 @@ use App\Repository\RoundThrowsRepository;
 final readonly class SseStreamService
 {
     public function __construct(
-        private GameRoomService                $gameRoomService,
+        private GameRoomService $gameRoomService,
         private RoundThrowsRepository $roundThrowsRepository
-    )
-    {
+    ) {
     }
 
     public function createPlayerStream(int $gameId): StreamedResponse
     {
         $response = new StreamedResponse(function () use ($gameId) {
+
             set_time_limit(0);
             $eventId = 0;
             $lastPayload = null;
             $lastThrowId = null;
-
             echo ": init\n\n";
             @ob_flush();
             @flush();
-
             while (!connection_aborted()) {
                 $players = $this->gameRoomService->getPlayersWithUserInfo($gameId);
                 $payload = json_encode([
                     'players' => $players,
                     'count' => count($players),
                 ]);
-
                 if (false !== $payload && $payload !== $lastPayload) {
                     $lastPayload = $payload;
                     $eventId++;
-
                     echo 'id: ' . $eventId . "\n";
                     echo "event: players\n";
                     echo 'data: ' . $payload . "\n\n";
@@ -53,16 +51,15 @@ final readonly class SseStreamService
                 if (is_array($latestThrow) && isset($latestThrow['id']) && $latestThrow['id'] !== $lastThrowId) {
                     $lastThrowId = $latestThrow['id'];
                     $eventId++;
-
                     if ($latestThrow['timestamp'] instanceof DateTimeInterface) {
-                        $latestThrow['timestamp'] = $latestThrow['timestamp']->format(DateTimeInterface::ATOM);
+                            $latestThrow['timestamp'] = $latestThrow['timestamp']->format(DateTimeInterface::ATOM);
                     }
 
                     echo 'id: ' . $eventId . "\n";
                     echo "event: throw\n";
                     $jsonEncoded = json_encode($latestThrow);
                     if ($jsonEncoded !== false) {
-                        echo 'data: ' . $jsonEncoded . "\n\n";
+                                echo 'data: ' . $jsonEncoded . "\n\n";
                     }
                     @ob_flush();
                     @flush();
@@ -74,12 +71,10 @@ final readonly class SseStreamService
                 sleep(1);
             }
         });
-
         $response->headers->set('Content-Type', 'text/event-stream');
         $response->headers->set('Cache-Control', 'no-cache');
         $response->headers->set('Connection', 'keep-alive');
         $response->headers->set('X-Accel-Buffering', 'no');
-
         return $response;
     }
 }

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Dto;
 
@@ -13,10 +15,8 @@ use Symfony\Component\Validator\Constraints as Assert;
  */
 final readonly class GameFinishDto
 {
-    public function __construct(
-        #[Assert\Type(DateTimeInterface::class)]
-        public ?DateTimeInterface $finishedAt = null,
-    )
+    public function __construct(#[Assert\Type(DateTimeInterface::class)]
+        public ?DateTimeInterface $finishedAt = null,)
     {
     }
 
@@ -25,10 +25,8 @@ final readonly class GameFinishDto
      */
     public static function fromArray(array $data): self
     {
-        return new self(
-            finishedAt: isset($data['finishedAt'])
+        return new self(finishedAt: isset($data['finishedAt'])
                 ? new DateTimeImmutable($data['finishedAt'])
-                : null
-        );
+                : null);
     }
 }

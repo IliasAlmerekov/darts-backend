@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Service;
 
@@ -11,22 +13,19 @@ use Doctrine\ORM\EntityManagerInterface;
 final readonly class GameRoomService
 {
     public function __construct(
-        private GameRepository          $gameRepository,
-        private GamePlayersRepository   $gamePlayersRepository,
-        private EntityManagerInterface  $entityManager,
+        private GameRepository $gameRepository,
+        private GamePlayersRepository $gamePlayersRepository,
+        private EntityManagerInterface $entityManager,
         private PlayerManagementService $playerManagementService,
-    )
-    {
+    ) {
     }
 
     public function createGame(): Game
     {
         $game = new Game();
         $game->setDate(new DateTime());
-
         $this->entityManager->persist($game);
         $this->entityManager->flush();
-
         return $game;
     }
 
@@ -34,10 +33,12 @@ final readonly class GameRoomService
      * @param list<int>|null $includePlayerIds Explicit list of players to place into the new game
      * @param list<int>|null $excludePlayerIds Players to omit from the include list
      */
-    public function createGameWithPreviousPlayers(?int $previousGameId = null, ?array $includePlayerIds = null, ?array $excludePlayerIds = null): Game
-    {
+    public function createGameWithPreviousPlayers(
+        ?int $previousGameId = null,
+        ?array $includePlayerIds = null,
+        ?array $excludePlayerIds = null
+    ): Game {
         $game = $this->createGame();
-
         if ($includePlayerIds !== null) {
             $ids = array_values(array_unique(array_map('intval', $includePlayerIds)));
             if ($excludePlayerIds !== null) {

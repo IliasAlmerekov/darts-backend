@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<files psalm-version="6.13.1@1e3b7f0a8ab32b23197b91107adc0a7ed8a05b51">
+  <file src="src/Controller/GameController.php">
+    <UnusedClass>
+      <code><![CDATA[GameController]]></code>
+    </UnusedClass>
+  </file>
+  <file src="src/Controller/GameRoomController.php">
+    <UnusedClass>
+      <code><![CDATA[GameRoomController]]></code>
+    </UnusedClass>
+  </file>
+  <file src="src/Controller/InvitationController.php">
+    <UnusedClass>
+      <code><![CDATA[InvitationController]]></code>
+    </UnusedClass>
+  </file>
+  <file src="src/Controller/RegistrationController.php">
+    <UnusedClass>
+      <code><![CDATA[RegistrationController]]></code>
+    </UnusedClass>
+  </file>
+  <file src="src/Controller/SecurityController.php">
+    <UnusedClass>
+      <code><![CDATA[SecurityController]]></code>
+    </UnusedClass>
+  </file>
+  <file src="src/Dto/GameFinishDto.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[fromArray]]></code>
+    </PossiblyUnusedMethod>
+    <PossiblyUnusedProperty>
+      <code><![CDATA[$finishedAt]]></code>
+    </PossiblyUnusedProperty>
+  </file>
+  <file src="src/Dto/GameResponseDto.php">
+    <PossiblyUnusedProperty>
+      <code><![CDATA[$activePlayerId]]></code>
+      <code><![CDATA[$currentRound]]></code>
+      <code><![CDATA[$currentThrowCount]]></code>
+      <code><![CDATA[$id]]></code>
+      <code><![CDATA[$players]]></code>
+      <code><![CDATA[$settings]]></code>
+      <code><![CDATA[$status]]></code>
+      <code><![CDATA[$winnerId]]></code>
+    </PossiblyUnusedProperty>
+  </file>
+  <file src="src/Dto/PlayerResponseDto.php">
+    <PossiblyUnusedProperty>
+      <code><![CDATA[$currentRoundThrows]]></code>
+      <code><![CDATA[$id]]></code>
+      <code><![CDATA[$isActive]]></code>
+      <code><![CDATA[$isBust]]></code>
+      <code><![CDATA[$name]]></code>
+      <code><![CDATA[$position]]></code>
+      <code><![CDATA[$roundHistory]]></code>
+      <code><![CDATA[$score]]></code>
+      <code><![CDATA[$throwsInCurrentRound]]></code>
+    </PossiblyUnusedProperty>
+  </file>
+  <file src="src/Dto/PlayerStatsDto.php">
+    <PossiblyUnusedProperty>
+      <code><![CDATA[$gamesPlayed]]></code>
+      <code><![CDATA[$name]]></code>
+      <code><![CDATA[$playerId]]></code>
+      <code><![CDATA[$scoreAverage]]></code>
+    </PossiblyUnusedProperty>
+  </file>
+  <file src="src/Dto/ThrowRequest.php">
+    <PossiblyUnusedProperty>
+      <code><![CDATA[$isBust]]></code>
+    </PossiblyUnusedProperty>
+  </file>
+  <file src="src/Dto/ThrowResponseDto.php">
+    <PossiblyUnusedProperty>
+      <code><![CDATA[$isBust]]></code>
+      <code><![CDATA[$isDouble]]></code>
+      <code><![CDATA[$isTriple]]></code>
+      <code><![CDATA[$value]]></code>
+    </PossiblyUnusedProperty>
+  </file>
+  <file src="src/Entity/Game.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[addGamePlayer]]></code>
+      <code><![CDATA[getInvitation]]></code>
+      <code><![CDATA[getType]]></code>
+      <code><![CDATA[removeGamePlayer]]></code>
+      <code><![CDATA[removeRound]]></code>
+      <code><![CDATA[setGameId]]></code>
+      <code><![CDATA[setInvitation]]></code>
+      <code><![CDATA[setType]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="src/Entity/GamePlayers.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[getGamePlayerId]]></code>
+      <code><![CDATA[setGamePlayerId]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="src/Entity/Invitation.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[getId]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="src/Entity/PlayerStats.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[getGamesPlayed]]></code>
+      <code><![CDATA[getHighestCheckout]]></code>
+      <code><![CDATA[getPlayerId]]></code>
+      <code><![CDATA[getRoundAverage]]></code>
+      <code><![CDATA[getWinPercentage]]></code>
+      <code><![CDATA[getWins]]></code>
+      <code><![CDATA[setGamesPlayed]]></code>
+      <code><![CDATA[setHighestCheckout]]></code>
+      <code><![CDATA[setPlayerId]]></code>
+      <code><![CDATA[setRoundAverage]]></code>
+      <code><![CDATA[setWinPercentage]]></code>
+      <code><![CDATA[setWins]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="src/Entity/Round.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[addRoundThrow]]></code>
+      <code><![CDATA[getFinishedAt]]></code>
+      <code><![CDATA[getRoundId]]></code>
+      <code><![CDATA[getRoundThrows]]></code>
+      <code><![CDATA[removeRoundThrow]]></code>
+      <code><![CDATA[setRoundId]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="src/Entity/RoundThrows.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[getGame]]></code>
+      <code><![CDATA[getThrowId]]></code>
+      <code><![CDATA[getThrowNumber]]></code>
+      <code><![CDATA[getTimestamp]]></code>
+      <code><![CDATA[setThrowId]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="src/Entity/User.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[getEmail]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="src/Repository/GamePlayersRepository.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+    <UnusedParam>
+      <code><![CDATA[$gameId]]></code>
+      <code><![CDATA[$gameId]]></code>
+      <code><![CDATA[$gameId]]></code>
+      <code><![CDATA[$gameId]]></code>
+      <code><![CDATA[$playerId]]></code>
+      <code><![CDATA[$registry]]></code>
+    </UnusedParam>
+  </file>
+  <file src="src/Repository/GameRepository.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+      <code><![CDATA[findHighestGameId]]></code>
+      <code><![CDATA[findOneByGameId]]></code>
+    </PossiblyUnusedMethod>
+    <UnusedParam>
+      <code><![CDATA[$gameId]]></code>
+      <code><![CDATA[$registry]]></code>
+    </UnusedParam>
+  </file>
+  <file src="src/Repository/InvitationRepository.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+    <UnusedParam>
+      <code><![CDATA[$registry]]></code>
+    </UnusedParam>
+  </file>
+  <file src="src/Repository/PlayerStatsRepository.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+    <UnusedParam>
+      <code><![CDATA[$registry]]></code>
+    </UnusedParam>
+  </file>
+  <file src="src/Repository/RoundRepository.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+    <UnusedParam>
+      <code><![CDATA[$gameId]]></code>
+      <code><![CDATA[$registry]]></code>
+    </UnusedParam>
+  </file>
+  <file src="src/Repository/RoundThrowsRepository.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+      <code><![CDATA[getLastRoundNumberForGame]]></code>
+      <code><![CDATA[getRoundAveragesForGame]]></code>
+    </PossiblyUnusedMethod>
+    <UnusedParam>
+      <code><![CDATA[$direction]]></code>
+      <code><![CDATA[$gameId]]></code>
+      <code><![CDATA[$gameId]]></code>
+      <code><![CDATA[$gameId]]></code>
+      <code><![CDATA[$gameId]]></code>
+      <code><![CDATA[$gameId]]></code>
+      <code><![CDATA[$gameId]]></code>
+      <code><![CDATA[$gameId]]></code>
+      <code><![CDATA[$limit]]></code>
+      <code><![CDATA[$offset]]></code>
+      <code><![CDATA[$playerId]]></code>
+      <code><![CDATA[$registry]]></code>
+      <code><![CDATA[$sortField]]></code>
+    </UnusedParam>
+  </file>
+  <file src="src/Repository/UserRepository.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+      <code><![CDATA[findByIds]]></code>
+    </PossiblyUnusedMethod>
+    <UnusedParam>
+      <code><![CDATA[$ids]]></code>
+      <code><![CDATA[$registry]]></code>
+    </UnusedParam>
+  </file>
+  <file src="src/Security/ErrorController.php">
+    <UnusedClass>
+      <code><![CDATA[ErrorController]]></code>
+    </UnusedClass>
+  </file>
+  <file src="src/Service/GameFinishService.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="src/Service/GameRoomService.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="src/Service/GameService.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="src/Service/GameStartService.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="src/Service/GameStatisticsService.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="src/Service/GameThrowService.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="src/Service/PlayerManagementService.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+    <PossiblyUnusedReturnValue>
+      <code><![CDATA[GamePlayers]]></code>
+    </PossiblyUnusedReturnValue>
+  </file>
+  <file src="src/Service/RematchService.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+  <file src="src/Service/SseStreamService.php">
+    <PossiblyUnusedMethod>
+      <code><![CDATA[__construct]]></code>
+    </PossiblyUnusedMethod>
+  </file>
+</files>

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace App\Repository;
 
@@ -45,7 +47,6 @@ final class GamePlayersRepository extends ServiceEntityRepository
             'game' => $gameId,
             'player' => $playerId
         ]);
-
         return $count > 0;
     }
 
