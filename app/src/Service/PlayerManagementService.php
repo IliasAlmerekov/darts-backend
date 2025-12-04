@@ -50,6 +50,9 @@ final readonly class PlayerManagementService
     }
 
     /**
+     * @param int $gameId
+     * @param int $playerId
+     *
      * @throws ORMException
      *
      * @return GamePlayers
