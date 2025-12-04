@@ -165,13 +165,14 @@ class RoundThrows
     }
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @return bool
      */
     public function isDouble(): bool
     {
         return $this->isDouble;
     }
-
     /**
      * @param bool $isDouble
      *
@@ -185,13 +186,14 @@ class RoundThrows
     }
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @return bool
      */
     public function isTriple(): bool
     {
         return $this->isTriple;
     }
-
     /**
      * @param bool $isTriple
      *

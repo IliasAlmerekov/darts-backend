@@ -224,8 +224,7 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
                 'COUNT(DISTINCT g.gameId) AS gamesPlayed',
                 "SUM(CASE WHEN rt.isBust = true THEN 0 ELSE rt.value END) AS totalValue",
                 'COUNT(DISTINCT r.roundId) AS roundsFinished',
-                "(SUM(CASE WHEN rt.isBust = true THEN 0 ELSE rt.value END) / "
-                    . "NULLIF(COUNT(DISTINCT r.roundId), 0)) AS scoreAverage"
+                "(SUM(CASE WHEN rt.isBust = true THEN 0 ELSE rt.value END) / "."NULLIF(COUNT(DISTINCT r.roundId), 0)) AS scoreAverage"
             )
             ->innerJoin('rt.player', 'u')
             ->innerJoin('rt.game', 'g')

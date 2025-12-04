@@ -23,7 +23,8 @@ final readonly class GameService
     public function __construct(
         private RoundRepositoryInterface $roundRepository,
         private RoundThrowsRepositoryInterface $roundThrowsRepository,
-    ) {}
+    ) {
+    }
 
 
     /**

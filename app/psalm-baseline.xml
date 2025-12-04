@@ -166,15 +166,6 @@
       <code><![CDATA[$registry]]></code>
     </UnusedParam>
   </file>
-  <file src="src/Repository/RoundRepository.php">
-    <PossiblyUnusedMethod>
-      <code><![CDATA[__construct]]></code>
-    </PossiblyUnusedMethod>
-    <UnusedParam>
-      <code><![CDATA[$gameId]]></code>
-      <code><![CDATA[$registry]]></code>
-    </UnusedParam>
-  </file>
   <file src="src/Repository/RoundThrowsRepository.php">
     <PossiblyUnusedMethod>
       <code><![CDATA[__construct]]></code>
