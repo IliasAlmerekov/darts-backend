@@ -10,7 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
  * This class represents the association between a Game and its Players.
  */
 #[ORM\Entity(repositoryClass: GamePlayersRepository::class)]
-final class GamePlayers
+class GamePlayers
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]

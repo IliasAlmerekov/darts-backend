@@ -14,7 +14,7 @@ use Doctrine\ORM\Mapping as ORM;
  * This class represents a round of a game.
  */
 #[ORM\Entity(repositoryClass: RoundRepository::class)]
-final class Round
+class Round
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]

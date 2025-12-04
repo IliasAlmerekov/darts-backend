@@ -11,7 +11,7 @@ use Symfony\Component\Uid\UuidV4;
  * This class represents an invitation to join a game.
  */
 #[ORM\Entity(repositoryClass: InvitationRepository::class)]
-final class Invitation
+class Invitation
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]

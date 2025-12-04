@@ -10,7 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
  * This class represents the statistics of a player.
  */
 #[ORM\Entity(repositoryClass: PlayerStatsRepository::class)]
-final class PlayerStats
+class PlayerStats
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]

@@ -12,7 +12,7 @@ use Doctrine\ORM\Mapping as ORM;
  * This class represents a round throw.
  */
 #[ORM\Entity(repositoryClass: RoundThrowsRepository::class)]
-final class RoundThrows
+class RoundThrows
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
