@@ -10,7 +10,7 @@ use Doctrine\Persistence\ManagerRegistry;
 /**
  * @extends ServiceEntityRepository<RoundThrows>
  */
-class RoundThrowsRepository extends ServiceEntityRepository
+final class RoundThrowsRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
     {

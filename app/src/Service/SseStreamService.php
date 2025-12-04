@@ -10,7 +10,7 @@ use App\Repository\RoundThrowsRepository;
  * Service to create SSE streams for players and throws.
  * This class is responsible for sending updates to the client via SSE.
  */
- readonly class SseStreamService
+final readonly class SseStreamService
 {
     public function __construct(
         private GameRoomService                $gameRoomService,
@@ -50,7 +50,7 @@ use App\Repository\RoundThrowsRepository;
                 }
 
                 $latestThrow = $this->roundThrowsRepository->findLatestForGame($gameId);
-                if ($latestThrow && $latestThrow['id'] !== $lastThrowId) {
+                if (is_array($latestThrow) && isset($latestThrow['id']) && $latestThrow['id'] !== $lastThrowId) {
                     $lastThrowId = $latestThrow['id'];
                     $eventId++;
 
@@ -60,7 +60,10 @@ use App\Repository\RoundThrowsRepository;
 
                     echo 'id: ' . $eventId . "\n";
                     echo "event: throw\n";
-                    echo 'data: ' . json_encode($latestThrow) . "\n\n";
+                    $jsonEncoded = json_encode($latestThrow);
+                    if ($jsonEncoded !== false) {
+                        echo 'data: ' . $jsonEncoded . "\n\n";
+                    }
                     @ob_flush();
                     @flush();
                 }

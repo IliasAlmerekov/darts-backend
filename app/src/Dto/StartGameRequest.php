@@ -9,7 +9,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * @psalm-immutable
  * This class is used to serialize game start request
  */
-class StartGameRequest
+final class StartGameRequest
 {
     #[Assert\Choice(choices: [101, 201, 301, 401, 501])]
     #[SerializedName('startscore')]

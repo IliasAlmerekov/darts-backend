@@ -4,7 +4,7 @@ namespace App\Dto;
 /**
  * This class is used to serialize throw response
  */
-class ThrowResponseDto
+final class ThrowResponseDto
 {
     public function __construct(
         public int $value,

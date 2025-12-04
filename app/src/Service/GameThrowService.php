@@ -19,7 +19,7 @@ use InvalidArgumentException;
  * Service to handle recording of game throws.
  * This class is responsible for updating the game state and recalculating the positions of the players.
  */
-readonly class GameThrowService
+final readonly class GameThrowService
 {
     public function __construct(
         private GamePlayersRepository  $gamePlayersRepository,
@@ -112,7 +112,10 @@ readonly class GameThrowService
             $pointsScoredInRound = 0;
             foreach ($previousThrowsInRound as $prevThrow) {
                 if (!$prevThrow->isBust()) {
-                    $pointsScoredInRound += $prevThrow->getValue();
+                    $throwValue = $prevThrow->getValue();
+                    if ($throwValue !== null) {
+                        $pointsScoredInRound += $throwValue;
+                    }
                 }
             }
 
@@ -165,7 +168,12 @@ readonly class GameThrowService
 
     public function undoLastThrow(Game $game): void
     {
-        $lastThrow = $this->roundThrowsRepository->findEntityLatestForGame($game->getGameId());
+        $gameId = $game->getGameId();
+        if ($gameId === null) {
+            return;
+        }
+
+        $lastThrow = $this->roundThrowsRepository->findEntityLatestForGame($gameId);
         if (!$lastThrow) {
             return;
         }
@@ -177,13 +185,16 @@ readonly class GameThrowService
         $this->entityManager->flush();
 
         if ($player) {
-            $previousThrow = $this->roundThrowsRepository->findLatestForGameAndPlayer($game->getGameId(), $player->getId());
-            $playerScore = $previousThrow?->getScore() ?? $game->getStartScore();
-            $gamePlayer = $this->gamePlayersRepository->findOneBy(['game' => $game->getGameId(), 'player' => $player->getId()]);
-            $gamePlayer?->setScore($playerScore);
+            $playerId = $player->getId();
+            if ($playerId !== null) {
+                $previousThrow = $this->roundThrowsRepository->findLatestForGameAndPlayer($gameId, $playerId);
+                $playerScore = $previousThrow?->getScore() ?? $game->getStartScore();
+                $gamePlayer = $this->gamePlayersRepository->findOneBy(['game' => $gameId, 'player' => $playerId]);
+                $gamePlayer?->setScore($playerScore);
 
-            if ($game->getWinner()?->getId() === $player->getId()) {
-                $game->setWinner(null);
+                if ($game->getWinner()?->getId() === $playerId) {
+                    $game->setWinner(null);
+                }
             }
         }
 
@@ -230,7 +241,7 @@ readonly class GameThrowService
             ->getQuery()
             ->getSingleScalarResult();
 
-        $game->setRound($latestRoundNumber ? (int)$latestRoundNumber : $lastThrowRoundNumber);
+        $game->setRound($latestRoundNumber !== null && $latestRoundNumber !== '' ? (int)$latestRoundNumber : $lastThrowRoundNumber);
 
         $this->entityManager->flush();
     }
@@ -290,7 +301,8 @@ readonly class GameThrowService
         // Alle Spieler haben 3 Würfe gemacht — wir gehen zur nächsten Runde über
         $currentRound->setFinishedAt(new DateTime());
 
-        $nextRoundNumber = ($game->getRound() ?? $currentRound->getRoundNumber()) + 1;
+        $currentRoundNum = $game->getRound() ?? $currentRound->getRoundNumber() ?? 1;
+        $nextRoundNumber = $currentRoundNum + 1;
         $game->setRound($nextRoundNumber);
 
         $nextRound = new Round();

@@ -213,7 +213,9 @@ final class GameController extends AbstractController
         $direction = 'desc';
 
         if (str_contains($sort, ':')) {
-            [$candidateField, $candidateDirection] = explode(':', $sort, 2);
+            $parts = explode(':', $sort, 2);
+            $candidateField = $parts[0] ?? '';
+            $candidateDirection = $parts[1] ?? '';
             $field = strtolower(trim($candidateField)) ?: $field;
             $direction = strtolower(trim($candidateDirection)) ?: $direction;
         } elseif ($sort !== '') {

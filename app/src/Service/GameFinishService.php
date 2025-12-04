@@ -16,7 +16,7 @@ use Doctrine\ORM\EntityManagerInterface;
  * Service to handle finishing games.
  * This class is responsible for updating the game status and recalculating the positions of the players.
  */
-readonly class GameFinishService
+final readonly class GameFinishService
 {
     public function __construct(
         private EntityManagerInterface $entityManager,
@@ -30,7 +30,12 @@ readonly class GameFinishService
     public function finishGame(Game $game, ?DateTimeInterface $finishedAt = null): array
     {
         $game->setStatus(GameStatus::Finished);
-        $game->setFinishedAt($finishedAt ?? new DateTimeImmutable());
+
+        $timestamp = $finishedAt instanceof DateTimeImmutable
+            ? $finishedAt
+            : ($finishedAt !== null ? DateTimeImmutable::createFromInterface($finishedAt) : new DateTimeImmutable());
+
+        $game->setFinishedAt($timestamp);
 
         $this->recalculatePositions($game);
 

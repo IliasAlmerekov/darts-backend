@@ -19,7 +19,7 @@ use Symfony\Component\HttpFoundation\Request;
  * creating rooms, and viewing room details.
  * Also get as JSON responses for API requests.
  */
-class GameRoomController extends AbstractController
+final class GameRoomController extends AbstractController
 {
     public function __construct(
         private readonly GameRoomService         $gameRoomService,
@@ -50,9 +50,9 @@ class GameRoomController extends AbstractController
                 $previousGameId = $request->query->getInt('previousGameId');
             }
 
-            $game = $this->gameRoomService->createGameWithPreviousPlayers($previousGameId ?: null, $selectedPlayers, $excludedPlayers);
+            $game = $this->gameRoomService->createGameWithPreviousPlayers($previousGameId !== 0 ? $previousGameId : null, $selectedPlayers, $excludedPlayers);
 
-            if (str_contains($request->headers->get('Accept', ''), 'application/json')) {
+            if (str_contains($request->headers->get('Accept') ?? '', 'application/json')) {
                 return $this->json([
                     'success' => true,
                     'gameId' => $game->getGameId()

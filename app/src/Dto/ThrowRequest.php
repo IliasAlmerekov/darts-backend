@@ -8,7 +8,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * @psalm-immutable
  * This class is used to serialize a throw request
  */
-class ThrowRequest
+final class ThrowRequest
 {
     #[Assert\NotNull]
     #[Assert\Positive]

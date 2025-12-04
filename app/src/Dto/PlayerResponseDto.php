@@ -4,7 +4,7 @@ namespace App\Dto;
 /**
  * This class is used to serialize player stats
  */
-class PlayerResponseDto
+final class PlayerResponseDto
 {
     public function __construct(
         public int $id,

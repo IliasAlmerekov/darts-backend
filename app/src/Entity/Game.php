@@ -16,7 +16,7 @@ use Doctrine\ORM\Mapping as ORM;
  * This class represents a game
  */
 #[ORM\Entity(repositoryClass: GameRepository::class)]
-class Game
+final class Game
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
