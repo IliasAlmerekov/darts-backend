@@ -68,6 +68,8 @@ final readonly class PlayerManagementService
     /**
      * Copy players from one game to another. If a filter list is provided, only those players are copied.
      *
+     * @param int            $fromGameId
+     * @param int            $toGameId
      * @param list<int>|null $playerIds
      *
      * @throws ORMException

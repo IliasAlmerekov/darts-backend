@@ -127,6 +127,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     /**
      * @param list<string> $roles
+     *
+     * @return static
      */
     public function setRoles(array $roles): static
     {
@@ -160,6 +162,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     /**
      * Ensure the session doesn't contain actual password hashes by CRC32C-hashing them, as supported since Symfony 7.3.
+     *
+     * @return array<string, mixed>
      */
     public function __serialize(): array
     {

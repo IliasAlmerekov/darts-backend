@@ -58,6 +58,8 @@ final class GamePlayersRepository extends ServiceEntityRepository
 
     /**
      * @return GamePlayers[]
+     *
+     * @param int $gameId
      */
     public function findByGameId(int $gameId): array
     {

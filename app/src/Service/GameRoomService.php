@@ -43,6 +43,7 @@ final readonly class GameRoomService
     }
 
     /**
+     * @param int|null       $previousGameId
      * @param list<int>|null $includePlayerIds Explicit list of players to place into the new game
      * @param list<int>|null $excludePlayerIds Players to omit from the include list
      *

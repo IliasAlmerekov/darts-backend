@@ -57,37 +57,6 @@ final readonly class GameFinishService
     /**
      * @param Game $game
      *
-     * @return void
-     */
-    private function recalculatePositions(Game $game): void
-    {
-        $players = $this->gamePlayersRepository->findByGameId((int) $game->getGameId());
-
-        usort($players, static function (GamePlayers $a, GamePlayers $b): int {
-            $scoreA = $a->getScore() ?? PHP_INT_MAX;
-            $scoreB = $b->getScore() ?? PHP_INT_MAX;
-            if ($scoreA === $scoreB) {
-                return ($a->getPosition() ?? PHP_INT_MAX) <=> ($b->getPosition() ?? PHP_INT_MAX);
-            }
-
-            return $scoreA <=> $scoreB;
-        });
-        foreach ($players as $index => $player) {
-            $player->setPosition($index + 1);
-        }
-
-        if ($players !== []) {
-            $winnerPlayer = $players[0];
-            $game->setWinner($winnerPlayer->getPlayer());
-            foreach ($players as $player) {
-                $player->setIsWinner($player === $winnerPlayer);
-            }
-        }
-    }
-
-    /**
-     * @param Game $game
-     *
      * @return array<string, mixed>
      */
     public function getGameStats(Game $game): array
@@ -121,6 +90,37 @@ final readonly class GameFinishService
                 $totalScoresMap
             ),
         ];
+    }
+
+    /**
+     * @param Game $game
+     *
+     * @return void
+     */
+    private function recalculatePositions(Game $game): void
+    {
+        $players = $this->gamePlayersRepository->findByGameId((int) $game->getGameId());
+
+        usort($players, static function (GamePlayers $a, GamePlayers $b): int {
+            $scoreA = $a->getScore() ?? PHP_INT_MAX;
+            $scoreB = $b->getScore() ?? PHP_INT_MAX;
+            if ($scoreA === $scoreB) {
+                return ($a->getPosition() ?? PHP_INT_MAX) <=> ($b->getPosition() ?? PHP_INT_MAX);
+            }
+
+            return $scoreA <=> $scoreB;
+        });
+        foreach ($players as $index => $player) {
+            $player->setPosition($index + 1);
+        }
+
+        if ([] !== $players) {
+            $winnerPlayer = $players[0];
+            $game->setWinner($winnerPlayer->getPlayer());
+            foreach ($players as $player) {
+                $player->setIsWinner($player === $winnerPlayer);
+            }
+        }
     }
 
     /**
