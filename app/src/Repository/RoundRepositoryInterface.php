@@ -18,7 +18,7 @@ interface RoundRepositoryInterface
      * @param array<string, string>|null $orderBy
      * @return Round[]|array<object>
      */
-    public function findBy(array $criteria, ?array $orderBy = null, $limit = null, $offset = null): array;
+    public function findBy(array $criteria, ?array $orderBy = null, ?int $limit = null, ?int $offset = null): array;
 
     public function countFinishedRounds(int $gameId): int;
 }
