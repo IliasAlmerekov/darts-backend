@@ -7,10 +7,19 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Throwable;
 
+/**
+ * Custom error controller for handling common HTTP exceptions.
+ */
 final class ErrorController extends AbstractController
 {
-    public function show(\Throwable $exception): Response
+    /**
+     * @param Throwable $exception
+     *
+     * @return Response
+     */
+    public function show(Throwable $exception): Response
     {
         if ($exception instanceof NotFoundHttpException) {
             return $this->render('security/error404.html.twig', []);

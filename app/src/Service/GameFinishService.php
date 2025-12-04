@@ -20,6 +20,12 @@ use Doctrine\ORM\EntityManagerInterface;
  */
 final readonly class GameFinishService
 {
+    /**
+     * @param EntityManagerInterface $entityManager
+     * @param GamePlayersRepository  $gamePlayersRepository
+     * @param RoundThrowsRepository  $roundThrowsRepository
+     * @param RoundRepository        $roundRepository
+     */
     public function __construct(
         private EntityManagerInterface $entityManager,
         private GamePlayersRepository $gamePlayersRepository,
@@ -28,25 +34,35 @@ final readonly class GameFinishService
     ) {
     }
 
+    /**
+     * @param Game                    $game
+     * @param DateTimeInterface|null  $finishedAt
+     *
+     * @return array
+     */
     public function finishGame(Game $game, ?DateTimeInterface $finishedAt = null): array
     {
         $game->setStatus(GameStatus::Finished);
         $timestamp = $finishedAt instanceof DateTimeImmutable
             ? $finishedAt
-            : ($finishedAt !== null ? DateTimeImmutable::createFromInterface($finishedAt) : new DateTimeImmutable());
+            : (null !== $finishedAt ? DateTimeImmutable::createFromInterface($finishedAt) : new DateTimeImmutable());
         $game->setFinishedAt($timestamp);
         $this->recalculatePositions($game);
         $this->entityManager->flush();
-        $finishedRounds = $this->roundRepository->countFinishedRounds((int)$game->getGameId());
-        return $this->buildFinishedPlayersList((int)$game->getGameId(), $finishedRounds);
+        $finishedRounds = $this->roundRepository->countFinishedRounds((int) $game->getGameId());
+        return $this->buildFinishedPlayersList((int) $game->getGameId(), $finishedRounds);
     }
 
+    /**
+     * @param Game $game
+     *
+     * @return void
+     */
     private function recalculatePositions(Game $game): void
     {
-        $players = $this->gamePlayersRepository->findByGameId((int)$game->getGameId());
+        $players = $this->gamePlayersRepository->findByGameId((int) $game->getGameId());
 
         usort($players, static function (GamePlayers $a, GamePlayers $b): int {
-
             $scoreA = $a->getScore() ?? PHP_INT_MAX;
             $scoreB = $b->getScore() ?? PHP_INT_MAX;
             if ($scoreA === $scoreB) {
@@ -67,25 +83,33 @@ final readonly class GameFinishService
             }
         }
     }
+
+    /**
+     * @param Game $game
+     *
+     * @return array<string, mixed>
+     */
     public function getGameStats(Game $game): array
     {
-        $gameId = (int)$game->getGameId();
+        $gameId = (int) $game->getGameId();
         $finishedRounds = $this->roundRepository->countFinishedRounds($gameId);
         $roundsPlayedMap = $this->roundThrowsRepository->getRoundsPlayedForGame($gameId);
         $totalScoresMap = $this->roundThrowsRepository->getTotalScoreForGame($gameId);
         $winner = $game->getWinner();
         $winnerId = $winner?->getId();
-        $winnerRounds = $winnerId !== null ? max($roundsPlayedMap[$winnerId] ?? 0, $finishedRounds) : 0;
-        $winnerTotal = $winnerId !== null ? ($totalScoresMap[$winnerId] ?? 0.0) : 0.0;
+        $winnerRounds = null !== $winnerId ? max($roundsPlayedMap[$winnerId] ?? 0, $finishedRounds) : 0;
+        $winnerTotal = null !== $winnerId ? ($totalScoresMap[$winnerId] ?? 0.0) : 0.0;
         $winnerAverage = $winnerRounds > 0 ? $winnerTotal / $winnerRounds : 0.0;
         return [
             'gameId' => $gameId,
             'date' => $game->getDate(),
             'finishedAt' => $game->getFinishedAt(),
-            'winner' => $winner ? [
-                'id' => $winner->getId(),
-                'username' => $winner->getUsername(),
-            ] : null,
+            'winner' => $winner
+                ? [
+                    'id' => $winner->getId(),
+                    'username' => $winner->getUsername(),
+                ]
+                : null,
             'winnerRoundsPlayed' => $winnerRounds,
             'winnerRoundAverage' => $winnerAverage,
             'finishedPlayers' => $this->buildFinishedPlayersList(
@@ -97,6 +121,14 @@ final readonly class GameFinishService
         ];
     }
 
+    /**
+     * @param int $gameId
+     * @param int $finishedRounds
+     * @param array<int, int>|null $roundsPlayedMap
+     * @param array<int, float>|null $totalScoresMap
+     *
+     * @return array<int, array<string, int|float|null>>
+     */
     private function buildFinishedPlayersList(
         int $gameId,
         int $finishedRounds,
@@ -107,18 +139,17 @@ final readonly class GameFinishService
         $totalScoresMap ??= $this->roundThrowsRepository->getTotalScoreForGame($gameId);
         $players = $this->gamePlayersRepository->findByGameId($gameId);
         usort($players, static function (GamePlayers $a, GamePlayers $b): int {
-
             $posA = $a->getPosition();
             $posB = $b->getPosition();
-            if ($posA === null && $posB === null) {
+            if (null === $posA && null === $posB) {
                 return ($a->getScore() ?? PHP_INT_MAX) <=> ($b->getScore() ?? PHP_INT_MAX);
             }
 
-            if ($posA === null) {
+            if (null === $posA) {
                 return 1;
             }
 
-            if ($posB === null) {
+            if (null === $posB) {
                 return -1;
             }
 
@@ -128,10 +159,10 @@ final readonly class GameFinishService
         foreach ($players as $player) {
             $user = $player->getPlayer();
             $playerId = $user?->getId();
-            $roundsPlayed = $playerId !== null
+            $roundsPlayed = null !== $playerId
                 ? max($roundsPlayedMap[$playerId] ?? 0, $finishedRounds)
                 : $finishedRounds;
-            $totalScore = $playerId !== null
+            $totalScore = null !== $playerId
                 ? ($totalScoresMap[$playerId] ?? 0.0)
                 : 0.0;
             $roundAverage = $roundsPlayed > 0 ? $totalScore / $roundsPlayed : 0.0;

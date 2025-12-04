@@ -23,27 +23,47 @@ class Invitation
     private ?string $uuid = null;
     #[ORM\Column]
     private ?int $gameId = null;
+
+    /**
+     * @return int|null
+     */
     public function getId(): ?int
     {
         return $this->id;
     }
 
+    /**
+     * @return string|null
+     */
     public function getUuid(): ?string
     {
         return $this->uuid;
     }
 
+    /**
+     * @param UuidV4|string $uuid
+     *
+     * @return static
+     */
     public function setUuid(UuidV4|string $uuid): static
     {
-        $this->uuid = (string)$uuid;
+        $this->uuid = (string) $uuid;
         return $this;
     }
 
+    /**
+     * @return int|null
+     */
     public function getGameId(): ?int
     {
         return $this->gameId;
     }
 
+    /**
+     * @param int $gameId
+     *
+     * @return static
+     */
     public function setGameId(int $gameId): static
     {
         $this->gameId = $gameId;

@@ -22,15 +22,15 @@ final class StartGameRequest
     #[Assert\Type('bool')]
     #[SerializedName('tripleout')]
     public ?bool $tripleOut = null;
-/**
+    /**
      * @var list<int>|null
      */
     #[Assert\When(expression: 'this.playerPositions !== null', constraints: [
-            new Assert\Count(min: 2, max: 10),
-            new Assert\All([
-                new Assert\Type('integer'),
-                new Assert\Positive(),
-            ]),
-        ])]
+        new Assert\Count(min: 2, max: 10),
+        new Assert\All([
+            new Assert\Type('integer'),
+            new Assert\Positive(),
+        ]),
+    ])]
     public ?array $playerPositions = null;
 }

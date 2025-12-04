@@ -11,11 +11,19 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class RoundRepository extends ServiceEntityRepository
 {
+    /**
+     * @param ManagerRegistry $registry
+     */
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Round::class);
     }
 
+    /**
+     * @param int $gameId
+     *
+     * @return int
+     */
     public function countFinishedRounds(int $gameId): int
     {
         return (int) $this->createQueryBuilder('r')

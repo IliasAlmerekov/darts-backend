@@ -67,17 +67,28 @@ class Game
     #[ORM\Column(type: Types::TIME_IMMUTABLE, nullable: true)]
     private ?DateTimeImmutable $finishedAt = null;
 
+    /**
+     * @return void
+     */
     public function __construct()
     {
         $this->gamePlayers = new ArrayCollection();
         $this->rounds = new ArrayCollection();
     }
 
+    /**
+     * @return int|null
+     */
     public function getType(): ?int
     {
         return $this->type;
     }
 
+    /**
+     * @param int $type
+     *
+     * @return static
+     */
     public function setType(int $type): static
     {
         $this->type = $type;
@@ -85,11 +96,19 @@ class Game
         return $this;
     }
 
+    /**
+     * @return User|null
+     */
     public function getWinner(): ?User
     {
         return $this->winner;
     }
 
+    /**
+     * @param User|null $winner
+     *
+     * @return static
+     */
     public function setWinner(?User $winner): static
     {
         $this->winner = $winner;
@@ -97,11 +116,19 @@ class Game
         return $this;
     }
 
+    /**
+     * @return DateTime|null
+     */
     public function getDate(): ?DateTime
     {
         return $this->date;
     }
 
+    /**
+     * @param DateTime $date
+     *
+     * @return static
+     */
     public function setDate(DateTime $date): static
     {
         $this->date = $date;
@@ -109,11 +136,19 @@ class Game
         return $this;
     }
 
+    /**
+     * @return int
+     */
     public function getStartScore(): int
     {
         return $this->startScore;
     }
 
+    /**
+     * @param int $startScore
+     *
+     * @return static
+     */
     public function setStartScore(int $startScore): static
     {
         $this->startScore = $startScore;
@@ -121,11 +156,19 @@ class Game
         return $this;
     }
 
+    /**
+     * @return bool
+     */
     public function isDoubleOut(): bool
     {
         return $this->doubleOut;
     }
 
+    /**
+     * @param bool $doubleOut
+     *
+     * @return static
+     */
     public function setDoubleOut(bool $doubleOut): static
     {
         $this->doubleOut = $doubleOut;
@@ -133,11 +176,19 @@ class Game
         return $this;
     }
 
+    /**
+     * @return bool
+     */
     public function isTripleOut(): bool
     {
         return $this->tripleOut;
     }
 
+    /**
+     * @param bool $tripleOut
+     *
+     * @return static
+     */
     public function setTripleOut(bool $tripleOut): static
     {
         $this->tripleOut = $tripleOut;
@@ -145,11 +196,19 @@ class Game
         return $this;
     }
 
+    /**
+     * @return GameStatus
+     */
     public function getStatus(): GameStatus
     {
         return $this->status;
     }
 
+    /**
+     * @param GameStatus $status
+     *
+     * @return static
+     */
     public function setStatus(GameStatus $status): static
     {
         $this->status = $status;
@@ -157,11 +216,19 @@ class Game
         return $this;
     }
 
+    /**
+     * @return int|null
+     */
     public function getRound(): ?int
     {
         return $this->round;
     }
 
+    /**
+     * @param int|null $round
+     *
+     * @return static
+     */
     public function setRound(?int $round): static
     {
         $this->round = $round;
@@ -177,6 +244,11 @@ class Game
         return $this->gamePlayers;
     }
 
+    /**
+     * @param GamePlayers $gamePlayer
+     *
+     * @return static
+     */
     public function addGamePlayer(GamePlayers $gamePlayer): static
     {
         if (!$this->gamePlayers->contains($gamePlayer)) {
@@ -187,6 +259,11 @@ class Game
         return $this;
     }
 
+    /**
+     * @param GamePlayers $gamePlayer
+     *
+     * @return static
+     */
     public function removeGamePlayer(GamePlayers $gamePlayer): static
     {
         if ($this->gamePlayers->removeElement($gamePlayer)) {
@@ -207,6 +284,11 @@ class Game
         return $this->rounds;
     }
 
+    /**
+     * @param Round $round
+     *
+     * @return static
+     */
     public function addRound(Round $round): static
     {
         if (!$this->rounds->contains($round)) {
@@ -217,6 +299,11 @@ class Game
         return $this;
     }
 
+    /**
+     * @param Round $round
+     *
+     * @return static
+     */
     public function removeRound(Round $round): static
     {
         if ($this->rounds->removeElement($round)) {
@@ -229,11 +316,19 @@ class Game
         return $this;
     }
 
+    /**
+     * @return Invitation|null
+     */
     public function getInvitation(): ?Invitation
     {
         return $this->invitation;
     }
 
+    /**
+     * @param Invitation|null $invitation
+     *
+     * @return static
+     */
     public function setInvitation(?Invitation $invitation): static
     {
         $this->invitation = $invitation;
@@ -241,11 +336,19 @@ class Game
         return $this;
     }
 
+    /**
+     * @return int|null
+     */
     public function getGameId(): ?int
     {
         return $this->gameId;
     }
 
+    /**
+     * @param int $gameId
+     *
+     * @return static
+     */
     public function setGameId(int $gameId): static
     {
         $this->gameId = $gameId;
@@ -253,11 +356,19 @@ class Game
         return $this;
     }
 
+    /**
+     * @return DateTimeImmutable|null
+     */
     public function getFinishedAt(): ?DateTimeImmutable
     {
         return $this->finishedAt;
     }
 
+    /**
+     * @param DateTimeImmutable|null $finishedAt
+     *
+     * @return static
+     */
     public function setFinishedAt(?DateTimeImmutable $finishedAt): static
     {
         $this->finishedAt = $finishedAt;

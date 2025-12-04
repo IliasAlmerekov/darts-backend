@@ -15,6 +15,9 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class GameRepository extends ServiceEntityRepository
 {
+    /**
+     * @param ManagerRegistry $registry
+     */
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Game::class);
@@ -35,6 +38,11 @@ final class GameRepository extends ServiceEntityRepository
     //        ;
     //    }
 
+    /**
+     * @param int $gameId
+     *
+     * @return Game|null
+     */
     public function findOneByGameId(int $gameId): ?Game
     {
         return $this->createQueryBuilder('g')
@@ -44,18 +52,25 @@ final class GameRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     }
 
+    /**
+     * @return int|null
+     */
     public function findHighestGameId(): ?int
     {
         $result = $this->createQueryBuilder('g')
             ->select('MAX(g.gameId)')
             ->getQuery()
             ->getSingleScalarResult();
-        return $result ? (int)$result : null;
+
+        return $result ? (int) $result : null;
     }
 
+    /**
+     * @return int
+     */
     public function countFinishedGames(): int
     {
-        return (int)$this->createQueryBuilder('g')
+        return (int) $this->createQueryBuilder('g')
             ->select('COUNT(g.gameId)')
             ->andWhere('g.status = :status')
             ->setParameter('status', GameStatus::Finished)

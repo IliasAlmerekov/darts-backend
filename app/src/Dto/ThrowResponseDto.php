@@ -9,7 +9,17 @@ namespace App\Dto;
  */
 final class ThrowResponseDto
 {
-    public function __construct(public int $value, public bool $isDouble, public bool $isTriple, public bool $isBust,)
-    {
+    /**
+     * @param int  $value
+     * @param bool $isDouble
+     * @param bool $isTriple
+     * @param bool $isBust
+     */
+    public function __construct(
+        public int $value,
+        public bool $isDouble,
+        public bool $isTriple,
+        public bool $isBust,
+    ) {
     }
 }

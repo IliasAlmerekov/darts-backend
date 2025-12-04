@@ -12,6 +12,9 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class RoundThrowsRepository extends ServiceEntityRepository
 {
+    /**
+     * @param ManagerRegistry $registry
+     */
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, RoundThrows::class);
@@ -19,6 +22,10 @@ final class RoundThrowsRepository extends ServiceEntityRepository
 
     /**
      * Latest throw for game (scalar data)
+     *
+     * @param int $gameId
+     *
+     * @return array<string, mixed>|null
      */
     public function findLatestForGame(int $gameId): ?array
     {
@@ -46,6 +53,11 @@ final class RoundThrowsRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     }
 
+    /**
+     * @param int $gameId
+     *
+     * @return RoundThrows|null
+     */
     public function findEntityLatestForGame(int $gameId): ?RoundThrows
     {
         return $this->createQueryBuilder('rt')
@@ -57,6 +69,12 @@ final class RoundThrowsRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     }
 
+    /**
+     * @param int $gameId
+     * @param int $playerId
+     *
+     * @return RoundThrows|null
+     */
     public function findLatestForGameAndPlayer(int $gameId, int $playerId): ?RoundThrows
     {
         return $this->createQueryBuilder('rt')
@@ -72,6 +90,10 @@ final class RoundThrowsRepository extends ServiceEntityRepository
 
     /**
      * Returns average throw value per round for each player in a game.
+     *
+     * @param int $gameId
+     *
+     * @return array<int, array<string, mixed>>
      */
     public function getRoundAveragesForGame(int $gameId): array
     {
@@ -92,6 +114,10 @@ final class RoundThrowsRepository extends ServiceEntityRepository
 
     /**
      * Counts how many distinct rounds each player has played in a game.
+     *
+     * @param int $gameId
+     *
+     * @return array<int, int>
      */
     public function getRoundsPlayedForGame(int $gameId): array
     {
@@ -138,6 +164,10 @@ final class RoundThrowsRepository extends ServiceEntityRepository
 
     /**
      * Sum of thrown values per player in a game.
+     *
+     * @param int $gameId
+     *
+     * @return array<int, float>
      */
     public function getTotalScoreForGame(int $gameId): array
     {
@@ -177,8 +207,8 @@ final class RoundThrowsRepository extends ServiceEntityRepository
         string $sortField = 'average',
         string $direction = 'DESC'
     ): array {
-        $orderColumn = $sortField === 'gamesPlayed' ? 'gamesPlayed' : 'scoreAverage';
-        $direction = strtoupper($direction) === 'ASC' ? 'ASC' : 'DESC';
+        $orderColumn = 'gamesPlayed' === $sortField ? 'gamesPlayed' : 'scoreAverage';
+        $direction = 'ASC' === strtoupper($direction) ? 'ASC' : 'DESC';
 
         return $this->createQueryBuilder('rt')
             ->select(
@@ -206,6 +236,8 @@ final class RoundThrowsRepository extends ServiceEntityRepository
 
     /**
      * Counts distinct players who have finished rounds in finished games.
+     *
+     * @return int
      */
     public function countPlayersWithFinishedRounds(): int
     {

@@ -18,6 +18,14 @@ use Symfony\Component\Uid\Uuid;
  */
 final readonly class RematchService
 {
+    /**
+     * @param GameRoomService           $gameRoomService
+     * @param PlayerManagementService   $playerManagementService
+     * @param GameFinishService         $gameFinishService
+     * @param InvitationRepository      $invitationRepository
+     * @param EntityManagerInterface    $entityManager
+     * @param UrlGeneratorInterface     $urlGenerator
+     */
     public function __construct(
         private GameRoomService $gameRoomService,
         private PlayerManagementService $playerManagementService,
@@ -29,7 +37,11 @@ final readonly class RematchService
     }
 
     /**
+     * @param int $oldGameId
+     *
      * @throws ORMException
+     *
+     * @return array<string, mixed>
      */
     public function createRematch(int $oldGameId): array
     {
@@ -42,7 +54,7 @@ final readonly class RematchService
         $newGame->setStatus(GameStatus::Lobby);
         $newGame->setRound(null);
         $newGameId = $newGame->getGameId();
-        if ($newGameId === null) {
+        if (null === $newGameId) {
             return ['success' => false, 'message' => 'Failed to create new game'];
         }
 
@@ -57,6 +69,11 @@ final readonly class RematchService
         ];
     }
 
+    /**
+     * @param int $gameId
+     *
+     * @return string
+     */
     private function createInvitation(int $gameId): string
     {
         $invitation = $this->invitationRepository->findOneBy(['gameId' => $gameId]);

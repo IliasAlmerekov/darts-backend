@@ -38,60 +38,106 @@ class Round
         orphanRemoval: true
     )]
     private Collection $roundThrows;
+
+    /**
+     * @return void
+     */
     public function __construct()
     {
         $this->roundThrows = new ArrayCollection();
     }
 
+    /**
+     * @return int|null
+     */
     public function getRoundId(): ?int
     {
         return $this->roundId;
     }
 
+    /**
+     * @param int $roundId
+     *
+     * @return static
+     */
     public function setRoundId(int $roundId): static
     {
         $this->roundId = $roundId;
         return $this;
     }
 
+    /**
+     * @return Game|null
+     */
     public function getGame(): ?Game
     {
         return $this->game;
     }
 
+    /**
+     * @param Game|null $game
+     *
+     * @return static
+     */
     public function setGame(?Game $game): static
     {
         $this->game = $game;
         return $this;
     }
 
+    /**
+     * @return int|null
+     */
     public function getRoundNumber(): ?int
     {
         return $this->roundNumber;
     }
 
+    /**
+     * @param int $roundNumber
+     *
+     * @return static
+     */
     public function setRoundNumber(int $roundNumber): static
     {
         $this->roundNumber = $roundNumber;
         return $this;
     }
 
-    /** @psalm-suppress PossiblyUnusedMethod Doctrine getter может не вызываться напрямую */
+    /**
+     * @psalm-suppress PossiblyUnusedMethod Doctrine getter может не вызываться напрямую
+     *
+     * @return DateTimeInterface|null
+     */
     public function getStartedAt(): ?DateTimeInterface
     {
         return $this->startedAt;
     }
+
+    /**
+     * @param DateTimeInterface|null $startedAt
+     *
+     * @return static
+     */
     public function setStartedAt(?DateTimeInterface $startedAt): static
     {
         $this->startedAt = $startedAt;
         return $this;
     }
 
+    /**
+     * @return DateTimeInterface|null
+     */
     public function getFinishedAt(): ?DateTimeInterface
     {
         return $this->finishedAt;
     }
 
+    /**
+     * @param DateTimeInterface|null $finishedAt
+     *
+     * @return static
+     */
     public function setFinishedAt(?DateTimeInterface $finishedAt): static
     {
         $this->finishedAt = $finishedAt;
@@ -106,6 +152,11 @@ class Round
         return $this->roundThrows;
     }
 
+    /**
+     * @param RoundThrows $roundThrow
+     *
+     * @return static
+     */
     public function addRoundThrow(RoundThrows $roundThrow): static
     {
         if (!$this->roundThrows->contains($roundThrow)) {
@@ -116,6 +167,11 @@ class Round
         return $this;
     }
 
+    /**
+     * @param RoundThrows $roundThrow
+     *
+     * @return static
+     */
     public function removeRoundThrow(RoundThrows $roundThrow): static
     {
         if ($this->roundThrows->removeElement($roundThrow)) {

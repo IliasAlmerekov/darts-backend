@@ -14,6 +14,11 @@ final class GameSetupService
 {
     /**
      * Setzt Startscore und Position der Spieler für ein Game.
+     *
+     * @param Game            $game
+     * @param array<int, int>|null $playerPositions
+     *
+     * @return void
      */
     public function applyInitialScoresAndPositions(Game $game, ?array $playerPositions = null): void
     {
@@ -21,7 +26,7 @@ final class GameSetupService
         $startScore = $game->getStartScore();
 /** @var array<int, int> $positionMap */
         $positionMap = [];
-        if ($playerPositions !== null) {
+        if (null !== $playerPositions) {
             foreach ($playerPositions as $index => $playerId) {
                 if (is_int($index) && is_int($playerId)) {
                     $positionMap[$playerId] = $index + 1;
@@ -32,7 +37,7 @@ final class GameSetupService
         foreach ($players as $index => $player) {
             $player->setScore($startScore);
             $playerId = $player->getPlayer()?->getId();
-            if ($playerId !== null && isset($positionMap[$playerId])) {
+            if (null !== $playerId && isset($positionMap[$playerId])) {
                 $player->setPosition($positionMap[$playerId]);
             } else {
                 $player->setPosition($index + 1);

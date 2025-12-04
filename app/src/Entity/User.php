@@ -29,37 +29,57 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?string $username = null;
     #[ORM\Column(length: 180)]
     private ?string $email = null;
-/**
+    /**
      * @var list<string> The user roles
      */
     #[ORM\Column]
     private array $roles = [];
-/**
+    /**
      * @var string The hashed password
      */
     #[ORM\Column]
     private ?string $password = null;
+
+    /**
+     * @return int|null
+     */
     public function getId(): ?int
     {
         return $this->id;
     }
 
+    /**
+     * @return string|null
+     */
     public function getUsername(): ?string
     {
         return $this->username;
     }
 
+    /**
+     * @param string $username
+     *
+     * @return static
+     */
     public function setUsername(string $username): static
     {
         $this->username = $username;
         return $this;
     }
 
+    /**
+     * @return string|null
+     */
     public function getEmail(): ?string
     {
         return $this->email;
     }
 
+    /**
+     * @param string $email
+     *
+     * @return static
+     */
     public function setEmail(string $email): static
     {
         $this->email = $email;
@@ -89,6 +109,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return array_unique($roles);
     }
 
+    /**
+     * @return list<string>
+     */
     public function getStoredRoles(): array
     {
         return $this->roles;
@@ -113,6 +136,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->password;
     }
 
+    /**
+     * @param string $password
+     *
+     * @return static
+     */
     public function setPassword(string $password): static
     {
         $this->password = $password;
