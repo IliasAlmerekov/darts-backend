@@ -38,6 +38,7 @@ final class SecurityController extends AbstractController
 
         $error = $authenticationUtils->getLastAuthenticationError();
         $lastUsername = $authenticationUtils->getLastUsername();
+
         return $this->render('security/login.html.twig', [
             'last_username' => $lastUsername,
             'error' => $error,
@@ -46,10 +47,10 @@ final class SecurityController extends AbstractController
 
     #[Route('api/login/success', name: 'login_success')]
     /**
-     * @param Request                 $request
-     * @param EntityManagerInterface  $entityManager
-     * @param InvitationRepository    $invitationRepository
-     * @param GamePlayersRepository   $gamePlayersRepository
+     * @param Request                $request
+     * @param EntityManagerInterface $entityManager
+     * @param InvitationRepository   $invitationRepository
+     * @param GamePlayersRepository  $gamePlayersRepository
      *
      * @return Response
      */

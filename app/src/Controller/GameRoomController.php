@@ -23,10 +23,10 @@ use Symfony\Component\HttpFoundation\Request;
 final class GameRoomController extends AbstractController
 {
     /**
-     * @param GameRoomService          $gameRoomService
-     * @param PlayerManagementService  $playerManagementService
-     * @param RematchService           $rematchService
-     * @param SseStreamService         $sseStreamService
+     * @param GameRoomService         $gameRoomService
+     * @param PlayerManagementService $playerManagementService
+     * @param RematchService          $rematchService
+     * @param SseStreamService        $sseStreamService
      */
     public function __construct(
         private readonly GameRoomService $gameRoomService,
@@ -140,6 +140,7 @@ final class GameRoomController extends AbstractController
     public function rematch(int $id): Response
     {
         $result = $this->rematchService->createRematch($id);
+
         return $this->json($result, $result['success'] ? Response::HTTP_CREATED : Response::HTTP_NOT_FOUND);
     }
 

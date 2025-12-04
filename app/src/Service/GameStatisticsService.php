@@ -30,10 +30,12 @@ final readonly class GameStatisticsService
     public function getPlayerStats(int $limit, int $offset, string $sortField, string $sortDirection): array
     {
         $rows = $this->roundThrowsRepository->getPlayerStatistics($limit, $offset, $sortField, $sortDirection);
+
         return array_map(static function (array $row): PlayerStatsDto {
             $rounds = (int) $row['roundsFinished'];
             $total = (float) $row['totalValue'];
             $average = $rounds > 0 ? $total / (float) $rounds : 0.0;
+
             return new PlayerStatsDto(
                 (int) $row['playerId'],
                 (string) $row['username'],

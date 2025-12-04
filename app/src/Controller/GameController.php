@@ -98,6 +98,7 @@ final class GameController extends AbstractController
         }
 
         $gameDto = $gameService->createGameDto($game);
+
         return $this->json($gameDto);
     }
 
@@ -123,14 +124,15 @@ final class GameController extends AbstractController
 
         $gameThrowService->undoLastThrow($game);
         $gameDto = $gameService->createGameDto($game);
+
         return $this->json($gameDto);
     }
 
     #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['GET'])]
     /**
-     * @param int                $gameId
-     * @param GameRepository     $gameRepository
-     * @param GameFinishService  $gameFinishService
+     * @param int               $gameId
+     * @param GameRepository    $gameRepository
+     * @param GameFinishService $gameFinishService
      *
      * @return Response
      */
@@ -148,7 +150,7 @@ final class GameController extends AbstractController
             $result = $gameFinishService->finishGame($game);
         } catch (Throwable $e) {
             return $this->json(
-                ['error' => 'An error occurred: ' . $e->getMessage()],
+                ['error' => 'An error occurred: '.$e->getMessage()],
                 Response::HTTP_INTERNAL_SERVER_ERROR
             );
         }
@@ -158,9 +160,9 @@ final class GameController extends AbstractController
 
     #[Route('/api/games/overview', name: 'app_games_overview', methods: ['GET'])]
     /**
-     * @param Request            $request
-     * @param GameRepository     $gameRepository
-     * @param GameFinishService  $gameFinishService
+     * @param Request           $request
+     * @param GameRepository    $gameRepository
+     * @param GameFinishService $gameFinishService
      *
      * @return Response
      */
@@ -204,9 +206,9 @@ final class GameController extends AbstractController
 
     #[Route('/api/players/stats', name: 'app_players_stats', methods: ['GET'])]
     /**
-     * @param Request                 $request
-     * @param GameStatisticsService   $gameStatisticsService
-     * @param RoundThrowsRepository   $roundThrowsRepository
+     * @param Request               $request
+     * @param GameStatisticsService $gameStatisticsService
+     * @param RoundThrowsRepository $roundThrowsRepository
      *
      * @return Response
      */
@@ -217,9 +219,10 @@ final class GameController extends AbstractController
     ): Response {
         $limit = max(1, min(100, $request->query->getInt('limit', 20)));
         $offset = max(0, $request->query->getInt('offset'));
-        $sortParam = (string)$request->query->get('sort', 'average:desc');
+        $sortParam = (string) $request->query->get('sort', 'average:desc');
         [$sortField, $sortDirection] = $this->parseSort($sortParam);
         $stats = $gameStatisticsService->getPlayerStats($limit, $offset, $sortField, $sortDirection);
+
         return $this->json([
             'limit' => $limit,
             'offset' => $offset,

@@ -19,12 +19,12 @@ use Symfony\Component\Uid\Uuid;
 final readonly class RematchService
 {
     /**
-     * @param GameRoomService           $gameRoomService
-     * @param PlayerManagementService   $playerManagementService
-     * @param GameFinishService         $gameFinishService
-     * @param InvitationRepository      $invitationRepository
-     * @param EntityManagerInterface    $entityManager
-     * @param UrlGeneratorInterface     $urlGenerator
+     * @param GameRoomService         $gameRoomService
+     * @param PlayerManagementService $playerManagementService
+     * @param GameFinishService       $gameFinishService
+     * @param InvitationRepository    $invitationRepository
+     * @param EntityManagerInterface  $entityManager
+     * @param UrlGeneratorInterface   $urlGenerator
      */
     public function __construct(
         private GameRoomService $gameRoomService,
@@ -61,6 +61,7 @@ final readonly class RematchService
         $this->playerManagementService->copyPlayers($oldGameId, $newGameId);
         $invitationLink = $this->createInvitation($newGameId);
         $finishedPlayers = $this->gameFinishService->finishGame($oldGame);
+
         return [
             'success' => true,
             'gameId' => $newGameId,

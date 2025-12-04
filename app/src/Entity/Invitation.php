@@ -48,6 +48,7 @@ class Invitation
     public function setUuid(UuidV4|string $uuid): static
     {
         $this->uuid = (string) $uuid;
+
         return $this;
     }
 
@@ -67,6 +68,7 @@ class Invitation
     public function setGameId(int $gameId): static
     {
         $this->gameId = $gameId;
+
         return $this;
     }
 }

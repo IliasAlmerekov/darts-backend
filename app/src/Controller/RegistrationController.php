@@ -53,6 +53,7 @@ final class RegistrationController extends AbstractController
             $user->setRoles(['ROLE_PLAYER']);
             $entityManager->persist($user);
             $entityManager->flush();
+
             return $this->json([
                 'success' => true,
                 'message' => 'Registrierung erfolgreich',

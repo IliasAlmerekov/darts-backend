@@ -60,6 +60,7 @@ class RoundThrows
     public function setGame(?Game $game): static
     {
         $this->game = $game;
+
         return $this;
     }
 
@@ -79,6 +80,7 @@ class RoundThrows
     public function setRound(?Round $round): static
     {
         $this->round = $round;
+
         return $this;
     }
 
@@ -98,6 +100,7 @@ class RoundThrows
     public function setPlayer(?User $player): static
     {
         $this->player = $player;
+
         return $this;
     }
 
@@ -117,6 +120,7 @@ class RoundThrows
     public function setThrowNumber(int $throwNumber): static
     {
         $this->throwNumber = $throwNumber;
+
         return $this;
     }
 
@@ -136,6 +140,7 @@ class RoundThrows
     public function setValue(int $value): static
     {
         $this->value = $value;
+
         return $this;
     }
 
@@ -155,6 +160,7 @@ class RoundThrows
     public function setIsBust(bool $isBust): static
     {
         $this->isBust = $isBust;
+
         return $this;
     }
 
@@ -174,6 +180,7 @@ class RoundThrows
     public function setIsDouble(bool $isDouble): static
     {
         $this->isDouble = $isDouble;
+
         return $this;
     }
 
@@ -193,6 +200,7 @@ class RoundThrows
     public function setIsTriple(bool $isTriple): static
     {
         $this->isTriple = $isTriple;
+
         return $this;
     }
 
@@ -212,6 +220,7 @@ class RoundThrows
     public function setScore(int $score): static
     {
         $this->score = $score;
+
         return $this;
     }
 
@@ -231,6 +240,7 @@ class RoundThrows
     public function setTimestamp(DateTimeInterface $timestamp): static
     {
         $this->timestamp = $timestamp;
+
         return $this;
     }
 
@@ -250,6 +260,7 @@ class RoundThrows
     public function setThrowId(int $throwId): static
     {
         $this->throwId = $throwId;
+
         return $this;
     }
 }

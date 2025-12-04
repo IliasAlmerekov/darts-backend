@@ -10,6 +10,8 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * @ORM\Entity(repositoryClass: PlayerStatsRepository::class)
  * This class represents the statistics of a player.
+ *
+ * @psalm-suppress UnusedClass
  */
 #[ORM\Entity(repositoryClass: PlayerStatsRepository::class)]
 class PlayerStats
@@ -45,6 +47,7 @@ class PlayerStats
     public function setPlayerId(int $playerId): static
     {
         $this->playerId = $playerId;
+
         return $this;
     }
 
@@ -64,6 +67,7 @@ class PlayerStats
     public function setWins(?int $wins): static
     {
         $this->wins = $wins;
+
         return $this;
     }
 
@@ -83,6 +87,7 @@ class PlayerStats
     public function setWinPercentage(int $winPercentage): static
     {
         $this->winPercentage = $winPercentage;
+
         return $this;
     }
 
@@ -102,6 +107,7 @@ class PlayerStats
     public function setRoundAverage(?int $roundAverage): static
     {
         $this->roundAverage = $roundAverage;
+
         return $this;
     }
 
@@ -121,6 +127,7 @@ class PlayerStats
     public function setHighestCheckout(?int $highestCheckout): static
     {
         $this->highestCheckout = $highestCheckout;
+
         return $this;
     }
 
@@ -140,6 +147,7 @@ class PlayerStats
     public function setGamesPlayed(?int $gamesPlayed): static
     {
         $this->gamesPlayed = $gamesPlayed;
+
         return $this;
     }
 }

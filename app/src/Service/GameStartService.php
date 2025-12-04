@@ -18,8 +18,8 @@ use InvalidArgumentException;
 final readonly class GameStartService
 {
     /**
-     * @param GameSetupService        $gameSetupService
-     * @param EntityManagerInterface  $entityManager
+     * @param GameSetupService       $gameSetupService
+     * @param EntityManagerInterface $entityManager
      */
     public function __construct(
         private GameSetupService $gameSetupService,

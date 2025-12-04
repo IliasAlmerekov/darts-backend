@@ -17,7 +17,7 @@ use App\Repository\RoundThrowsRepository;
 final readonly class GameService
 {
     /**
-     * @param RoundRepository      $roundRepository
+     * @param RoundRepository       $roundRepository
      * @param RoundThrowsRepository $roundThrowsRepository
      */
     public function __construct(
@@ -38,6 +38,7 @@ final readonly class GameService
      * - He is not bust in the current round
      *
      * @param Game $game The game entity
+     *
      * @return int|null The id of the active player or null if no active player found
      */
     public function calculateActivePlayer(Game $game): ?int

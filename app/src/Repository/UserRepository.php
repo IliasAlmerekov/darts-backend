@@ -47,6 +47,7 @@ final class UserRepository extends ServiceEntityRepository implements PasswordUp
     /**
      * Find users by array of IDs
      * @param array $ids
+     *
      * @return User[]
      */
     public function findByIds(array $ids): array

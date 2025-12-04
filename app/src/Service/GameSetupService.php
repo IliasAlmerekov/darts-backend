@@ -15,7 +15,7 @@ final class GameSetupService
     /**
      * Setzt Startscore und Position der Spieler für ein Game.
      *
-     * @param Game            $game
+     * @param Game                 $game
      * @param array<int, int>|null $playerPositions
      *
      * @return void

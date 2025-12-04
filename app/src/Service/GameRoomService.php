@@ -16,10 +16,10 @@ use Doctrine\ORM\EntityManagerInterface;
 final readonly class GameRoomService
 {
     /**
-     * @param GameRepository           $gameRepository
-     * @param GamePlayersRepository    $gamePlayersRepository
-     * @param EntityManagerInterface   $entityManager
-     * @param PlayerManagementService  $playerManagementService
+     * @param GameRepository          $gameRepository
+     * @param GamePlayersRepository   $gamePlayersRepository
+     * @param EntityManagerInterface  $entityManager
+     * @param PlayerManagementService $playerManagementService
      */
     public function __construct(
         private GameRepository $gameRepository,
@@ -38,10 +38,12 @@ final readonly class GameRoomService
         $game->setDate(new DateTime());
         $this->entityManager->persist($game);
         $this->entityManager->flush();
+
         return $game;
     }
 
     /**
+     * @param int|null       $previousGameId
      * @param list<int>|null $includePlayerIds Explicit list of players to place into the new game
      * @param list<int>|null $excludePlayerIds Players to omit from the include list
      *

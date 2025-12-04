@@ -27,12 +27,12 @@ use Symfony\Component\Uid\Uuid;
 final class InvitationController extends AbstractController
 {
     /**
-     * @param int                     $id
-     * @param Request                 $request
-     * @param EntityManagerInterface  $entityManager
-     * @param InvitationRepository    $invitationRepository
-     * @param GamePlayersRepository   $gamePlayersRepository
-     * @param UserRepository          $userRepository
+     * @param int                    $id
+     * @param Request                $request
+     * @param EntityManagerInterface $entityManager
+     * @param InvitationRepository   $invitationRepository
+     * @param GamePlayersRepository  $gamePlayersRepository
+     * @param UserRepository         $userRepository
      *
      * @return Response
      */
@@ -56,7 +56,7 @@ final class InvitationController extends AbstractController
         }
 
         $players = $gamePlayersRepository->findByGameId($id);
-        $playerIds = array_map(fn($player) => $player->getPlayer()?->getId(), $players);
+        $playerIds = array_map(fn ($player) => $player->getPlayer()?->getId(), $players);
         $users = $userRepository->findBy(['id' => $playerIds]);
         $invitationLink = $this->generateUrl('join_invitation', ['uuid' => $invitation->getUuid()]);
         if (str_contains($request->headers->get('Accept') ?? '', 'application/json')) {
@@ -91,6 +91,7 @@ final class InvitationController extends AbstractController
         $session->remove('invitation_uuid');
         $session->set('invitation_uuid', $uuid);
         $session->set('game_id', $invitation->getGameId());
+
         return $this->redirect('http://localhost:5173/');
     }
 
@@ -133,6 +134,7 @@ final class InvitationController extends AbstractController
 
         $request->getSession()->remove('invitation_uuid');
         $request->getSession()->remove('game_id');
+
         return $this->redirectToRoute('waiting_room');
     }
 }

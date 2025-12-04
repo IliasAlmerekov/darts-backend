@@ -47,6 +47,7 @@ class GamePlayers
     public function setGame(?Game $game): static
     {
         $this->game = $game;
+
         return $this;
     }
 
@@ -66,6 +67,7 @@ class GamePlayers
     public function setPlayer(?User $player): static
     {
         $this->player = $player;
+
         return $this;
     }
 
@@ -85,6 +87,7 @@ class GamePlayers
     public function setPosition(int $position): static
     {
         $this->position = $position;
+
         return $this;
     }
 
@@ -104,6 +107,7 @@ class GamePlayers
     public function setScore(int $score): static
     {
         $this->score = $score;
+
         return $this;
     }
 
@@ -123,6 +127,7 @@ class GamePlayers
     public function setGamePlayerId(int $gamePlayerId): static
     {
         $this->gamePlayerId = $gamePlayerId;
+
         return $this;
     }
 
@@ -142,6 +147,7 @@ class GamePlayers
     public function setIsWinner(?bool $isWinner): static
     {
         $this->isWinner = $isWinner;
+
         return $this;
     }
 }

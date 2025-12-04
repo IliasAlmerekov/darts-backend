@@ -35,8 +35,8 @@ final readonly class GameFinishService
     }
 
     /**
-     * @param Game                    $game
-     * @param DateTimeInterface|null  $finishedAt
+     * @param Game                   $game
+     * @param DateTimeInterface|null $finishedAt
      *
      * @return array
      */
@@ -50,7 +50,46 @@ final readonly class GameFinishService
         $this->recalculatePositions($game);
         $this->entityManager->flush();
         $finishedRounds = $this->roundRepository->countFinishedRounds((int) $game->getGameId());
+
         return $this->buildFinishedPlayersList((int) $game->getGameId(), $finishedRounds);
+    }
+
+    /**
+     * @param Game $game
+     *
+     * @return array<string, mixed>
+     */
+    public function getGameStats(Game $game): array
+    {
+        $gameId = (int) $game->getGameId();
+        $finishedRounds = $this->roundRepository->countFinishedRounds($gameId);
+        $roundsPlayedMap = $this->roundThrowsRepository->getRoundsPlayedForGame($gameId);
+        $totalScoresMap = $this->roundThrowsRepository->getTotalScoreForGame($gameId);
+        $winner = $game->getWinner();
+        $winnerId = $winner?->getId();
+        $winnerRounds = null !== $winnerId ? max($roundsPlayedMap[$winnerId] ?? 0, $finishedRounds) : 0;
+        $winnerTotal = null !== $winnerId ? ($totalScoresMap[$winnerId] ?? 0.0) : 0.0;
+        $winnerAverage = $winnerRounds > 0 ? (float) $winnerTotal / (float) $winnerRounds : 0.0;
+
+        return [
+            'gameId' => $gameId,
+            'date' => $game->getDate(),
+            'finishedAt' => $game->getFinishedAt(),
+            'winner' => $winner
+                ? [
+                    'id' => $winner->getId(),
+                    'username' => $winner->getUsername(),
+                ]
+                : null,
+            'winnerRoundsPlayed' => $winnerRounds,
+            'winnerRoundAverage' => $winnerAverage,
+            'finishedPlayers' => $this->buildFinishedPlayersList(
+                $gameId,
+                $finishedRounds,
+                $roundsPlayedMap,
+                $totalScoresMap
+            ),
+        ];
     }
 
     /**
@@ -75,7 +114,7 @@ final readonly class GameFinishService
             $player->setPosition($index + 1);
         }
 
-        if ($players !== []) {
+        if ([] !== $players) {
             $winnerPlayer = $players[0];
             $game->setWinner($winnerPlayer->getPlayer());
             foreach ($players as $player) {
@@ -85,49 +124,18 @@ final readonly class GameFinishService
     }
 
     /**
-     * @param Game $game
-     *
-     * @return array<string, mixed>
-     */
-    public function getGameStats(Game $game): array
-    {
-        $gameId = (int) $game->getGameId();
-        $finishedRounds = $this->roundRepository->countFinishedRounds($gameId);
-        $roundsPlayedMap = $this->roundThrowsRepository->getRoundsPlayedForGame($gameId);
-        $totalScoresMap = $this->roundThrowsRepository->getTotalScoreForGame($gameId);
-        $winner = $game->getWinner();
-        $winnerId = $winner?->getId();
-        $winnerRounds = null !== $winnerId ? max($roundsPlayedMap[$winnerId] ?? 0, $finishedRounds) : 0;
-        $winnerTotal = null !== $winnerId ? ($totalScoresMap[$winnerId] ?? 0.0) : 0.0;
-        $winnerAverage = $winnerRounds > 0 ? $winnerTotal / $winnerRounds : 0.0;
-        return [
-            'gameId' => $gameId,
-            'date' => $game->getDate(),
-            'finishedAt' => $game->getFinishedAt(),
-            'winner' => $winner
-                ? [
-                    'id' => $winner->getId(),
-                    'username' => $winner->getUsername(),
-                ]
-                : null,
-            'winnerRoundsPlayed' => $winnerRounds,
-            'winnerRoundAverage' => $winnerAverage,
-            'finishedPlayers' => $this->buildFinishedPlayersList(
-                $gameId,
-                $finishedRounds,
-                $roundsPlayedMap,
-                $totalScoresMap
-            ),
-        ];
-    }
-
-    /**
-     * @param int $gameId
-     * @param int $finishedRounds
-     * @param array<int, int>|null $roundsPlayedMap
+     * @param int                    $gameId
+     * @param int                    $finishedRounds
+     * @param array<int, int>|null   $roundsPlayedMap
      * @param array<int, float>|null $totalScoresMap
      *
-     * @return array<int, array<string, int|float|null>>
+     * @return list<array{
+     *     playerId:int|null,
+     *     username:string|null,
+     *     position:int|null,
+     *     roundsPlayed:int,
+     *     roundAverage:float
+     * }>
      */
     private function buildFinishedPlayersList(
         int $gameId,
@@ -165,7 +173,7 @@ final readonly class GameFinishService
             $totalScore = null !== $playerId
                 ? ($totalScoresMap[$playerId] ?? 0.0)
                 : 0.0;
-            $roundAverage = $roundsPlayed > 0 ? $totalScore / $roundsPlayed : 0.0;
+            $roundAverage = $roundsPlayed > 0 ? (float) $totalScore / (float) $roundsPlayed : 0.0;
             $result[] = [
                 'playerId' => $playerId,
                 'username' => $user?->getUsername(),

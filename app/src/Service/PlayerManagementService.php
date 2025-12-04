@@ -45,10 +45,14 @@ final readonly class PlayerManagementService
 
         $this->entityManager->remove($gamePlayer);
         $this->entityManager->flush();
+
         return true;
     }
 
     /**
+     * @param int $gameId
+     * @param int $playerId
+     *
      * @throws ORMException
      *
      * @return GamePlayers
@@ -60,12 +64,15 @@ final readonly class PlayerManagementService
         $gamePlayer->setPlayer($this->entityManager->getReference(User::class, $playerId));
         $this->entityManager->persist($gamePlayer);
         $this->entityManager->flush();
+
         return $gamePlayer;
     }
 
     /**
      * Copy players from one game to another. If a filter list is provided, only those players are copied.
      *
+     * @param int            $fromGameId
+     * @param int            $toGameId
      * @param list<int>|null $playerIds
      *
      * @throws ORMException

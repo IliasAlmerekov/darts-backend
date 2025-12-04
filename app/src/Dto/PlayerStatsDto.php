@@ -21,10 +21,10 @@ final class PlayerStatsDto
     public float $scoreAverage;
 
     /**
-     * @param int   $playerId
+     * @param int    $playerId
      * @param string $name
-     * @param int   $gamesPlayed
-     * @param float $scoreAverage
+     * @param int    $gamesPlayed
+     * @param float  $scoreAverage
      */
     public function __construct(int $playerId, string $name, int $gamesPlayed, float $scoreAverage)
     {

@@ -141,6 +141,8 @@ final class RoundThrowsRepository extends ServiceEntityRepository
     /**
      * Returns the last round number each player participated in for a game.
      *
+     * @param int $gameId
+     *
      * @return array<int,int>
      */
     public function getLastRoundNumberForGame(int $gameId): array
@@ -192,6 +194,11 @@ final class RoundThrowsRepository extends ServiceEntityRepository
     /**
      * Aggregated player statistics over finished games and finished rounds.
      *
+     * @param int    $limit
+     * @param int    $offset
+     * @param string $sortField
+     * @param string $direction
+     *
      * @return array<int, array{
      *     playerId:int,
      *     username:string,
@@ -218,7 +225,7 @@ final class RoundThrowsRepository extends ServiceEntityRepository
                 "SUM(CASE WHEN rt.isBust = true THEN 0 ELSE rt.value END) AS totalValue",
                 'COUNT(DISTINCT r.roundId) AS roundsFinished',
                 "(SUM(CASE WHEN rt.isBust = true THEN 0 ELSE rt.value END) / "
-                . "NULLIF(COUNT(DISTINCT r.roundId), 0)) AS scoreAverage"
+                ."NULLIF(COUNT(DISTINCT r.roundId), 0)) AS scoreAverage"
             )
             ->innerJoin('rt.player', 'u')
             ->innerJoin('rt.game', 'g')
