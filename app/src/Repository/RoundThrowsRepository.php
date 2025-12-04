@@ -10,7 +10,7 @@ use Doctrine\Persistence\ManagerRegistry;
 /**
  * @extends ServiceEntityRepository<RoundThrows>
  */
-final class RoundThrowsRepository extends ServiceEntityRepository
+final class RoundThrowsRepository extends ServiceEntityRepository implements RoundThrowsRepositoryInterface
 {
     /**
      * @param ManagerRegistry $registry
@@ -225,7 +225,7 @@ final class RoundThrowsRepository extends ServiceEntityRepository
                 "SUM(CASE WHEN rt.isBust = true THEN 0 ELSE rt.value END) AS totalValue",
                 'COUNT(DISTINCT r.roundId) AS roundsFinished',
                 "(SUM(CASE WHEN rt.isBust = true THEN 0 ELSE rt.value END) / "
-                ."NULLIF(COUNT(DISTINCT r.roundId), 0)) AS scoreAverage"
+                    . "NULLIF(COUNT(DISTINCT r.roundId), 0)) AS scoreAverage"
             )
             ->innerJoin('rt.player', 'u')
             ->innerJoin('rt.game', 'g')
