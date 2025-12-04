@@ -10,7 +10,7 @@ namespace App\Dto;
 final class PlayerResponseDto
 {
     /**
-     * @param list<ThrowResponseDto>                     $currentRoundThrows
+     * @param list<ThrowResponseDto>                                $currentRoundThrows
      * @param list<array{round:int, throws:list<ThrowResponseDto>}> $roundHistory
      */
     public function __construct(

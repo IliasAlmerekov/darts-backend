@@ -25,6 +25,7 @@ final class GamePlayersRepository extends ServiceEntityRepository
     /**
      * Find players with user information for a specific game
      * @param int $gameId
+     *
      * @return array
      */
     public function findPlayersWithUserInfo(int $gameId): array
@@ -42,6 +43,7 @@ final class GamePlayersRepository extends ServiceEntityRepository
      * Check if a player already joined the game
      * @param int $gameId
      * @param int $playerId
+     *
      * @return bool
      */
     public function isPlayerInGame(int $gameId, int $playerId): bool

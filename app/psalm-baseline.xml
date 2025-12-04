@@ -102,22 +102,6 @@
       <code><![CDATA[getId]]></code>
     </PossiblyUnusedMethod>
   </file>
-  <file src="src/Entity/PlayerStats.php">
-    <PossiblyUnusedMethod>
-      <code><![CDATA[getGamesPlayed]]></code>
-      <code><![CDATA[getHighestCheckout]]></code>
-      <code><![CDATA[getPlayerId]]></code>
-      <code><![CDATA[getRoundAverage]]></code>
-      <code><![CDATA[getWinPercentage]]></code>
-      <code><![CDATA[getWins]]></code>
-      <code><![CDATA[setGamesPlayed]]></code>
-      <code><![CDATA[setHighestCheckout]]></code>
-      <code><![CDATA[setPlayerId]]></code>
-      <code><![CDATA[setRoundAverage]]></code>
-      <code><![CDATA[setWinPercentage]]></code>
-      <code><![CDATA[setWins]]></code>
-    </PossiblyUnusedMethod>
-  </file>
   <file src="src/Entity/Round.php">
     <PossiblyUnusedMethod>
       <code><![CDATA[addRoundThrow]]></code>

@@ -24,10 +24,10 @@ use InvalidArgumentException;
 final readonly class GameThrowService
 {
     /**
-     * @param GamePlayersRepository   $gamePlayersRepository
-     * @param RoundRepository         $roundRepository
-     * @param RoundThrowsRepository   $roundThrowsRepository
-     * @param EntityManagerInterface  $entityManager
+     * @param GamePlayersRepository  $gamePlayersRepository
+     * @param RoundRepository        $roundRepository
+     * @param RoundThrowsRepository  $roundThrowsRepository
+     * @param EntityManagerInterface $entityManager
      */
     public function __construct(
         private GamePlayersRepository $gamePlayersRepository,

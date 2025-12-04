@@ -63,6 +63,7 @@ class Round
     public function setRoundId(int $roundId): static
     {
         $this->roundId = $roundId;
+
         return $this;
     }
 
@@ -82,6 +83,7 @@ class Round
     public function setGame(?Game $game): static
     {
         $this->game = $game;
+
         return $this;
     }
 
@@ -101,6 +103,7 @@ class Round
     public function setRoundNumber(int $roundNumber): static
     {
         $this->roundNumber = $roundNumber;
+
         return $this;
     }
 
@@ -122,6 +125,7 @@ class Round
     public function setStartedAt(?DateTimeInterface $startedAt): static
     {
         $this->startedAt = $startedAt;
+
         return $this;
     }
 
@@ -141,6 +145,7 @@ class Round
     public function setFinishedAt(?DateTimeInterface $finishedAt): static
     {
         $this->finishedAt = $finishedAt;
+
         return $this;
     }
 

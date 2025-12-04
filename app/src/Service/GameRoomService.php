@@ -16,10 +16,10 @@ use Doctrine\ORM\EntityManagerInterface;
 final readonly class GameRoomService
 {
     /**
-     * @param GameRepository           $gameRepository
-     * @param GamePlayersRepository    $gamePlayersRepository
-     * @param EntityManagerInterface   $entityManager
-     * @param PlayerManagementService  $playerManagementService
+     * @param GameRepository          $gameRepository
+     * @param GamePlayersRepository   $gamePlayersRepository
+     * @param EntityManagerInterface  $entityManager
+     * @param PlayerManagementService $playerManagementService
      */
     public function __construct(
         private GameRepository $gameRepository,
@@ -38,6 +38,7 @@ final readonly class GameRoomService
         $game->setDate(new DateTime());
         $this->entityManager->persist($game);
         $this->entityManager->flush();
+
         return $game;
     }
 

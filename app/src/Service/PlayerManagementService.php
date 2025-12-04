@@ -45,6 +45,7 @@ final readonly class PlayerManagementService
 
         $this->entityManager->remove($gamePlayer);
         $this->entityManager->flush();
+
         return true;
     }
 
@@ -60,6 +61,7 @@ final readonly class PlayerManagementService
         $gamePlayer->setPlayer($this->entityManager->getReference(User::class, $playerId));
         $this->entityManager->persist($gamePlayer);
         $this->entityManager->flush();
+
         return $gamePlayer;
     }
 

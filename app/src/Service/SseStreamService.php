@@ -15,8 +15,8 @@ use App\Repository\RoundThrowsRepository;
 final readonly class SseStreamService
 {
     /**
-     * @param GameRoomService        $gameRoomService
-     * @param RoundThrowsRepository  $roundThrowsRepository
+     * @param GameRoomService       $gameRoomService
+     * @param RoundThrowsRepository $roundThrowsRepository
      */
     public function __construct(
         private GameRoomService $gameRoomService,
@@ -83,6 +83,7 @@ final readonly class SseStreamService
         $response->headers->set('Cache-Control', 'no-cache');
         $response->headers->set('Connection', 'keep-alive');
         $response->headers->set('X-Accel-Buffering', 'no');
+
         return $response;
     }
 }
