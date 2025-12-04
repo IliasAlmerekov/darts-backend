@@ -13,6 +13,9 @@ final class RoundRepository extends ServiceEntityRepository implements RoundRepo
 {
     /**
      * @param ManagerRegistry $registry
+     *
+     * @psalm-suppress PossiblyUnusedMethod
+     * @psalm-suppress UnusedParam
      */
     public function __construct(ManagerRegistry $registry)
     {

@@ -7,9 +7,9 @@ namespace App\Service;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Enum\GameStatus;
-use App\Repository\GamePlayersRepository;
-use App\Repository\RoundRepository;
-use App\Repository\RoundThrowsRepository;
+use App\Repository\GamePlayersRepositoryInterface;
+use App\Repository\RoundRepositoryInterface;
+use App\Repository\RoundThrowsRepositoryInterface;
 use DateTimeImmutable;
 use DateTimeInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -21,16 +21,16 @@ use Doctrine\ORM\EntityManagerInterface;
 final readonly class GameFinishService
 {
     /**
-     * @param EntityManagerInterface $entityManager
-     * @param GamePlayersRepository  $gamePlayersRepository
-     * @param RoundThrowsRepository  $roundThrowsRepository
-     * @param RoundRepository        $roundRepository
+     * @param EntityManagerInterface         $entityManager
+     * @param GamePlayersRepositoryInterface $gamePlayersRepository
+     * @param RoundThrowsRepositoryInterface $roundThrowsRepository
+     * @param RoundRepositoryInterface       $roundRepository
      */
     public function __construct(
         private EntityManagerInterface $entityManager,
-        private GamePlayersRepository $gamePlayersRepository,
-        private RoundThrowsRepository $roundThrowsRepository,
-        private RoundRepository $roundRepository,
+        private GamePlayersRepositoryInterface $gamePlayersRepository,
+        private RoundThrowsRepositoryInterface $roundThrowsRepository,
+        private RoundRepositoryInterface $roundRepository,
     ) {
     }
 

@@ -9,9 +9,9 @@ use App\Entity\Game;
 use App\Entity\Round;
 use App\Entity\RoundThrows;
 use App\Enum\GameStatus;
-use App\Repository\GamePlayersRepository;
-use App\Repository\RoundRepository;
-use App\Repository\RoundThrowsRepository;
+use App\Repository\GamePlayersRepositoryInterface;
+use App\Repository\RoundRepositoryInterface;
+use App\Repository\RoundThrowsRepositoryInterface;
 use DateTime;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
@@ -24,15 +24,15 @@ use InvalidArgumentException;
 final readonly class GameThrowService
 {
     /**
-     * @param GamePlayersRepository  $gamePlayersRepository
-     * @param RoundRepository        $roundRepository
-     * @param RoundThrowsRepository  $roundThrowsRepository
-     * @param EntityManagerInterface $entityManager
+     * @param GamePlayersRepositoryInterface $gamePlayersRepository
+     * @param RoundRepositoryInterface       $roundRepository
+     * @param RoundThrowsRepositoryInterface $roundThrowsRepository
+     * @param EntityManagerInterface         $entityManager
      */
     public function __construct(
-        private GamePlayersRepository $gamePlayersRepository,
-        private RoundRepository $roundRepository,
-        private RoundThrowsRepository $roundThrowsRepository,
+        private GamePlayersRepositoryInterface $gamePlayersRepository,
+        private RoundRepositoryInterface $roundRepository,
+        private RoundThrowsRepositoryInterface $roundThrowsRepository,
         private EntityManagerInterface $entityManager,
     ) {
     }

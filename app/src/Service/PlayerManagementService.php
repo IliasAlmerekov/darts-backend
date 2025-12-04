@@ -7,7 +7,7 @@ namespace App\Service;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\User;
-use App\Repository\GamePlayersRepository;
+use App\Repository\GamePlayersRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
 
@@ -18,11 +18,11 @@ use Doctrine\ORM\Exception\ORMException;
 final readonly class PlayerManagementService
 {
     /**
-     * @param GamePlayersRepository  $gamePlayersRepository
-     * @param EntityManagerInterface $entityManager
+     * @param GamePlayersRepositoryInterface $gamePlayersRepository
+     * @param EntityManagerInterface         $entityManager
      */
     public function __construct(
-        private GamePlayersRepository $gamePlayersRepository,
+        private GamePlayersRepositoryInterface $gamePlayersRepository,
         private EntityManagerInterface $entityManager
     ) {
     }

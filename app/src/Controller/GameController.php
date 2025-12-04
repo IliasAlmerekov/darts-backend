@@ -12,10 +12,10 @@ use App\Service\GameFinishService;
 use App\Service\GameStartService;
 use App\Service\GameStatisticsService;
 use App\Service\GameThrowService;
-use App\Repository\RoundThrowsRepository;
+use App\Repository\RoundThrowsRepositoryInterface;
 use DateTimeInterface;
 use InvalidArgumentException;
-use App\Repository\GameRepository;
+use App\Repository\GameRepositoryInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -32,18 +32,18 @@ final class GameController extends AbstractController
 {
     #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'])]
     /**
-     * @param int                 $gameId
-     * @param Request             $request
-     * @param GameRepository      $gameRepository
-     * @param GameStartService    $gameStartService
-     * @param SerializerInterface $serializer
+     * @param int                     $gameId
+     * @param Request                 $request
+     * @param GameRepositoryInterface $gameRepository
+     * @param GameStartService        $gameStartService
+     * @param SerializerInterface     $serializer
      *
      * @return Response
      */
     public function start(
         int $gameId,
         Request $request,
-        GameRepository $gameRepository,
+        GameRepositoryInterface $gameRepository,
         GameStartService $gameStartService,
         SerializerInterface $serializer,
     ): Response {
@@ -68,19 +68,19 @@ final class GameController extends AbstractController
      */
     #[Route('/api/game/{gameId}/throw', name: 'app_game_throw', methods: ['POST'])]
     /**
-     * @param int                 $gameId
-     * @param Request             $request
-     * @param GameRepository      $gameRepository
-     * @param GameThrowService    $gameThrowService
-     * @param GameService         $gameService
-     * @param SerializerInterface $serializer
+     * @param int                     $gameId
+     * @param Request                 $request
+     * @param GameRepositoryInterface $gameRepository
+     * @param GameThrowService        $gameThrowService
+     * @param GameService             $gameService
+     * @param SerializerInterface     $serializer
      *
      * @return Response
      */
     public function throw(
         int $gameId,
         Request $request,
-        GameRepository $gameRepository,
+        GameRepositoryInterface $gameRepository,
         GameThrowService $gameThrowService,
         GameService $gameService,
         SerializerInterface $serializer,
@@ -104,16 +104,16 @@ final class GameController extends AbstractController
 
     #[Route('/api/game/{gameId}/throw', name: 'app_game_throw_undo', methods: ['DELETE'])]
     /**
-     * @param int              $gameId
-     * @param GameRepository   $gameRepository
-     * @param GameThrowService $gameThrowService
-     * @param GameService      $gameService
+     * @param int                     $gameId
+     * @param GameRepositoryInterface $gameRepository
+     * @param GameThrowService        $gameThrowService
+     * @param GameService             $gameService
      *
      * @return Response
      */
     public function undoThrow(
         int $gameId,
-        GameRepository $gameRepository,
+        GameRepositoryInterface $gameRepository,
         GameThrowService $gameThrowService,
         GameService $gameService
     ): Response {
@@ -130,15 +130,15 @@ final class GameController extends AbstractController
 
     #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['GET'])]
     /**
-     * @param int               $gameId
-     * @param GameRepository    $gameRepository
-     * @param GameFinishService $gameFinishService
+     * @param int                     $gameId
+     * @param GameRepositoryInterface $gameRepository
+     * @param GameFinishService       $gameFinishService
      *
      * @return Response
      */
     public function finished(
         int $gameId,
-        GameRepository $gameRepository,
+        GameRepositoryInterface $gameRepository,
         GameFinishService $gameFinishService,
     ): Response {
         $game = $gameRepository->find($gameId);
@@ -160,15 +160,15 @@ final class GameController extends AbstractController
 
     #[Route('/api/games/overview', name: 'app_games_overview', methods: ['GET'])]
     /**
-     * @param Request           $request
-     * @param GameRepository    $gameRepository
-     * @param GameFinishService $gameFinishService
+     * @param Request                 $request
+     * @param GameRepositoryInterface $gameRepository
+     * @param GameFinishService       $gameFinishService
      *
      * @return Response
      */
     public function gamesOverview(
         Request $request,
-        GameRepository $gameRepository,
+        GameRepositoryInterface $gameRepository,
         GameFinishService $gameFinishService,
     ): Response {
         $limit = max(1, min(100, $request->query->getInt('limit', 100)));
@@ -206,16 +206,16 @@ final class GameController extends AbstractController
 
     #[Route('/api/players/stats', name: 'app_players_stats', methods: ['GET'])]
     /**
-     * @param Request               $request
-     * @param GameStatisticsService $gameStatisticsService
-     * @param RoundThrowsRepository $roundThrowsRepository
+     * @param Request                        $request
+     * @param GameStatisticsService          $gameStatisticsService
+     * @param RoundThrowsRepositoryInterface $roundThrowsRepository
      *
      * @return Response
      */
     public function playerStats(
         Request $request,
         GameStatisticsService $gameStatisticsService,
-        RoundThrowsRepository $roundThrowsRepository,
+        RoundThrowsRepositoryInterface $roundThrowsRepository,
     ): Response {
         $limit = max(1, min(100, $request->query->getInt('limit', 20)));
         $offset = max(0, $request->query->getInt('offset'));
@@ -233,14 +233,17 @@ final class GameController extends AbstractController
 
     #[Route('/api/game/{gameId}', name: 'app_game_state', methods: ['GET'])]
     /**
-     * @param int            $gameId
-     * @param GameRepository $gameRepository
-     * @param GameService    $gameService
+     * @param int                     $gameId
+     * @param GameRepositoryInterface $gameRepository
+     * @param GameService             $gameService
      *
      * @return JsonResponse
      */
-    public function getGameState(int $gameId, GameRepository $gameRepository, GameService $gameService): JsonResponse
-    {
+    public function getGameState(
+        int $gameId,
+        GameRepositoryInterface $gameRepository,
+        GameService $gameService
+    ): JsonResponse {
         // Spiel aus der Datenbank abrufen
         $game = $gameRepository->find($gameId);
 // Überprüfen, ob das Spiel existiert

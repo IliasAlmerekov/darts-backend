@@ -6,7 +6,7 @@ namespace App\Service;
 
 use DateTimeInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
-use App\Repository\RoundThrowsRepository;
+use App\Repository\RoundThrowsRepositoryInterface;
 
 /**
  * Service to create SSE streams for players and throws.
@@ -15,12 +15,12 @@ use App\Repository\RoundThrowsRepository;
 final readonly class SseStreamService
 {
     /**
-     * @param GameRoomService       $gameRoomService
-     * @param RoundThrowsRepository $roundThrowsRepository
+     * @param GameRoomService                $gameRoomService
+     * @param RoundThrowsRepositoryInterface $roundThrowsRepository
      */
     public function __construct(
         private GameRoomService $gameRoomService,
-        private RoundThrowsRepository $roundThrowsRepository
+        private RoundThrowsRepositoryInterface $roundThrowsRepository
     ) {
     }
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Dto\PlayerStatsDto;
-use App\Repository\RoundThrowsRepository;
+use App\Repository\RoundThrowsRepositoryInterface;
 
 /**
  * Provides aggregated game statistics.
@@ -13,9 +13,9 @@ use App\Repository\RoundThrowsRepository;
 final readonly class GameStatisticsService
 {
     /**
-     * @param RoundThrowsRepository $roundThrowsRepository
+     * @param RoundThrowsRepositoryInterface $roundThrowsRepository
      */
-    public function __construct(private RoundThrowsRepository $roundThrowsRepository)
+    public function __construct(private RoundThrowsRepositoryInterface $roundThrowsRepository)
     {
     }
 
