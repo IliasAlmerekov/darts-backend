@@ -22,7 +22,7 @@ use Symfony\Component\Uid\Uuid;
  * joining via invitation links, and processing invitations.
  * Also get as JSON responses for API requests.
  */
-class InvitationController extends AbstractController
+final class InvitationController extends AbstractController
 {
     /**
      * @param int $id
@@ -56,7 +56,7 @@ class InvitationController extends AbstractController
 
         $invitationLink = $this->generateUrl('join_invitation', ['uuid' => $invitation->getUuid()]);
 
-        if (str_contains($request->headers->get('Accept', ''), 'application/json')) {
+        if (str_contains($request->headers->get('Accept') ?? '', 'application/json')) {
             return $this->json([
                 'success' => true,
                 'gameId' => $id,
@@ -106,10 +106,15 @@ class InvitationController extends AbstractController
             return $this->redirectToRoute('room_list');
         }
 
-        if (!$gamePlayersRepository->isPlayerInGame($gameId, $user->getId())) {
+        $userId = $user->getId();
+        if ($userId === null) {
+            return $this->redirectToRoute('app_login');
+        }
+
+        if (!$gamePlayersRepository->isPlayerInGame($gameId, $userId)) {
             $gamePlayer = new GamePlayers();
             $gamePlayer->setGame($entityManager->getReference(Game::class, $gameId));
-            $gamePlayer->setPlayer($entityManager->getReference(User::class, $user->getId()));
+            $gamePlayer->setPlayer($entityManager->getReference(User::class, $userId));
 
             $entityManager->persist($gamePlayer);
             $entityManager->flush();

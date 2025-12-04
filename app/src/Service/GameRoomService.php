@@ -8,7 +8,7 @@ use App\Repository\GamePlayersRepository;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 
-readonly class GameRoomService
+final readonly class GameRoomService
 {
     public function __construct(
         private GameRepository          $gameRepository,

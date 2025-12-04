@@ -5,7 +5,7 @@ namespace App\Dto;
  * @psalm-immutable
  * This class is used to serialize game stats
  */
-class GameResponseDto
+final class GameResponseDto
 {
     public function __construct(
         public int $id,

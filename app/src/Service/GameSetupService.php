@@ -8,7 +8,7 @@ use App\Entity\Game;
  * Service to handle game setup.
  * This class is responsible for setting up the initial game state.
  */
-class GameSetupService
+final class GameSetupService
 {
     /**
      * Setzt Startscore und Position der Spieler für ein Game.
@@ -19,10 +19,13 @@ class GameSetupService
 
         $startScore = $game->getStartScore();
 
+        /** @var array<int, int> $positionMap */
         $positionMap = [];
         if ($playerPositions !== null) {
             foreach ($playerPositions as $index => $playerId) {
-                $positionMap[(int) $playerId] = $index + 1;
+                if (is_int($index) && is_int($playerId)) {
+                    $positionMap[$playerId] = $index + 1;
+                }
             }
         }
 

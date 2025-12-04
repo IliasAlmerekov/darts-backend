@@ -11,7 +11,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * @psalm-immutable
  * This class is used to serialize game stats
  */
-readonly class GameFinishDto
+final readonly class GameFinishDto
 {
     public function __construct(
         #[Assert\Type(DateTimeInterface::class)]

@@ -14,7 +14,7 @@ use Symfony\Component\Routing\Attribute\Route;
 /**
  * Controller to handle user registration.
  */
-class RegistrationController extends AbstractController
+final class RegistrationController extends AbstractController
 {
     #[Route('/api/register', name: 'app_register', methods: ['POST'])]
     public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher, EntityManagerInterface $entityManager): Response
@@ -57,8 +57,10 @@ class RegistrationController extends AbstractController
 
         $errors = [];
         foreach ($form->getErrors(true) as $error) {
+            // FormError always has getOrigin() and getMessage() methods
+            /** @var \Symfony\Component\Form\FormError $error */
             $origin = $error->getOrigin();
-            $fieldName = $origin ? $origin->getName() : 'global';
+            $fieldName = $origin !== null ? $origin->getName() : 'global';
             $errors[$fieldName][] = $error->getMessage();
         }
 

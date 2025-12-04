@@ -7,7 +7,7 @@ use Symfony\Component\Serializer\Annotation\Groups;
 /**
  * This class is used to serialize player stats
  */
-class PlayerStatsDto
+final class PlayerStatsDto
 {
     #[Groups(['stats:read'])]
     public int $playerId;

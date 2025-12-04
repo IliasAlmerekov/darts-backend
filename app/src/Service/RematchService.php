@@ -14,7 +14,7 @@ use Symfony\Component\Uid\Uuid;
  * Service to handle rematches.
  * This class is responsible for creating a new game and copying players from the old game.
  */
-readonly class RematchService
+final readonly class RematchService
 {
     public function __construct(
         private GameRoomService         $gameRoomService,
@@ -42,6 +42,10 @@ readonly class RematchService
         $newGame->setStatus(GameStatus::Lobby);
         $newGame->setRound(null);
         $newGameId = $newGame->getGameId();
+
+        if ($newGameId === null) {
+            return ['success' => false, 'message' => 'Failed to create new game'];
+        }
 
         $this->playerManagementService->copyPlayers($oldGameId, $newGameId);
 

@@ -19,7 +19,7 @@ use Symfony\Component\HttpFoundation\Request;
 /**
  * Controller to handle user login and logout.
  */
-class SecurityController extends AbstractController
+final class SecurityController extends AbstractController
 {
     #[Route(path: 'api/login', name: 'app_login', methods: ['GET', 'POST'])]
     public function login(AuthenticationUtils $authenticationUtils): Response

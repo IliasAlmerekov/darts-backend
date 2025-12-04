@@ -17,7 +17,7 @@ use Symfony\Component\Security\Core\User\UserInterface;
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_USERNAME', fields: ['username'])]
 #[UniqueEntity(fields: ['email'], message: 'There is already an account with this email')]
 #[UniqueEntity(fields: ['username'], message: 'There is already an account with this username')]
-class User implements UserInterface, PasswordAuthenticatedUserInterface
+final class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -76,15 +76,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      * A visual identifier that represents this user.
      *
      * @see UserInterface
+     * @return non-empty-string
      */
+    #[\Override]
     public function getUserIdentifier(): string
     {
-        return (string) $this->email;
+        return $this->email !== null && $this->email !== '' ? $this->email : 'unknown';
     }
 
     /**
      * @see UserInterface
      */
+    #[\Override]
     public function getRoles(): array
     {
         $roles = $this->roles;
@@ -112,6 +115,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     /**
      * @see PasswordAuthenticatedUserInterface
      */
+    #[\Override]
     public function getPassword(): ?string
     {
         return $this->password;
@@ -130,12 +134,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function __serialize(): array
     {
         $data = (array) $this;
-        $data["\0".self::class."\0password"] = hash('crc32c', $this->password);
+        $data["\0".self::class."\0password"] = hash('crc32c', $this->password ?? '');
 
         return $data;
     }
 
     #[\Deprecated]
+    #[\Override]
     public function eraseCredentials(): void
     {
         // @deprecated, to be removed when upgrading to Symfony 8

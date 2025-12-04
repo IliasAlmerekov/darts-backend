@@ -13,7 +13,7 @@ use Doctrine\ORM\Exception\ORMException;
  * Service to handle player management.
  * This class is responsible for adding and removing players from games.
  */
-readonly class PlayerManagementService
+final readonly class PlayerManagementService
 {
     public function __construct(
         private GamePlayersRepository  $gamePlayersRepository,
@@ -67,8 +67,9 @@ readonly class PlayerManagementService
 
         foreach ($oldGamePlayers as $oldGamePlayer) {
             $player = $oldGamePlayer->getPlayer();
-            if ($player !== null && ($filter === null || in_array($player->getId(), $filter, true))) {
-                $this->addPlayer($toGameId, $player->getId());
+            $playerId = $player?->getId();
+            if ($playerId !== null && ($filter === null || in_array($playerId, $filter, true))) {
+                $this->addPlayer($toGameId, $playerId);
             }
         }
     }

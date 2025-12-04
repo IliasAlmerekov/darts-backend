@@ -10,7 +10,7 @@ use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;
 
-readonly class GameStartService
+final readonly class GameStartService
 {
     public function __construct(
         private GameSetupService       $gameSetupService,
