@@ -31,6 +31,15 @@ use Throwable;
 final class GameController extends AbstractController
 {
     #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'])]
+    /**
+     * @param int                 $gameId
+     * @param Request             $request
+     * @param GameRepository      $gameRepository
+     * @param GameStartService    $gameStartService
+     * @param SerializerInterface $serializer
+     *
+     * @return Response
+     */
     public function start(
         int $gameId,
         Request $request,
@@ -58,6 +67,16 @@ final class GameController extends AbstractController
      * This function records a throw for a player in a game.
      */
     #[Route('/api/game/{gameId}/throw', name: 'app_game_throw', methods: ['POST'])]
+    /**
+     * @param int                 $gameId
+     * @param Request             $request
+     * @param GameRepository      $gameRepository
+     * @param GameThrowService    $gameThrowService
+     * @param GameService         $gameService
+     * @param SerializerInterface $serializer
+     *
+     * @return Response
+     */
     public function throw(
         int $gameId,
         Request $request,
@@ -83,6 +102,14 @@ final class GameController extends AbstractController
     }
 
     #[Route('/api/game/{gameId}/throw', name: 'app_game_throw_undo', methods: ['DELETE'])]
+    /**
+     * @param int              $gameId
+     * @param GameRepository   $gameRepository
+     * @param GameThrowService $gameThrowService
+     * @param GameService      $gameService
+     *
+     * @return Response
+     */
     public function undoThrow(
         int $gameId,
         GameRepository $gameRepository,
@@ -100,6 +127,13 @@ final class GameController extends AbstractController
     }
 
     #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['GET'])]
+    /**
+     * @param int                $gameId
+     * @param GameRepository     $gameRepository
+     * @param GameFinishService  $gameFinishService
+     *
+     * @return Response
+     */
     public function finished(
         int $gameId,
         GameRepository $gameRepository,
@@ -123,6 +157,13 @@ final class GameController extends AbstractController
     }
 
     #[Route('/api/games/overview', name: 'app_games_overview', methods: ['GET'])]
+    /**
+     * @param Request            $request
+     * @param GameRepository     $gameRepository
+     * @param GameFinishService  $gameFinishService
+     *
+     * @return Response
+     */
     public function gamesOverview(
         Request $request,
         GameRepository $gameRepository,
@@ -162,6 +203,13 @@ final class GameController extends AbstractController
 
 
     #[Route('/api/players/stats', name: 'app_players_stats', methods: ['GET'])]
+    /**
+     * @param Request                 $request
+     * @param GameStatisticsService   $gameStatisticsService
+     * @param RoundThrowsRepository   $roundThrowsRepository
+     *
+     * @return Response
+     */
     public function playerStats(
         Request $request,
         GameStatisticsService $gameStatisticsService,
@@ -180,33 +228,14 @@ final class GameController extends AbstractController
         ], context: ['groups' => 'stats:read']);
     }
 
-    private function parseSort(string $sort): array
-    {
-        $field = 'average';
-        $direction = 'desc';
-        if (str_contains($sort, ':')) {
-            $parts = explode(':', $sort, 2);
-            $candidateField = $parts[0] ?? '';
-            $candidateDirection = $parts[1] ?? '';
-            $field = strtolower(trim($candidateField)) ?: $field;
-            $direction = strtolower(trim($candidateDirection)) ?: $direction;
-        } elseif ($sort !== '') {
-            $field = strtolower(trim($sort));
-        }
-
-        if (!in_array($field, ['average', 'gamesplayed'], true)) {
-            $field = 'average';
-        }
-
-        $direction = $direction === 'asc' ? 'ASC' : 'DESC';
-        if ($field === 'gamesplayed') {
-            $field = 'gamesPlayed';
-        }
-
-        return [$field, $direction];
-    }
-
     #[Route('/api/game/{gameId}', name: 'app_game_state', methods: ['GET'])]
+    /**
+     * @param int            $gameId
+     * @param GameRepository $gameRepository
+     * @param GameService    $gameService
+     *
+     * @return JsonResponse
+     */
     public function getGameState(int $gameId, GameRepository $gameRepository, GameService $gameService): JsonResponse
     {
         // Spiel aus der Datenbank abrufen
@@ -222,5 +251,36 @@ final class GameController extends AbstractController
         // wir konvertieren das DTO automatisch in JSON,
         // alle public werden zu JSON-Feldern
         return $this->json($gameDto);
+    }
+
+    /**
+     * @param string $sort
+     *
+     * @return array{0:string,1:string}
+     */
+    private function parseSort(string $sort): array
+    {
+        $field = 'average';
+        $direction = 'desc';
+        if (str_contains($sort, ':')) {
+            $parts = explode(':', $sort, 2);
+            $candidateField = $parts[0] ?? '';
+            $candidateDirection = $parts[1] ?? '';
+            $field = strtolower(trim($candidateField)) ?: $field;
+            $direction = strtolower(trim($candidateDirection)) ?: $direction;
+        } elseif ('' !== $sort) {
+            $field = strtolower(trim($sort));
+        }
+
+        if (!in_array($field, ['average', 'gamesplayed'], true)) {
+            $field = 'average';
+        }
+
+        $direction = 'asc' === $direction ? 'ASC' : 'DESC';
+        if ('gamesplayed' === $field) {
+            $field = 'gamesPlayed';
+        }
+
+        return [$field, $direction];
     }
 }

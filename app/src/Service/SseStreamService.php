@@ -14,16 +14,24 @@ use App\Repository\RoundThrowsRepository;
  */
 final readonly class SseStreamService
 {
+    /**
+     * @param GameRoomService        $gameRoomService
+     * @param RoundThrowsRepository  $roundThrowsRepository
+     */
     public function __construct(
         private GameRoomService $gameRoomService,
         private RoundThrowsRepository $roundThrowsRepository
     ) {
     }
 
+    /**
+     * @param int $gameId
+     *
+     * @return StreamedResponse
+     */
     public function createPlayerStream(int $gameId): StreamedResponse
     {
         $response = new StreamedResponse(function () use ($gameId) {
-
             set_time_limit(0);
             $eventId = 0;
             $lastPayload = null;
@@ -40,9 +48,9 @@ final readonly class SseStreamService
                 if (false !== $payload && $payload !== $lastPayload) {
                     $lastPayload = $payload;
                     $eventId++;
-                    echo 'id: ' . $eventId . "\n";
+                    echo 'id: '.$eventId."\n";
                     echo "event: players\n";
-                    echo 'data: ' . $payload . "\n\n";
+                    echo 'data: '.$payload."\n\n";
                     @ob_flush();
                     @flush();
                 }
@@ -52,14 +60,14 @@ final readonly class SseStreamService
                     $lastThrowId = $latestThrow['id'];
                     $eventId++;
                     if ($latestThrow['timestamp'] instanceof DateTimeInterface) {
-                            $latestThrow['timestamp'] = $latestThrow['timestamp']->format(DateTimeInterface::ATOM);
+                        $latestThrow['timestamp'] = $latestThrow['timestamp']->format(DateTimeInterface::ATOM);
                     }
 
-                    echo 'id: ' . $eventId . "\n";
+                    echo 'id: '.$eventId."\n";
                     echo "event: throw\n";
                     $jsonEncoded = json_encode($latestThrow);
-                    if ($jsonEncoded !== false) {
-                                echo 'data: ' . $jsonEncoded . "\n\n";
+                    if (false !== $jsonEncoded) {
+                        echo 'data: '.$jsonEncoded."\n\n";
                     }
                     @ob_flush();
                     @flush();

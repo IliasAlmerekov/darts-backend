@@ -19,6 +19,13 @@ final class PlayerStatsDto
     public int $gamesPlayed;
     #[Groups(['stats:read'])]
     public float $scoreAverage;
+
+    /**
+     * @param int   $playerId
+     * @param string $name
+     * @param int   $gamesPlayed
+     * @param float $scoreAverage
+     */
     public function __construct(int $playerId, string $name, int $gamesPlayed, float $scoreAverage)
     {
         $this->playerId = $playerId;

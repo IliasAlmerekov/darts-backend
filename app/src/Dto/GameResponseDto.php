@@ -10,12 +10,16 @@ namespace App\Dto;
  */
 final class GameResponseDto
 {
+    /**
+     * @param list<PlayerResponseDto>                    $players
+     * @param array<string, int|bool|string|null|array> $settings
+     */
     public function __construct(
         public int $id,
         public string $status,
         public int $currentRound,
         public ?int $activePlayerId,
-        public int $currentThrowCount, /** @var PlayerResponseDto[] */
+        public int $currentThrowCount,
         public array $players,
         public ?int $winnerId,
         public array $settings,

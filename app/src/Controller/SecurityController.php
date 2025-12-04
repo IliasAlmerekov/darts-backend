@@ -24,6 +24,11 @@ use Symfony\Component\HttpFoundation\Request;
 final class SecurityController extends AbstractController
 {
     #[Route(path: 'api/login', name: 'app_login', methods: ['GET', 'POST'])]
+    /**
+     * @param AuthenticationUtils $authenticationUtils
+     *
+     * @return Response
+     */
     public function login(AuthenticationUtils $authenticationUtils): Response
     {
         $user = $this->getUser();
@@ -40,6 +45,14 @@ final class SecurityController extends AbstractController
     }
 
     #[Route('api/login/success', name: 'login_success')]
+    /**
+     * @param Request                 $request
+     * @param EntityManagerInterface  $entityManager
+     * @param InvitationRepository    $invitationRepository
+     * @param GamePlayersRepository   $gamePlayersRepository
+     *
+     * @return Response
+     */
     public function loginSuccess(
         Request $request,
         EntityManagerInterface $entityManager,
@@ -59,7 +72,7 @@ final class SecurityController extends AbstractController
                 'roles' => $user->getStoredRoles(),
                 'id' => $user->getId(),
                 'username' => $user->getUserIdentifier(),
-                'redirect' => '/start'
+                'redirect' => '/start',
             ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
         }
 
@@ -68,7 +81,7 @@ final class SecurityController extends AbstractController
         if ($session->has('invitation_uuid')) {
             $uuid = $session->get('invitation_uuid');
             $invitation = $invitationRepository->findOneBy(['uuid' => $uuid]);
-            if ($invitation === null) {
+            if (null === $invitation) {
                 return $this->json(['error' => 'Invitation not found'], Response::HTTP_NOT_FOUND);
             }
 
@@ -85,7 +98,7 @@ final class SecurityController extends AbstractController
                 }
             } catch (ORMException) {
                 return $this->json([
-                'error' => 'Database error occurred while adding player to game'
+                    'error' => 'Database error occurred while adding player to game',
                 ], Response::HTTP_INTERNAL_SERVER_ERROR);
             }
 
@@ -94,7 +107,7 @@ final class SecurityController extends AbstractController
                 'roles' => $user->getStoredRoles(),
                 'id' => $user->getId(),
                 'username' => $user->getUserIdentifier(),
-                'redirect' => '/joined'
+                'redirect' => '/joined',
             ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
         }
 
@@ -105,11 +118,14 @@ final class SecurityController extends AbstractController
             'roles' => $user->getStoredRoles(),
             'id' => $user->getId(),
             'username' => $user->getUserIdentifier(),
-            'redirect' => '/playerprofile'
+            'redirect' => '/playerprofile',
         ]);
     }
 
     #[Route(path: 'api/logout', name: 'app_logout')]
+    /**
+     * @return void
+     */
     public function logout(): void
     {
         throw new LogicException(

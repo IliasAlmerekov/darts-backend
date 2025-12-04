@@ -17,12 +17,22 @@ use Doctrine\ORM\Exception\ORMException;
  */
 final readonly class PlayerManagementService
 {
+    /**
+     * @param GamePlayersRepository  $gamePlayersRepository
+     * @param EntityManagerInterface $entityManager
+     */
     public function __construct(
         private GamePlayersRepository $gamePlayersRepository,
         private EntityManagerInterface $entityManager
     ) {
     }
 
+    /**
+     * @param int $gameId
+     * @param int $playerId
+     *
+     * @return bool
+     */
     public function removePlayer(int $gameId, int $playerId): bool
     {
         $gamePlayer = $this->gamePlayersRepository->findOneBy([
@@ -40,6 +50,8 @@ final readonly class PlayerManagementService
 
     /**
      * @throws ORMException
+     *
+     * @return GamePlayers
      */
     public function addPlayer(int $gameId, int $playerId): GamePlayers
     {
@@ -55,16 +67,17 @@ final readonly class PlayerManagementService
      * Copy players from one game to another. If a filter list is provided, only those players are copied.
      *
      * @param list<int>|null $playerIds
+     *
      * @throws ORMException
      */
     public function copyPlayers(int $fromGameId, int $toGameId, ?array $playerIds = null): void
     {
         $oldGamePlayers = $this->gamePlayersRepository->findByGameId($fromGameId);
-        $filter = $playerIds !== null ? array_map('intval', $playerIds) : null;
+        $filter = null !== $playerIds ? array_map('intval', $playerIds) : null;
         foreach ($oldGamePlayers as $oldGamePlayer) {
             $player = $oldGamePlayer->getPlayer();
             $playerId = $player?->getId();
-            if ($playerId !== null && ($filter === null || in_array($playerId, $filter, true))) {
+            if (null !== $playerId && (null === $filter || in_array($playerId, $filter, true))) {
                 $this->addPlayer($toGameId, $playerId);
             }
         }

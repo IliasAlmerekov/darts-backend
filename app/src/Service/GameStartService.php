@@ -12,27 +12,40 @@ use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;
 
+/**
+ * Service to start a game and initialize settings.
+ */
 final readonly class GameStartService
 {
+    /**
+     * @param GameSetupService        $gameSetupService
+     * @param EntityManagerInterface  $entityManager
+     */
     public function __construct(
         private GameSetupService $gameSetupService,
         private EntityManagerInterface $entityManager,
     ) {
     }
 
+    /**
+     * @param Game             $game
+     * @param StartGameRequest $dto
+     *
+     * @return void
+     */
     public function start(Game $game, StartGameRequest $dto): void
     {
         $this->guardPlayerCount($game, $dto);
         $game->setStatus(GameStatus::Started);
-        if ($dto->startScore !== null) {
+        if (null !== $dto->startScore) {
             $game->setStartScore($dto->startScore);
         }
 
-        if ($dto->doubleOut !== null) {
+        if (null !== $dto->doubleOut) {
             $game->setDoubleOut($dto->doubleOut);
         }
 
-        if ($dto->tripleOut !== null) {
+        if (null !== $dto->tripleOut) {
             $game->setTripleOut($dto->tripleOut);
         }
 
@@ -49,6 +62,12 @@ final readonly class GameStartService
         $this->entityManager->flush();
     }
 
+    /**
+     * @param Game             $game
+     * @param StartGameRequest $dto
+     *
+     * @return void
+     */
     private function guardPlayerCount(Game $game, StartGameRequest $dto): void
     {
         $count = $game->getGamePlayers()->count();
@@ -56,7 +75,7 @@ final readonly class GameStartService
             throw new InvalidArgumentException('Game must have between 2 and 10 players to start.');
         }
 
-        if ($dto->playerPositions !== null && $count !== count($dto->playerPositions)) {
+        if (null !== $dto->playerPositions && count($dto->playerPositions) !== $count) {
             throw new InvalidArgumentException('Player positions count must match players in game.');
         }
     }

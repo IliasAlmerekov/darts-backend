@@ -23,6 +23,12 @@ use InvalidArgumentException;
  */
 final readonly class GameThrowService
 {
+    /**
+     * @param GamePlayersRepository   $gamePlayersRepository
+     * @param RoundRepository         $roundRepository
+     * @param RoundThrowsRepository   $roundThrowsRepository
+     * @param EntityManagerInterface  $entityManager
+     */
     public function __construct(
         private GamePlayersRepository $gamePlayersRepository,
         private RoundRepository $roundRepository,
@@ -31,13 +37,19 @@ final readonly class GameThrowService
     ) {
     }
 
+    /**
+     * @param Game         $game
+     * @param ThrowRequest $dto
+     *
+     * @return void
+     */
     public function recordThrow(Game $game, ThrowRequest $dto): void
     {
         $player = $this->gamePlayersRepository->findOneBy([
             'game' => $game->getGameId(),
             'player' => $dto->playerId,
         ]);
-        if ($player === null) {
+        if (null === $player) {
             throw new InvalidArgumentException('Player not found in this game');
         }
 
@@ -73,7 +85,7 @@ final readonly class GameThrowService
         $roundThrow->setTimestamp(new DateTime());
 // Berechne den neuen Score
         $newScore = $currentScore - $finalValue;
-        $wouldFinishGame = ($newScore === 0);
+        $wouldFinishGame = (0 === $newScore);
 // Hole Game-Mode Einstellungen
         $isDoubleOutMode = $game->isDoubleOut();
         $isTripleOutMode = $game->isTripleOut();
@@ -83,10 +95,10 @@ final readonly class GameThrowService
             ($newScore < 0) ||
 
             // Score = 1 bei Double-Out oder Triple-Out
-            (($isDoubleOutMode || $isTripleOutMode) && $newScore === 1) ||
+            (($isDoubleOutMode || $isTripleOutMode) && 1 === $newScore) ||
 
             // Score = 2 bei Triple-Out
-            ($isTripleOutMode && $newScore === 2) ||
+            ($isTripleOutMode && 2 === $newScore) ||
 
             // Finish ohne Double bei Double-Out
             ($wouldFinishGame && $isDoubleOutMode && !$isDouble) ||
@@ -118,15 +130,15 @@ final readonly class GameThrowService
             $player->setScore($newScore);
             $roundThrow->setScore($newScore);
         // Check, ob der Spieler gewonnen hat
-            if ($newScore === 0 && $currentScore > 0) {
-                $finishedPlayers = $this->gamePlayersRepository->countFinishedPlayers((int)$game->getGameId());
+            if (0 === $newScore && $currentScore > 0) {
+                $finishedPlayers = $this->gamePlayersRepository->countFinishedPlayers((int) $game->getGameId());
                 $player->setPosition($finishedPlayers + 1);
-                if ($finishedPlayers === 0) {
+                if (0 === $finishedPlayers) {
                     $game->setWinner($player->getPlayer());
                     $player->setIsWinner(true);
                     foreach ($game->getGamePlayers() as $gamePlayer) {
                         if ($gamePlayer !== $player) {
-                                    $gamePlayer->setIsWinner(false);
+                            $gamePlayer->setIsWinner(false);
                         }
                     }
                 } else {
@@ -143,14 +155,14 @@ final readonly class GameThrowService
                 if ($activePlayers <= 1) {
                     $game->setStatus(GameStatus::Finished);
                     $game->setFinishedAt(new DateTimeImmutable());
-                    if ($activePlayers === 1) {
-                                $finishedPlayers = $this->gamePlayersRepository->countFinishedPlayers(
-                                    (int)$game->getGameId()
-                                );
+                    if (1 === $activePlayers) {
+                        $finishedPlayers = $this->gamePlayersRepository->countFinishedPlayers(
+                            (int) $game->getGameId()
+                        );
                         foreach ($game->getGamePlayers() as $gamePlayer) {
                             $playerScore = $gamePlayer->getScore() ?? $game->getStartScore();
-                            if ($playerScore > 0 && $gamePlayer->getPosition() === null) {
-                                        $gamePlayer->setPosition($finishedPlayers + 1);
+                            if ($playerScore > 0 && null === $gamePlayer->getPosition()) {
+                                $gamePlayer->setPosition($finishedPlayers + 1);
                             }
                         }
                     }
@@ -163,10 +175,15 @@ final readonly class GameThrowService
         $this->maybeAdvanceRound($game, $round);
     }
 
+    /**
+     * @param Game $game
+     *
+     * @return void
+     */
     public function undoLastThrow(Game $game): void
     {
         $gameId = $game->getGameId();
-        if ($gameId === null) {
+        if (null === $gameId) {
             return;
         }
 
@@ -181,7 +198,7 @@ final readonly class GameThrowService
         $this->entityManager->flush();
         if ($player) {
             $playerId = $player->getId();
-            if ($playerId !== null) {
+            if (null !== $playerId) {
                 $previousThrow = $this->roundThrowsRepository->findLatestForGameAndPlayer($gameId, $playerId);
                 $playerScore = $previousThrow?->getScore() ?? $game->getStartScore();
                 $gamePlayer = $this->gamePlayersRepository->findOneBy(['game' => $gameId, 'player' => $playerId]);
@@ -194,16 +211,16 @@ final readonly class GameThrowService
 
         // Alle Spieler-Positionen neu berechnen basierend auf aktuellen Scores
         foreach ($game->getGamePlayers() as $gamePlayer) {
-                    $currentPlayerScore = $gamePlayer->getScore() ?? $game->getStartScore();
-                    // Wenn Score > 0, dann ist der Spieler nicht fertig → Position zurücksetzen
-            if ($currentPlayerScore > 0 && $gamePlayer->getPosition() !== null) {
-                    $gamePlayer->setPosition(0);
+            $currentPlayerScore = $gamePlayer->getScore() ?? $game->getStartScore();
+            // Wenn Score > 0, dann ist der Spieler nicht fertig → Position zurücksetzen
+            if ($currentPlayerScore > 0 && null !== $gamePlayer->getPosition()) {
+                $gamePlayer->setPosition(0);
             }
         }
 
         // Game-Status zurücksetzen, falls nötig
         if ($game->getStatus() === GameStatus::Finished) {
-                    $activePlayers = 0;
+            $activePlayers = 0;
             foreach ($game->getGamePlayers() as $gamePlayer) {
                 $playerScore = $gamePlayer->getScore() ?? $game->getStartScore();
                 if ($playerScore > 0) {
@@ -214,7 +231,7 @@ final readonly class GameThrowService
             // Wenn wieder mehr als 1 Spieler aktiv ist, Status auf Started setzen
             if ($activePlayers > 1) {
                 $game->setStatus(GameStatus::Started);
-                        $game->setFinishedAt(null);
+                $game->setFinishedAt(null);
             }
         }
 
@@ -233,25 +250,31 @@ final readonly class GameThrowService
             ->getSingleScalarResult();
 
         $game->setRound(
-            $latestRoundNumber !== null && $latestRoundNumber !== ''
-                ? (int)$latestRoundNumber
+            $latestRoundNumber !== null && '' !== $latestRoundNumber
+                ? (int) $latestRoundNumber
                 : $lastThrowRoundNumber
         );
 
         $winnerPlayer = $this->gamePlayersRepository->findOneBy([
             'game' => $game->getGameId(),
-            'position' => 1
+            'position' => 1,
         ]);
         foreach ($game->getGamePlayers() as $gamePlayer) {
             $gamePlayer->setIsWinner(false);
         }
         $game->setWinner($winnerPlayer?->getPlayer());
-        if ($winnerPlayer !== null) {
+        if (null !== $winnerPlayer) {
             $winnerPlayer->setIsWinner(true);
         }
 
         $this->entityManager->flush();
     }
+
+    /**
+     * @param Game $game
+     *
+     * @return Round
+     */
     private function getCurrentRound(Game $game): Round
     {
         $roundNumber = $game->getRound() ?? 1;
@@ -259,7 +282,7 @@ final readonly class GameThrowService
             'game' => $game,
             'roundNumber' => $roundNumber,
         ]);
-        if ($round === null) {
+        if (null === $round) {
             $round = new Round();
             $round->setRoundNumber($roundNumber);
             $round->setGame($game);
@@ -271,17 +294,23 @@ final readonly class GameThrowService
         return $round;
     }
 
+    /**
+     * @param Game  $game
+     * @param Round $currentRound
+     *
+     * @return void
+     */
     private function maybeAdvanceRound(Game $game, Round $currentRound): void
     {
         $playersCount = $game->getGamePlayers()->count();
-        if ($playersCount === 0) {
+        if (0 === $playersCount) {
             return;
         }
 
         // Wir prüfen, ob alle Spieler 3 Würfe gemacht haben
         foreach ($game->getGamePlayers() as $gp) {
             $player = $gp->getPlayer();
-            if ($player === null) {
+            if (null === $player) {
                 continue;
             }
 
@@ -294,7 +323,7 @@ final readonly class GameThrowService
                     ['round' => $currentRound, 'player' => $player],
                     ['throwNumber' => 'DESC']
                 );
-                if ($latestThrow === null || !$latestThrow->isBust()) {
+                if (null === $latestThrow || !$latestThrow->isBust()) {
                     return;
         // Noch nicht alle Spieler haben 3 Würfe gemacht
                 }

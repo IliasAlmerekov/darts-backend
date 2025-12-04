@@ -14,6 +14,9 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class GamePlayersRepository extends ServiceEntityRepository
 {
+    /**
+     * @param ManagerRegistry $registry
+     */
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, GamePlayers::class);
@@ -45,8 +48,9 @@ final class GamePlayersRepository extends ServiceEntityRepository
     {
         $count = $this->count([
             'game' => $gameId,
-            'player' => $playerId
+            'player' => $playerId,
         ]);
+
         return $count > 0;
     }
 
@@ -64,10 +68,14 @@ final class GamePlayersRepository extends ServiceEntityRepository
 
     /**
      * Counts how many players in a game have already finished (score == 0).
+     *
+     * @param int $gameId
+     *
+     * @return int
      */
     public function countFinishedPlayers(int $gameId): int
     {
-        return (int)$this->createQueryBuilder('gp')
+        return (int) $this->createQueryBuilder('gp')
             ->select('COUNT(gp.gamePlayerId)')
             ->andWhere('gp.game = :gameId')
             ->andWhere('gp.score = 0')

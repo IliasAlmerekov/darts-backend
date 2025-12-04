@@ -27,12 +27,13 @@ use Symfony\Component\Uid\Uuid;
 final class InvitationController extends AbstractController
 {
     /**
-     * @param int $id
-     * @param Request $request
-     * @param EntityManagerInterface $entityManager
-     * @param InvitationRepository $invitationRepository
-     * @param GamePlayersRepository $gamePlayersRepository
-     * @param UserRepository $userRepository
+     * @param int                     $id
+     * @param Request                 $request
+     * @param EntityManagerInterface  $entityManager
+     * @param InvitationRepository    $invitationRepository
+     * @param GamePlayersRepository   $gamePlayersRepository
+     * @param UserRepository          $userRepository
+     *
      * @return Response
      */
     #[Route('api/invite/create/{id}', name: 'create_invitation')]
@@ -62,21 +63,28 @@ final class InvitationController extends AbstractController
             return $this->json([
                 'success' => true,
                 'gameId' => $id,
-                'invitationLink' => $invitationLink
+                'invitationLink' => $invitationLink,
             ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
         }
 
         return $this->render('invitation/index.html.twig', [
             'invitationLink' => $invitationLink,
-            'users' => $users
+            'users' => $users,
         ]);
     }
 
     #[Route('api/invite/join/{uuid}', name: 'join_invitation')]
+    /**
+     * @param string               $uuid
+     * @param InvitationRepository $invitationRepository
+     * @param Request              $request
+     *
+     * @return Response
+     */
     public function joinInvitation(string $uuid, InvitationRepository $invitationRepository, Request $request): Response
     {
         $invitation = $invitationRepository->findOneBy(['uuid' => $uuid]);
-        if (!$invitation) {
+        if (null === $invitation) {
             return $this->render('invitation/not_found.html.twig');
         }
         $session = $request->getSession();
@@ -87,7 +95,13 @@ final class InvitationController extends AbstractController
     }
 
     /**
+     * @param Request                $request
+     * @param GamePlayersRepository  $gamePlayersRepository
+     * @param EntityManagerInterface $entityManager
+     *
      * @throws ORMException
+     *
+     * @return Response
      */
     #[Route('api/invite/process', name: 'process_invitation')]
     public function processInvitation(
@@ -105,7 +119,7 @@ final class InvitationController extends AbstractController
         }
 
         $userId = $user->getId();
-        if ($userId === null) {
+        if (null === $userId) {
             return $this->redirectToRoute('app_login');
         }
 
