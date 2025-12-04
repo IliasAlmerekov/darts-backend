@@ -25,9 +25,9 @@ interface RoundThrowsRepositoryInterface
      * @param array<string, mixed>       $criteria
      * @param array<string, string>|null $orderBy
      *
-     * @return RoundThrows|null
+     * @return RoundThrows|object|null
      */
-    public function findOneBy(array $criteria, ?array $orderBy = null): ?RoundThrows;
+    public function findOneBy(array $criteria, ?array $orderBy = null): ?object;
 
     /**
      * @param array<string, mixed> $criteria

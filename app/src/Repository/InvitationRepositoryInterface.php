@@ -22,7 +22,7 @@ interface InvitationRepositoryInterface
      * @param array<string, mixed>       $criteria
      * @param array<string, string>|null $orderBy
      *
-     * @return Invitation|null
+     * @return Invitation|object|null
      */
-    public function findOneBy(array $criteria, ?array $orderBy = null): ?Invitation;
+    public function findOneBy(array $criteria, ?array $orderBy = null): ?object;
 }
