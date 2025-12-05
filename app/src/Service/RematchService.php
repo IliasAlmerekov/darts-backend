@@ -11,12 +11,13 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Uid\Uuid;
+use Override;
 
 /**
  * Service to handle rematches.
  * This class is responsible for creating a new game and copying players from the old game.
  */
-final readonly class RematchService
+final readonly class RematchService implements RematchServiceInterface
 {
     /**
      * @param GameRoomService               $gameRoomService
@@ -43,6 +44,7 @@ final readonly class RematchService
      *
      * @return array<string, mixed>
      */
+    #[Override]
     public function createRematch(int $oldGameId): array
     {
         $oldGame = $this->gameRoomService->findGameById($oldGameId);

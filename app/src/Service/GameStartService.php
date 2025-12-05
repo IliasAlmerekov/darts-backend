@@ -11,11 +11,15 @@ use App\Enum\GameStatus;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;
+use Override;
 
 /**
  * Service to start a game and initialize settings.
+ *
+ * @psalm-suppress UnusedClass
+ *
  */
-final readonly class GameStartService
+final readonly class GameStartService implements GameStartServiceInterface
 {
     /**
      * @param GameSetupService       $gameSetupService
@@ -33,6 +37,7 @@ final readonly class GameStartService
      *
      * @return void
      */
+    #[Override]
     public function start(Game $game, StartGameRequest $dto): void
     {
         $this->guardPlayerCount($game, $dto);

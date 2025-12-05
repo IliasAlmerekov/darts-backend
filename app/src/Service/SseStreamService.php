@@ -7,12 +7,13 @@ namespace App\Service;
 use DateTimeInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use App\Repository\RoundThrowsRepositoryInterface;
+use Override;
 
 /**
  * Service to create SSE streams for players and throws.
  * This class is responsible for sending updates to the client via SSE.
  */
-final readonly class SseStreamService
+final readonly class SseStreamService implements SseStreamServiceInterface
 {
     /**
      * @param GameRoomService                $gameRoomService
@@ -29,6 +30,7 @@ final readonly class SseStreamService
      *
      * @return StreamedResponse
      */
+    #[Override]
     public function createPlayerStream(int $gameId): StreamedResponse
     {
         $response = new StreamedResponse(function () use ($gameId) {

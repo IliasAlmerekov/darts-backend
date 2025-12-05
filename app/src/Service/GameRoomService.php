@@ -10,11 +10,12 @@ use App\Repository\GamePlayersRepositoryInterface;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
+use Override;
 
 /**
  * Service for creating and managing game rooms.
  */
-final readonly class GameRoomService
+final readonly class GameRoomService implements GameRoomServiceInterface
 {
     /**
      * @param GameRepositoryInterface        $gameRepository
@@ -33,6 +34,7 @@ final readonly class GameRoomService
     /**
      * @return Game
      */
+    #[Override]
     public function createGame(): Game
     {
         $game = new Game();
@@ -52,6 +54,7 @@ final readonly class GameRoomService
      *
      * @throws ORMException
      */
+    #[Override]
     public function createGameWithPreviousPlayers(
         ?int $previousGameId = null,
         ?array $includePlayerIds = null,
@@ -85,6 +88,7 @@ final readonly class GameRoomService
      *
      * @return Game|null
      */
+    #[Override]
     public function findGameById(int $id): ?Game
     {
         $game = $this->gameRepository->find($id);
@@ -97,6 +101,7 @@ final readonly class GameRoomService
      *
      * @return array<int, array<string, mixed>>
      */
+    #[Override]
     public function getPlayersWithUserInfo(int $gameId): array
     {
         return $this->gamePlayersRepository->findPlayersWithUserInfo($gameId);
