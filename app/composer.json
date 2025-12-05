@@ -106,7 +106,7 @@
         "micheh/phpcs-gitlab": "^2.1",
         "phpunit/php-code-coverage": "^12.5",
         "phpunit/phpunit": "^12.4",
-        "psalm/plugin-symfony": "^5.2",
+        "psalm/plugin-symfony": "*",
         "roave/security-advisories": "dev-latest",
         "symfony/browser-kit": "7.3.*",
         "symfony/css-selector": "7.3.*",

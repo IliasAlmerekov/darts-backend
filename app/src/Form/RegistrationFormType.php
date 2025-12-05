@@ -16,8 +16,6 @@ use Symfony\Component\Validator\Constraints\NotBlank;
 
 /**
  * Defines the form used to register new users.
- *
- * @extends AbstractType<User>
  */
 final class RegistrationFormType extends AbstractType
 {

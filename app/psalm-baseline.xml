@@ -126,38 +126,6 @@
       <code><![CDATA[getEmail]]></code>
     </PossiblyUnusedMethod>
   </file>
-  <file src="src/Repository/RoundThrowsRepository.php">
-    <PossiblyUnusedMethod>
-      <code><![CDATA[__construct]]></code>
-      <code><![CDATA[getLastRoundNumberForGame]]></code>
-      <code><![CDATA[getRoundAveragesForGame]]></code>
-    </PossiblyUnusedMethod>
-    <UnusedParam>
-      <code><![CDATA[$direction]]></code>
-      <code><![CDATA[$gameId]]></code>
-      <code><![CDATA[$gameId]]></code>
-      <code><![CDATA[$gameId]]></code>
-      <code><![CDATA[$gameId]]></code>
-      <code><![CDATA[$gameId]]></code>
-      <code><![CDATA[$gameId]]></code>
-      <code><![CDATA[$gameId]]></code>
-      <code><![CDATA[$limit]]></code>
-      <code><![CDATA[$offset]]></code>
-      <code><![CDATA[$playerId]]></code>
-      <code><![CDATA[$registry]]></code>
-      <code><![CDATA[$sortField]]></code>
-    </UnusedParam>
-  </file>
-  <file src="src/Repository/UserRepository.php">
-    <PossiblyUnusedMethod>
-      <code><![CDATA[__construct]]></code>
-      <code><![CDATA[findByIds]]></code>
-    </PossiblyUnusedMethod>
-    <UnusedParam>
-      <code><![CDATA[$ids]]></code>
-      <code><![CDATA[$registry]]></code>
-    </UnusedParam>
-  </file>
   <file src="src/Security/ErrorController.php">
     <UnusedClass>
       <code><![CDATA[ErrorController]]></code>
