@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Entity\Game;
 use App\Dto\StartGameRequest;
 use App\Dto\ThrowRequest;
 use App\Enum\GameStatus;
@@ -21,6 +22,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Serializer\Exception\ExceptionInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use Throwable;
 
@@ -39,6 +41,8 @@ final class GameController extends AbstractController
      * @param SerializerInterface     $serializer
      *
      * @return Response
+     *
+     * @throws ExceptionInterface
      */
     public function start(
         int $gameId,
@@ -49,7 +53,7 @@ final class GameController extends AbstractController
     ): Response {
         $dto = $serializer->deserialize($request->getContent(), StartGameRequest::class, 'json');
         $game = $gameRepository->find($gameId);
-        if (!$game) {
+        if (!$game instanceof Game) {
             return $this->json(['error' => 'Game not found'], Response::HTTP_NOT_FOUND);
         }
 
@@ -63,7 +67,7 @@ final class GameController extends AbstractController
     }
 
     /**
-     * @throws InvalidArgumentException
+     * @throws InvalidArgumentException|ExceptionInterface
      * This function records a throw for a player in a game.
      */
     #[Route('/api/game/{gameId}/throw', name: 'app_game_throw', methods: ['POST'])]
@@ -87,7 +91,7 @@ final class GameController extends AbstractController
     ): Response {
         $dto = $serializer->deserialize($request->getContent(), ThrowRequest::class, 'json');
         $game = $gameRepository->find($gameId);
-        if (!$game) {
+        if (!$game instanceof Game) {
             return $this->json(['error' => 'Game not found'], Response::HTTP_NOT_FOUND);
         }
 
@@ -118,7 +122,7 @@ final class GameController extends AbstractController
         GameService $gameService
     ): Response {
         $game = $gameRepository->find($gameId);
-        if (!$game) {
+        if (!$game instanceof Game) {
             return $this->json(['error' => 'Game not found'], Response::HTTP_NOT_FOUND);
         }
 
@@ -142,7 +146,7 @@ final class GameController extends AbstractController
         GameFinishService $gameFinishService,
     ): Response {
         $game = $gameRepository->find($gameId);
-        if (!$game) {
+        if (!$game instanceof Game) {
             return $this->json(['error' => 'Game not found'], Response::HTTP_NOT_FOUND);
         }
 

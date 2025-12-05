@@ -9,6 +9,7 @@ use App\Repository\GameRepositoryInterface;
 use App\Repository\GamePlayersRepositoryInterface;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Exception\ORMException;
 
 /**
  * Service for creating and managing game rooms.
@@ -48,6 +49,8 @@ final readonly class GameRoomService
      * @param list<int>|null $excludePlayerIds Players to omit from the include list
      *
      * @return Game
+     *
+     * @throws ORMException
      */
     public function createGameWithPreviousPlayers(
         ?int $previousGameId = null,
@@ -84,7 +87,9 @@ final readonly class GameRoomService
      */
     public function findGameById(int $id): ?Game
     {
-        return $this->gameRepository->find($id);
+        $game = $this->gameRepository->find($id);
+
+        return $game instanceof Game ? $game : null;
     }
 
     /**

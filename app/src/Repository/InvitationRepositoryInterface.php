@@ -9,6 +9,7 @@ use App\Entity\Invitation;
 /**
  * Contract for invitation repository.
  */
+/** @psalm-suppress UnusedClass */
 interface InvitationRepositoryInterface
 {
     /**
@@ -16,6 +17,7 @@ interface InvitationRepositoryInterface
      *
      * @return Invitation|object|null
      */
+    /** @psalm-suppress PossiblyUnusedMethod */
     public function find(mixed $id): ?object;
 
     /**
@@ -24,5 +26,6 @@ interface InvitationRepositoryInterface
      *
      * @return Invitation|object|null
      */
+    /** @psalm-suppress PossiblyUnusedMethod */
     public function findOneBy(array $criteria, ?array $orderBy = null): ?object;
 }

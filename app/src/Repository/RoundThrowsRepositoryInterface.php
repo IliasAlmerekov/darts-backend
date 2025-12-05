@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\RoundThrows;
+use Doctrine\ORM\QueryBuilder;
 
 /**
  * Contract for round throws repository.
@@ -25,7 +26,7 @@ interface RoundThrowsRepositoryInterface
      * @param array<string, mixed>       $criteria
      * @param array<string, string>|null $orderBy
      *
-     * @return RoundThrows|object|null
+     * @return object|null
      */
     public function findOneBy(array $criteria, ?array $orderBy = null): ?object;
 
@@ -70,6 +71,7 @@ interface RoundThrowsRepositoryInterface
      *
      * @return array<int, array<string, mixed>>
      */
+    /** @psalm-suppress PossiblyUnusedMethod */
     public function getRoundAveragesForGame(int $gameId): array;
 
     /**
@@ -77,10 +79,10 @@ interface RoundThrowsRepositoryInterface
      *
      * @return array<int, int>
      */
+    /** @psalm-suppress PossiblyUnusedMethod */
     public function getLastRoundNumberForGame(int $gameId): array;
 
     /**
-     * @param int    $gameId
      * @param int    $limit
      * @param int    $offset
      * @param string $sortField
@@ -113,4 +115,12 @@ interface RoundThrowsRepositoryInterface
      * @return array<string, mixed>|null
      */
     public function findLatestForGame(int $gameId): ?array;
+
+    /**
+     * @param string      $alias
+     * @param string|null $indexBy
+     *
+     * @return QueryBuilder
+     */
+    public function createQueryBuilder(string $alias, ?string $indexBy = null): QueryBuilder;
 }

@@ -7,7 +7,7 @@ namespace App\Repository;
 use App\Entity\GamePlayers;
 
 /**
- * Contract for game players repository.
+ * Contract for game players' repository.
  */
 interface GamePlayersRepositoryInterface
 {
@@ -15,7 +15,7 @@ interface GamePlayersRepositoryInterface
      * @param array<string, mixed>       $criteria
      * @param array<string, string>|null $orderBy
      *
-     * @return GamePlayers|object|null
+     * @return object|null
      */
     public function findOneBy(array $criteria, ?array $orderBy = null): ?object;
 
@@ -27,6 +27,7 @@ interface GamePlayersRepositoryInterface
      *
      * @return GamePlayers[]|array<object>
      */
+    /** @psalm-suppress PossiblyUnusedMethod */
     public function findBy(array $criteria, ?array $orderBy = null, ?int $limit = null, ?int $offset = null): array;
 
     /**
@@ -34,6 +35,7 @@ interface GamePlayersRepositoryInterface
      *
      * @return int
      */
+    /** @psalm-suppress PossiblyUnusedMethod */
     public function count(array $criteria): int;
 
     /**

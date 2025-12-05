@@ -126,46 +126,6 @@
       <code><![CDATA[getEmail]]></code>
     </PossiblyUnusedMethod>
   </file>
-  <file src="src/Repository/GamePlayersRepository.php">
-    <PossiblyUnusedMethod>
-      <code><![CDATA[__construct]]></code>
-    </PossiblyUnusedMethod>
-    <UnusedParam>
-      <code><![CDATA[$gameId]]></code>
-      <code><![CDATA[$gameId]]></code>
-      <code><![CDATA[$gameId]]></code>
-      <code><![CDATA[$gameId]]></code>
-      <code><![CDATA[$playerId]]></code>
-      <code><![CDATA[$registry]]></code>
-    </UnusedParam>
-  </file>
-  <file src="src/Repository/GameRepository.php">
-    <PossiblyUnusedMethod>
-      <code><![CDATA[__construct]]></code>
-      <code><![CDATA[findHighestGameId]]></code>
-      <code><![CDATA[findOneByGameId]]></code>
-    </PossiblyUnusedMethod>
-    <UnusedParam>
-      <code><![CDATA[$gameId]]></code>
-      <code><![CDATA[$registry]]></code>
-    </UnusedParam>
-  </file>
-  <file src="src/Repository/InvitationRepository.php">
-    <PossiblyUnusedMethod>
-      <code><![CDATA[__construct]]></code>
-    </PossiblyUnusedMethod>
-    <UnusedParam>
-      <code><![CDATA[$registry]]></code>
-    </UnusedParam>
-  </file>
-  <file src="src/Repository/PlayerStatsRepository.php">
-    <PossiblyUnusedMethod>
-      <code><![CDATA[__construct]]></code>
-    </PossiblyUnusedMethod>
-    <UnusedParam>
-      <code><![CDATA[$registry]]></code>
-    </UnusedParam>
-  </file>
   <file src="src/Repository/RoundThrowsRepository.php">
     <PossiblyUnusedMethod>
       <code><![CDATA[__construct]]></code>

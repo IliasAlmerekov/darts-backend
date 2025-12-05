@@ -18,21 +18,19 @@ class Invitation
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    private ?int $id = null;
+    private ?int $id = null {
+        get {
+            return $this->id;
+        }
+    }
     #[ORM\Column(length: 255, unique: true)]
     private ?string $uuid = null;
     #[ORM\Column]
     private ?int $gameId = null;
 
     /**
-     * @return int|null
-     */
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
-
-    /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @return string|null
      */
     public function getUuid(): ?string
@@ -53,6 +51,8 @@ class Invitation
     }
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @return int|null
      */
     public function getGameId(): ?int

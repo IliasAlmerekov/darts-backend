@@ -125,6 +125,8 @@ class RoundThrows
     }
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @return int|null
      */
     public function getValue(): ?int
@@ -145,6 +147,8 @@ class RoundThrows
     }
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @return bool
      */
     public function isBust(): bool

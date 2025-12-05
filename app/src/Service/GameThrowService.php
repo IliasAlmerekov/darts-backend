@@ -263,9 +263,7 @@ final readonly class GameThrowService
             $gamePlayer->setIsWinner(false);
         }
         $game->setWinner($winnerPlayer?->getPlayer());
-        if (null !== $winnerPlayer) {
-            $winnerPlayer->setIsWinner(true);
-        }
+        $winnerPlayer?->setIsWinner(true);
 
         $this->entityManager->flush();
     }
@@ -282,7 +280,7 @@ final readonly class GameThrowService
             'game' => $game,
             'roundNumber' => $roundNumber,
         ]);
-        if (null === $round) {
+        if (!$round instanceof Round) {
             $round = new Round();
             $round->setRoundNumber($roundNumber);
             $round->setGame($game);

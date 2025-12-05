@@ -18,7 +18,7 @@ interface GameRepositoryInterface
      * @param LockMode|int|null $lockMode
      * @param int|null          $lockVersion
      *
-     * @return Game|object|null
+     * @return object|null
      */
     public function find(mixed $id, LockMode|int|null $lockMode = null, ?int $lockVersion = null): ?object;
 
@@ -35,11 +35,13 @@ interface GameRepositoryInterface
      *
      * @return Game|null
      */
+    /** @psalm-suppress PossiblyUnusedMethod */
     public function findOneByGameId(int $gameId): ?Game;
 
     /**
      * @return int|null
      */
+    /** @psalm-suppress PossiblyUnusedMethod */
     public function findHighestGameId(): ?int;
 
     /**
