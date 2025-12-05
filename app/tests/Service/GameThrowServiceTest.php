@@ -16,9 +16,14 @@ use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\GameThrowService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
+use ReflectionException;
+use ReflectionProperty;
 
 final class GameThrowServiceTest extends TestCase
 {
+    /**
+     * @throws ReflectionException
+     */
     public function testRecordThrowUpdatesScoreAndPersistsThrow(): void
     {
         $game = new Game();
@@ -31,17 +36,17 @@ final class GameThrowServiceTest extends TestCase
         $round->setRoundNumber(1);
         $round->setGame($game);
 
-        $user1 = (new User())->setUsername('Player 1');
+        $user1 = new User()->setUsername('Player 1');
         $this->setPrivateProperty($user1, 'id', 1);
-        $player1 = (new GamePlayers())
+        $player1 = new GamePlayers()
             ->setPlayer($user1)
             ->setScore(50)
             ->setPosition(1);
         $game->addGamePlayer($player1);
 
-        $user2 = (new User())->setUsername('Player 2');
+        $user2 = new User()->setUsername('Player 2');
         $this->setPrivateProperty($user2, 'id', 2);
-        $player2 = (new GamePlayers())
+        $player2 = new GamePlayers()
             ->setPlayer($user2)
             ->setScore(40)
             ->setPosition(2);
@@ -98,12 +103,11 @@ final class GameThrowServiceTest extends TestCase
     }
 
     /**
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     private function setPrivateProperty(object $object, string $property, mixed $value): void
     {
-        $ref = new \ReflectionProperty($object, $property);
-        $ref->setAccessible(true);
+        $ref = new ReflectionProperty($object, $property);
         $ref->setValue($object, $value);
     }
 }
