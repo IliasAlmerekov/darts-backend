@@ -17,6 +17,9 @@ final class GameRepository extends ServiceEntityRepository implements GameReposi
 {
     /**
      * @param ManagerRegistry $registry
+     *
+     * @psalm-suppress PossiblyUnusedMethod
+     * @psalm-suppress UnusedParam
      */
     public function __construct(ManagerRegistry $registry)
     {

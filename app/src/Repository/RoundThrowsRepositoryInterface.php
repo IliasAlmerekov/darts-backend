@@ -67,19 +67,21 @@ interface RoundThrowsRepositoryInterface
     public function getTotalScoreForGame(int $gameId): array;
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param int $gameId
      *
      * @return array<int, array<string, mixed>>
      */
-    /** @psalm-suppress PossiblyUnusedMethod */
     public function getRoundAveragesForGame(int $gameId): array;
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param int $gameId
      *
      * @return array<int, int>
      */
-    /** @psalm-suppress PossiblyUnusedMethod */
     public function getLastRoundNumberForGame(int $gameId): array;
 
     /**

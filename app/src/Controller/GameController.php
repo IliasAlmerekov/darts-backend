@@ -251,7 +251,7 @@ final class GameController extends AbstractController
         // Spiel aus der Datenbank abrufen
         $game = $gameRepository->find($gameId);
 // Überprüfen, ob das Spiel existiert
-        if (!$game) {
+        if (!$game instanceof Game) {
             return $this->json(['error' => 'Game not found'], Response::HTTP_NOT_FOUND);
         }
         // GameService verwenden, um das GameResponseDto zu erstellen,

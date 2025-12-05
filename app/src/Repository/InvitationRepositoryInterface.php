@@ -13,19 +13,21 @@ use App\Entity\Invitation;
 interface InvitationRepositoryInterface
 {
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param mixed $id
      *
      * @return Invitation|object|null
      */
-    /** @psalm-suppress PossiblyUnusedMethod */
     public function find(mixed $id): ?object;
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param array<string, mixed>       $criteria
      * @param array<string, string>|null $orderBy
      *
      * @return Invitation|object|null
      */
-    /** @psalm-suppress PossiblyUnusedMethod */
     public function findOneBy(array $criteria, ?array $orderBy = null): ?object;
 }

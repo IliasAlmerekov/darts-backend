@@ -31,11 +31,12 @@ interface GameRepositoryInterface
     public function createQueryBuilder(string $alias, ?string $indexBy = null): QueryBuilder;
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param int $gameId
      *
      * @return Game|null
      */
-    /** @psalm-suppress PossiblyUnusedMethod */
     public function findOneByGameId(int $gameId): ?Game;
 
     /**

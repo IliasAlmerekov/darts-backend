@@ -16,6 +16,9 @@ final class InvitationRepository extends ServiceEntityRepository implements Invi
 {
     /**
      * @param ManagerRegistry $registry
+     *
+     * @psalm-suppress PossiblyUnusedMethod
+     * @psalm-suppress UnusedParam
      */
     public function __construct(ManagerRegistry $registry)
     {

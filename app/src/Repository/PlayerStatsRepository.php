@@ -16,6 +16,9 @@ final class PlayerStatsRepository extends ServiceEntityRepository implements Pla
 {
     /**
      * @param ManagerRegistry $registry
+     *
+     * @psalm-suppress PossiblyUnusedMethod
+     * @psalm-suppress UnusedParam
      */
     public function __construct(ManagerRegistry $registry)
     {

@@ -14,19 +14,21 @@ use Symfony\Component\Security\Core\User\PasswordUpgraderInterface;
 interface UserRepositoryInterface extends PasswordUpgraderInterface
 {
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param mixed $id
      *
      * @return User|object|null
      */
-    /** @psalm-suppress PossiblyUnusedMethod */
     public function find(mixed $id): ?object;
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param array<int> $ids
      *
      * @return User[]
      */
-    /** @psalm-suppress PossiblyUnusedMethod */
     public function findByIds(array $ids): array;
 
     /**
