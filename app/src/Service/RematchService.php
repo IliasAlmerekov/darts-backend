@@ -16,7 +16,7 @@ use Symfony\Component\Uid\Uuid;
  * Service to handle rematches.
  * This class is responsible for creating a new game and copying players from the old game.
  */
-final readonly class RematchService
+final readonly class RematchService implements RematchServiceInterface
 {
     /**
      * @param GameRoomService               $gameRoomService

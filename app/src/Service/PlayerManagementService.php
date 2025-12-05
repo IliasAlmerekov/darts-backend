@@ -15,7 +15,7 @@ use Doctrine\ORM\Exception\ORMException;
  * Service to handle player management.
  * This class is responsible for adding and removing players from games.
  */
-final readonly class PlayerManagementService
+final readonly class PlayerManagementService implements PlayerManagementServiceInterface
 {
     /**
      * @param GamePlayersRepositoryInterface $gamePlayersRepository

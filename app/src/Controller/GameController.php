@@ -10,10 +10,13 @@ use App\Dto\ThrowRequest;
 use App\Enum\GameStatus;
 use App\Service\GameService;
 use App\Service\GameFinishService;
+use App\Service\GameServiceInterface;
 use App\Service\GameStartService;
+use App\Service\GameStartServiceInterface;
 use App\Service\GameStatisticsService;
 use App\Service\GameThrowService;
 use App\Repository\RoundThrowsRepositoryInterface;
+use App\Service\GameThrowServiceInterface;
 use DateTimeInterface;
 use InvalidArgumentException;
 use App\Repository\GameRepositoryInterface;
@@ -48,7 +51,7 @@ final class GameController extends AbstractController
         int $gameId,
         Request $request,
         GameRepositoryInterface $gameRepository,
-        GameStartService $gameStartService,
+        GameStartServiceInterface $gameStartService,
         SerializerInterface $serializer,
     ): Response {
         $dto = $serializer->deserialize($request->getContent(), StartGameRequest::class, 'json');
@@ -85,8 +88,8 @@ final class GameController extends AbstractController
         int $gameId,
         Request $request,
         GameRepositoryInterface $gameRepository,
-        GameThrowService $gameThrowService,
-        GameService $gameService,
+        GameThrowServiceInterface $gameThrowService,
+        GameServiceInterface $gameService,
         SerializerInterface $serializer,
     ): Response {
         $dto = $serializer->deserialize($request->getContent(), ThrowRequest::class, 'json');

@@ -6,9 +6,13 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Service\GameRoomService;
+use App\Service\GameRoomServiceInterface;
 use App\Service\PlayerManagementService;
+use App\Service\PlayerManagementServiceInterface;
 use App\Service\RematchService;
+use App\Service\RematchServiceInterface;
 use App\Service\SseStreamService;
+use App\Service\SseStreamServiceInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -29,10 +33,10 @@ final class GameRoomController extends AbstractController
      * @param SseStreamService        $sseStreamService
      */
     public function __construct(
-        private readonly GameRoomService $gameRoomService,
-        private readonly PlayerManagementService $playerManagementService,
-        private readonly RematchService $rematchService,
-        private readonly SseStreamService $sseStreamService
+        private readonly GameRoomServiceInterface $gameRoomService,
+        private readonly PlayerManagementServiceInterface $playerManagementService,
+        private readonly RematchServiceInterface $rematchService,
+        private readonly SseStreamServiceInterface $sseStreamService
     ) {
     }
 
@@ -72,10 +76,7 @@ final class GameRoomController extends AbstractController
                     'gameId' => $game->getGameId(),
                 ]);
             }
-
-            return $this->redirectToRoute('create_invitation', ['id' => $game->getGameId()]);
         }
-
         return $this->render('room/create.html.twig');
     }
 

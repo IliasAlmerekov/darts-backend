@@ -12,7 +12,7 @@ use App\Repository\RoundThrowsRepositoryInterface;
  * Service to create SSE streams for players and throws.
  * This class is responsible for sending updates to the client via SSE.
  */
-final readonly class SseStreamService
+final readonly class SseStreamService implements SseStreamServiceInterface
 {
     /**
      * @param GameRoomService                $gameRoomService

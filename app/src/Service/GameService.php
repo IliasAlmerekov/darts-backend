@@ -14,7 +14,7 @@ use App\Repository\RoundThrowsRepositoryInterface;
 /**
  * This class is responsible for creating GameResponseDto objects from Game entities.
  */
-final readonly class GameService
+final readonly class GameService implements GameServiceInterface
 {
     /**
      * @param RoundRepositoryInterface       $roundRepository

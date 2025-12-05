@@ -14,7 +14,7 @@ use Doctrine\ORM\Exception\ORMException;
 /**
  * Service for creating and managing game rooms.
  */
-final readonly class GameRoomService
+final readonly class GameRoomService implements GameRoomServiceInterface
 {
     /**
      * @param GameRepositoryInterface        $gameRepository

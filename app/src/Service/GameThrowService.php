@@ -21,7 +21,7 @@ use InvalidArgumentException;
  * Service to handle recording of game throws.
  * This class is responsible for updating the game state and recalculating the positions of the players.
  */
-final readonly class GameThrowService
+final readonly class GameThrowService implements GameThrowServiceInterface
 {
     /**
      * @param GamePlayersRepositoryInterface $gamePlayersRepository

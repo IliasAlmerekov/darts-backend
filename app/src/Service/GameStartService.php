@@ -15,7 +15,7 @@ use InvalidArgumentException;
 /**
  * Service to start a game and initialize settings.
  */
-final readonly class GameStartService
+final readonly class GameStartService implements GameStartServiceInterface
 {
     /**
      * @param GameSetupService       $gameSetupService
