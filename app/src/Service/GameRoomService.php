@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Entity\Game;
-use App\Repository\GameRepository;
-use App\Repository\GamePlayersRepository;
+use App\Repository\GameRepositoryInterface;
+use App\Repository\GamePlayersRepositoryInterface;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Exception\ORMException;
 
 /**
  * Service for creating and managing game rooms.
@@ -16,14 +17,14 @@ use Doctrine\ORM\EntityManagerInterface;
 final readonly class GameRoomService
 {
     /**
-     * @param GameRepository          $gameRepository
-     * @param GamePlayersRepository   $gamePlayersRepository
-     * @param EntityManagerInterface  $entityManager
-     * @param PlayerManagementService $playerManagementService
+     * @param GameRepositoryInterface        $gameRepository
+     * @param GamePlayersRepositoryInterface $gamePlayersRepository
+     * @param EntityManagerInterface         $entityManager
+     * @param PlayerManagementService        $playerManagementService
      */
     public function __construct(
-        private GameRepository $gameRepository,
-        private GamePlayersRepository $gamePlayersRepository,
+        private GameRepositoryInterface $gameRepository,
+        private GamePlayersRepositoryInterface $gamePlayersRepository,
         private EntityManagerInterface $entityManager,
         private PlayerManagementService $playerManagementService,
     ) {
@@ -48,6 +49,8 @@ final readonly class GameRoomService
      * @param list<int>|null $excludePlayerIds Players to omit from the include list
      *
      * @return Game
+     *
+     * @throws ORMException
      */
     public function createGameWithPreviousPlayers(
         ?int $previousGameId = null,
@@ -84,7 +87,9 @@ final readonly class GameRoomService
      */
     public function findGameById(int $id): ?Game
     {
-        return $this->gameRepository->find($id);
+        $game = $this->gameRepository->find($id);
+
+        return $game instanceof Game ? $game : null;
     }
 
     /**

@@ -6,7 +6,7 @@ namespace App\Service;
 
 use App\Entity\Invitation;
 use App\Enum\GameStatus;
-use App\Repository\InvitationRepository;
+use App\Repository\InvitationRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -19,18 +19,18 @@ use Symfony\Component\Uid\Uuid;
 final readonly class RematchService
 {
     /**
-     * @param GameRoomService         $gameRoomService
-     * @param PlayerManagementService $playerManagementService
-     * @param GameFinishService       $gameFinishService
-     * @param InvitationRepository    $invitationRepository
-     * @param EntityManagerInterface  $entityManager
-     * @param UrlGeneratorInterface   $urlGenerator
+     * @param GameRoomService               $gameRoomService
+     * @param PlayerManagementService       $playerManagementService
+     * @param GameFinishService             $gameFinishService
+     * @param InvitationRepositoryInterface $invitationRepository
+     * @param EntityManagerInterface        $entityManager
+     * @param UrlGeneratorInterface         $urlGenerator
      */
     public function __construct(
         private GameRoomService $gameRoomService,
         private PlayerManagementService $playerManagementService,
         private GameFinishService $gameFinishService,
-        private InvitationRepository $invitationRepository,
+        private InvitationRepositoryInterface $invitationRepository,
         private EntityManagerInterface $entityManager,
         private UrlGeneratorInterface $urlGenerator
     ) {

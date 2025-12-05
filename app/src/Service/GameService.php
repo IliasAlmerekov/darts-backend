@@ -8,8 +8,8 @@ use App\Dto\GameResponseDto;
 use App\Dto\PlayerResponseDto;
 use App\Dto\ThrowResponseDto;
 use App\Entity\Game;
-use App\Repository\RoundRepository;
-use App\Repository\RoundThrowsRepository;
+use App\Repository\RoundRepositoryInterface;
+use App\Repository\RoundThrowsRepositoryInterface;
 
 /**
  * This class is responsible for creating GameResponseDto objects from Game entities.
@@ -17,12 +17,12 @@ use App\Repository\RoundThrowsRepository;
 final readonly class GameService
 {
     /**
-     * @param RoundRepository       $roundRepository
-     * @param RoundThrowsRepository $roundThrowsRepository
+     * @param RoundRepositoryInterface       $roundRepository
+     * @param RoundThrowsRepositoryInterface $roundThrowsRepository
      */
     public function __construct(
-        private RoundRepository $roundRepository,
-        private RoundThrowsRepository $roundThrowsRepository,
+        private RoundRepositoryInterface $roundRepository,
+        private RoundThrowsRepositoryInterface $roundThrowsRepository,
     ) {
     }
 
@@ -44,27 +44,27 @@ final readonly class GameService
     public function calculateActivePlayer(Game $game): ?int
     {
         $currentRoundNumber = $game->getRound() ?? 1;
-// Hole die aktuelle Runde aus der DB
+        // Hole die aktuelle Runde aus der DB
         $roundEntity = $this->roundRepository->findOneBy([
             'game' => $game,
             'roundNumber' => $currentRoundNumber,
         ]);
-// Sortiere Spieler nach Position (wichtig für die Reihenfolge!)
+        // Sortiere Spieler nach Position (wichtig für die Reihenfolge!)
         $gamePlayers = $game->getGamePlayers()->toArray();
-        usort($gamePlayers, fn ($a, $b) => $a->getPosition() <=> $b->getPosition());
-// Gehe alle Spieler der Reihe nach durch
+        usort($gamePlayers, fn($a, $b) => $a->getPosition() <=> $b->getPosition());
+        // Gehe alle Spieler der Reihe nach durch
         foreach ($gamePlayers as $gamePlayer) {
             $user = $gamePlayer->getPlayer();
             if (null === $user) {
                 continue;
-            // Spieler ohne User-Entity überspringen
+                // Spieler ohne User-Entity überspringen
             }
 
             // Check: Hat der Spieler das Spiel schon beendet? (Score = 0)
             $playerScore = $gamePlayer->getScore() ?? $game->getStartScore();
             if (0 === $playerScore) {
                 continue;
-            // Ja → Dieser Spieler ist fertig, nächster!
+                // Ja → Dieser Spieler ist fertig, nächster!
             }
 
             // Check: Wie viele Würfe hat er in DIESER Runde?
@@ -76,7 +76,7 @@ final readonly class GameService
                     'player' => $user,
                 ]);
                 $throwsCount = count($throws);
-            // Check: War sein letzter Wurf ein Bust?
+                // Check: War sein letzter Wurf ein Bust?
                 if ($throwsCount > 0) {
                     $lastThrow = end($throws);
                     if (false !== $lastThrow) {
@@ -88,7 +88,7 @@ final readonly class GameService
             // Entscheidung: Darf dieser Spieler werfen?
             if ($throwsCount < 3 && !$hasBusted) {
                 return $user->getId();
-// Dieser Spieler ist dran!
+                // Dieser Spieler ist dran!
             }
         }
 
@@ -111,11 +111,11 @@ final readonly class GameService
             'game' => $game,
             'roundNumber' => $currentRoundNumber,
         ]);
-// Sortiere Spieler nach Position (Reihenfolge im Spiel)
+        // Sortiere Spieler nach Position (Reihenfolge im Spiel)
         $gamePlayers = $game->getGamePlayers()->toArray();
-        usort($gamePlayers, fn ($a, $b) => $a->getPosition() <=> $b->getPosition());
+        usort($gamePlayers, fn($a, $b) => $a->getPosition() <=> $b->getPosition());
         $calculatedActivePlayerId = $this->calculateActivePlayer($game);
-// DTOs für Spieler erstellen
+        // DTOs für Spieler erstellen
         $playerDtos = [];
         $currentThrowCountForActivePlayer = 0;
         foreach ($gamePlayers as $gamePlayer) {
@@ -133,7 +133,7 @@ final readonly class GameService
             $throwsThisRound = 0;
             $isBust = false;
             $currentRoundThrows = [];
-/** @var list<array{round: int, throws: list<ThrowResponseDto>}> $roundHistory */
+            /** @var list<array{round: int, throws: list<ThrowResponseDto>}> $roundHistory */
             $roundHistory = [];
             if ($roundEntity) {
                 $throws = $this->roundThrowsRepository->findBy([
@@ -141,7 +141,7 @@ final readonly class GameService
                     'player' => $user,
                 ], ['throwNumber' => 'ASC']);
                 $throwsThisRound = count($throws);
-            // Baue Array mit den einzelnen Würfen
+                // Baue Array mit den einzelnen Würfen
                 foreach ($throws as $throw) {
                     $throwValue = $throw->getValue();
                     if (null === $throwValue) {
@@ -156,7 +156,7 @@ final readonly class GameService
                     );
                 }
 
-                        // Check, ob der letzte Wurf ein Bust war
+                // Check, ob der letzte Wurf ein Bust war
                 if ($throwsThisRound > 0) {
                     $lastThrow = end($throws);
                     if (false !== $lastThrow) {

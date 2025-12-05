@@ -25,14 +25,8 @@ class Invitation
     private ?int $gameId = null;
 
     /**
-     * @return int|null
-     */
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
-
-    /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @return string|null
      */
     public function getUuid(): ?string
@@ -53,6 +47,8 @@ class Invitation
     }
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @return int|null
      */
     public function getGameId(): ?int
@@ -70,5 +66,13 @@ class Invitation
         $this->gameId = $gameId;
 
         return $this;
+    }
+
+    /**
+     * @return int|null
+     */
+    public function getId(): ?int
+    {
+        return $this->id;
     }
 }

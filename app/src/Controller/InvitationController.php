@@ -8,9 +8,9 @@ use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\Invitation;
 use App\Entity\User;
-use App\Repository\GamePlayersRepository;
-use App\Repository\InvitationRepository;
-use App\Repository\UserRepository;
+use App\Repository\GamePlayersRepositoryInterface;
+use App\Repository\InvitationRepositoryInterface;
+use App\Repository\UserRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -27,12 +27,12 @@ use Symfony\Component\Uid\Uuid;
 final class InvitationController extends AbstractController
 {
     /**
-     * @param int                    $id
-     * @param Request                $request
-     * @param EntityManagerInterface $entityManager
-     * @param InvitationRepository   $invitationRepository
-     * @param GamePlayersRepository  $gamePlayersRepository
-     * @param UserRepository         $userRepository
+     * @param int                            $id
+     * @param Request                        $request
+     * @param EntityManagerInterface         $entityManager
+     * @param InvitationRepositoryInterface  $invitationRepository
+     * @param GamePlayersRepositoryInterface $gamePlayersRepository
+     * @param UserRepositoryInterface        $userRepository
      *
      * @return Response
      */
@@ -41,9 +41,9 @@ final class InvitationController extends AbstractController
         int $id,
         Request $request,
         EntityManagerInterface $entityManager,
-        InvitationRepository $invitationRepository,
-        GamePlayersRepository $gamePlayersRepository,
-        UserRepository $userRepository
+        InvitationRepositoryInterface $invitationRepository,
+        GamePlayersRepositoryInterface $gamePlayersRepository,
+        UserRepositoryInterface $userRepository
     ): Response {
         $invitation = $invitationRepository->findOneBy(['gameId' => $id]);
         if (null === $invitation) {
@@ -75,14 +75,17 @@ final class InvitationController extends AbstractController
 
     #[Route('api/invite/join/{uuid}', name: 'join_invitation')]
     /**
-     * @param string               $uuid
-     * @param InvitationRepository $invitationRepository
-     * @param Request              $request
+     * @param string                        $uuid
+     * @param InvitationRepositoryInterface $invitationRepository
+     * @param Request                       $request
      *
      * @return Response
      */
-    public function joinInvitation(string $uuid, InvitationRepository $invitationRepository, Request $request): Response
-    {
+    public function joinInvitation(
+        string $uuid,
+        InvitationRepositoryInterface $invitationRepository,
+        Request $request
+    ): Response {
         $invitation = $invitationRepository->findOneBy(['uuid' => $uuid]);
         if (null === $invitation) {
             return $this->render('invitation/not_found.html.twig');
@@ -96,9 +99,9 @@ final class InvitationController extends AbstractController
     }
 
     /**
-     * @param Request                $request
-     * @param GamePlayersRepository  $gamePlayersRepository
-     * @param EntityManagerInterface $entityManager
+     * @param Request                        $request
+     * @param GamePlayersRepositoryInterface $gamePlayersRepository
+     * @param EntityManagerInterface         $entityManager
      *
      * @throws ORMException
      *
@@ -107,7 +110,7 @@ final class InvitationController extends AbstractController
     #[Route('api/invite/process', name: 'process_invitation')]
     public function processInvitation(
         Request $request,
-        GamePlayersRepository $gamePlayersRepository,
+        GamePlayersRepositoryInterface $gamePlayersRepository,
         EntityManagerInterface $entityManager
     ): Response {
         $user = $this->getUser();

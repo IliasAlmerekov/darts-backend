@@ -7,8 +7,8 @@ namespace App\Controller;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\User;
-use App\Repository\GamePlayersRepository;
-use App\Repository\InvitationRepository;
+use App\Repository\GamePlayersRepositoryInterface;
+use App\Repository\InvitationRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
 use LogicException;
@@ -47,18 +47,18 @@ final class SecurityController extends AbstractController
 
     #[Route('api/login/success', name: 'login_success')]
     /**
-     * @param Request                $request
-     * @param EntityManagerInterface $entityManager
-     * @param InvitationRepository   $invitationRepository
-     * @param GamePlayersRepository  $gamePlayersRepository
+     * @param Request                        $request
+     * @param EntityManagerInterface         $entityManager
+     * @param InvitationRepositoryInterface  $invitationRepository
+     * @param GamePlayersRepositoryInterface $gamePlayersRepository
      *
      * @return Response
      */
     public function loginSuccess(
         Request $request,
         EntityManagerInterface $entityManager,
-        InvitationRepository $invitationRepository,
-        GamePlayersRepository $gamePlayersRepository
+        InvitationRepositoryInterface $invitationRepository,
+        GamePlayersRepositoryInterface $gamePlayersRepository
     ): Response {
         $user = $this->getUser();
 // Ensure a user is an instance of a User entity

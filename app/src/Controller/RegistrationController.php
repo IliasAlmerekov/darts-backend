@@ -63,6 +63,7 @@ final class RegistrationController extends AbstractController
 
         $errors = [];
         foreach ($form->getErrors(true) as $error) {
+            /** @var \Symfony\Component\Form\FormError $error */
             // FormError always has getOrigin() and getMessage() methods
             $origin = $error->getOrigin();
             $fieldName = $origin !== null ? $origin->getName() : 'global';

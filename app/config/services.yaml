@@ -17,5 +17,13 @@ services:
     App\:
         resource: '../src/'
 
+    App\Repository\RoundRepositoryInterface: '@App\Repository\RoundRepository'
+    App\Repository\RoundThrowsRepositoryInterface: '@App\Repository\RoundThrowsRepository'
+    App\Repository\GamePlayersRepositoryInterface: '@App\Repository\GamePlayersRepository'
+    App\Repository\GameRepositoryInterface: '@App\Repository\GameRepository'
+    App\Repository\InvitationRepositoryInterface: '@App\Repository\InvitationRepository'
+    App\Repository\PlayerStatsRepositoryInterface: '@App\Repository\PlayerStatsRepository'
+    App\Repository\UserRepositoryInterface: '@App\Repository\UserRepository'
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
