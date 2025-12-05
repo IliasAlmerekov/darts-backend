@@ -59,7 +59,7 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
      *
      * @return GamePlayers
      *
-     * @psalm-suppress PossiblyUnusedMethod
+     * @psalm-suppress PossiblyUnusedReturnValue
      *
      */
     #[Override]

@@ -15,6 +15,9 @@ use Override;
 
 /**
  * Service to start a game and initialize settings.
+ *
+ * @psalm-suppress UnusedClass
+ *
  */
 final readonly class GameStartService implements GameStartServiceInterface
 {

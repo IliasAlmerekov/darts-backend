@@ -32,7 +32,7 @@ interface PlayerManagementServiceInterface
      *
      * @throws ORMException
      *
-     * @psalm-suppress PossiblyUnusedMethod
+     * @psalm-suppress PossiblyUnusedReturnValue
      *
      */
     public function addPlayer(int $gameId, int $playerId): GamePlayers;
