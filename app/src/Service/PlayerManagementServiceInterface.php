@@ -31,6 +31,9 @@ interface PlayerManagementServiceInterface
      * @return GamePlayers The created GamePlayers entity
      *
      * @throws ORMException
+     *
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      */
     public function addPlayer(int $gameId, int $playerId): GamePlayers;
 

@@ -146,11 +146,6 @@
       <code><![CDATA[__construct]]></code>
     </PossiblyUnusedMethod>
   </file>
-  <file src="src/Service/GameStartService.php">
-    <PossiblyUnusedMethod>
-      <code><![CDATA[__construct]]></code>
-    </PossiblyUnusedMethod>
-  </file>
   <file src="src/Service/GameStatisticsService.php">
     <PossiblyUnusedMethod>
       <code><![CDATA[__construct]]></code>
@@ -165,9 +160,6 @@
     <PossiblyUnusedMethod>
       <code><![CDATA[__construct]]></code>
     </PossiblyUnusedMethod>
-    <PossiblyUnusedReturnValue>
-      <code><![CDATA[GamePlayers]]></code>
-    </PossiblyUnusedReturnValue>
   </file>
   <file src="src/Service/RematchService.php">
     <PossiblyUnusedMethod>

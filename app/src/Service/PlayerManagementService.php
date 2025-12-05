@@ -58,6 +58,9 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
      * @throws ORMException
      *
      * @return GamePlayers
+     *
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      */
     #[Override]
     public function addPlayer(int $gameId, int $playerId): GamePlayers
