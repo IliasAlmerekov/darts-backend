@@ -18,11 +18,7 @@ class Invitation
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    private ?int $id = null {
-        get {
-            return $this->id;
-        }
-    }
+    private ?int $id = null;
     #[ORM\Column(length: 255, unique: true)]
     private ?string $uuid = null;
     #[ORM\Column]
