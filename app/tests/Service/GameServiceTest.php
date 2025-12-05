@@ -14,9 +14,14 @@ use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\GameService;
 use PHPUnit\Framework\TestCase;
+use ReflectionException;
+use ReflectionProperty;
 
 final class GameServiceTest extends TestCase
 {
+    /**
+     * @throws ReflectionException
+     */
     public function testCreateGameDtoBuildsPlayersAndActivePlayer(): void
     {
         $game = new Game();
@@ -48,7 +53,7 @@ final class GameServiceTest extends TestCase
         $game->addGamePlayer($p2);
 
         // current round throws for user1 (2 throws, not bust)
-        $throw1 = (new RoundThrows())
+        $throw1 = new RoundThrows()
             ->setRound($round)
             ->setPlayer($user1)
             ->setThrowNumber(1)
@@ -56,7 +61,7 @@ final class GameServiceTest extends TestCase
             ->setIsBust(false)
             ->setIsDouble(false)
             ->setIsTriple(false);
-        $throw2 = (new RoundThrows())
+        $throw2 = new RoundThrows()
             ->setRound($round)
             ->setPlayer($user1)
             ->setThrowNumber(2)
@@ -86,10 +91,7 @@ final class GameServiceTest extends TestCase
         $roundThrowsRepository->method('findBy')
             ->willReturnCallback(
                 static function (
-                    array $criteria,
-                    ?array $orderBy = null,
-                    $limit = null,
-                    $offset = null
+                    array $criteria
                 ) use ($round, $user1, $throw1, $throw2): array {
                     if (($criteria['round'] ?? null) === $round && ($criteria['player'] ?? null) === $user1) {
                         return [$throw1, $throw2];
@@ -115,12 +117,11 @@ final class GameServiceTest extends TestCase
     }
 
     /**
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     private function setPrivateProperty(object $object, string $property, mixed $value): void
     {
-        $ref = new \ReflectionProperty($object, $property);
-        $ref->setAccessible(true);
+        $ref = new ReflectionProperty($object, $property);
         $ref->setValue($object, $value);
     }
 }
