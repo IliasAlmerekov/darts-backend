@@ -16,6 +16,7 @@ use DateTime;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;
+use Override;
 
 /**
  * Service to handle recording of game throws.
@@ -43,6 +44,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      *
      * @return void
      */
+    #[Override]
     public function recordThrow(Game $game, ThrowRequest $dto): void
     {
         $player = $this->gamePlayersRepository->findOneBy([
@@ -180,6 +182,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      *
      * @return void
      */
+    #[Override]
     public function undoLastThrow(Game $game): void
     {
         $gameId = $game->getGameId();

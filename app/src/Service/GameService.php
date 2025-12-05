@@ -10,6 +10,7 @@ use App\Dto\ThrowResponseDto;
 use App\Entity\Game;
 use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
+use Override;
 
 /**
  * This class is responsible for creating GameResponseDto objects from Game entities.
@@ -41,6 +42,7 @@ final readonly class GameService implements GameServiceInterface
      *
      * @return int|null The id of the active player or null if no active player found
      */
+    #[Override]
     public function calculateActivePlayer(Game $game): ?int
     {
         $currentRoundNumber = $game->getRound() ?? 1;
@@ -103,6 +105,7 @@ final readonly class GameService implements GameServiceInterface
      *
      * @return GameResponseDto
      */
+    #[Override]
     public function createGameDto(Game $game): GameResponseDto
     {
         // 1. Aktive Runde und Würfe ermitteln

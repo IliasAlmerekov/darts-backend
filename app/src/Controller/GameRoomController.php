@@ -77,6 +77,7 @@ final class GameRoomController extends AbstractController
                 ]);
             }
         }
+        
         return $this->render('room/create.html.twig');
     }
 

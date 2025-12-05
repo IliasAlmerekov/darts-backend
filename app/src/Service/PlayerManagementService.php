@@ -10,6 +10,7 @@ use App\Entity\User;
 use App\Repository\GamePlayersRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
+use Override;
 
 /**
  * Service to handle player management.
@@ -33,6 +34,7 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
      *
      * @return bool
      */
+    #[Override]
     public function removePlayer(int $gameId, int $playerId): bool
     {
         $gamePlayer = $this->gamePlayersRepository->findOneBy([
@@ -57,6 +59,7 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
      *
      * @return GamePlayers
      */
+    #[Override]
     public function addPlayer(int $gameId, int $playerId): GamePlayers
     {
         $gamePlayer = new GamePlayers();
@@ -77,6 +80,7 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
      *
      * @throws ORMException
      */
+    #[Override]
     public function copyPlayers(int $fromGameId, int $toGameId, ?array $playerIds = null): void
     {
         $oldGamePlayers = $this->gamePlayersRepository->findByGameId($fromGameId);
