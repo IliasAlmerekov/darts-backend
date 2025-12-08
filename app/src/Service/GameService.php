@@ -138,7 +138,12 @@ final readonly class GameService implements GameServiceInterface
             $currentRoundThrows = [];
             /** @var list<array{round: int, throws: list<ThrowResponseDto>}> $roundHistory */
             $roundHistory = [];
-            if ($roundEntity) {
+            
+            // Nur aktive Spieler (Score > 0) bekommen currentRoundThrows angezeigt
+            $playerScore = $gamePlayer->getScore() ?? $game->getStartScore();
+            $isPlayerActive = ($playerScore > 0);
+            
+            if ($roundEntity && $isPlayerActive) {
                 $throws = $this->roundThrowsRepository->findBy([
                     'round' => $roundEntity,
                     'player' => $user,
