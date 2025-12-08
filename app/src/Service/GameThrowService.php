@@ -308,10 +308,16 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             return;
         }
 
-        // Wir prüfen, ob alle Spieler 3 Würfe gemacht haben
+        // Wir prüfen, ob alle AKTIVEN Spieler (Score > 0) 3 Würfe gemacht haben
         foreach ($game->getGamePlayers() as $gp) {
             $player = $gp->getPlayer();
             if (null === $player) {
+                continue;
+            }
+
+            // Skip Spieler, die bereits gewonnen haben (Score = 0)
+            $playerScore = $gp->getScore() ?? $game->getStartScore();
+            if (0 === $playerScore) {
                 continue;
             }
 
@@ -326,7 +332,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
                 );
                 if (null === $latestThrow || !$latestThrow->isBust()) {
                     return;
-        // Noch nicht alle Spieler haben 3 Würfe gemacht
+        // Noch nicht alle AKTIVEN Spieler haben 3 Würfe gemacht
                 }
             }
         }
