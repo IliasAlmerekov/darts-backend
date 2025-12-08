@@ -12,6 +12,8 @@ use InvalidArgumentException;
 
 /**
  * Service to update game settings in a safe way.
+ *
+ * @psalm-suppress UnusedClass Reason: service is auto-wired by the container and used through DI.
  */
 final readonly class GameSettingsService
 {
@@ -25,8 +27,8 @@ final readonly class GameSettingsService
     }
 
     /**
-     * @param Game                 $game
-     * @param GameSettingsRequest  $dto
+     * @param Game                $game
+     * @param GameSettingsRequest $dto
      *
      * @return void
      */
