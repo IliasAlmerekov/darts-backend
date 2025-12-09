@@ -28,6 +28,7 @@ interface GameRepositoryInterface
      *
      * @return QueryBuilder
      */
+    /** @psalm-suppress PossiblyUnusedMethod */
     public function createQueryBuilder(string $alias, ?string $indexBy = null): QueryBuilder;
 
     /**

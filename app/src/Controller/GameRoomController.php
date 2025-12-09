@@ -26,6 +26,12 @@ use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
  */
 final class GameRoomController extends AbstractController
 {
+    /**
+     * @param GameRoomServiceInterface         $gameRoomService
+     * @param PlayerManagementServiceInterface $playerManagementService
+     * @param RematchServiceInterface          $rematchService
+     * @param SseStreamServiceInterface        $sseStreamService
+     */
     public function __construct(
         private readonly GameRoomServiceInterface $gameRoomService,
         private readonly PlayerManagementServiceInterface $playerManagementService,
@@ -35,6 +41,11 @@ final class GameRoomController extends AbstractController
     }
 
     #[Route(path: '/api/room/create', name: 'room_create', methods: ['POST'], format: 'json')]
+    /**
+     * Creates a game with optional preselected players.
+     *
+     * @param RoomCreateRequest $dto
+     */
     public function roomCreateApi(
         #[MapRequestPayload] RoomCreateRequest $dto,
     ): Response {
@@ -48,12 +59,22 @@ final class GameRoomController extends AbstractController
     }
 
     #[Route(path: '/room/create', name: 'room_create_page', methods: ['GET'])]
+    /**
+     * Renders room creation page.
+     */
     public function roomCreate(): Response
     {
         return $this->render('room/create.html.twig');
     }
 
     #[Route(path: '/api/room/{id}', name: 'room_player_leave', methods: ['DELETE'], format: 'json')]
+    /**
+     * Removes a player from the room.
+     *
+     * @param int                  $id
+     * @param int|null             $playerId
+     * @param PlayerIdPayload|null $payload
+     */
     public function playerLeave(
         int $id,
         #[MapQueryParameter] ?int $playerId = null,
@@ -90,10 +111,10 @@ final class GameRoomController extends AbstractController
 
     #[Route(path: '/api/room/{id}/stream', name: 'room_stream', methods: ['GET'])]
     /**
+     * Streams SSE updates for a room.
+     *
      * @param int     $id
      * @param Request $request
-     *
-     * @return StreamedResponse
      */
     public function roomStream(int $id, Request $request): StreamedResponse
     {
@@ -111,9 +132,9 @@ final class GameRoomController extends AbstractController
 
     #[Route(path: '/api/room/{id}/rematch', name: 'room_rematch', methods: ['POST'])]
     /**
-     * @param int $id
+     * Creates a rematch for a finished game.
      *
-     * @return Response
+     * @param int $id
      */
     public function rematch(int $id): Response
     {

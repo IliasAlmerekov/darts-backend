@@ -22,8 +22,9 @@ final readonly class GameService implements GameServiceInterface
     /**
      * @param RoundRepositoryInterface       $roundRepository
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
+     *
+     * @psalm-suppress PossiblyUnusedMethod
      */
-    /** @psalm-suppress PossiblyUnusedMethod */
     public function __construct(
         private RoundRepositoryInterface $roundRepository,
         private RoundThrowsRepositoryInterface $roundThrowsRepository,

@@ -16,6 +16,8 @@ use Override;
 /**
  * Service to handle rematches.
  * This class is responsible for creating a new game and copying players from the old game.
+ *
+ * @psalm-suppress UnusedClass Reason: service is auto-wired and used via interface.
  */
 final readonly class RematchService implements RematchServiceInterface
 {

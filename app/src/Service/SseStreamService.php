@@ -12,6 +12,8 @@ use Override;
 /**
  * Service to create SSE streams for players and throws.
  * This class is responsible for sending updates to the client via SSE.
+ *
+ * @psalm-suppress UnusedClass Reason: service is auto-wired and used via interface.
  */
 final readonly class SseStreamService implements SseStreamServiceInterface
 {

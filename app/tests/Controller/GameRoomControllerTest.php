@@ -6,6 +6,7 @@ namespace App\Tests\Controller;
 
 use App\Controller\GameRoomController;
 use App\Entity\Game;
+use App\Dto\RoomCreateRequest;
 use App\Service\GameRoomServiceInterface;
 use App\Service\PlayerManagementServiceInterface;
 use App\Service\RematchServiceInterface;
@@ -14,9 +15,7 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Twig\Environment;
 
 class GameRoomControllerTest extends TestCase
 {
@@ -53,16 +52,6 @@ class GameRoomControllerTest extends TestCase
      */
     public function testRoomCreatePostCreatesGame(): void
     {
-        $request = Request::create(
-            uri: '/api/room/create',
-            method: 'POST',
-            parameters: [],
-            cookies: [],
-            files: [],
-            server: ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode([])
-        );
-
         $gameMock = $this->createMock(Game::class);
         $gameMock->method('getGameId')->willReturn(123);
 
@@ -71,12 +60,11 @@ class GameRoomControllerTest extends TestCase
             ->with(null, null, null)
             ->willReturn($gameMock);
 
-        $twig = $this->createMock(Environment::class);
-        $twig->method('render')->willReturn('');
-        $this->container->method('has')->willReturnMap([['twig', true]]);
-        $this->container->method('get')->with('twig')->willReturn($twig);
+        $this->container->method('has')->willReturn(false);
 
-        $response = $this->controller->roomCreate($request);
+        $dto = new RoomCreateRequest();
+
+        $response = $this->controller->roomCreateApi($dto);
 
         $this->assertInstanceOf(Response::class, $response);
     }

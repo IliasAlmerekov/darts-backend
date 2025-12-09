@@ -29,20 +29,11 @@ use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Throwable;
 
 /**
- * @throws InvalidArgumentException
  * Controller to manage game actions such as starting a game and recording throws.
  */
 final class GameController extends AbstractController
 {
     #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'], format: 'json')]
-    /**
-     * @param int                       $gameId
-     * @param GameStartServiceInterface $gameStartService
-     * @param StartGameRequest          $dto
-     *
-     * @return Response
-     *
-     */
     public function start(
         #[AttributeMapEntity(id: 'gameId')] Game $game,
         GameStartServiceInterface $gameStartService,
@@ -62,12 +53,6 @@ final class GameController extends AbstractController
      * This function records a throw for a player in a game.
      */
     #[Route('/api/game/{gameId}/throw', name: 'app_game_throw', methods: ['POST'], format: 'json')]
-    /**
-     * @param GameThrowService     $gameThrowService
-     * @param GameServiceInterface $gameService
-     *
-     * @return Response
-     */
     public function throw(
         #[AttributeMapEntity(id: 'gameId')] Game $game,
         GameThrowServiceInterface $gameThrowService,
@@ -88,13 +73,6 @@ final class GameController extends AbstractController
     }
 
     #[Route('/api/game/settings', name: 'app_game_settings_create', methods: ['POST'], format: 'json')]
-    /**
-     * @param GameRoomServiceInterface     $gameRoomService
-     * @param GameSettingsServiceInterface $gameSettingsService
-     * @param GameServiceInterface         $gameService
-     *
-     * @return Response
-     */
     public function createSettings(
         GameRoomServiceInterface $gameRoomService,
         GameSettingsServiceInterface $gameSettingsService,
@@ -116,12 +94,6 @@ final class GameController extends AbstractController
     }
 
     #[Route('/api/game/{gameId}/settings', name: 'app_game_settings', methods: ['PATCH'], format: 'json')]
-    /**
-     * @param GameSettingsServiceInterface $gameSettingsService
-     * @param GameServiceInterface         $gameService
-     *
-     * @return Response
-     */
     public function updateSettings(
         #[AttributeMapEntity(id: 'gameId')] Game $game,
         GameSettingsServiceInterface $gameSettingsService,
@@ -141,12 +113,6 @@ final class GameController extends AbstractController
     }
 
     #[Route('/api/game/{gameId}/throw', name: 'app_game_throw_undo', methods: ['DELETE'], format: 'json')]
-    /**
-     * @param GameThrowServiceInterface $gameThrowService
-     * @param GameServiceInterface      $gameService
-     *
-     * @return Response
-     */
     public function undoThrow(
         #[AttributeMapEntity(id: 'gameId')] Game $game,
         GameThrowServiceInterface $gameThrowService,
@@ -159,11 +125,6 @@ final class GameController extends AbstractController
     }
 
     #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['GET'], format: 'json')]
-    /**
-     * @param GameFinishService $gameFinishService
-     *
-     * @return Response
-     */
     public function finished(
         #[AttributeMapEntity(id: 'gameId')] Game $game,
         GameFinishService $gameFinishService,
@@ -181,17 +142,11 @@ final class GameController extends AbstractController
     }
 
     #[Route('/api/games/overview', name: 'app_games_overview', methods: ['GET'], format: 'json')]
-    /**
-     * @param GameRepositoryInterface $gameRepository
-     * @param GameFinishService       $gameFinishService
-     *
-     * @return Response
-     */
     public function gamesOverview(
-        #[MapQueryParameter] int $limit = 100,
-        #[MapQueryParameter] int $offset = 0,
         GameRepositoryInterface $gameRepository,
         GameFinishService $gameFinishService,
+        #[MapQueryParameter] int $limit = 100,
+        #[MapQueryParameter] int $offset = 0,
     ): Response {
         $limit = max(1, min(100, $limit));
         $offset = max(0, $offset);
@@ -221,18 +176,12 @@ final class GameController extends AbstractController
 
 
     #[Route('/api/players/stats', name: 'app_players_stats', methods: ['GET'], format: 'json')]
-    /**
-     * @param GameStatisticsService          $gameStatisticsService
-     * @param RoundThrowsRepositoryInterface $roundThrowsRepository
-     *
-     * @return Response
-     */
     public function playerStats(
+        GameStatisticsService $gameStatisticsService,
+        RoundThrowsRepositoryInterface $roundThrowsRepository,
         #[MapQueryParameter] int $limit = 20,
         #[MapQueryParameter] int $offset = 0,
         #[MapQueryParameter] string $sort = 'average:desc',
-        GameStatisticsService $gameStatisticsService,
-        RoundThrowsRepositoryInterface $roundThrowsRepository,
     ): Response {
 
         $limit = max(1, min(100, $limit));
@@ -249,11 +198,6 @@ final class GameController extends AbstractController
     }
 
     #[Route('/api/game/{gameId}', name: 'app_game_state', methods: ['GET'], format: 'json')]
-    /**
-     * @param GameServiceInterface $gameService
-     *
-     * @return JsonResponse
-     */
     public function getGameState(
         #[AttributeMapEntity(id: 'gameId')] Game $game,
         GameServiceInterface $gameService

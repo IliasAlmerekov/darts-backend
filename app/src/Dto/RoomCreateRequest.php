@@ -4,9 +4,18 @@ declare(strict_types=1);
 
 namespace App\Dto;
 
+/**
+ * Payload DTO for creating a room via API.
+ */
 final class RoomCreateRequest
 {
-    /** @psalm-suppress PossiblyUnusedMethod */
+    /**
+     * @param int|null   $previousGameId
+     * @param int[]|null $playerIds
+     * @param int[]|null $excludePlayerIds
+     *
+     * @psalm-suppress PossiblyUnusedMethod
+     */
     public function __construct(
         public ?int $previousGameId = null,
         /** @var int[]|null */
