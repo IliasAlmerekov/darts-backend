@@ -37,7 +37,7 @@ final class GameController extends AbstractController
     /**
      * Starts a game with provided settings.
      *
-     * @param Game                     $game
+     * @param Game                      $game
      * @param GameStartServiceInterface $gameStartService
      * @param StartGameRequest          $dto
      *
@@ -120,6 +120,7 @@ final class GameController extends AbstractController
 
     #[Route('/api/game/{gameId}/settings', name: 'app_game_settings', methods: ['PATCH'], format: 'json')]
     /**
+     * @param Game                         $game
      * @param GameSettingsServiceInterface $gameSettingsService
      * @param GameServiceInterface         $gameService
      * @param GameSettingsRequest          $dto
@@ -164,7 +165,7 @@ final class GameController extends AbstractController
 
     #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['GET'], format: 'json')]
     /**
-     * @param Game          $game
+     * @param Game              $game
      * @param GameFinishService $gameFinishService
      *
      * @return Response
