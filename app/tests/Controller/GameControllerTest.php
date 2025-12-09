@@ -12,7 +12,7 @@ use App\Dto\ThrowRequest;
 use App\Entity\Game;
 use App\Repository\GameRepositoryInterface;
 use App\Service\GameServiceInterface;
-use App\Service\GameSettingsService;
+use App\Service\GameSettingsServiceInterface;
 use App\Service\GameStartServiceInterface;
 use App\Service\GameThrowServiceInterface;
 use App\Service\GameRoomServiceInterface;
@@ -409,7 +409,7 @@ class GameControllerTest extends TestCase
             ->with($gameId)
             ->willReturn($game);
 
-        $gameSettingsService = $this->createMock(GameSettingsService::class);
+        $gameSettingsService = $this->createMock(GameSettingsServiceInterface::class);
         $gameSettingsService->expects($this->once())
             ->method('updateSettings')
             ->with($game, $settingsRequest);
@@ -493,7 +493,7 @@ class GameControllerTest extends TestCase
             ->with($gameId)
             ->willReturn($game);
 
-        $gameSettingsService = $this->createMock(GameSettingsService::class);
+        $gameSettingsService = $this->createMock(GameSettingsServiceInterface::class);
         $gameSettingsService->expects($this->once())
             ->method('updateSettings')
             ->with($game, $settingsRequest);
@@ -558,7 +558,7 @@ class GameControllerTest extends TestCase
         $settingsRequest = $this->createGameSettingsRequest(
             startScore: 201,
             doubleOut: false,
-            tripleOut: true,
+            tripleOut: null,
             outMode: 'singleout'
         );
 
@@ -575,7 +575,7 @@ class GameControllerTest extends TestCase
             ->method('createGame')
             ->willReturn($game);
 
-        $gameSettingsService = $this->createMock(GameSettingsService::class);
+        $gameSettingsService = $this->createMock(GameSettingsServiceInterface::class);
         $gameSettingsService->expects($this->once())
             ->method('updateSettings')
             ->with($game, $settingsRequest);
@@ -613,7 +613,7 @@ class GameControllerTest extends TestCase
         $this->assertEquals(123, $data['id']);
         $this->assertEquals(201, $data['settings']['startScore']);
         $this->assertFalse($data['settings']['doubleOut']);
-        $this->assertTrue($data['settings']['tripleOut']);
+        $this->assertFalse($data['settings']['tripleOut']);
     }
 
     /**

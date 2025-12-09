@@ -10,7 +10,7 @@ use App\Dto\StartGameRequest;
 use App\Dto\ThrowRequest;
 use App\Enum\GameStatus;
 use App\Service\GameRoomServiceInterface;
-use App\Service\GameSettingsService;
+use App\Service\GameSettingsServiceInterface;
 use App\Service\GameFinishService;
 use App\Service\GameServiceInterface;
 use App\Service\GameStartServiceInterface;
@@ -37,11 +37,11 @@ final class GameController extends AbstractController
 {
     #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'])]
     /**
-     * @param int                     $gameId
-     * @param Request                 $request
-     * @param GameRepositoryInterface $gameRepository
+     * @param int                       $gameId
+     * @param Request                   $request
+     * @param GameRepositoryInterface   $gameRepository
      * @param GameStartServiceInterface $gameStartService
-     * @param SerializerInterface     $serializer
+     * @param SerializerInterface       $serializer
      *
      * @return Response
      *
@@ -111,11 +111,7 @@ final class GameController extends AbstractController
 
     #[Route('/api/game/settings', name: 'app_game_settings_create', methods: ['POST'])]
     /**
-     * @param Request                   $request
-     * @param SerializerInterface       $serializer
-     * @param GameRoomServiceInterface  $gameRoomService
-     * @param GameSettingsService       $gameSettingsService
-     * @param GameServiceInterface      $gameService
+     * @param Request $request * @param SerializerInterface          $serializer
      *
      * @return Response
      */
@@ -123,7 +119,7 @@ final class GameController extends AbstractController
         Request $request,
         SerializerInterface $serializer,
         GameRoomServiceInterface $gameRoomService,
-        GameSettingsService $gameSettingsService,
+        GameSettingsServiceInterface $gameSettingsService,
         GameServiceInterface $gameService,
     ): Response {
         $dto = $serializer->deserialize($request->getContent(), GameSettingsRequest::class, 'json');
@@ -142,12 +138,7 @@ final class GameController extends AbstractController
 
     #[Route('/api/game/{gameId}/settings', name: 'app_game_settings', methods: ['PATCH'])]
     /**
-     * @param int                     $gameId
-     * @param Request                 $request
-     * @param GameRepositoryInterface $gameRepository
-     * @param GameSettingsService     $gameSettingsService
-     * @param GameServiceInterface    $gameService
-     * @param SerializerInterface     $serializer
+     * @param int $gameId * @param Request                     $request
      *
      * @return Response
      */
@@ -155,7 +146,7 @@ final class GameController extends AbstractController
         int $gameId,
         Request $request,
         GameRepositoryInterface $gameRepository,
-        GameSettingsService $gameSettingsService,
+        GameSettingsServiceInterface $gameSettingsService,
         GameServiceInterface $gameService,
         SerializerInterface $serializer,
     ): Response {

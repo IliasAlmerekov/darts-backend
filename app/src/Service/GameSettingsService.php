@@ -9,6 +9,7 @@ use App\Entity\Game;
 use App\Enum\GameStatus;
 use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;
+use Override;
 
 /**
  * Service to update game settings in a safe way.
@@ -16,7 +17,8 @@ use InvalidArgumentException;
  * @psalm-suppress UnusedClass Reason: service is auto-wired by the container and used through DI.
  * @psalm-suppress PossiblyUnusedMethod Reason: constructor is used by Symfony autowiring.
  */
-final readonly class GameSettingsService
+
+final readonly class GameSettingsService implements GameSettingsServiceInterface
 {
     private const ALLOWED_START_SCORES = [101, 201, 301, 401, 501];
 
@@ -35,6 +37,7 @@ final readonly class GameSettingsService
      *
      * @return void
      */
+    #[Override]
     public function updateSettings(Game $game, GameSettingsRequest $dto): void
     {
         $status = $game->getStatus();
