@@ -8,7 +8,6 @@ use App\Entity\Game;
 use App\Dto\GameSettingsRequest;
 use App\Dto\StartGameRequest;
 use App\Dto\ThrowRequest;
-use App\Enum\GameStatus;
 use App\Service\GameRoomServiceInterface;
 use App\Service\GameSettingsServiceInterface;
 use App\Service\GameFinishService;
@@ -20,13 +19,13 @@ use App\Service\GameThrowServiceInterface;
 use DateTimeInterface;
 use InvalidArgumentException;
 use App\Repository\GameRepositoryInterface;
+use Symfony\Bridge\Doctrine\Attribute\MapEntity as AttributeMapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Serializer\Exception\ExceptionInterface;
-use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Throwable;
 
 /**
@@ -35,31 +34,21 @@ use Throwable;
  */
 final class GameController extends AbstractController
 {
-    #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'])]
+    #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'], format: 'json')]
     /**
      * @param int                       $gameId
-     * @param Request                   $request
-     * @param GameRepositoryInterface   $gameRepository
      * @param GameStartServiceInterface $gameStartService
-     * @param SerializerInterface       $serializer
+     * @param StartGameRequest          $dto
      *
      * @return Response
      *
-     * @throws ExceptionInterface
      */
     public function start(
-        int $gameId,
-        Request $request,
-        GameRepositoryInterface $gameRepository,
+        #[AttributeMapEntity(id: 'gameId')] Game $game,
         GameStartServiceInterface $gameStartService,
-        SerializerInterface $serializer,
+        #[MapRequestPayload] StartGameRequest $dto,
     ): Response {
-        $dto = $serializer->deserialize($request->getContent(), StartGameRequest::class, 'json');
-        $game = $gameRepository->find($gameId);
-        if (!$game instanceof Game) {
-            return $this->json(['error' => 'Game not found'], Response::HTTP_NOT_FOUND);
-        }
-
+        // $game wird automatisch durch den Mapping geladen
         try {
             $gameStartService->start($game, $dto);
         } catch (InvalidArgumentException $e) {
@@ -70,34 +59,23 @@ final class GameController extends AbstractController
     }
 
     /**
-     * @throws InvalidArgumentException|ExceptionInterface
      * This function records a throw for a player in a game.
      */
-    #[Route('/api/game/{gameId}/throw', name: 'app_game_throw', methods: ['POST'])]
+    #[Route('/api/game/{gameId}/throw', name: 'app_game_throw', methods: ['POST'], format: 'json')]
     /**
-     * @param int                     $gameId
-     * @param Request                 $request
-     * @param GameRepositoryInterface $gameRepository
-     * @param GameThrowService        $gameThrowService
-     * @param GameServiceInterface    $gameService
-     * @param SerializerInterface     $serializer
+     * @param GameThrowService     $gameThrowService
+     * @param GameServiceInterface $gameService
      *
      * @return Response
      */
     public function throw(
-        int $gameId,
-        Request $request,
-        GameRepositoryInterface $gameRepository,
+        #[AttributeMapEntity(id: 'gameId')] Game $game,
         GameThrowServiceInterface $gameThrowService,
         GameServiceInterface $gameService,
-        SerializerInterface $serializer,
+        #[MapRequestPayload] ThrowRequest $dto,
     ): Response {
-        $dto = $serializer->deserialize($request->getContent(), ThrowRequest::class, 'json');
-        $game = $gameRepository->find($gameId);
-        if (!$game instanceof Game) {
-            return $this->json(['error' => 'Game not found'], Response::HTTP_NOT_FOUND);
-        }
-
+        // $dto wird automatisch durch den Mapping geladen
+        // $game wird automatisch durch den Mapping geladen
         try {
             $gameThrowService->recordThrow($game, $dto);
         } catch (InvalidArgumentException $e) {
@@ -109,10 +87,8 @@ final class GameController extends AbstractController
         return $this->json($gameDto);
     }
 
-    #[Route('/api/game/settings', name: 'app_game_settings_create', methods: ['POST'])]
+    #[Route('/api/game/settings', name: 'app_game_settings_create', methods: ['POST'], format: 'json')]
     /**
-     * @param Request                      $request
-     * @param SerializerInterface          $serializer
      * @param GameRoomServiceInterface     $gameRoomService
      * @param GameSettingsServiceInterface $gameSettingsService
      * @param GameServiceInterface         $gameService
@@ -120,13 +96,12 @@ final class GameController extends AbstractController
      * @return Response
      */
     public function createSettings(
-        Request $request,
-        SerializerInterface $serializer,
         GameRoomServiceInterface $gameRoomService,
         GameSettingsServiceInterface $gameSettingsService,
         GameServiceInterface $gameService,
+        #[MapRequestPayload] GameSettingsRequest $dto,
     ): Response {
-        $dto = $serializer->deserialize($request->getContent(), GameSettingsRequest::class, 'json');
+        // $dto wird automatisch durch den Mapping geladen
         $game = $gameRoomService->createGame();
 
         try {
@@ -140,31 +115,20 @@ final class GameController extends AbstractController
         return $this->json($gameDto, Response::HTTP_CREATED);
     }
 
-    #[Route('/api/game/{gameId}/settings', name: 'app_game_settings', methods: ['PATCH'])]
+    #[Route('/api/game/{gameId}/settings', name: 'app_game_settings', methods: ['PATCH'], format: 'json')]
     /**
-     * @param int                          $gameId
-     * @param Request                      $request
-     * @param GameRepositoryInterface      $gameRepository
      * @param GameSettingsServiceInterface $gameSettingsService
      * @param GameServiceInterface         $gameService
-     * @param SerializerInterface          $serializer
      *
      * @return Response
      */
     public function updateSettings(
-        int $gameId,
-        Request $request,
-        GameRepositoryInterface $gameRepository,
+        #[AttributeMapEntity(id: 'gameId')] Game $game,
         GameSettingsServiceInterface $gameSettingsService,
         GameServiceInterface $gameService,
-        SerializerInterface $serializer,
+        #[MapRequestPayload] GameSettingsRequest $dto,
     ): Response {
-        $dto = $serializer->deserialize($request->getContent(), GameSettingsRequest::class, 'json');
-        $game = $gameRepository->find($gameId);
-        if (!$game instanceof Game) {
-            return $this->json(['error' => 'Game not found'], Response::HTTP_NOT_FOUND);
-        }
-
+        // $dto wird automatisch durch den Mapping geladen
         try {
             $gameSettingsService->updateSettings($game, $dto);
         } catch (InvalidArgumentException $e) {
@@ -176,50 +140,34 @@ final class GameController extends AbstractController
         return $this->json($gameDto);
     }
 
-    #[Route('/api/game/{gameId}/throw', name: 'app_game_throw_undo', methods: ['DELETE'])]
+    #[Route('/api/game/{gameId}/throw', name: 'app_game_throw_undo', methods: ['DELETE'], format: 'json')]
     /**
-     * @param int                       $gameId
-     * @param GameRepositoryInterface   $gameRepository
      * @param GameThrowServiceInterface $gameThrowService
      * @param GameServiceInterface      $gameService
      *
      * @return Response
      */
     public function undoThrow(
-        int $gameId,
-        GameRepositoryInterface $gameRepository,
+        #[AttributeMapEntity(id: 'gameId')] Game $game,
         GameThrowServiceInterface $gameThrowService,
         GameServiceInterface $gameService
     ): Response {
-        $game = $gameRepository->find($gameId);
-        if (!$game instanceof Game) {
-            return $this->json(['error' => 'Game not found'], Response::HTTP_NOT_FOUND);
-        }
-
         $gameThrowService->undoLastThrow($game);
         $gameDto = $gameService->createGameDto($game);
 
         return $this->json($gameDto);
     }
 
-    #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['GET'])]
+    #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['GET'], format: 'json')]
     /**
-     * @param int                     $gameId
-     * @param GameRepositoryInterface $gameRepository
-     * @param GameFinishService       $gameFinishService
+     * @param GameFinishService $gameFinishService
      *
      * @return Response
      */
     public function finished(
-        int $gameId,
-        GameRepositoryInterface $gameRepository,
+        #[AttributeMapEntity(id: 'gameId')] Game $game,
         GameFinishService $gameFinishService,
     ): Response {
-        $game = $gameRepository->find($gameId);
-        if (!$game instanceof Game) {
-            return $this->json(['error' => 'Game not found'], Response::HTTP_NOT_FOUND);
-        }
-
         try {
             $result = $gameFinishService->finishGame($game);
         } catch (Throwable $e) {
@@ -232,29 +180,23 @@ final class GameController extends AbstractController
         return $this->json($result, context: ['groups' => 'game:read']);
     }
 
-    #[Route('/api/games/overview', name: 'app_games_overview', methods: ['GET'])]
+    #[Route('/api/games/overview', name: 'app_games_overview', methods: ['GET'], format: 'json')]
     /**
-     * @param Request                 $request
      * @param GameRepositoryInterface $gameRepository
      * @param GameFinishService       $gameFinishService
      *
      * @return Response
      */
     public function gamesOverview(
-        Request $request,
+        #[MapQueryParameter] int $limit = 100,
+        #[MapQueryParameter] int $offset = 0,
         GameRepositoryInterface $gameRepository,
         GameFinishService $gameFinishService,
     ): Response {
-        $limit = max(1, min(100, $request->query->getInt('limit', 100)));
-        $offset = max(0, $request->query->getInt('offset'));
-        $games = $gameRepository->createQueryBuilder('g')
-            ->andWhere('g.status = :status')
-            ->setParameter('status', GameStatus::Finished)
-            ->orderBy('g.gameId', 'DESC')
-            ->setFirstResult($offset)
-            ->setMaxResults($limit)
-            ->getQuery()
-            ->getResult();
+        $limit = max(1, min(100, $limit));
+        $offset = max(0, $offset);
+        $games = $gameRepository->findFinished($limit, $offset);
+
         $items = [];
         foreach ($games as $game) {
             $stats = $gameFinishService->getGameStats($game);
@@ -278,23 +220,24 @@ final class GameController extends AbstractController
     }
 
 
-    #[Route('/api/players/stats', name: 'app_players_stats', methods: ['GET'])]
+    #[Route('/api/players/stats', name: 'app_players_stats', methods: ['GET'], format: 'json')]
     /**
-     * @param Request                        $request
      * @param GameStatisticsService          $gameStatisticsService
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
      *
      * @return Response
      */
     public function playerStats(
-        Request $request,
+        #[MapQueryParameter] int $limit = 20,
+        #[MapQueryParameter] int $offset = 0,
+        #[MapQueryParameter] string $sort = 'average:desc',
         GameStatisticsService $gameStatisticsService,
         RoundThrowsRepositoryInterface $roundThrowsRepository,
     ): Response {
-        $limit = max(1, min(100, $request->query->getInt('limit', 20)));
-        $offset = max(0, $request->query->getInt('offset'));
-        $sortParam = (string) $request->query->get('sort', 'average:desc');
-        [$sortField, $sortDirection] = $this->parseSort($sortParam);
+
+        $limit = max(1, min(100, $limit));
+        $offset = max(0, $offset);
+        [$sortField, $sortDirection] = $this->parseSort($sort);
         $stats = $gameStatisticsService->getPlayerStats($limit, $offset, $sortField, $sortDirection);
 
         return $this->json([
@@ -305,31 +248,19 @@ final class GameController extends AbstractController
         ], context: ['groups' => 'stats:read']);
     }
 
-    #[Route('/api/game/{gameId}', name: 'app_game_state', methods: ['GET'])]
+    #[Route('/api/game/{gameId}', name: 'app_game_state', methods: ['GET'], format: 'json')]
     /**
-     * @param int                     $gameId
-     * @param GameRepositoryInterface $gameRepository
-     * @param GameServiceInterface    $gameService
+     * @param GameServiceInterface $gameService
      *
      * @return JsonResponse
      */
     public function getGameState(
-        int $gameId,
-        GameRepositoryInterface $gameRepository,
+        #[AttributeMapEntity(id: 'gameId')] Game $game,
         GameServiceInterface $gameService
     ): JsonResponse {
-        // Spiel aus der Datenbank abrufen
-        $game = $gameRepository->find($gameId);
-// Überprüfen, ob das Spiel existiert
-        if (!$game instanceof Game) {
-            return $this->json(['error' => 'Game not found'], Response::HTTP_NOT_FOUND);
-        }
-        // GameService verwenden, um das GameResponseDto zu erstellen,
         // hier berechnen wir, sammeln die Wurfdaten, bauen Spielerliste mit allen Informationen
         $gameDto = $gameService->createGameDto($game);
-// Das DTO als JSON-Antwort zurückgeben,
-        // wir konvertieren das DTO automatisch in JSON,
-        // alle public werden zu JSON-Feldern
+
         return $this->json($gameDto);
     }
 

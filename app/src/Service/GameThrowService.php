@@ -32,6 +32,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
      * @param EntityManagerInterface         $entityManager
      */
+    /** @psalm-suppress PossiblyUnusedMethod */
     public function __construct(
         private GamePlayersRepositoryInterface $gamePlayersRepository,
         private RoundRepositoryInterface $roundRepository,

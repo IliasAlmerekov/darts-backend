@@ -26,16 +26,6 @@ use Symfony\Component\Uid\Uuid;
  */
 final class InvitationController extends AbstractController
 {
-    /**
-     * @param int                            $id
-     * @param Request                        $request
-     * @param EntityManagerInterface         $entityManager
-     * @param InvitationRepositoryInterface  $invitationRepository
-     * @param GamePlayersRepositoryInterface $gamePlayersRepository
-     * @param UserRepositoryInterface        $userRepository
-     *
-     * @return Response
-     */
     #[Route('api/invite/create/{id}', name: 'create_invitation')]
     public function createInvitation(
         int $id,
@@ -74,13 +64,6 @@ final class InvitationController extends AbstractController
     }
 
     #[Route('api/invite/join/{uuid}', name: 'join_invitation')]
-    /**
-     * @param string                        $uuid
-     * @param InvitationRepositoryInterface $invitationRepository
-     * @param Request                       $request
-     *
-     * @return Response
-     */
     public function joinInvitation(
         string $uuid,
         InvitationRepositoryInterface $invitationRepository,
