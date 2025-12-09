@@ -6,13 +6,16 @@ namespace App\Tests\Controller;
 
 use App\Controller\GameController;
 use App\Dto\GameResponseDto;
+use App\Dto\GameSettingsRequest;
 use App\Dto\StartGameRequest;
 use App\Dto\ThrowRequest;
 use App\Entity\Game;
 use App\Repository\GameRepositoryInterface;
 use App\Service\GameServiceInterface;
+use App\Service\GameSettingsServiceInterface;
 use App\Service\GameStartServiceInterface;
 use App\Service\GameThrowServiceInterface;
+use App\Service\GameRoomServiceInterface;
 use InvalidArgumentException;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -94,6 +97,24 @@ class GameControllerTest extends TestCase
         $dto->startScore = $startScore;
         $dto->doubleOut = $doubleOut;
         $dto->tripleOut = $tripleOut;
+        return $dto;
+    }
+
+    /**
+     * Helper: Erstellt eine GameSettingsRequest-Instanz
+     */
+    private function createGameSettingsRequest(
+        ?int $startScore = 501,
+        ?bool $doubleOut = true,
+        ?bool $tripleOut = false,
+        ?string $outMode = null
+    ): GameSettingsRequest {
+        $dto = new GameSettingsRequest();
+        $dto->startScore = $startScore;
+        $dto->doubleOut = $doubleOut;
+        $dto->tripleOut = $tripleOut;
+        $dto->outMode = $outMode;
+
         return $dto;
     }
 
@@ -343,6 +364,256 @@ class GameControllerTest extends TestCase
 
         $this->assertInstanceOf(JsonResponse::class, $response);
         $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
+    }
+
+    /**
+     * Test: Settings - Bestehendes Spiel aktualisieren
+     */
+    public function testUpdateSettingsReturnsUpdatedDto(): void
+    {
+        $gameId = 55;
+
+        $jsonContent = json_encode([
+            'startScore' => 401,
+            'doubleOut' => true,
+            'tripleOut' => true,
+        ]);
+
+        $request = Request::create(
+            uri: "/api/game/{$gameId}/settings",
+            method: 'PATCH',
+            parameters: [],
+            cookies: [],
+            files: [],
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: $jsonContent
+        );
+
+        $settingsRequest = $this->createGameSettingsRequest(
+            startScore: 401,
+            doubleOut: true,
+            tripleOut: true
+        );
+
+        $serializer = $this->createMock(SerializerInterface::class);
+        $serializer->expects($this->once())
+            ->method('deserialize')
+            ->with($jsonContent, GameSettingsRequest::class, 'json')
+            ->willReturn($settingsRequest);
+
+        $game = $this->createMock(Game::class);
+
+        $gameRepository = $this->createMock(GameRepositoryInterface::class);
+        $gameRepository->expects($this->once())
+            ->method('find')
+            ->with($gameId)
+            ->willReturn($game);
+
+        $gameSettingsService = $this->createMock(GameSettingsServiceInterface::class);
+        $gameSettingsService->expects($this->once())
+            ->method('updateSettings')
+            ->with($game, $settingsRequest);
+
+        $gameDto = $this->createGameResponseDto(
+            id: $gameId,
+            status: 'lobby',
+            settings: [
+                'startScore' => 401,
+                'doubleOut' => true,
+                'tripleOut' => true,
+            ]
+        );
+
+        $gameService = $this->createMock(GameServiceInterface::class);
+        $gameService->expects($this->once())
+            ->method('createGameDto')
+            ->with($game)
+            ->willReturn($gameDto);
+
+        $this->container->method('has')->willReturn(false);
+
+        $response = $this->controller->updateSettings(
+            $gameId,
+            $request,
+            $gameRepository,
+            $gameSettingsService,
+            $gameService,
+            $serializer
+        );
+
+        $this->assertInstanceOf(JsonResponse::class, $response);
+        $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
+
+        $data = json_decode($response->getContent(), true);
+        $this->assertEquals($gameId, $data['id']);
+        $this->assertEquals(401, $data['settings']['startScore']);
+        $this->assertTrue($data['settings']['doubleOut']);
+        $this->assertTrue($data['settings']['tripleOut']);
+    }
+
+    /**
+     * Test: Settings - outMode setzt double/triple korrekt
+     */
+    public function testUpdateSettingsWithOutMode(): void
+    {
+        $gameId = 77;
+
+        $jsonContent = json_encode([
+            'outMode' => 'doubleout',
+        ]);
+
+        $request = Request::create(
+            uri: "/api/game/{$gameId}/settings",
+            method: 'PATCH',
+            parameters: [],
+            cookies: [],
+            files: [],
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: $jsonContent
+        );
+
+        $settingsRequest = $this->createGameSettingsRequest(
+            startScore: null,
+            doubleOut: null,
+            tripleOut: null,
+            outMode: 'doubleout'
+        );
+
+        $serializer = $this->createMock(SerializerInterface::class);
+        $serializer->expects($this->once())
+            ->method('deserialize')
+            ->with($jsonContent, GameSettingsRequest::class, 'json')
+            ->willReturn($settingsRequest);
+
+        $game = $this->createMock(Game::class);
+
+        $gameRepository = $this->createMock(GameRepositoryInterface::class);
+        $gameRepository->expects($this->once())
+            ->method('find')
+            ->with($gameId)
+            ->willReturn($game);
+
+        $gameSettingsService = $this->createMock(GameSettingsServiceInterface::class);
+        $gameSettingsService->expects($this->once())
+            ->method('updateSettings')
+            ->with($game, $settingsRequest);
+
+        $gameDto = $this->createGameResponseDto(
+            id: $gameId,
+            status: 'lobby',
+            settings: [
+                'startScore' => 301,
+                'doubleOut' => true,
+                'tripleOut' => false,
+            ]
+        );
+
+        $gameService = $this->createMock(GameServiceInterface::class);
+        $gameService->expects($this->once())
+            ->method('createGameDto')
+            ->with($game)
+            ->willReturn($gameDto);
+
+        $this->container->method('has')->willReturn(false);
+
+        $response = $this->controller->updateSettings(
+            $gameId,
+            $request,
+            $gameRepository,
+            $gameSettingsService,
+            $gameService,
+            $serializer
+        );
+
+        $this->assertInstanceOf(JsonResponse::class, $response);
+        $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
+
+        $data = json_decode($response->getContent(), true);
+        $this->assertTrue($data['settings']['doubleOut']);
+        $this->assertFalse($data['settings']['tripleOut']);
+    }
+
+    /**
+     * Test: Settings - Neues Spiel wird lazy erstellt
+     */
+    public function testCreateSettingsCreatesGameAndReturnsDto(): void
+    {
+        $jsonContent = json_encode([
+            'startScore' => 201,
+            'doubleOut' => false,
+            'tripleOut' => true,
+            'outMode' => 'singleout',
+        ]);
+
+        $request = Request::create(
+            uri: "/api/game/settings",
+            method: 'POST',
+            parameters: [],
+            cookies: [],
+            files: [],
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: $jsonContent
+        );
+
+        $settingsRequest = $this->createGameSettingsRequest(
+            startScore: 201,
+            doubleOut: false,
+            tripleOut: null,
+            outMode: 'singleout'
+        );
+
+        $serializer = $this->createMock(SerializerInterface::class);
+        $serializer->expects($this->once())
+            ->method('deserialize')
+            ->with($jsonContent, GameSettingsRequest::class, 'json')
+            ->willReturn($settingsRequest);
+
+        $game = $this->createMock(Game::class);
+
+        $gameRoomService = $this->createMock(GameRoomServiceInterface::class);
+        $gameRoomService->expects($this->once())
+            ->method('createGame')
+            ->willReturn($game);
+
+        $gameSettingsService = $this->createMock(GameSettingsServiceInterface::class);
+        $gameSettingsService->expects($this->once())
+            ->method('updateSettings')
+            ->with($game, $settingsRequest);
+
+        $gameDto = $this->createGameResponseDto(
+            id: 123,
+            status: 'lobby',
+            settings: [
+                'startScore' => 201,
+                'doubleOut' => false,
+                'tripleOut' => false,
+            ]
+        );
+
+        $gameService = $this->createMock(GameServiceInterface::class);
+        $gameService->expects($this->once())
+            ->method('createGameDto')
+            ->with($game)
+            ->willReturn($gameDto);
+
+        $this->container->method('has')->willReturn(false);
+
+        $response = $this->controller->createSettings(
+            $request,
+            $serializer,
+            $gameRoomService,
+            $gameSettingsService,
+            $gameService
+        );
+
+        $this->assertInstanceOf(JsonResponse::class, $response);
+        $this->assertEquals(Response::HTTP_CREATED, $response->getStatusCode());
+
+        $data = json_decode($response->getContent(), true);
+        $this->assertEquals(123, $data['id']);
+        $this->assertEquals(201, $data['settings']['startScore']);
+        $this->assertFalse($data['settings']['doubleOut']);
+        $this->assertFalse($data['settings']['tripleOut']);
     }
 
     /**

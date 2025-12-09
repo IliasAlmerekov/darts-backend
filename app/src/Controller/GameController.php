@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Entity\Game;
+use App\Dto\GameSettingsRequest;
 use App\Dto\StartGameRequest;
 use App\Dto\ThrowRequest;
 use App\Enum\GameStatus;
-use App\Service\GameService;
+use App\Service\GameRoomServiceInterface;
+use App\Service\GameSettingsServiceInterface;
 use App\Service\GameFinishService;
 use App\Service\GameServiceInterface;
-use App\Service\GameStartService;
 use App\Service\GameStartServiceInterface;
 use App\Service\GameStatisticsService;
-use App\Service\GameThrowService;
 use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\GameThrowServiceInterface;
 use DateTimeInterface;
@@ -37,11 +37,11 @@ final class GameController extends AbstractController
 {
     #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'])]
     /**
-     * @param int                     $gameId
-     * @param Request                 $request
-     * @param GameRepositoryInterface $gameRepository
-     * @param GameStartService        $gameStartService
-     * @param SerializerInterface     $serializer
+     * @param int                       $gameId
+     * @param Request                   $request
+     * @param GameRepositoryInterface   $gameRepository
+     * @param GameStartServiceInterface $gameStartService
+     * @param SerializerInterface       $serializer
      *
      * @return Response
      *
@@ -79,7 +79,7 @@ final class GameController extends AbstractController
      * @param Request                 $request
      * @param GameRepositoryInterface $gameRepository
      * @param GameThrowService        $gameThrowService
-     * @param GameService             $gameService
+     * @param GameServiceInterface    $gameService
      * @param SerializerInterface     $serializer
      *
      * @return Response
@@ -109,20 +109,87 @@ final class GameController extends AbstractController
         return $this->json($gameDto);
     }
 
+    #[Route('/api/game/settings', name: 'app_game_settings_create', methods: ['POST'])]
+    /**
+     * @param Request                      $request
+     * @param SerializerInterface          $serializer
+     * @param GameRoomServiceInterface     $gameRoomService
+     * @param GameSettingsServiceInterface $gameSettingsService
+     * @param GameServiceInterface         $gameService
+     *
+     * @return Response
+     */
+    public function createSettings(
+        Request $request,
+        SerializerInterface $serializer,
+        GameRoomServiceInterface $gameRoomService,
+        GameSettingsServiceInterface $gameSettingsService,
+        GameServiceInterface $gameService,
+    ): Response {
+        $dto = $serializer->deserialize($request->getContent(), GameSettingsRequest::class, 'json');
+        $game = $gameRoomService->createGame();
+
+        try {
+            $gameSettingsService->updateSettings($game, $dto);
+        } catch (InvalidArgumentException $e) {
+            return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
+        }
+
+        $gameDto = $gameService->createGameDto($game);
+
+        return $this->json($gameDto, Response::HTTP_CREATED);
+    }
+
+    #[Route('/api/game/{gameId}/settings', name: 'app_game_settings', methods: ['PATCH'])]
+    /**
+     * @param int                          $gameId
+     * @param Request                      $request
+     * @param GameRepositoryInterface      $gameRepository
+     * @param GameSettingsServiceInterface $gameSettingsService
+     * @param GameServiceInterface         $gameService
+     * @param SerializerInterface          $serializer
+     *
+     * @return Response
+     */
+    public function updateSettings(
+        int $gameId,
+        Request $request,
+        GameRepositoryInterface $gameRepository,
+        GameSettingsServiceInterface $gameSettingsService,
+        GameServiceInterface $gameService,
+        SerializerInterface $serializer,
+    ): Response {
+        $dto = $serializer->deserialize($request->getContent(), GameSettingsRequest::class, 'json');
+        $game = $gameRepository->find($gameId);
+        if (!$game instanceof Game) {
+            return $this->json(['error' => 'Game not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        try {
+            $gameSettingsService->updateSettings($game, $dto);
+        } catch (InvalidArgumentException $e) {
+            return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
+        }
+
+        $gameDto = $gameService->createGameDto($game);
+
+        return $this->json($gameDto);
+    }
+
     #[Route('/api/game/{gameId}/throw', name: 'app_game_throw_undo', methods: ['DELETE'])]
     /**
-     * @param int                     $gameId
-     * @param GameRepositoryInterface $gameRepository
-     * @param GameThrowService        $gameThrowService
-     * @param GameService             $gameService
+     * @param int                       $gameId
+     * @param GameRepositoryInterface   $gameRepository
+     * @param GameThrowServiceInterface $gameThrowService
+     * @param GameServiceInterface      $gameService
      *
      * @return Response
      */
     public function undoThrow(
         int $gameId,
         GameRepositoryInterface $gameRepository,
-        GameThrowService $gameThrowService,
-        GameService $gameService
+        GameThrowServiceInterface $gameThrowService,
+        GameServiceInterface $gameService
     ): Response {
         $game = $gameRepository->find($gameId);
         if (!$game instanceof Game) {
@@ -242,14 +309,14 @@ final class GameController extends AbstractController
     /**
      * @param int                     $gameId
      * @param GameRepositoryInterface $gameRepository
-     * @param GameService             $gameService
+     * @param GameServiceInterface    $gameService
      *
      * @return JsonResponse
      */
     public function getGameState(
         int $gameId,
         GameRepositoryInterface $gameRepository,
-        GameService $gameService
+        GameServiceInterface $gameService
     ): JsonResponse {
         // Spiel aus der Datenbank abrufen
         $game = $gameRepository->find($gameId);

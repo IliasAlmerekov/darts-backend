@@ -21,6 +21,8 @@ use Override;
 /**
  * Service to handle recording of game throws.
  * This class is responsible for updating the game state and recalculating the positions of the players.
+ *
+ * @psalm-suppress UnusedClass Reason: service is auto-wired by the container and used through DI.
  */
 final readonly class GameThrowService implements GameThrowServiceInterface
 {
