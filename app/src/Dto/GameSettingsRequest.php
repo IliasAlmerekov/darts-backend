@@ -17,6 +17,10 @@ final class GameSettingsRequest
     #[SerializedName('startScore')]
     public ?int $startScore = null;
 
+    #[Assert\Choice(choices: ['singleout', 'doubleout', 'tripleout'])]
+    #[SerializedName('outMode')]
+    public ?string $outMode = null;
+
     #[Assert\Type('bool')]
     #[SerializedName('doubleOut')]
     public ?bool $doubleOut = null;
