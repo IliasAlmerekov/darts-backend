@@ -111,7 +111,11 @@ final class GameController extends AbstractController
 
     #[Route('/api/game/settings', name: 'app_game_settings_create', methods: ['POST'])]
     /**
-     * @param Request $request * @param SerializerInterface          $serializer
+     * @param Request                      $request
+     * @param SerializerInterface          $serializer
+     * @param GameRoomServiceInterface     $gameRoomService
+     * @param GameSettingsServiceInterface $gameSettingsService
+     * @param GameServiceInterface         $gameService
      *
      * @return Response
      */
@@ -138,7 +142,12 @@ final class GameController extends AbstractController
 
     #[Route('/api/game/{gameId}/settings', name: 'app_game_settings', methods: ['PATCH'])]
     /**
-     * @param int $gameId * @param Request                     $request
+     * @param int                          $gameId
+     * @param Request                      $request
+     * @param GameRepositoryInterface      $gameRepository
+     * @param GameSettingsServiceInterface $gameSettingsService
+     * @param GameServiceInterface         $gameService
+     * @param SerializerInterface          $serializer
      *
      * @return Response
      */
