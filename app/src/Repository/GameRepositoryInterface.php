@@ -23,12 +23,13 @@ interface GameRepositoryInterface
     public function find(mixed $id, LockMode|int|null $lockMode = null, ?int $lockVersion = null): ?object;
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param string      $alias
      * @param string|null $indexBy
      *
      * @return QueryBuilder
      */
-    /** @psalm-suppress PossiblyUnusedMethod */
     public function createQueryBuilder(string $alias, ?string $indexBy = null): QueryBuilder;
 
     /**

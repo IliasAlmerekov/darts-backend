@@ -31,6 +31,8 @@ final class GameRoomController extends AbstractController
      * @param PlayerManagementServiceInterface $playerManagementService
      * @param RematchServiceInterface          $rematchService
      * @param SseStreamServiceInterface        $sseStreamService
+     *
+     * @return void
      */
     public function __construct(
         private readonly GameRoomServiceInterface $gameRoomService,
@@ -45,6 +47,8 @@ final class GameRoomController extends AbstractController
      * Creates a game with optional preselected players.
      *
      * @param RoomCreateRequest $dto
+     *
+     * @return Response
      */
     public function roomCreateApi(
         #[MapRequestPayload] RoomCreateRequest $dto,
@@ -61,6 +65,8 @@ final class GameRoomController extends AbstractController
     #[Route(path: '/room/create', name: 'room_create_page', methods: ['GET'])]
     /**
      * Renders room creation page.
+     *
+     * @return Response
      */
     public function roomCreate(): Response
     {
@@ -74,6 +80,8 @@ final class GameRoomController extends AbstractController
      * @param int                  $id
      * @param int|null             $playerId
      * @param PlayerIdPayload|null $payload
+     *
+     * @return Response
      */
     public function playerLeave(
         int $id,
@@ -115,6 +123,8 @@ final class GameRoomController extends AbstractController
      *
      * @param int     $id
      * @param Request $request
+     *
+     * @return StreamedResponse
      */
     public function roomStream(int $id, Request $request): StreamedResponse
     {
@@ -135,6 +145,8 @@ final class GameRoomController extends AbstractController
      * Creates a rematch for a finished game.
      *
      * @param int $id
+     *
+     * @return Response
      */
     public function rematch(int $id): Response
     {

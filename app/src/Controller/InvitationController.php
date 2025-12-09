@@ -26,6 +26,8 @@ final class InvitationController extends AbstractController
      *
      * @param Game                       $game
      * @param InvitationServiceInterface $invitationService
+     *
+     * @return Response
      */
     #[Route('/api/invite/create/{id}', name: 'create_invitation', format: 'json')]
     public function createInvitation(
@@ -44,6 +46,8 @@ final class InvitationController extends AbstractController
      *
      * @param Invitation       $invitation
      * @param SessionInterface $session
+     *
+     * @return Response
      */
     public function joinInvitation(
         #[MapEntity(mapping: ['uuid' => 'uuid'])] Invitation $invitation,
@@ -61,6 +65,11 @@ final class InvitationController extends AbstractController
     }
 
     /**
+     * Processes invitation stored in session for the current user.
+     *
+     * @param SessionInterface           $session
+     * @param InvitationServiceInterface $invitationService
+     *
      * @return Response
      */
     #[Route('api/invite/process', name: 'process_invitation')]

@@ -40,6 +40,11 @@ final readonly class InvitationService implements InvitationServiceInterface
     ) {
     }
 
+    /**
+     * @param Game $game
+     *
+     * @return Invitation
+     */
     #[Override]
     public function createOrGetInvitation(Game $game): Invitation
     {
@@ -65,6 +70,11 @@ final readonly class InvitationService implements InvitationServiceInterface
         return $invitation;
     }
 
+    /**
+     * @param Game $game
+     *
+     * @return array<string, mixed>
+     */
     #[Override]
     public function getInvitationPayload(Game $game): array
     {
@@ -85,6 +95,11 @@ final readonly class InvitationService implements InvitationServiceInterface
         ];
     }
 
+    /**
+     * @param Game $game
+     *
+     * @return array<int, mixed>
+     */
     #[Override]
     public function getUsersForGame(Game $game): array
     {
@@ -102,6 +117,12 @@ final readonly class InvitationService implements InvitationServiceInterface
         return [] === $playerIds ? [] : $this->userRepository->findBy(['id' => $playerIds]);
     }
 
+    /**
+     * @param SessionInterface $session
+     * @param mixed            $user
+     *
+     * @return Response
+     */
     #[Override]
     public function processInvitation(SessionInterface $session, mixed $user): Response
     {
