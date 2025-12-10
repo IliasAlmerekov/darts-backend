@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service;
+namespace App\Service\Game;
 
 use App\Dto\GameResponseDto;
 use App\Dto\PlayerResponseDto;
@@ -22,6 +22,8 @@ final readonly class GameService implements GameServiceInterface
     /**
      * @param RoundRepositoryInterface       $roundRepository
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
+     *
+     * @psalm-suppress PossiblyUnusedMethod
      */
     public function __construct(
         private RoundRepositoryInterface $roundRepository,

@@ -80,4 +80,22 @@ final class GameRepository extends ServiceEntityRepository implements GameReposi
             ->getQuery()
             ->getSingleScalarResult();
     }
+
+    /**
+     * @param int $limit
+     * @param int $offset
+     *
+     * @return Game[]
+     */
+    public function findFinished(int $limit, int $offset): array
+    {
+        return $this->createQueryBuilder('g')
+            ->andWhere('g.status = :status')
+            ->setParameter('status', GameStatus::Finished)
+            ->orderBy('g.gameId', 'DESC')
+            ->setFirstResult($offset)
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
 }

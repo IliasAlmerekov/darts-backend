@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service;
+namespace App\Service\Sse;
 
+use App\Service\Game\GameRoomServiceInterface;
 use DateTimeInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use App\Repository\RoundThrowsRepositoryInterface;
@@ -12,15 +13,19 @@ use Override;
 /**
  * Service to create SSE streams for players and throws.
  * This class is responsible for sending updates to the client via SSE.
+ *
+ * @psalm-suppress UnusedClass Reason: service is auto-wired and used via interface.
  */
 final readonly class SseStreamService implements SseStreamServiceInterface
 {
     /**
-     * @param GameRoomService                $gameRoomService
+     * @param GameRoomServiceInterface       $gameRoomService
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
+     *
+     * @psalm-suppress PossiblyUnusedMethod
      */
     public function __construct(
-        private GameRoomService $gameRoomService,
+        private GameRoomServiceInterface $gameRoomService,
         private RoundThrowsRepositoryInterface $roundThrowsRepository
     ) {
     }

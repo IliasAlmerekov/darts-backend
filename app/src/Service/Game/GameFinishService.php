@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service;
+namespace App\Service\Game;
 
 use App\Entity\Game;
 use App\Entity\GamePlayers;
@@ -18,7 +18,7 @@ use Doctrine\ORM\EntityManagerInterface;
  * Service to handle finishing games.
  * This class is responsible for updating the game status and recalculating the positions of the players.
  */
-final readonly class GameFinishService
+final readonly class GameFinishService implements GameFinishServiceInterface
 {
     /**
      * @param EntityManagerInterface         $entityManager
@@ -40,6 +40,7 @@ final readonly class GameFinishService
      *
      * @return array
      */
+    #[\Override]
     public function finishGame(Game $game, ?DateTimeInterface $finishedAt = null): array
     {
         $game->setStatus(GameStatus::Finished);
@@ -59,6 +60,7 @@ final readonly class GameFinishService
      *
      * @return array<string, mixed>
      */
+    #[\Override]
     public function getGameStats(Game $game): array
     {
         $gameId = (int) $game->getGameId();

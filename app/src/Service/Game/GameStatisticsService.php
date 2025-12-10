@@ -2,15 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Service;
+namespace App\Service\Game;
 
 use App\Dto\PlayerStatsDto;
 use App\Repository\RoundThrowsRepositoryInterface;
+use Override;
 
 /**
  * Provides aggregated game statistics.
  */
-final readonly class GameStatisticsService
+final readonly class GameStatisticsService implements GameStatisticsServiceInterface
 {
     /**
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
@@ -27,6 +28,7 @@ final readonly class GameStatisticsService
      *
      * @return PlayerStatsDto[]
      */
+    #[Override]
     public function getPlayerStats(int $limit, int $offset, string $sortField, string $sortDirection): array
     {
         $rows = $this->roundThrowsRepository->getPlayerStatistics($limit, $offset, $sortField, $sortDirection);

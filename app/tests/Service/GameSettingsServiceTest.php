@@ -7,7 +7,7 @@ namespace App\Tests\Service;
 use App\Dto\GameSettingsRequest;
 use App\Entity\Game;
 use App\Enum\GameStatus;
-use App\Service\GameSettingsService;
+use App\Service\Game\GameSettingsService;
 use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;

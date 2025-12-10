@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service;
+namespace App\Service\Game;
 
 use App\Entity\Invitation;
 use App\Enum\GameStatus;
 use App\Repository\InvitationRepositoryInterface;
+use App\Service\Game\GameRoomServiceInterface;
+use App\Service\Game\GameFinishServiceInterface;
+use App\Service\Player\PlayerManagementServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -16,21 +19,25 @@ use Override;
 /**
  * Service to handle rematches.
  * This class is responsible for creating a new game and copying players from the old game.
+ *
+ * @psalm-suppress UnusedClass Reason: service is auto-wired and used via interface.
  */
 final readonly class RematchService implements RematchServiceInterface
 {
     /**
-     * @param GameRoomService               $gameRoomService
-     * @param PlayerManagementService       $playerManagementService
-     * @param GameFinishService             $gameFinishService
-     * @param InvitationRepositoryInterface $invitationRepository
-     * @param EntityManagerInterface        $entityManager
-     * @param UrlGeneratorInterface         $urlGenerator
+     * @param GameRoomServiceInterface         $gameRoomService
+     * @param PlayerManagementServiceInterface $playerManagementService
+     * @param GameFinishServiceInterface       $gameFinishService
+     * @param InvitationRepositoryInterface    $invitationRepository
+     * @param EntityManagerInterface           $entityManager
+     * @param UrlGeneratorInterface            $urlGenerator
+     *
+     * @psalm-suppress PossiblyUnusedMethod
      */
     public function __construct(
-        private GameRoomService $gameRoomService,
-        private PlayerManagementService $playerManagementService,
-        private GameFinishService $gameFinishService,
+        private GameRoomServiceInterface $gameRoomService,
+        private PlayerManagementServiceInterface $playerManagementService,
+        private GameFinishServiceInterface $gameFinishService,
         private InvitationRepositoryInterface $invitationRepository,
         private EntityManagerInterface $entityManager,
         private UrlGeneratorInterface $urlGenerator

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service;
+namespace App\Service\Game;
 
 use App\Dto\ThrowRequest;
 use App\Entity\Game;
@@ -31,6 +31,8 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      * @param RoundRepositoryInterface       $roundRepository
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
      * @param EntityManagerInterface         $entityManager
+     *
+     * @psalm-suppress PossiblyUnusedMethod
      */
     public function __construct(
         private GamePlayersRepositoryInterface $gamePlayersRepository,

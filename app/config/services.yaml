@@ -24,6 +24,19 @@ services:
     App\Repository\InvitationRepositoryInterface: '@App\Repository\InvitationRepository'
     App\Repository\PlayerStatsRepositoryInterface: '@App\Repository\PlayerStatsRepository'
     App\Repository\UserRepositoryInterface: '@App\Repository\UserRepository'
+    App\Service\Invitation\InvitationServiceInterface: '@App\Service\Invitation\InvitationService'
+    App\Service\Registration\RegistrationServiceInterface: '@App\Service\Registration\RegistrationService'
+    App\Service\Security\SecurityServiceInterface: '@App\Service\Security\SecurityService'
+    App\Service\Game\GameStartServiceInterface: '@App\Service\Game\GameStartService'
+    App\Service\Game\GameSettingsServiceInterface: '@App\Service\Game\GameSettingsService'
+    App\Service\Game\GameRoomServiceInterface: '@App\Service\Game\GameRoomService'
+    App\Service\Game\GameThrowServiceInterface: '@App\Service\Game\GameThrowService'
+    App\Service\Game\GameServiceInterface: '@App\Service\Game\GameService'
+    App\Service\Game\GameStatisticsServiceInterface: '@App\Service\Game\GameStatisticsService'
+    App\Service\Game\GameFinishServiceInterface: '@App\Service\Game\GameFinishService'
+    App\Service\Game\RematchServiceInterface: '@App\Service\Game\RematchService'
+    App\Service\Player\PlayerManagementServiceInterface: '@App\Service\Player\PlayerManagementService'
+    App\Service\Sse\SseStreamServiceInterface: '@App\Service\Sse\SseStreamService'
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

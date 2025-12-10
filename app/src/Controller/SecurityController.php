@@ -4,13 +4,8 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Entity\Game;
-use App\Entity\GamePlayers;
 use App\Entity\User;
-use App\Repository\GamePlayersRepositoryInterface;
-use App\Repository\InvitationRepositoryInterface;
-use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\Exception\ORMException;
+use App\Service\Security\SecurityServiceInterface;
 use LogicException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,107 +18,59 @@ use Symfony\Component\HttpFoundation\Request;
  */
 final class SecurityController extends AbstractController
 {
-    #[Route(path: 'api/login', name: 'app_login', methods: ['GET', 'POST'])]
     /**
+     * Returns login state or last error for API clients.
+     *
      * @param AuthenticationUtils $authenticationUtils
      *
      * @return Response
      */
+    #[Route(path: '/api/login', name: 'app_login', methods: ['GET', 'POST'], format: 'json')]
     public function login(AuthenticationUtils $authenticationUtils): Response
     {
         $user = $this->getUser();
         if ($user) {
-            return $this->redirectToRoute('login_success');
+            $id = method_exists($user, 'getId') ? $user->getId() : null;
+
+            return $this->json([
+                'success' => true,
+                'id' => $id,
+                'username' => $user->getUserIdentifier(),
+                'roles' => $user instanceof User ? $user->getStoredRoles() : $user->getRoles(),
+                'redirect' => '/api/login/success',
+            ]);
         }
 
         $error = $authenticationUtils->getLastAuthenticationError();
         $lastUsername = $authenticationUtils->getLastUsername();
 
-        return $this->render('security/login.html.twig', [
+        return $this->json([
+            'success' => false,
             'last_username' => $lastUsername,
-            'error' => $error,
-        ]);
+            'error' => $error?->getMessage(),
+        ], $error ? Response::HTTP_UNAUTHORIZED : Response::HTTP_OK);
     }
 
-    #[Route('api/login/success', name: 'login_success')]
     /**
-     * @param Request                        $request
-     * @param EntityManagerInterface         $entityManager
-     * @param InvitationRepositoryInterface  $invitationRepository
-     * @param GamePlayersRepositoryInterface $gamePlayersRepository
+     * Handles post-login redirection logic for API clients.
+     *
+     * @param Request                  $request
+     * @param SecurityServiceInterface $securityService
      *
      * @return Response
      */
-    public function loginSuccess(
-        Request $request,
-        EntityManagerInterface $entityManager,
-        InvitationRepositoryInterface $invitationRepository,
-        GamePlayersRepositoryInterface $gamePlayersRepository
-    ): Response {
+    #[Route('/api/login/success', name: 'login_success', format: 'json')]
+    public function loginSuccess(Request $request, SecurityServiceInterface $securityService): Response
+    {
         $user = $this->getUser();
-// Ensure a user is an instance of a User entity
         if (!$user instanceof User) {
             return $this->json(['error' => 'User not authenticated'], Response::HTTP_UNAUTHORIZED);
         }
 
-        // Admin redirect
-        if (in_array('ROLE_ADMIN', $user->getRoles())) {
-            return $this->json([
-                'success' => true,
-                'roles' => $user->getStoredRoles(),
-                'id' => $user->getId(),
-                'username' => $user->getUserIdentifier(),
-                'redirect' => '/start',
-            ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
-        }
-
-        // Invitation redirect + Logic
-        $session = $request->getSession();
-        if ($session->has('invitation_uuid')) {
-            $uuid = $session->get('invitation_uuid');
-            $invitation = $invitationRepository->findOneBy(['uuid' => $uuid]);
-            if (null === $invitation) {
-                return $this->json(['error' => 'Invitation not found'], Response::HTTP_NOT_FOUND);
-            }
-
-            $gameId = $invitation->getGameId();
-            $userId = $user->getId();
-            try {
-    // Add player to game if not already in
-                if (!$gamePlayersRepository->findOneBy(['game' => $gameId, 'player' => $userId])) {
-                    $gamePlayer = new GamePlayers();
-                    $gamePlayer->setGame($entityManager->getReference(Game::class, $gameId));
-                    $gamePlayer->setPlayer($entityManager->getReference(User::class, $userId));
-                    $entityManager->persist($gamePlayer);
-                    $entityManager->flush();
-                }
-            } catch (ORMException) {
-                return $this->json([
-                    'error' => 'Database error occurred while adding player to game',
-                ], Response::HTTP_INTERNAL_SERVER_ERROR);
-            }
-
-            return $this->json([
-                'success' => true,
-                'roles' => $user->getStoredRoles(),
-                'id' => $user->getId(),
-                'username' => $user->getUserIdentifier(),
-                'redirect' => '/joined',
-            ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
-        }
-
-
-        // Default player redirect
-        return $this->json([
-            'success' => true,
-            'roles' => $user->getStoredRoles(),
-            'id' => $user->getId(),
-            'username' => $user->getUserIdentifier(),
-            'redirect' => '/playerprofile',
-        ]);
+        return $securityService->buildLoginSuccessResponse($user, $request->getSession());
     }
 
-    #[Route(path: 'api/logout', name: 'app_logout')]
+    #[Route(path: '/api/logout', name: 'app_logout')]
     /**
      * @return void
      */

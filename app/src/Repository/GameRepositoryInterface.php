@@ -23,6 +23,8 @@ interface GameRepositoryInterface
     public function find(mixed $id, LockMode|int|null $lockMode = null, ?int $lockVersion = null): ?object;
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param string      $alias
      * @param string|null $indexBy
      *
@@ -49,4 +51,12 @@ interface GameRepositoryInterface
      * @return int
      */
     public function countFinishedGames(): int;
+
+    /**
+     * @param int $limit
+     * @param int $offset
+     *
+     * @return Game[]
+     */
+    public function findFinished(int $limit, int $offset): array;
 }
