@@ -69,7 +69,7 @@ final readonly class GameFinishService implements GameFinishServiceInterface
         $totalScoresMap = $this->roundThrowsRepository->getTotalScoreForGame($gameId);
         $winner = $game->getWinner();
         $winnerId = $winner?->getId();
-        $winnerRounds = null !== $winnerId ? max($roundsPlayedMap[$winnerId] ?? 0, $finishedRounds) : 0;
+        $winnerRounds = null !== $winnerId ? ($roundsPlayedMap[$winnerId] ?? $finishedRounds) : 0;
         $winnerTotal = null !== $winnerId ? ($totalScoresMap[$winnerId] ?? 0.0) : 0.0;
         $winnerAverage = $winnerRounds > 0 ? (float) $winnerTotal / (float) $winnerRounds : 0.0;
 
