@@ -147,7 +147,7 @@ final class GameController extends AbstractController
 
     #[Route('/api/game/{gameId}/throw', name: 'app_game_throw_undo', methods: ['DELETE'], format: 'json')]
     /**
-     * @param Game                         $game
+     * @param Game                      $game
      * @param GameThrowServiceInterface $gameThrowService
      * @param GameServiceInterface      $gameService
      *

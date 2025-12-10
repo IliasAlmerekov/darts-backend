@@ -28,6 +28,8 @@ final readonly class RematchService implements RematchServiceInterface
      * @param InvitationRepositoryInterface $invitationRepository
      * @param EntityManagerInterface        $entityManager
      * @param UrlGeneratorInterface         $urlGenerator
+     *
+     * @psalm-suppress PossiblyUnusedMethod
      */
     public function __construct(
         private GameRoomService $gameRoomService,

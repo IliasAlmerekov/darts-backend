@@ -20,6 +20,8 @@ final readonly class SseStreamService implements SseStreamServiceInterface
     /**
      * @param GameRoomService                $gameRoomService
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
+     *
+     * @psalm-suppress PossiblyUnusedMethod
      */
     public function __construct(
         private GameRoomService $gameRoomService,
