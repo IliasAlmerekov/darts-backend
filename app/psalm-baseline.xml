@@ -30,11 +30,6 @@
       <code><![CDATA[RegistrationController]]></code>
     </UnusedClass>
   </file>
-  <file src="src/Controller/SecurityController.php">
-    <UnusedClass>
-      <code><![CDATA[SecurityController]]></code>
-    </UnusedClass>
-  </file>
   <file src="src/Dto/GameFinishDto.php">
     <PossiblyUnusedMethod>
       <code><![CDATA[fromArray]]></code>
@@ -93,12 +88,10 @@
     <PossiblyUnusedMethod>
       <code><![CDATA[addGamePlayer]]></code>
       <code><![CDATA[getInvitation]]></code>
-      <code><![CDATA[getType]]></code>
       <code><![CDATA[removeGamePlayer]]></code>
       <code><![CDATA[removeRound]]></code>
       <code><![CDATA[setGameId]]></code>
       <code><![CDATA[setInvitation]]></code>
-      <code><![CDATA[setType]]></code>
     </PossiblyUnusedMethod>
   </file>
   <file src="src/Entity/GamePlayers.php">
