@@ -2,16 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Service;
+namespace App\Service\Invitation;
 
 use App\Entity\Game;
+use App\Entity\GamePlayers;
 use App\Entity\Invitation;
+use App\Entity\User;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\InvitationRepositoryInterface;
 use App\Repository\UserRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Override;
-use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Routing\RouterInterface;
@@ -37,8 +39,7 @@ final readonly class InvitationService implements InvitationServiceInterface
         private UserRepositoryInterface $userRepository,
         private EntityManagerInterface $entityManager,
         private RouterInterface $router,
-    ) {
-    }
+    ) {}
 
     /**
      * @param Game $game
@@ -110,7 +111,7 @@ final readonly class InvitationService implements InvitationServiceInterface
 
         $players = $this->gamePlayersRepository->findByGameId($gameId);
         $playerIds = array_values(array_filter(array_map(
-            static fn ($player) => $player->getPlayer()?->getId(),
+            static fn($player) => $player->getPlayer()?->getId(),
             $players
         )));
 
@@ -126,24 +127,24 @@ final readonly class InvitationService implements InvitationServiceInterface
     #[Override]
     public function processInvitation(SessionInterface $session, mixed $user): Response
     {
-        if (!$user instanceof \App\Entity\User) {
-            return new RedirectResponse($this->router->generate('app_login'));
+        if (!$user instanceof User) {
+            return new JsonResponse(['success' => false, 'redirect' => '/login'], Response::HTTP_UNAUTHORIZED);
         }
 
         $gameId = $session->get('game_id');
         if (!$gameId) {
-            return new RedirectResponse($this->router->generate('room_list'));
+            return new JsonResponse(['success' => false, 'redirect' => '/start'], Response::HTTP_BAD_REQUEST);
         }
 
         $userId = $user->getId();
         if (null === $userId) {
-            return new RedirectResponse($this->router->generate('app_login'));
+            return new JsonResponse(['success' => false, 'redirect' => '/login'], Response::HTTP_UNAUTHORIZED);
         }
 
         if (!$this->gamePlayersRepository->isPlayerInGame($gameId, $userId)) {
-            $gamePlayer = new \App\Entity\GamePlayers();
+            $gamePlayer = new GamePlayers();
             $gamePlayer->setGame($this->entityManager->getReference(Game::class, $gameId));
-            $gamePlayer->setPlayer($this->entityManager->getReference(\App\Entity\User::class, $userId));
+            $gamePlayer->setPlayer($this->entityManager->getReference(User::class, $userId));
             $this->entityManager->persist($gamePlayer);
             $this->entityManager->flush();
         }
@@ -151,6 +152,11 @@ final readonly class InvitationService implements InvitationServiceInterface
         $session->remove('invitation_uuid');
         $session->remove('game_id');
 
-        return new RedirectResponse($this->router->generate('waiting_room'));
+        $frontendUrl = rtrim($_ENV['FRONTEND_URL'] ?? 'http://localhost:5173', '/');
+
+        return new JsonResponse([
+            'success' => true,
+            'redirect' => $frontendUrl . '/joined',
+        ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
     }
 }

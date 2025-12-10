@@ -7,7 +7,7 @@ namespace App\Tests\Controller;
 use App\Controller\InvitationController;
 use App\Entity\Game;
 use App\Entity\Invitation;
-use App\Service\InvitationServiceInterface;
+use App\Service\Invitation\InvitationServiceInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;

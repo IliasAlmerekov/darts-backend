@@ -7,7 +7,7 @@ namespace App\Tests\Service;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\User;
-use App\Service\GameSetupService;
+use App\Service\Game\GameSetupService;
 use PHPUnit\Framework\TestCase;
 use ReflectionException;
 use ReflectionProperty;

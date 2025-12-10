@@ -12,7 +12,7 @@ use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
-use App\Service\GameService;
+use App\Service\Game\GameService;
 use PHPUnit\Framework\TestCase;
 use ReflectionException;
 use ReflectionProperty;

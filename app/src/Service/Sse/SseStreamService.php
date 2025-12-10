@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service;
+namespace App\Service\Sse;
 
+use App\Service\Game\GameRoomServiceInterface;
 use DateTimeInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use App\Repository\RoundThrowsRepositoryInterface;
@@ -18,13 +19,13 @@ use Override;
 final readonly class SseStreamService implements SseStreamServiceInterface
 {
     /**
-     * @param GameRoomService                $gameRoomService
+     * @param GameRoomServiceInterface       $gameRoomService
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
     public function __construct(
-        private GameRoomService $gameRoomService,
+        private GameRoomServiceInterface $gameRoomService,
         private RoundThrowsRepositoryInterface $roundThrowsRepository
     ) {
     }

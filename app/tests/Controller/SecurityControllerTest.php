@@ -6,22 +6,21 @@ namespace App\Tests\Controller;
 
 use App\Controller\SecurityController;
 use App\Entity\User;
+use Override;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
-use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
-use Twig\Environment;
 
 class SecurityControllerTest extends TestCase
 {
     private SecurityController $controller;
     private ContainerInterface&MockObject $container;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->controller = new SecurityController();
@@ -63,7 +62,7 @@ class SecurityControllerTest extends TestCase
         return $tokenStorage;
     }
     /**
-     * Test: Login - User ist bereits eingeloggt -> Redirect zu login_success
+     * Test: Login - User ist bereits eingeloggt -> Returns JSON with success
      */
     public function testLoginRedirectsWhenUserAlreadyLoggedIn(): void
     {
@@ -72,34 +71,34 @@ class SecurityControllerTest extends TestCase
 
         $authenticationUtils = $this->createMock(AuthenticationUtils::class);
 
-        $router = $this->createMock(RouterInterface::class);
-        $router->expects($this->once())
-            ->method('generate')
-            ->with('login_success')
-            ->willReturn('/api/login/success');
-
         // Container Konfiguration
-        $this->container->method('has')->willReturnMap([
-            ['security.token_storage', true],
-            ['router', true],
-        ]);
+        $this->container->method('has')->willReturnCallback(function ($service) {
+            return $service === 'security.token_storage';
+        });
 
-        $this->container->method('get')->willReturnCallback(function($service) use ($tokenStorage, $router) {
-            return match($service) {
+        $this->container->method('get')->willReturnCallback(function ($service) use ($tokenStorage) {
+            return match ($service) {
                 'security.token_storage' => $tokenStorage,
-                'router' => $router,
-                default => null
+                default => throw new \RuntimeException("Service $service not found")
             };
         });
 
         $response = $this->controller->login($authenticationUtils);
 
-        $this->assertInstanceOf(RedirectResponse::class, $response);
-        $this->assertEquals('/api/login/success', $response->getTargetUrl());
+        $this->assertInstanceOf(Response::class, $response);
+        $this->assertEquals(200, $response->getStatusCode());
+
+        $content = $response->getContent();
+        $this->assertNotFalse($content);
+        $data = json_decode($content, true);
+        $this->assertTrue($data['success']);
+        $this->assertEquals(1, $data['id']);
+        $this->assertEquals('testuser', $data['username']);
+        $this->assertEquals('/api/login/success', $data['redirect']);
     }
 
     /**
-     * Test: Login - User nicht eingeloggt -> Zeigt Login-Form
+     * Test: Login - User nicht eingeloggt -> Returns JSON with error info
      */
     public function testLoginRendersFormWhenUserNotLoggedIn(): void
     {
@@ -110,32 +109,28 @@ class SecurityControllerTest extends TestCase
         $authenticationUtils->method('getLastAuthenticationError')->willReturn(null);
         $authenticationUtils->method('getLastUsername')->willReturn('john@example.com');
 
-        $twig = $this->createMock(Environment::class);
-        $twig->expects($this->once())
-            ->method('render')
-            ->with('security/login.html.twig', [
-                'last_username' => 'john@example.com',
-                'error' => null,
-            ])
-            ->willReturn('');
-
         // Container Konfiguration
-        $this->container->method('has')->willReturnMap([
-            ['security.token_storage', true],
-            ['twig', true],
-        ]);
+        $this->container->method('has')->willReturnCallback(function ($service) {
+            return $service === 'security.token_storage';
+        });
 
-        $this->container->method('get')->willReturnCallback(function($service) use ($tokenStorage, $twig) {
-            return match($service) {
+        $this->container->method('get')->willReturnCallback(function ($service) use ($tokenStorage) {
+            return match ($service) {
                 'security.token_storage' => $tokenStorage,
-                'twig' => $twig,
-                default => null
+                default => throw new \RuntimeException("Service $service not found")
             };
         });
 
         $response = $this->controller->login($authenticationUtils);
 
         $this->assertInstanceOf(Response::class, $response);
-        $this->assertEquals('', $response->getContent());
+        $this->assertEquals(200, $response->getStatusCode());
+
+        $content = $response->getContent();
+        $this->assertNotFalse($content);
+        $data = json_decode($content, true);
+        $this->assertFalse($data['success']);
+        $this->assertEquals('john@example.com', $data['last_username']);
+        $this->assertNull($data['error']);
     }
 }

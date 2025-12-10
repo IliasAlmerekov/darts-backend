@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service;
+namespace App\Service\Player;
 
 use App\Entity\GamePlayers;
 use Doctrine\ORM\Exception\ORMException;

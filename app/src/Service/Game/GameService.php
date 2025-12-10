@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service;
+namespace App\Service\Game;
 
 use App\Dto\GameResponseDto;
 use App\Dto\PlayerResponseDto;
