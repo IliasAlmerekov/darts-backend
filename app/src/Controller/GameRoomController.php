@@ -7,10 +7,10 @@ namespace App\Controller;
 use App\Entity\User;
 use App\Dto\PlayerIdPayload;
 use App\Dto\RoomCreateRequest;
-use App\Service\GameRoomServiceInterface;
-use App\Service\PlayerManagementServiceInterface;
-use App\Service\RematchServiceInterface;
-use App\Service\SseStreamServiceInterface;
+use App\Service\Game\GameRoomServiceInterface;
+use App\Service\Game\RematchServiceInterface;
+use App\Service\Player\PlayerManagementServiceInterface;
+use App\Service\Sse\SseStreamServiceInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -60,17 +60,6 @@ final class GameRoomController extends AbstractController
         );
 
         return $this->json(['success' => true, 'gameId' => $game->getGameId()]);
-    }
-
-    #[Route(path: '/room/create', name: 'room_create_page', methods: ['GET'])]
-    /**
-     * Renders room creation page.
-     *
-     * @return Response
-     */
-    public function roomCreate(): Response
-    {
-        return $this->render('room/create.html.twig');
     }
 
     #[Route(path: '/api/room/{id}', name: 'room_player_leave', methods: ['DELETE'], format: 'json')]

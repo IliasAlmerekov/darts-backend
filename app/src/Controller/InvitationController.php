@@ -7,7 +7,7 @@ namespace App\Controller;
 use App\Entity\Game;
 use App\Entity\Invitation;
 use App\Entity\User;
-use App\Service\InvitationServiceInterface;
+use App\Service\Invitation\InvitationServiceInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -57,11 +57,9 @@ final class InvitationController extends AbstractController
         $session->set('invitation_uuid', $invitation->getUuid());
         $session->set('game_id', $invitation->getGameId());
 
-        return $this->json([
-            'success' => true,
-            'gameId' => $invitation->getGameId(),
-            'invitationUuid' => $invitation->getUuid(),
-        ]);
+        $frontendUrl = rtrim($_ENV['FRONTEND_URL'] ?? 'http://localhost:5173', '/');
+
+        return $this->redirect($frontendUrl . '/');
     }
 
     /**

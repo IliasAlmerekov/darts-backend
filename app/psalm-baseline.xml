@@ -1,13 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <files psalm-version="6.13.1@1e3b7f0a8ab32b23197b91107adc0a7ed8a05b51">
-  <file src="src/Controller/GameController.php">
+  <file src="src/Controller/GameLifecycleController.php">
     <UnusedClass>
-      <code><![CDATA[GameController]]></code>
+      <code><![CDATA[GameLifecycleController]]></code>
     </UnusedClass>
   </file>
   <file src="src/Controller/GameRoomController.php">
     <UnusedClass>
       <code><![CDATA[GameRoomController]]></code>
+    </UnusedClass>
+  </file>
+  <file src="src/Controller/GameStatsController.php">
+    <UnusedClass>
+      <code><![CDATA[GameStatsController]]></code>
+    </UnusedClass>
+  </file>
+  <file src="src/Controller/GameThrowController.php">
+    <UnusedClass>
+      <code><![CDATA[GameThrowController]]></code>
     </UnusedClass>
   </file>
   <file src="src/Controller/InvitationController.php">
@@ -131,24 +141,34 @@
       <code><![CDATA[ErrorController]]></code>
     </UnusedClass>
   </file>
-  <file src="src/Service/GameFinishService.php">
+  <file src="src/Service/Game/GameFinishService.php">
+    <UnusedClass>
+      <code><![CDATA[GameFinishService]]></code>
+    </UnusedClass>
+  </file>
+  <file src="src/Service/Game/GameRoomService.php">
+    <UnusedClass>
+      <code><![CDATA[GameRoomService]]></code>
+    </UnusedClass>
+  </file>
+  <file src="src/Service/Game/GameStatisticsService.php">
+    <UnusedClass>
+      <code><![CDATA[GameStatisticsService]]></code>
+    </UnusedClass>
+  </file>
+  <file src="src/Service/Player/PlayerManagementService.php">
     <PossiblyUnusedMethod>
       <code><![CDATA[__construct]]></code>
     </PossiblyUnusedMethod>
   </file>
-  <file src="src/Service/GameRoomService.php">
-    <PossiblyUnusedMethod>
-      <code><![CDATA[__construct]]></code>
-    </PossiblyUnusedMethod>
+  <file src="src/Service/Registration/RegistrationService.php">
+    <UnusedClass>
+      <code><![CDATA[RegistrationService]]></code>
+    </UnusedClass>
   </file>
-  <file src="src/Service/GameStatisticsService.php">
-    <PossiblyUnusedMethod>
-      <code><![CDATA[__construct]]></code>
-    </PossiblyUnusedMethod>
-  </file>
-  <file src="src/Service/PlayerManagementService.php">
-    <PossiblyUnusedMethod>
-      <code><![CDATA[__construct]]></code>
-    </PossiblyUnusedMethod>
+  <file src="src/Service/Security/SecurityService.php">
+    <UnusedClass>
+      <code><![CDATA[SecurityService]]></code>
+    </UnusedClass>
   </file>
 </files>
