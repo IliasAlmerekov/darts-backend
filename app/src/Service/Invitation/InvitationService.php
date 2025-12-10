@@ -39,7 +39,8 @@ final readonly class InvitationService implements InvitationServiceInterface
         private UserRepositoryInterface $userRepository,
         private EntityManagerInterface $entityManager,
         private RouterInterface $router,
-    ) {}
+    ) {
+    }
 
     /**
      * @param Game $game
@@ -156,7 +157,7 @@ final readonly class InvitationService implements InvitationServiceInterface
 
         return new JsonResponse([
             'success' => true,
-            'redirect' => $frontendUrl . '/joined',
+            'redirect' => $frontendUrl.'/joined',
         ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
     }
 }

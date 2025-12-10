@@ -59,7 +59,7 @@ final class InvitationController extends AbstractController
 
         $frontendUrl = rtrim($_ENV['FRONTEND_URL'] ?? 'http://localhost:5173', '/');
 
-        return $this->redirect($frontendUrl . '/');
+        return $this->redirect($frontendUrl.'/');
     }
 
     /**

@@ -27,6 +27,14 @@ final readonly class SecurityService implements SecurityServiceInterface
         $this->frontendUrl = rtrim($_ENV['FRONTEND_URL'] ?? 'http://localhost:5173', '/');
     }
 
+    /**
+     * Builds login success response with proper redirect for role or invitation flow.
+     *
+     * @param User             $user
+     * @param SessionInterface $session
+     *
+     * @return Response
+     */
     #[Override]
     public function buildLoginSuccessResponse(User $user, SessionInterface $session): Response
     {
@@ -36,7 +44,7 @@ final readonly class SecurityService implements SecurityServiceInterface
                 'roles' => $user->getStoredRoles(),
                 'id' => $user->getId(),
                 'username' => $user->getUserIdentifier(),
-                'redirect' => $this->frontendUrl . '/start',
+                'redirect' => $this->frontendUrl.'/start',
             ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
         }
 
@@ -49,7 +57,7 @@ final readonly class SecurityService implements SecurityServiceInterface
             'roles' => $user->getStoredRoles(),
             'id' => $user->getId(),
             'username' => $user->getUserIdentifier(),
-            'redirect' => $this->frontendUrl . '/joined',
+            'redirect' => $this->frontendUrl.'/joined',
         ]);
     }
 }

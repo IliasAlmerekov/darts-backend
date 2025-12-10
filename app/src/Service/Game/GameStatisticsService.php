@@ -16,7 +16,9 @@ final readonly class GameStatisticsService implements GameStatisticsServiceInter
     /**
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
      */
-    public function __construct(private RoundThrowsRepositoryInterface $roundThrowsRepository) {}
+    public function __construct(private RoundThrowsRepositoryInterface $roundThrowsRepository)
+    {
+    }
 
     /**
      * @param int    $limit

@@ -28,7 +28,8 @@ final readonly class RegistrationService implements RegistrationServiceInterface
         private FormFactoryInterface $formFactory,
         private UserPasswordHasherInterface $passwordHasher,
         private EntityManagerInterface $entityManager,
-    ) {}
+    ) {
+    }
 
     /**
      * @param array<string, mixed> $data
