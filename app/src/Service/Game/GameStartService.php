@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -25,10 +30,8 @@ final readonly class GameStartService implements GameStartServiceInterface
      * @param GameSetupService       $gameSetupService
      * @param EntityManagerInterface $entityManager
      */
-    public function __construct(
-        private GameSetupService $gameSetupService,
-        private EntityManagerInterface $entityManager,
-    ) {
+    public function __construct(private GameSetupService $gameSetupService, private EntityManagerInterface $entityManager)
+    {
     }
 
     /**

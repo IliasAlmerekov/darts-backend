@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -20,15 +25,7 @@ final class GameResponseDto
      * @param int|null                                  $winnerId
      * @param array<string, int|bool|string|null|array> $settings
      */
-    public function __construct(
-        public int $id,
-        public string $status,
-        public int $currentRound,
-        public ?int $activePlayerId,
-        public int $currentThrowCount,
-        public array $players,
-        public ?int $winnerId,
-        public array $settings,
-    ) {
+    public function __construct(public int $id, public string $status, public int $currentRound, public ?int $activePlayerId, public int $currentThrowCount, public array $players, public ?int $winnerId, public array $settings)
+    {
     }
 }

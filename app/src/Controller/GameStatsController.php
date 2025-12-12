@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -30,12 +35,8 @@ final class GameStatsController extends AbstractController
      * @return Response
      */
     #[Route('/api/games/overview', name: 'app_games_overview', methods: ['GET'], format: 'json')]
-    public function gamesOverview(
-        GameRepositoryInterface $gameRepository,
-        GameFinishServiceInterface $gameFinishService,
-        #[MapQueryParameter] int $limit = 100,
-        #[MapQueryParameter] int $offset = 0,
-    ): Response {
+    public function gamesOverview(GameRepositoryInterface $gameRepository, GameFinishServiceInterface $gameFinishService, #[MapQueryParameter] int $limit = 100, #[MapQueryParameter] int $offset = 0): Response
+    {
         $limit = max(1, min(100, $limit));
         $offset = max(0, $offset);
         $games = $gameRepository->findFinished($limit, $offset);
@@ -74,13 +75,8 @@ final class GameStatsController extends AbstractController
      * @return Response
      */
     #[Route('/api/players/stats', name: 'app_players_stats', methods: ['GET'], format: 'json')]
-    public function playerStats(
-        GameStatisticsServiceInterface $gameStatisticsService,
-        RoundThrowsRepositoryInterface $roundThrowsRepository,
-        #[MapQueryParameter] int $limit = 20,
-        #[MapQueryParameter] int $offset = 0,
-        #[MapQueryParameter] string $sort = 'average:desc',
-    ): Response {
+    public function playerStats(GameStatisticsServiceInterface $gameStatisticsService, RoundThrowsRepositoryInterface $roundThrowsRepository, #[MapQueryParameter] int $limit = 20, #[MapQueryParameter] int $offset = 0, #[MapQueryParameter] string $sort = 'average:desc'): Response
+    {
         $limit = max(1, min(100, $limit));
         $offset = max(0, $offset);
         [$sortField, $sortDirection] = $this->parseSort($sort);

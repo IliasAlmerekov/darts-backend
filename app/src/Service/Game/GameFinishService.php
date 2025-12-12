@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -26,12 +31,8 @@ final readonly class GameFinishService implements GameFinishServiceInterface
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
      * @param RoundRepositoryInterface       $roundRepository
      */
-    public function __construct(
-        private EntityManagerInterface $entityManager,
-        private GamePlayersRepositoryInterface $gamePlayersRepository,
-        private RoundThrowsRepositoryInterface $roundThrowsRepository,
-        private RoundRepositoryInterface $roundRepository,
-    ) {
+    public function __construct(private EntityManagerInterface $entityManager, private GamePlayersRepositoryInterface $gamePlayersRepository, private RoundThrowsRepositoryInterface $roundThrowsRepository, private RoundRepositoryInterface $roundRepository)
+    {
     }
 
     /**
@@ -68,8 +69,32 @@ final readonly class GameFinishService implements GameFinishServiceInterface
         $roundsPlayedMap = $this->roundThrowsRepository->getRoundsPlayedForGame($gameId);
         $totalScoresMap = $this->roundThrowsRepository->getTotalScoreForGame($gameId);
         $winner = $game->getWinner();
+        if (null === $winner) {
+            $players = $this->gamePlayersRepository->findByGameId($gameId);
+            foreach ($players as $player) {
+                if (true === $player->isWinner()) {
+                    $winner = $player->getPlayer();
+                    $game->setWinner($winner);
+                    break;
+                }
+            }
+        }
         $winnerId = $winner?->getId();
-        $winnerRounds = null !== $winnerId ? ($roundsPlayedMap[$winnerId] ?? $finishedRounds) : 0;
+        $finishedPlayers = $this->buildFinishedPlayersList(
+            $gameId,
+            $finishedRounds,
+            $roundsPlayedMap,
+            $totalScoresMap
+        );
+        $winnerRounds = 0;
+        if (null !== $winnerId) {
+            foreach ($finishedPlayers as $fp) {
+                if ($fp['playerId'] === $winnerId) {
+                    $winnerRounds = $fp['roundsPlayed'];
+                    break;
+                }
+            }
+        }
         $winnerTotal = null !== $winnerId ? ($totalScoresMap[$winnerId] ?? 0.0) : 0.0;
         $winnerAverage = $winnerRounds > 0 ? (float) $winnerTotal / (float) $winnerRounds : 0.0;
 
@@ -85,12 +110,7 @@ final readonly class GameFinishService implements GameFinishServiceInterface
                 : null,
             'winnerRoundsPlayed' => $winnerRounds,
             'winnerRoundAverage' => $winnerAverage,
-            'finishedPlayers' => $this->buildFinishedPlayersList(
-                $gameId,
-                $finishedRounds,
-                $roundsPlayedMap,
-                $totalScoresMap
-            ),
+            'finishedPlayers' => $finishedPlayers,
         ];
     }
 
@@ -139,12 +159,13 @@ final readonly class GameFinishService implements GameFinishServiceInterface
      *     roundAverage:float
      * }>
      */
-    private function buildFinishedPlayersList(
-        int $gameId,
-        int $finishedRounds,
-        ?array $roundsPlayedMap = null,
-        ?array $totalScoresMap = null
-    ): array {
+    private function buildFinishedPlayersList(int $gameId, int $finishedRounds, ?array $roundsPlayedMap = null, ?array $totalScoresMap = null): array
+    {
+        $lastRoundsMap = $this->roundThrowsRepository->getLastRoundNumberForGame($gameId);
+        $maxRoundNumber = $finishedRounds;
+        if ([] !== $lastRoundsMap) {
+            $maxRoundNumber = max($maxRoundNumber, max($lastRoundsMap));
+        }
         $roundsPlayedMap ??= $this->roundThrowsRepository->getRoundsPlayedForGame($gameId);
         $totalScoresMap ??= $this->roundThrowsRepository->getTotalScoreForGame($gameId);
         $players = $this->gamePlayersRepository->findByGameId($gameId);
@@ -169,9 +190,15 @@ final readonly class GameFinishService implements GameFinishServiceInterface
         foreach ($players as $player) {
             $user = $player->getPlayer();
             $playerId = $user?->getId();
-            $roundsPlayed = null !== $playerId
-                ? max($roundsPlayedMap[$playerId] ?? 0, $finishedRounds)
-                : $finishedRounds;
+            $score = $player->getScore();
+            $playerRounds = null !== $playerId && array_key_exists($playerId, $roundsPlayedMap)
+                ? $roundsPlayedMap[$playerId]
+                : null;
+            if (null !== $score && 0 === $score) {
+                $roundsPlayed = $playerRounds ?? 0;
+            } else {
+                $roundsPlayed = $maxRoundNumber;
+            }
             $totalScore = null !== $playerId
                 ? ($totalScoresMap[$playerId] ?? 0.0)
                 : 0.0;

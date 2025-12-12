@@ -74,11 +74,12 @@ final class SecurityController extends AbstractController
         return $securityService->buildLoginSuccessResponse($user, $request->getSession());
     }
 
-    #[Route(path: '/api/logout', name: 'app_logout')]
     /**
      * @return void
+     *
+     * @psalm-suppress PossiblyUnusedMethod Handled by Symfony firewall logout
      */
-    /** @psalm-suppress PossiblyUnusedMethod Handled by Symfony firewall logout */
+    #[Route(path: '/api/logout', name: 'app_logout')]
     public function logout(): void
     {
         throw new LogicException(

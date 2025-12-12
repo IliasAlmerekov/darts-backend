@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -16,12 +21,7 @@ final class RoomCreateRequest
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
-    public function __construct(
-        public ?int $previousGameId = null,
-        /** @var int[]|null */
-        public ?array $playerIds = null,
-        /** @var int[]|null */
-        public ?array $excludePlayerIds = null,
-    ) {
+    public function __construct(public ?int $previousGameId = null, /** @var int[]|null */ public ?array $playerIds = null, /** @var int[]|null */ public ?array $excludePlayerIds = null)
+    {
     }
 }

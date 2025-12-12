@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -24,12 +29,8 @@ final readonly class GameRoomService implements GameRoomServiceInterface
      * @param EntityManagerInterface         $entityManager
      * @param PlayerManagementService        $playerManagementService
      */
-    public function __construct(
-        private GameRepositoryInterface $gameRepository,
-        private GamePlayersRepositoryInterface $gamePlayersRepository,
-        private EntityManagerInterface $entityManager,
-        private PlayerManagementService $playerManagementService,
-    ) {
+    public function __construct(private GameRepositoryInterface $gameRepository, private GamePlayersRepositoryInterface $gamePlayersRepository, private EntityManagerInterface $entityManager, private PlayerManagementService $playerManagementService)
+    {
     }
 
     /**
@@ -56,11 +57,8 @@ final readonly class GameRoomService implements GameRoomServiceInterface
      * @throws ORMException
      */
     #[Override]
-    public function createGameWithPreviousPlayers(
-        ?int $previousGameId = null,
-        ?array $includePlayerIds = null,
-        ?array $excludePlayerIds = null
-    ): Game {
+    public function createGameWithPreviousPlayers(?int $previousGameId = null, ?array $includePlayerIds = null, ?array $excludePlayerIds = null): Game
+    {
         $game = $this->createGame();
         if (null !== $includePlayerIds) {
             $ids = array_values(array_unique(array_map('intval', $includePlayerIds)));

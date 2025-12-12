@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -33,13 +38,8 @@ final readonly class InvitationService implements InvitationServiceInterface
      * @param EntityManagerInterface         $entityManager
      * @param RouterInterface                $router
      */
-    public function __construct(
-        private InvitationRepositoryInterface $invitationRepository,
-        private GamePlayersRepositoryInterface $gamePlayersRepository,
-        private UserRepositoryInterface $userRepository,
-        private EntityManagerInterface $entityManager,
-        private RouterInterface $router,
-    ) {
+    public function __construct(private InvitationRepositoryInterface $invitationRepository, private GamePlayersRepositoryInterface $gamePlayersRepository, private UserRepositoryInterface $userRepository, private EntityManagerInterface $entityManager, private RouterInterface $router)
+    {
     }
 
     /**

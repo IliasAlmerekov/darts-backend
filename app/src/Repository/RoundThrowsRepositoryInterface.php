@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -99,12 +104,7 @@ interface RoundThrowsRepositoryInterface
      *     scoreAverage:string|null
      * }>
      */
-    public function getPlayerStatistics(
-        int $limit,
-        int $offset,
-        string $sortField = 'average',
-        string $direction = 'DESC'
-    ): array;
+    public function getPlayerStatistics(int $limit, int $offset, string $sortField = 'average', string $direction = 'DESC'): array;
 
     /**
      * @return int

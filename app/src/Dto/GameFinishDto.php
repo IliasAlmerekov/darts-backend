@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -18,10 +23,8 @@ final readonly class GameFinishDto
     /**
      * @param DateTimeInterface|null $finishedAt
      */
-    public function __construct(
-        #[Assert\Type(DateTimeInterface::class)]
-        public ?DateTimeInterface $finishedAt = null,
-    ) {
+    public function __construct(#[Assert\Type(DateTimeInterface::class)] public ?DateTimeInterface $finishedAt = null)
+    {
     }
 
     /**

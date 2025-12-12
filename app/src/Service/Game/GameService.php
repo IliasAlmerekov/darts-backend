@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -25,10 +30,8 @@ final readonly class GameService implements GameServiceInterface
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
-    public function __construct(
-        private RoundRepositoryInterface $roundRepository,
-        private RoundThrowsRepositoryInterface $roundThrowsRepository,
-    ) {
+    public function __construct(private RoundRepositoryInterface $roundRepository, private RoundThrowsRepositoryInterface $roundThrowsRepository)
+    {
     }
 
 
@@ -142,11 +145,11 @@ final readonly class GameService implements GameServiceInterface
             $currentRoundThrows = [];
             /** @var list<array{round: int, throws: list<ThrowResponseDto>}> $roundHistory */
             $roundHistory = [];
-            
+
             // Nur aktive Spieler (Score > 0) bekommen currentRoundThrows angezeigt
             $playerScore = $gamePlayer->getScore() ?? $game->getStartScore();
             $isPlayerActive = ($playerScore > 0);
-            
+
             if ($roundEntity && $isPlayerActive) {
                 $throws = $this->roundThrowsRepository->findBy([
                     'round' => $roundEntity,

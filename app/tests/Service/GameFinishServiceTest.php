@@ -92,6 +92,94 @@ final class GameFinishServiceTest extends TestCase
     /**
      * @throws ReflectionException
      */
+    public function testRoundsPerPlayerReflectEarlyWinnerAndLaterFinisher(): void
+    {
+        $game = new Game();
+        $this->setPrivateProperty($game, 'gameId', 99);
+        $winnerUser = new User();
+        $this->setPrivateProperty($winnerUser, 'id', 1);
+        $winner = (new GamePlayers())
+            ->setPlayer($winnerUser)
+            ->setPosition(1)
+            ->setIsWinner(true)
+            ->setScore(0);
+
+        $secondUser = new User();
+        $this->setPrivateProperty($secondUser, 'id', 2);
+        $second = (new GamePlayers())
+            ->setPlayer($secondUser)
+            ->setPosition(2)
+            ->setIsWinner(false)
+            ->setScore(10);
+
+        $thirdUser = new User();
+        $this->setPrivateProperty($thirdUser, 'id', 3);
+        $third = (new GamePlayers())
+            ->setPlayer($thirdUser)
+            ->setPosition(3)
+            ->setIsWinner(false)
+            ->setScore(50);
+
+        $players = [$winner, $second, $third];
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $gamePlayersRepository->method('findByGameId')
+            ->with(99)
+            ->willReturn($players);
+        $gamePlayersRepository->method('countFinishedPlayers')
+            ->willReturn(1);
+
+        $roundsPlayedMap = [
+            1 => 5,  // winner finished on round 5
+            2 => 10, // finalist finished on round 10
+            3 => 10, // lost to finalist on round 10 -> should match 10
+        ];
+        $totalsMap = [
+            1 => 301.0,
+            2 => 301.0,
+            3 => 300.0,
+        ];
+
+        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository->method('getRoundsPlayedForGame')
+            ->with(99)
+            ->willReturn($roundsPlayedMap);
+        $roundThrowsRepository->method('getTotalScoreForGame')
+            ->with(99)
+            ->willReturn($totalsMap);
+        $roundThrowsRepository->method('getLastRoundNumberForGame')
+            ->with(99)
+            ->willReturn([
+                1 => 5,
+                2 => 10,
+                3 => 10,
+            ]);
+
+        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
+        $roundRepository->method('countFinishedRounds')
+            ->with(99)
+            ->willReturn(10);
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+
+        $service = new GameFinishService(
+            $entityManager,
+            $gamePlayersRepository,
+            $roundThrowsRepository,
+            $roundRepository
+        );
+
+        $stats = $service->getGameStats($game);
+
+        self::assertSame(5, $stats['winnerRoundsPlayed']);
+        self::assertSame(3, count($stats['finishedPlayers']));
+        self::assertSame(5, $stats['finishedPlayers'][0]['roundsPlayed']);
+        self::assertSame(10, $stats['finishedPlayers'][1]['roundsPlayed']);
+        self::assertSame(10, $stats['finishedPlayers'][2]['roundsPlayed']);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
     private function setPrivateProperty(object $object, string $property, mixed $value): void
     {
         $ref = new ReflectionProperty($object, $property);

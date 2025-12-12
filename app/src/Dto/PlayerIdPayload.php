@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -14,8 +19,7 @@ final class PlayerIdPayload
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
-    public function __construct(
-        public ?int $playerId = null
-    ) {
+    public function __construct(public ?int $playerId = null)
+    {
     }
 }

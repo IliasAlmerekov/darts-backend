@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -24,11 +29,8 @@ final readonly class RegistrationService implements RegistrationServiceInterface
      * @param UserPasswordHasherInterface $passwordHasher
      * @param EntityManagerInterface      $entityManager
      */
-    public function __construct(
-        private FormFactoryInterface $formFactory,
-        private UserPasswordHasherInterface $passwordHasher,
-        private EntityManagerInterface $entityManager,
-    ) {
+    public function __construct(private FormFactoryInterface $formFactory, private UserPasswordHasherInterface $passwordHasher, private EntityManagerInterface $entityManager)
+    {
     }
 
     /**

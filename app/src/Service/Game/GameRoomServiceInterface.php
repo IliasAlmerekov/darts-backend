@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -30,11 +35,7 @@ interface GameRoomServiceInterface
      *
      * @throws ORMException
      */
-    public function createGameWithPreviousPlayers(
-        ?int $previousGameId = null,
-        ?array $includePlayerIds = null,
-        ?array $excludePlayerIds = null
-    ): Game;
+    public function createGameWithPreviousPlayers(?int $previousGameId = null, ?array $includePlayerIds = null, ?array $excludePlayerIds = null): Game;
 
     /**
      * Find a game by its ID.
