@@ -2,54 +2,94 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service {
+namespace App\Service\Sse;
 
-    use App\Repository\GamePlayersRepositoryInterface;
-    use App\Repository\GameRepositoryInterface;
-    use App\Repository\RoundThrowsRepositoryInterface;
-    use App\Service\Game\GameRoomService;
-    use App\Service\Player\PlayerManagementService;
-    use App\Service\Sse\SseStreamService;
-    use Doctrine\ORM\EntityManagerInterface;
-    use PHPUnit\Framework\TestCase;
-    use Symfony\Component\HttpFoundation\StreamedResponse;
+function connection_aborted(): bool
+{
+    static $calls = 0;
 
-    final class SseStreamServiceTest extends TestCase
+    return $calls++ > 0; // false on first call, true on next -> single loop iteration
+}
+
+function ob_flush(): bool
+{
+    return true; // no-op for tests
+}
+
+function flush(): void
+{
+    // no-op for tests
+}
+
+namespace App\Tests\Service\Sse;
+
+use App\Service\Game\GameRoomServiceInterface;
+use App\Service\Sse\SseStreamService;
+use App\Repository\RoundThrowsRepositoryInterface;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+
+final class SseStreamServiceTest extends TestCase
+{
+    private GameRoomServiceInterface&MockObject $gameRoomService;
+    private RoundThrowsRepositoryInterface&MockObject $roundThrowsRepository;
+    private SseStreamService $service;
+
+    protected function setUp(): void
     {
-        /**
-         * Test that createPlayerStream returns a proper StreamedResponse with SSE headers.
-         * Note: We cannot test the actual streaming behavior because it contains an infinite loop
-         * that relies on connection_aborted() which cannot be reliably mocked with @ suppression.
-         */
-        public function testCreatePlayerStreamReturnsStreamedResponseWithCorrectHeaders(): void
-        {
-            $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
-            $gameRepository = $this->createMock(GameRepositoryInterface::class);
-            $entityManager = $this->createMock(EntityManagerInterface::class);
-            $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $this->gameRoomService = $this->createMock(GameRoomServiceInterface::class);
+        $this->roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $this->service = new SseStreamService($this->gameRoomService, $this->roundThrowsRepository);
+    }
 
-            $playerManagementService = new PlayerManagementService($gamePlayersRepository, $entityManager);
-            $gameRoomService = new GameRoomService(
-                $gameRepository,
-                $gamePlayersRepository,
-                $entityManager,
-                $playerManagementService
-            );
+    public function testCreatePlayerStreamProducesEventsAndHeaders(): void
+    {
+        $this->gameRoomService
+            ->expects(self::once())
+            ->method('getPlayersWithUserInfo')
+            ->with(42)
+            ->willReturn([
+                ['id' => 1, 'name' => 'u1'],
+                ['id' => 2, 'name' => 'u2'],
+            ]);
 
-            $service = new SseStreamService($gameRoomService, $roundThrowsRepository);
+        $this->roundThrowsRepository
+            ->expects(self::once())
+            ->method('findLatestForGame')
+            ->with(42)
+            ->willReturn([
+                'id' => 99,
+                'throwNumber' => 1,
+                'value' => 20,
+                'isDouble' => false,
+                'isTriple' => false,
+                'isBust' => false,
+                'score' => 20,
+                'timestamp' => new \DateTimeImmutable('2024-01-01T10:00:00Z'),
+                'roundNumber' => 1,
+                'playerId' => 1,
+                'playerName' => 'u1',
+            ]);
 
-            $response = $service->createPlayerStream(7);
+        $response = $this->service->createPlayerStream(42);
 
-            self::assertInstanceOf(StreamedResponse::class, $response);
-            self::assertSame('text/event-stream', $response->headers->get('Content-Type'));
-            self::assertStringContainsString('no-cache', $response->headers->get('Cache-Control'));
-            self::assertSame('keep-alive', $response->headers->get('Connection'));
-            self::assertSame('no', $response->headers->get('X-Accel-Buffering'));
+        self::assertInstanceOf(StreamedResponse::class, $response);
+        self::assertSame('text/event-stream', $response->headers->get('Content-Type'));
+        self::assertStringContainsString('no-cache', (string) $response->headers->get('Cache-Control'));
+        self::assertSame('keep-alive', $response->headers->get('Connection'));
+        self::assertSame('no', $response->headers->get('X-Accel-Buffering'));
 
-            $callback = $response->getCallback();
-            self::assertIsCallable($callback);
+        $callback = $response->getCallback();
+        self::assertNotNull($callback);
 
-            // Note: Cannot safely execute callback as it contains an infinite loop
-        }
+        ob_start();
+        ($callback)();
+        $output = ob_get_clean();
+
+        self::assertStringContainsString('event: players', $output);
+        self::assertStringContainsString('"count":2', $output);
+        self::assertStringContainsString('event: throw', $output);
+        self::assertStringContainsString('"id":99', $output);
     }
 }
