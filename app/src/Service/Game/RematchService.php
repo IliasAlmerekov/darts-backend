@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -34,14 +39,8 @@ final readonly class RematchService implements RematchServiceInterface
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
-    public function __construct(
-        private GameRoomServiceInterface $gameRoomService,
-        private PlayerManagementServiceInterface $playerManagementService,
-        private GameFinishServiceInterface $gameFinishService,
-        private InvitationRepositoryInterface $invitationRepository,
-        private EntityManagerInterface $entityManager,
-        private UrlGeneratorInterface $urlGenerator
-    ) {
+    public function __construct(private GameRoomServiceInterface $gameRoomService, private PlayerManagementServiceInterface $playerManagementService, private GameFinishServiceInterface $gameFinishService, private InvitationRepositoryInterface $invitationRepository, private EntityManagerInterface $entityManager, private UrlGeneratorInterface $urlGenerator)
+    {
     }
 
     /**

@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -22,10 +27,8 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
      * @param GamePlayersRepositoryInterface $gamePlayersRepository
      * @param EntityManagerInterface         $entityManager
      */
-    public function __construct(
-        private GamePlayersRepositoryInterface $gamePlayersRepository,
-        private EntityManagerInterface $entityManager
-    ) {
+    public function __construct(private GamePlayersRepositoryInterface $gamePlayersRepository, private EntityManagerInterface $entityManager)
+    {
     }
 
     /**

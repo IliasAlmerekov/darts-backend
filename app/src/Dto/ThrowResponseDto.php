@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -15,11 +20,7 @@ final class ThrowResponseDto
      * @param bool $isTriple
      * @param bool $isBust
      */
-    public function __construct(
-        public int $value,
-        public bool $isDouble,
-        public bool $isTriple,
-        public bool $isBust,
-    ) {
+    public function __construct(public int $value, public bool $isDouble, public bool $isTriple, public bool $isBust)
+    {
     }
 }

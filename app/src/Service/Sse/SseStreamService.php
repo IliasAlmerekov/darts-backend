@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -24,10 +29,8 @@ final readonly class SseStreamService implements SseStreamServiceInterface
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
-    public function __construct(
-        private GameRoomServiceInterface $gameRoomService,
-        private RoundThrowsRepositoryInterface $roundThrowsRepository
-    ) {
+    public function __construct(private GameRoomServiceInterface $gameRoomService, private RoundThrowsRepositoryInterface $roundThrowsRepository)
+    {
     }
 
     /**

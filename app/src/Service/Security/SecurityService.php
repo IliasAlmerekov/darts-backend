@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -21,9 +26,8 @@ final readonly class SecurityService implements SecurityServiceInterface
     /**
      * @param InvitationServiceInterface $invitationService
      */
-    public function __construct(
-        private InvitationServiceInterface $invitationService,
-    ) {
+    public function __construct(private InvitationServiceInterface $invitationService)
+    {
         $this->frontendUrl = rtrim($_ENV['FRONTEND_URL'] ?? 'http://localhost:5173', '/');
     }
 

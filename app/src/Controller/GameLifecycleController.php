@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -36,11 +41,8 @@ final class GameLifecycleController extends AbstractController
      *
      * @return Response
      */
-    public function start(
-        #[AttributeMapEntity(id: 'gameId')] Game $game,
-        GameStartServiceInterface $gameStartService,
-        #[MapRequestPayload] StartGameRequest $dto,
-    ): Response {
+    public function start(#[AttributeMapEntity(id: 'gameId')] Game $game, GameStartServiceInterface $gameStartService, #[MapRequestPayload] StartGameRequest $dto): Response
+    {
         try {
             $gameStartService->start($game, $dto);
         } catch (InvalidArgumentException $e) {
@@ -59,12 +61,8 @@ final class GameLifecycleController extends AbstractController
      *
      * @return Response
      */
-    public function createSettings(
-        GameRoomServiceInterface $gameRoomService,
-        GameSettingsServiceInterface $gameSettingsService,
-        GameServiceInterface $gameService,
-        #[MapRequestPayload] GameSettingsRequest $dto,
-    ): Response {
+    public function createSettings(GameRoomServiceInterface $gameRoomService, GameSettingsServiceInterface $gameSettingsService, GameServiceInterface $gameService, #[MapRequestPayload] GameSettingsRequest $dto): Response
+    {
         $game = $gameRoomService->createGame();
 
         try {
@@ -87,12 +85,8 @@ final class GameLifecycleController extends AbstractController
      *
      * @return Response
      */
-    public function updateSettings(
-        #[AttributeMapEntity(id: 'gameId')] Game $game,
-        GameSettingsServiceInterface $gameSettingsService,
-        GameServiceInterface $gameService,
-        #[MapRequestPayload] GameSettingsRequest $dto,
-    ): Response {
+    public function updateSettings(#[AttributeMapEntity(id: 'gameId')] Game $game, GameSettingsServiceInterface $gameSettingsService, GameServiceInterface $gameService, #[MapRequestPayload] GameSettingsRequest $dto): Response
+    {
         try {
             $gameSettingsService->updateSettings($game, $dto);
         } catch (InvalidArgumentException $e) {
@@ -111,10 +105,8 @@ final class GameLifecycleController extends AbstractController
      *
      * @return Response
      */
-    public function finished(
-        #[AttributeMapEntity(id: 'gameId')] Game $game,
-        GameFinishServiceInterface $gameFinishService,
-    ): Response {
+    public function finished(#[AttributeMapEntity(id: 'gameId')] Game $game, GameFinishServiceInterface $gameFinishService): Response
+    {
         try {
             $result = $gameFinishService->finishGame($game);
         } catch (Throwable $e) {
@@ -134,10 +126,8 @@ final class GameLifecycleController extends AbstractController
      *
      * @return JsonResponse
      */
-    public function getGameState(
-        #[AttributeMapEntity(id: 'gameId')] Game $game,
-        GameServiceInterface $gameService
-    ): JsonResponse {
+    public function getGameState(#[AttributeMapEntity(id: 'gameId')] Game $game, GameServiceInterface $gameService): JsonResponse
+    {
         $gameDto = $gameService->createGameDto($game);
 
         return $this->json($gameDto);

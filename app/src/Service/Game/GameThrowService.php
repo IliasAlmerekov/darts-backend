@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -34,12 +39,8 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
-    public function __construct(
-        private GamePlayersRepositoryInterface $gamePlayersRepository,
-        private RoundRepositoryInterface $roundRepository,
-        private RoundThrowsRepositoryInterface $roundThrowsRepository,
-        private EntityManagerInterface $entityManager,
-    ) {
+    public function __construct(private GamePlayersRepositoryInterface $gamePlayersRepository, private RoundRepositoryInterface $roundRepository, private RoundThrowsRepositoryInterface $roundThrowsRepository, private EntityManagerInterface $entityManager)
+    {
     }
 
     /**

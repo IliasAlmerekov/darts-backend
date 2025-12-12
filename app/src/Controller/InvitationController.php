@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -30,10 +35,8 @@ final class InvitationController extends AbstractController
      * @return Response
      */
     #[Route('/api/invite/create/{id}', name: 'create_invitation', format: 'json')]
-    public function createInvitation(
-        #[MapEntity(id: 'id')] Game $game,
-        InvitationServiceInterface $invitationService
-    ): Response {
+    public function createInvitation(#[MapEntity(id: 'id')] Game $game, InvitationServiceInterface $invitationService): Response
+    {
         $payload = $invitationService->getInvitationPayload($game);
         $status = ($payload['success'] ?? false) ? Response::HTTP_OK : Response::HTTP_NOT_FOUND;
 
@@ -49,10 +52,8 @@ final class InvitationController extends AbstractController
      *
      * @return Response
      */
-    public function joinInvitation(
-        #[MapEntity(mapping: ['uuid' => 'uuid'])] Invitation $invitation,
-        SessionInterface $session,
-    ): Response {
+    public function joinInvitation(#[MapEntity(mapping: ['uuid' => 'uuid'])] Invitation $invitation, SessionInterface $session): Response
+    {
         $session->remove('invitation_uuid');
         $session->set('invitation_uuid', $invitation->getUuid());
         $session->set('game_id', $invitation->getGameId());
@@ -71,10 +72,8 @@ final class InvitationController extends AbstractController
      * @return Response
      */
     #[Route('api/invite/process', name: 'process_invitation')]
-    public function processInvitation(
-        SessionInterface $session,
-        InvitationServiceInterface $invitationService
-    ): Response {
+    public function processInvitation(SessionInterface $session, InvitationServiceInterface $invitationService): Response
+    {
         $result = $invitationService->processInvitation($session, $this->getUser());
 
         return $result;

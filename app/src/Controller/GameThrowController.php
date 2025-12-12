@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -29,12 +34,8 @@ final class GameThrowController extends AbstractController
      *
      * @return Response
      */
-    public function throw(
-        #[AttributeMapEntity(id: 'gameId')] Game $game,
-        GameThrowServiceInterface $gameThrowService,
-        GameServiceInterface $gameService,
-        #[MapRequestPayload] ThrowRequest $dto,
-    ): Response {
+    public function throw(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameServiceInterface $gameService, #[MapRequestPayload] ThrowRequest $dto): Response
+    {
         try {
             $gameThrowService->recordThrow($game, $dto);
         } catch (InvalidArgumentException $e) {
@@ -54,11 +55,8 @@ final class GameThrowController extends AbstractController
      *
      * @return Response
      */
-    public function undoThrow(
-        #[AttributeMapEntity(id: 'gameId')] Game $game,
-        GameThrowServiceInterface $gameThrowService,
-        GameServiceInterface $gameService
-    ): Response {
+    public function undoThrow(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameServiceInterface $gameService): Response
+    {
         $gameThrowService->undoLastThrow($game);
         $gameDto = $gameService->createGameDto($game);
 

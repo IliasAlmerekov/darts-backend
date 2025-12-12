@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -34,12 +39,8 @@ final class GameRoomController extends AbstractController
      *
      * @return void
      */
-    public function __construct(
-        private readonly GameRoomServiceInterface $gameRoomService,
-        private readonly PlayerManagementServiceInterface $playerManagementService,
-        private readonly RematchServiceInterface $rematchService,
-        private readonly SseStreamServiceInterface $sseStreamService
-    ) {
+    public function __construct(private readonly GameRoomServiceInterface $gameRoomService, private readonly PlayerManagementServiceInterface $playerManagementService, private readonly RematchServiceInterface $rematchService, private readonly SseStreamServiceInterface $sseStreamService)
+    {
     }
 
     #[Route(path: '/api/room/create', name: 'room_create', methods: ['POST'], format: 'json')]
@@ -50,9 +51,8 @@ final class GameRoomController extends AbstractController
      *
      * @return Response
      */
-    public function roomCreateApi(
-        #[MapRequestPayload] RoomCreateRequest $dto,
-    ): Response {
+    public function roomCreateApi(#[MapRequestPayload] RoomCreateRequest $dto): Response
+    {
         $game = $this->gameRoomService->createGameWithPreviousPlayers(
             $dto->previousGameId ?: null,
             $dto->playerIds ? array_values(array_map('intval', $dto->playerIds)) : null,
@@ -72,11 +72,8 @@ final class GameRoomController extends AbstractController
      *
      * @return Response
      */
-    public function playerLeave(
-        int $id,
-        #[MapQueryParameter] ?int $playerId = null,
-        #[MapRequestPayload] ?PlayerIdPayload $payload = null
-    ): Response {
+    public function playerLeave(int $id, #[MapQueryParameter] ?int $playerId = null, #[MapRequestPayload] ?PlayerIdPayload $payload = null): Response
+    {
         $user = $this->getUser();
         if ($user instanceof User) {
             $playerId ??= $user->getId();

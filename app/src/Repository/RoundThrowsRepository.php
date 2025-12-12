@@ -1,8 +1,15 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 namespace App\Repository;
 
 use App\Enum\GameStatus;
+use App\Entity\Round;
+use App\Entity\GamePlayers;
 use App\Entity\RoundThrows;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -211,12 +218,8 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
      *     scoreAverage:string|null
      * }>
      */
-    public function getPlayerStatistics(
-        int $limit,
-        int $offset,
-        string $sortField = 'average',
-        string $direction = 'DESC'
-    ): array {
+    public function getPlayerStatistics(int $limit, int $offset, string $sortField = 'average', string $direction = 'DESC'): array
+    {
         $orderColumn = 'gamesPlayed' === $sortField ? 'gamesPlayed' : 'scoreAverage';
         $direction = 'ASC' === strtoupper($direction) ? 'ASC' : 'DESC';
 

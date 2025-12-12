@@ -60,9 +60,10 @@ final class SecurityController extends AbstractController
      * @param SecurityServiceInterface $securityService
      *
      * @return Response
+     *
+     * @psalm-suppress PossiblyUnusedMethod Symfony route entry point
      */
     #[Route('/api/login/success', name: 'login_success', format: 'json')]
-    /** @psalm-suppress PossiblyUnusedMethod Symfony route entry point */
     public function loginSuccess(Request $request, SecurityServiceInterface $securityService): Response
     {
         $user = $this->getUser();
@@ -73,11 +74,12 @@ final class SecurityController extends AbstractController
         return $securityService->buildLoginSuccessResponse($user, $request->getSession());
     }
 
-    #[Route(path: '/api/logout', name: 'app_logout')]
     /**
      * @return void
+     *
+     * @psalm-suppress PossiblyUnusedMethod Handled by Symfony firewall logout
      */
-    /** @psalm-suppress PossiblyUnusedMethod Handled by Symfony firewall logout */
+    #[Route(path: '/api/logout', name: 'app_logout')]
     public function logout(): void
     {
         throw new LogicException(

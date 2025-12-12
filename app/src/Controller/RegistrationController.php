@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -24,10 +29,8 @@ final class RegistrationController extends AbstractController
      * @return Response
      */
     #[Route('/api/register', name: 'app_register', methods: ['POST'], format: 'json')]
-    public function register(
-        Request $request,
-        RegistrationServiceInterface $registrationService,
-    ): Response {
+    public function register(Request $request, RegistrationServiceInterface $registrationService): Response
+    {
         $data = json_decode($request->getContent(), true);
         if (JSON_ERROR_NONE !== json_last_error() || !is_array($data)) {
             return $this->json([
