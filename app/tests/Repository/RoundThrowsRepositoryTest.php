@@ -22,13 +22,13 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
     protected function setUp(): void
     {
         self::bootKernel();
-        $this->em = static::getContainer()->get(EntityManagerInterface::class);
+        $this->em = static::$kernel->getContainer()->get(EntityManagerInterface::class);
 
         $schemaTool = new SchemaTool($this->em);
         $schemaTool->dropDatabase();
         $schemaTool->createSchema($this->em->getMetadataFactory()->getAllMetadata());
 
-        $this->repo = static::getContainer()->get(RoundThrowsRepository::class);
+        $this->repo = static::$kernel->getContainer()->get(RoundThrowsRepository::class);
     }
 
     protected function tearDown(): void
