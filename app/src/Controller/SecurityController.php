@@ -15,6 +15,8 @@ use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Controller to handle user login and logout.
+ *
+ * @psalm-suppress UnusedClass Routed by Symfony framework
  */
 final class SecurityController extends AbstractController
 {
@@ -58,6 +60,8 @@ final class SecurityController extends AbstractController
      * @param SecurityServiceInterface $securityService
      *
      * @return Response
+     *
+     * @psalm-suppress PossiblyUnusedMethod Symfony route entry point
      */
     #[Route('/api/login/success', name: 'login_success', format: 'json')]
     public function loginSuccess(Request $request, SecurityServiceInterface $securityService): Response
@@ -74,6 +78,7 @@ final class SecurityController extends AbstractController
     /**
      * @return void
      */
+    /** @psalm-suppress PossiblyUnusedMethod Handled by Symfony firewall logout */
     public function logout(): void
     {
         throw new LogicException(

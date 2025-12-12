@@ -62,6 +62,12 @@ final readonly class RematchService implements RematchServiceInterface
         $newGame = $this->gameRoomService->createGame();
         $newGame->setStatus(GameStatus::Lobby);
         $newGame->setRound(null);
+        $newGame->setStartScore($oldGame->getStartScore());
+        $newGame->setDoubleOut($oldGame->isDoubleOut());
+        $newGame->setTripleOut($oldGame->isTripleOut());
+        if (null !== $oldGame->getType()) {
+            $newGame->setType((int) $oldGame->getType());
+        }
         $newGameId = $newGame->getGameId();
         if (null === $newGameId) {
             return ['success' => false, 'message' => 'Failed to create new game'];
