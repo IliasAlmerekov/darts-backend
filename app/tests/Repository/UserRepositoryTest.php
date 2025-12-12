@@ -21,12 +21,12 @@ final class UserRepositoryTest extends KernelTestCase
     {
         self::bootKernel();
 
-        $this->entityManager = static::$kernel->getContainer()->get(EntityManagerInterface::class);
+        $this->entityManager = static::getContainer()->get(EntityManagerInterface::class);
         $schemaTool = new SchemaTool($this->entityManager);
         $schemaTool->dropDatabase();
         $schemaTool->createSchema($this->entityManager->getMetadataFactory()->getAllMetadata());
 
-        $this->repository = static::$kernel->getContainer()->get(UserRepository::class);
+        $this->repository = static::getContainer()->get(UserRepository::class);
     }
 
     protected function tearDown(): void

@@ -20,12 +20,12 @@ final class InvitationRepositoryTest extends KernelTestCase
     {
         self::bootKernel();
 
-        $this->entityManager = static::$kernel->getContainer()->get(EntityManagerInterface::class);
+        $this->entityManager = static::getContainer()->get(EntityManagerInterface::class);
         $schemaTool = new SchemaTool($this->entityManager);
         $schemaTool->dropDatabase();
         $schemaTool->createSchema($this->entityManager->getMetadataFactory()->getAllMetadata());
 
-        $this->repository = static::$kernel->getContainer()->get(InvitationRepository::class);
+        $this->repository = static::getContainer()->get(InvitationRepository::class);
     }
 
     protected function tearDown(): void

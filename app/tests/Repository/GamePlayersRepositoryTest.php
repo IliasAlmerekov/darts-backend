@@ -22,12 +22,12 @@ final class GamePlayersRepositoryTest extends KernelTestCase
     {
         self::bootKernel();
 
-        $this->entityManager = static::$kernel->getContainer()->get(EntityManagerInterface::class);
+        $this->entityManager = static::getContainer()->get(EntityManagerInterface::class);
         $schemaTool = new SchemaTool($this->entityManager);
         $schemaTool->dropDatabase();
         $schemaTool->createSchema($this->entityManager->getMetadataFactory()->getAllMetadata());
 
-        $this->repository = static::$kernel->getContainer()->get(GamePlayersRepository::class);
+        $this->repository = static::getContainer()->get(GamePlayersRepository::class);
     }
 
     protected function tearDown(): void
