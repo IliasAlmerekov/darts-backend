@@ -65,10 +65,7 @@ final class PlayerManagementServiceTest extends TestCase
                 }
                 if ($class === User::class) {
                     $user = new User();
-                    $ref = new \ReflectionProperty(User::class, 'id');
-                    $ref->setAccessible(true);
-                    $ref->setValue($user, $id);
-
+                    (new \ReflectionProperty(User::class, 'id'))->setValue($user, $id);
                     return $user;
                 }
 
@@ -120,7 +117,6 @@ final class PlayerManagementServiceTest extends TestCase
     {
         $user = new User();
         $ref = new \ReflectionProperty(User::class, 'id');
-        $ref->setAccessible(true);
         $ref->setValue($user, $id);
 
         return $user;

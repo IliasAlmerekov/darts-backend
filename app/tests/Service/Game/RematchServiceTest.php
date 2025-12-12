@@ -15,9 +15,11 @@ use App\Service\Game\GameRoomService;
 use App\Service\Player\PlayerManagementService;
 use App\Service\Game\RematchService;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
+#[AllowMockObjectsWithoutExpectations]
 final class RematchServiceTest extends TestCase
 {
     public function testCreateRematchReturnsErrorWhenOldGameMissing(): void
@@ -116,7 +118,6 @@ final class RematchServiceTest extends TestCase
     private function setPrivateProperty(object $object, string $property, mixed $value): void
     {
         $ref = new \ReflectionProperty($object, $property);
-        $ref->setAccessible(true);
         $ref->setValue($object, $value);
     }
 }

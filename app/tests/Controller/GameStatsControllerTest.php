@@ -12,11 +12,13 @@ use App\Service\Game\GameFinishServiceInterface;
 use App\Service\Game\GameStatisticsServiceInterface;
 use DateTimeImmutable;
 use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 
+#[AllowMockObjectsWithoutExpectations]
 final class GameStatsControllerTest extends TestCase
 {
     private GameStatsController $controller;

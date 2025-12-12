@@ -7,12 +7,14 @@ namespace App\Tests\Service\Security;
 use App\Entity\User;
 use App\Service\Invitation\InvitationServiceInterface;
 use App\Service\Security\SecurityService;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
+#[AllowMockObjectsWithoutExpectations]
 final class SecurityServiceTest extends TestCase
 {
     private InvitationServiceInterface&MockObject $invitationService;
@@ -83,7 +85,6 @@ final class SecurityServiceTest extends TestCase
             ->setRoles($roles);
 
         $ref = new \ReflectionProperty(User::class, 'id');
-        $ref->setAccessible(true);
         $ref->setValue($user, $id);
 
         return $user;

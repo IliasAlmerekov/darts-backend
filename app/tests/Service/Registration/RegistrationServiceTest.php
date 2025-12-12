@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Form\RegistrationFormType;
 use App\Service\Registration\RegistrationService;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Form\FormError;
@@ -17,6 +18,7 @@ use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
+#[AllowMockObjectsWithoutExpectations]
 final class RegistrationServiceTest extends TestCase
 {
     private FormFactoryInterface&MockObject $formFactory;

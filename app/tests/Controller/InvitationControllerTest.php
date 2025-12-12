@@ -8,6 +8,7 @@ use App\Controller\InvitationController;
 use App\Entity\Game;
 use App\Entity\Invitation;
 use App\Service\Invitation\InvitationServiceInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
@@ -16,6 +17,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Uid\Uuid;
 
+#[AllowMockObjectsWithoutExpectations]
 final class InvitationControllerTest extends TestCase
 {
     private InvitationController $controller;

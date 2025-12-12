@@ -7,6 +7,7 @@ namespace App\Tests\Controller;
 use App\Controller\SecurityController;
 use App\Entity\User;
 use Override;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
@@ -15,6 +16,7 @@ use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInt
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 
+#[AllowMockObjectsWithoutExpectations]
 class SecurityControllerTest extends TestCase
 {
     private SecurityController $controller;

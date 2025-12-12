@@ -13,10 +13,12 @@ use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Game\GameFinishService;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use ReflectionException;
 use ReflectionProperty;
 
+#[AllowMockObjectsWithoutExpectations]
 final class GameFinishServiceTest extends TestCase
 {
     /**

@@ -13,6 +13,7 @@ use App\Repository\InvitationRepositoryInterface;
 use App\Repository\UserRepositoryInterface;
 use App\Service\Invitation\InvitationService;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -20,6 +21,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Routing\RouterInterface;
 
+#[AllowMockObjectsWithoutExpectations]
 final class InvitationServiceTest extends TestCase
 {
     private InvitationRepositoryInterface&MockObject $invitationRepository;
@@ -201,7 +203,6 @@ final class InvitationServiceTest extends TestCase
             ->setPassword('secret');
 
         $ref = new \ReflectionProperty(User::class, 'id');
-        $ref->setAccessible(true);
         $ref->setValue($user, $id);
 
         return $user;

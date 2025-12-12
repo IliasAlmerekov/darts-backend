@@ -13,8 +13,10 @@ use App\Service\Game\GameSetupService;
 use App\Service\Game\GameStartService;
 use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 
+#[AllowMockObjectsWithoutExpectations]
 final class GameStartServiceTest extends TestCase
 {
     public function testStartConfiguresGameAndCallsSetup(): void
