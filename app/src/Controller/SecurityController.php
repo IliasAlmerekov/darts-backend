@@ -60,9 +60,10 @@ final class SecurityController extends AbstractController
      * @param SecurityServiceInterface $securityService
      *
      * @return Response
+     *
+     * @psalm-suppress PossiblyUnusedMethod Symfony route entry point
      */
     #[Route('/api/login/success', name: 'login_success', format: 'json')]
-    /** @psalm-suppress PossiblyUnusedMethod Symfony route entry point */
     public function loginSuccess(Request $request, SecurityServiceInterface $securityService): Response
     {
         $user = $this->getUser();
