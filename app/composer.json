@@ -97,6 +97,7 @@
     },
     "require-dev": {
         "cyclonedx/cyclonedx-php-composer": "^6.0",
+        "dama/doctrine-test-bundle": "^8.4.1",
         "escapestudios/symfony2-coding-standard": "^3.16",
         "micheh/phpcs-gitlab": "^2.1",
         "phpunit/php-code-coverage": "^12.5",
