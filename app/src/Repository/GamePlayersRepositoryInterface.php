@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -50,7 +55,7 @@ interface GamePlayersRepositoryInterface
     /**
      * @param int $gameId
      *
-     * @return array<int, array{id:int|null,name:string|null}>
+     * @return array<int, array{id:int|null,name:string|null,position:int|null}>
      */
     public function findPlayersWithUserInfo(int $gameId): array;
 

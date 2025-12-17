@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -12,6 +17,7 @@ use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\InvitationRepositoryInterface;
 use App\Repository\UserRepositoryInterface;
 use App\Service\Invitation\InvitationService;
+use App\Service\Player\PlayerManagementServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -27,6 +33,7 @@ final class InvitationServiceTest extends TestCase
     private InvitationRepositoryInterface&MockObject $invitationRepository;
     private GamePlayersRepositoryInterface&MockObject $gamePlayersRepository;
     private UserRepositoryInterface&MockObject $userRepository;
+    private PlayerManagementServiceInterface&MockObject $playerManagementService;
     private EntityManagerInterface&MockObject $entityManager;
     private RouterInterface&MockObject $router;
     private InvitationService $service;
@@ -36,6 +43,7 @@ final class InvitationServiceTest extends TestCase
         $this->invitationRepository = $this->createMock(InvitationRepositoryInterface::class);
         $this->gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $this->userRepository = $this->createMock(UserRepositoryInterface::class);
+        $this->playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
         $this->router = $this->createMock(RouterInterface::class);
 
@@ -43,6 +51,7 @@ final class InvitationServiceTest extends TestCase
             $this->invitationRepository,
             $this->gamePlayersRepository,
             $this->userRepository,
+            $this->playerManagementService,
             $this->entityManager,
             $this->router
         );
@@ -168,22 +177,10 @@ final class InvitationServiceTest extends TestCase
             ->with(50, 5)
             ->willReturn(false);
 
-        $this->entityManager
-            ->expects(self::exactly(2))
-            ->method('getReference')
-            ->willReturnCallback(static function (string $class, int $id) use ($user) {
-                if ($class === Game::class) {
-                    return (new Game())->setGameId($id);
-                }
-                if ($class === User::class && $id === 5) {
-                    return $user;
-                }
-
-                throw new \LogicException('Unexpected getReference call');
-            });
-
-        $this->entityManager->expects(self::once())->method('persist')->with(self::isInstanceOf(GamePlayers::class));
-        $this->entityManager->expects(self::once())->method('flush');
+        $this->playerManagementService
+            ->expects(self::once())
+            ->method('addPlayer')
+            ->with(50, 5);
 
         $response = $this->service->processInvitation($session, $user);
 

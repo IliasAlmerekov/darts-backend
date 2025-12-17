@@ -9,20 +9,21 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Entity\User;
 use App\Dto\PlayerIdPayload;
 use App\Dto\RoomCreateRequest;
+use App\Dto\UpdatePlayerOrderRequest;
+use App\Entity\User;
 use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Game\RematchServiceInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
 use App\Service\Sse\SseStreamServiceInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\StreamedResponse;
-use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\Routing\Attribute\Route;
 
 /**
  * This class handles game-room-related actions such as listing rooms,
@@ -39,8 +40,12 @@ final class GameRoomController extends AbstractController
      *
      * @return void
      */
-    public function __construct(private readonly GameRoomServiceInterface $gameRoomService, private readonly PlayerManagementServiceInterface $playerManagementService, private readonly RematchServiceInterface $rematchService, private readonly SseStreamServiceInterface $sseStreamService)
-    {
+    public function __construct(
+        private readonly GameRoomServiceInterface $gameRoomService,
+        private readonly PlayerManagementServiceInterface $playerManagementService,
+        private readonly RematchServiceInterface $rematchService,
+        private readonly SseStreamServiceInterface $sseStreamService,
+    ) {
     }
 
     #[Route(path: '/api/room/create', name: 'room_create', methods: ['POST'], format: 'json')]
@@ -91,16 +96,42 @@ final class GameRoomController extends AbstractController
 
         $removed = $this->playerManagementService->removePlayer($id, $playerId);
         if (!$removed) {
-            return $this->json([
-                'success' => false,
-                'message' => 'Player not found in this game',
-            ], Response::HTTP_NOT_FOUND);
+            return $this->json(
+                [
+                    'success' => false,
+                    'message' => 'Player not found in this game',
+                ],
+                Response::HTTP_NOT_FOUND
+            );
         }
 
-        return $this->json([
-            'success' => true,
-            'message' => 'Player removed from the game',
-        ]);
+        return $this->json(
+            [
+                'success' => true,
+                'message' => 'Player removed from the game',
+            ]
+        );
+    }
+
+    #[Route(path: '/api/room/{id}/positions', name: 'room_update_player_positions', methods: ['POST'], format: 'json')]
+    /**
+     * Updates the positions of players in a room.
+     *
+     * @param int                      $id
+     * @param UpdatePlayerOrderRequest $dto
+     *
+     * @return Response
+     */
+    public function updatePlayerOrder(int $id, #[MapRequestPayload] UpdatePlayerOrderRequest $dto): Response
+    {
+        $game = $this->gameRoomService->findGameById($id);
+        if (!$game) {
+            return $this->json(['success' => false, 'message' => 'Game not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $this->playerManagementService->updatePlayerPositions($id, $dto->positions);
+
+        return $this->json(['success' => true]);
     }
 
     #[Route(path: '/api/room/{id}/stream', name: 'room_stream', methods: ['GET'])]

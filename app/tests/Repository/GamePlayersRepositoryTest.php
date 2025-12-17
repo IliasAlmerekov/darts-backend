@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -38,16 +43,22 @@ final class GamePlayersRepositoryTest extends KernelTestCase
 
         $playerInGame = $this->createUser('player-in');
         $playerInOtherGame = $this->createUser('player-out');
+        $secondPlayerInGame = $this->createUser('player-second');
 
-        $this->persistGamePlayer($game, $playerInGame);
+        $this->persistGamePlayer($game, $playerInGame, position: 2);
+        $this->persistGamePlayer($game, $secondPlayerInGame, position: 1);
         $this->persistGamePlayer($otherGame, $playerInOtherGame);
         $this->entityManager->flush();
 
         $result = $this->repository->findPlayersWithUserInfo($game->getGameId());
 
-        self::assertCount(1, $result);
-        self::assertSame($playerInGame->getId(), (int) $result[0]['id']);
-        self::assertSame($playerInGame->getUsername(), $result[0]['name']);
+        self::assertCount(2, $result);
+        self::assertSame($secondPlayerInGame->getId(), (int) $result[0]['id']);
+        self::assertSame($secondPlayerInGame->getUsername(), $result[0]['name']);
+        self::assertSame(1, $result[0]['position']);
+        self::assertSame($playerInGame->getId(), (int) $result[1]['id']);
+        self::assertSame($playerInGame->getUsername(), $result[1]['name']);
+        self::assertSame(2, $result[1]['position']);
     }
 
     public function testIsPlayerInGame(): void
@@ -76,7 +87,7 @@ final class GamePlayersRepositoryTest extends KernelTestCase
         $result = $this->repository->findByGameId($game->getGameId());
 
         self::assertCount(2, $result);
-        $ids = array_map(static fn (GamePlayers $gp): int => $gp->getGamePlayerId(), $result);
+        $ids = array_map(static fn(GamePlayers $gp): int => $gp->getGamePlayerId(), $result);
         self::assertContains($gamePlayerOne->getGamePlayerId(), $ids);
         self::assertContains($gamePlayerTwo->getGamePlayerId(), $ids);
     }
@@ -118,12 +129,12 @@ final class GamePlayersRepositoryTest extends KernelTestCase
         return $user;
     }
 
-    private function persistGamePlayer(Game $game, User $user, ?int $score = null): GamePlayers
+    private function persistGamePlayer(Game $game, User $user, ?int $score = null, int $position = 1): GamePlayers
     {
         $gamePlayer = (new GamePlayers())
             ->setGame($game)
             ->setPlayer($user)
-            ->setPosition(1)
+            ->setPosition($position)
             ->setScore($score ?? 50);
 
         $this->entityManager->persist($gamePlayer);

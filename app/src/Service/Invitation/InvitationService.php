@@ -10,12 +10,12 @@ declare(strict_types=1);
 namespace App\Service\Invitation;
 
 use App\Entity\Game;
-use App\Entity\GamePlayers;
 use App\Entity\Invitation;
 use App\Entity\User;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\InvitationRepositoryInterface;
 use App\Repository\UserRepositoryInterface;
+use App\Service\Player\PlayerManagementServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Override;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -32,14 +32,21 @@ use Symfony\Component\Uid\Uuid;
 final readonly class InvitationService implements InvitationServiceInterface
 {
     /**
-     * @param InvitationRepositoryInterface  $invitationRepository
-     * @param GamePlayersRepositoryInterface $gamePlayersRepository
-     * @param UserRepositoryInterface        $userRepository
-     * @param EntityManagerInterface         $entityManager
-     * @param RouterInterface                $router
+     * @param InvitationRepositoryInterface    $invitationRepository
+     * @param GamePlayersRepositoryInterface   $gamePlayersRepository
+     * @param UserRepositoryInterface          $userRepository
+     * @param PlayerManagementServiceInterface $playerManagementService
+     * @param EntityManagerInterface           $entityManager
+     * @param RouterInterface                  $router
      */
-    public function __construct(private InvitationRepositoryInterface $invitationRepository, private GamePlayersRepositoryInterface $gamePlayersRepository, private UserRepositoryInterface $userRepository, private EntityManagerInterface $entityManager, private RouterInterface $router)
-    {
+    public function __construct(
+        private InvitationRepositoryInterface $invitationRepository,
+        private GamePlayersRepositoryInterface $gamePlayersRepository,
+        private UserRepositoryInterface $userRepository,
+        private PlayerManagementServiceInterface $playerManagementService,
+        private EntityManagerInterface $entityManager,
+        private RouterInterface $router,
+    ) {
     }
 
     /**
@@ -143,11 +150,7 @@ final readonly class InvitationService implements InvitationServiceInterface
         }
 
         if (!$this->gamePlayersRepository->isPlayerInGame($gameId, $userId)) {
-            $gamePlayer = new GamePlayers();
-            $gamePlayer->setGame($this->entityManager->getReference(Game::class, $gameId));
-            $gamePlayer->setPlayer($this->entityManager->getReference(User::class, $userId));
-            $this->entityManager->persist($gamePlayer);
-            $this->entityManager->flush();
+            $this->playerManagementService->addPlayer($gameId, $userId);
         }
 
         $session->remove('invitation_uuid');

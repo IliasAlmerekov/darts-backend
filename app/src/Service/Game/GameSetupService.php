@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -24,7 +29,7 @@ final class GameSetupService
     {
         $players = $game->getGamePlayers();
         $startScore = $game->getStartScore();
-/** @var array<int, int> $positionMap */
+        /** @var array<int, int> $positionMap */
         $positionMap = [];
         if (null !== $playerPositions) {
             foreach ($playerPositions as $index => $playerId) {
@@ -39,7 +44,7 @@ final class GameSetupService
             $playerId = $player->getPlayer()?->getId();
             if (null !== $playerId && isset($positionMap[$playerId])) {
                 $player->setPosition($positionMap[$playerId]);
-            } else {
+            } elseif (null === $player->getPosition()) {
                 $player->setPosition($index + 1);
             }
         }
