@@ -1,7 +1,7 @@
 stages:
   - build
   - test
-#  - analyze
+  #  - analyze
   - build-docker
 #  - publish
 #  - deploy
@@ -54,8 +54,8 @@ build:php:
     - "find ./vendor -name .git -type d | xargs rm -rf"
     - composer CycloneDX:make-sbom --output-format=json --spec-version=1.6 --output-file=build/sbom.json
     # build API-DOC
-#    - mkdir -p public/api/v2/bff/_docs
-#    - APP_ENV=dev APP_VERSION="$CI_COMMIT_REF_NAME" php bin/console nelmio:apidoc:dump > public/api/v2/bff/_docs/swagger.json
+  #    - mkdir -p public/api/v2/bff/_docs
+  #    - APP_ENV=dev APP_VERSION="$CI_COMMIT_REF_NAME" php bin/console nelmio:apidoc:dump > public/api/v2/bff/_docs/swagger.json
 
   artifacts:
     untracked: true
@@ -63,8 +63,8 @@ build:php:
     paths:
       - app/vendor/
       - app/build/sbom.json
-#      - app/public/api/v2/_docs/swagger.json
-#      - app/public/api/doc/
+    #      - app/public/api/v2/_docs/swagger.json
+    #      - app/public/api/doc/
     reports:
       cyclonedx:
         - app/build/sbom.json
@@ -92,22 +92,28 @@ build:php:
 test:php:
   image: ${HARBOR_REGISTRY}/library/php:${PHP_VERSION}-pcov
   stage: test
-  #   variables:
-  #     APP_ENV: "test"
+  services:
+    - name: mysql:8.0
+      alias: mysql
+  variables:
+    MYSQL_ROOT_PASSWORD: root123
+    MYSQL_DATABASE: testphp_db
+    DATABASE_URL: "mysql://root:root123@mysql:3306/testphp_db?serverVersion=8.0&charset=utf8mb4"
   script:
     - cd app
     #
     - php bin/console lint:yaml -v --ansi --env=test config
     - php -d memory_limit=-1 bin/console cache:clear --env=test
+    - php -d memory_limit=-1 bin/console doctrine:migrations:migrate --env=test --no-interaction
     - php -d memory_limit=-1 vendor/bin/phpunit --coverage-text  --exclude-group ignore --coverage-clover build/phpunit.coverage.xml --coverage-cobertura build/phpunit.coverage.cobertura.xml --log-junit build/phpunit.xml
   needs:
     - job: build:php
       artifacts: true
   artifacts:
     when: always
-#    expire_in: 1 day
-#    paths:
-#      - app/build/
+    #    expire_in: 1 day
+    #    paths:
+    #      - app/build/
     reports:
       # https://docs.gitlab.com/ci/testing/code_coverage/cobertura/#php-example
       coverage_report:
@@ -163,8 +169,8 @@ docker:build:php:
   needs:
     - job: build:php
       artifacts: true
-#    - job: build:assets
-#      artifacts: true
+  #    - job: build:assets
+  #      artifacts: true
   rules:
     - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+(-(rc|dev|hotfix).*)?$/'
       when: always
@@ -182,8 +188,8 @@ docker:build:nginx:
   needs:
     - job: build:php
       artifacts: true
-#    - job: build:assets
-#      artifacts: true
+  #    - job: build:assets
+  #      artifacts: true
   rules:
     - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+(-(rc|dev|hotfix).*)?$/'
       when: always
