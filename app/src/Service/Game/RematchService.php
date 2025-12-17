@@ -74,7 +74,7 @@ final readonly class RematchService implements RematchServiceInterface
 
         $this->playerManagementService->copyPlayers($oldGameId, $newGameId);
         $invitationLink = $this->createInvitation($newGameId);
-        $finishedPlayers = $this->gameFinishService->finishGame($oldGame);
+        $finishedPlayers = $this->gameFinishService->buildFinishedPlayersList($oldGameId);
 
         return [
             'success' => true,

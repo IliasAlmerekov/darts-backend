@@ -115,39 +115,8 @@ final readonly class GameFinishService implements GameFinishServiceInterface
     }
 
     /**
-     * @param Game $game
-     *
-     * @return void
-     */
-    private function recalculatePositions(Game $game): void
-    {
-        $players = $this->gamePlayersRepository->findByGameId((int) $game->getGameId());
-
-        usort($players, static function (GamePlayers $a, GamePlayers $b): int {
-            $scoreA = $a->getScore() ?? PHP_INT_MAX;
-            $scoreB = $b->getScore() ?? PHP_INT_MAX;
-            if ($scoreA === $scoreB) {
-                return ($a->getPosition() ?? PHP_INT_MAX) <=> ($b->getPosition() ?? PHP_INT_MAX);
-            }
-
-            return $scoreA <=> $scoreB;
-        });
-        foreach ($players as $index => $player) {
-            $player->setPosition($index + 1);
-        }
-
-        if ([] !== $players) {
-            $winnerPlayer = $players[0];
-            $game->setWinner($winnerPlayer->getPlayer());
-            foreach ($players as $player) {
-                $player->setIsWinner($player === $winnerPlayer);
-            }
-        }
-    }
-
-    /**
      * @param int                    $gameId
-     * @param int                    $finishedRounds
+     * @param int|null               $finishedRounds
      * @param array<int, int>|null   $roundsPlayedMap
      * @param array<int, float>|null $totalScoresMap
      *
@@ -155,11 +124,12 @@ final readonly class GameFinishService implements GameFinishServiceInterface
      *     playerId:int|null,
      *     username:string|null,
      *     position:int|null,
-     *     roundsPlayed:int,
+     *     roundsPlayed:int|null,
      *     roundAverage:float
      * }>
      */
-    private function buildFinishedPlayersList(int $gameId, int $finishedRounds, ?array $roundsPlayedMap = null, ?array $totalScoresMap = null): array
+    #[\Override]
+    public function buildFinishedPlayersList(int $gameId, ?int $finishedRounds = null, ?array $roundsPlayedMap = null, ?array $totalScoresMap = null): array
     {
         $lastRoundsMap = $this->roundThrowsRepository->getLastRoundNumberForGame($gameId);
         $maxRoundNumber = $finishedRounds;
@@ -213,5 +183,36 @@ final readonly class GameFinishService implements GameFinishServiceInterface
         }
 
         return $result;
+    }
+
+    /**
+     * @param Game $game
+     *
+     * @return void
+     */
+    private function recalculatePositions(Game $game): void
+    {
+        $players = $this->gamePlayersRepository->findByGameId((int) $game->getGameId());
+
+        usort($players, static function (GamePlayers $a, GamePlayers $b): int {
+            $scoreA = $a->getScore() ?? PHP_INT_MAX;
+            $scoreB = $b->getScore() ?? PHP_INT_MAX;
+            if ($scoreA === $scoreB) {
+                return ($a->getPosition() ?? PHP_INT_MAX) <=> ($b->getPosition() ?? PHP_INT_MAX);
+            }
+
+            return $scoreA <=> $scoreB;
+        });
+        foreach ($players as $index => $player) {
+            $player->setPosition($index + 1);
+        }
+
+        if ([] !== $players) {
+            $winnerPlayer = $players[0];
+            $game->setWinner($winnerPlayer->getPlayer());
+            foreach ($players as $player) {
+                $player->setIsWinner($player === $winnerPlayer);
+            }
+        }
     }
 }

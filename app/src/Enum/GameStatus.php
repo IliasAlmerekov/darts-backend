@@ -12,4 +12,5 @@ enum GameStatus: string
     case Lobby = 'lobby';
     case Started = 'started';
     case Finished = 'finished';
+    case Aborted = 'aborted';
 }
