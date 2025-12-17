@@ -7,7 +7,6 @@ namespace App\Tests\Repository;
 use App\Entity\Invitation;
 use App\Repository\InvitationRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\Tools\SchemaTool;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Uid\Uuid;
 
@@ -21,10 +20,6 @@ final class InvitationRepositoryTest extends KernelTestCase
         self::bootKernel();
 
         $this->entityManager = static::getContainer()->get(EntityManagerInterface::class);
-        $schemaTool = new SchemaTool($this->entityManager);
-        $schemaTool->dropDatabase();
-        $schemaTool->createSchema($this->entityManager->getMetadataFactory()->getAllMetadata());
-
         $this->repository = static::getContainer()->get(InvitationRepository::class);
     }
 

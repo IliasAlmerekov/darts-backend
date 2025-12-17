@@ -10,7 +10,6 @@ use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Repository\GamePlayersRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\Tools\SchemaTool;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class GamePlayersRepositoryTest extends KernelTestCase
@@ -23,10 +22,6 @@ final class GamePlayersRepositoryTest extends KernelTestCase
         self::bootKernel();
 
         $this->entityManager = static::getContainer()->get(EntityManagerInterface::class);
-        $schemaTool = new SchemaTool($this->entityManager);
-        $schemaTool->dropDatabase();
-        $schemaTool->createSchema($this->entityManager->getMetadataFactory()->getAllMetadata());
-
         $this->repository = static::getContainer()->get(GamePlayersRepository::class);
     }
 

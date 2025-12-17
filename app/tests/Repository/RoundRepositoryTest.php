@@ -9,7 +9,6 @@ use App\Entity\Round;
 use App\Enum\GameStatus;
 use App\Repository\RoundRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\Tools\SchemaTool;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class RoundRepositoryTest extends KernelTestCase
@@ -22,10 +21,6 @@ final class RoundRepositoryTest extends KernelTestCase
         self::bootKernel();
 
         $this->entityManager = static::getContainer()->get(EntityManagerInterface::class);
-        $schemaTool = new SchemaTool($this->entityManager);
-        $schemaTool->dropDatabase();
-        $schemaTool->createSchema($this->entityManager->getMetadataFactory()->getAllMetadata());
-
         $this->repository = static::getContainer()->get(RoundRepository::class);
     }
 

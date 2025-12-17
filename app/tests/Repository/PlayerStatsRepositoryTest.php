@@ -7,7 +7,6 @@ namespace App\Tests\Repository;
 use App\Entity\PlayerStats;
 use App\Repository\PlayerStatsRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\Tools\SchemaTool;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class PlayerStatsRepositoryTest extends KernelTestCase
@@ -20,10 +19,6 @@ final class PlayerStatsRepositoryTest extends KernelTestCase
         self::bootKernel();
 
         $this->entityManager = static::getContainer()->get(EntityManagerInterface::class);
-        $schemaTool = new SchemaTool($this->entityManager);
-        $schemaTool->dropDatabase();
-        $schemaTool->createSchema($this->entityManager->getMetadataFactory()->getAllMetadata());
-
         $this->repository = static::getContainer()->get(PlayerStatsRepository::class);
     }
 

@@ -11,7 +11,6 @@ use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Repository\RoundThrowsRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\Tools\SchemaTool;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class RoundThrowsRepositoryTest extends KernelTestCase
@@ -23,11 +22,6 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
     {
         self::bootKernel();
         $this->em = static::getContainer()->get(EntityManagerInterface::class);
-
-        $schemaTool = new SchemaTool($this->em);
-        $schemaTool->dropDatabase();
-        $schemaTool->createSchema($this->em->getMetadataFactory()->getAllMetadata());
-
         $this->repo = static::getContainer()->get(RoundThrowsRepository::class);
     }
 
