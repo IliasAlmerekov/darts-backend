@@ -97,13 +97,14 @@ test:php:
       alias: mysql
   variables:
     MYSQL_ROOT_PASSWORD: root123
-    MYSQL_DATABASE: testphp_db
+    MYSQL_DATABASE: testphp_db_test
     DATABASE_URL: "mysql://root:root123@mysql:3306/testphp_db?serverVersion=8.0&charset=utf8mb4"
   script:
     - cd app
     #
     - php bin/console lint:yaml -v --ansi --env=test config
     - php -d memory_limit=-1 bin/console cache:clear --env=test
+    - php -d memory_limit=-1 bin/console doctrine:database:create --env=test --if-not-exists
     - php -d memory_limit=-1 bin/console doctrine:migrations:migrate --env=test --no-interaction
     - php -d memory_limit=-1 vendor/bin/phpunit --coverage-text  --exclude-group ignore --coverage-clover build/phpunit.coverage.xml --coverage-cobertura build/phpunit.coverage.cobertura.xml --log-junit build/phpunit.xml
   needs:
