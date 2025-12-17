@@ -4,18 +4,18 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
-    frontend_url: '%env(string:FRONTEND_URL)%'
+    frontend_url: "%env(string:FRONTEND_URL)%"
 
 services:
     # default configuration for services in *this* file
     _defaults:
-        autowire: true      # Automatically injects dependencies in your services.
+        autowire: true # Automatically injects dependencies in your services.
         autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
 
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name
     App\:
-        resource: '../src/'
+        resource: "../src/"
 
     App\Repository\RoundRepositoryInterface: '@App\Repository\RoundRepository'
     App\Repository\RoundThrowsRepositoryInterface: '@App\Repository\RoundThrowsRepository'
@@ -34,6 +34,7 @@ services:
     App\Service\Game\GameServiceInterface: '@App\Service\Game\GameService'
     App\Service\Game\GameStatisticsServiceInterface: '@App\Service\Game\GameStatisticsService'
     App\Service\Game\GameFinishServiceInterface: '@App\Service\Game\GameFinishService'
+    App\Service\Game\GameAbortServiceInterface: '@App\Service\Game\GameAbortService'
     App\Service\Game\RematchServiceInterface: '@App\Service\Game\RematchService'
     App\Service\Player\PlayerManagementServiceInterface: '@App\Service\Player\PlayerManagementService'
     App\Service\Sse\SseStreamServiceInterface: '@App\Service\Sse\SseStreamService'

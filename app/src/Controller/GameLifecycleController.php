@@ -133,11 +133,11 @@ final class GameLifecycleController extends AbstractController
 
         return $this->json($gameDto);
     }
-
+    
     #[Route('/api/game/{gameId}/abort', name: 'app_game_abort', methods: ['PATCH'], format: 'json')]
     /**
-     * @param Game                        $game
-     * @param GameAbortServiceInterface   $gameAbortService
+     * @param Game                      $game
+     * @param GameAbortServiceInterface $gameAbortService
      *
      * @return JsonResponse
      */
@@ -145,9 +145,6 @@ final class GameLifecycleController extends AbstractController
     {
         $gameAbortService->abortGame($game);
 
-        return $this->json([
-            'message' => 'Game aborted successfully',
-            'gameId' => $game->getGameId(),
-        ], Response::HTTP_OK);
+        return $this->json(['message' => 'Game aborted successfully'], Response::HTTP_OK);
     }
 }
