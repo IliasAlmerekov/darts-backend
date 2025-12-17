@@ -14,10 +14,12 @@ use App\Service\Player\PlayerManagementService;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use ReflectionException;
 use ReflectionProperty;
 
+#[AllowMockObjectsWithoutExpectations]
 final class GameRoomServiceTest extends TestCase
 {
     private GameRepositoryInterface $gameRepository;

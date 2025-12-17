@@ -13,10 +13,12 @@ use App\Enum\GameStatus;
 use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Game\GameService;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use ReflectionException;
 use ReflectionProperty;
 
+#[AllowMockObjectsWithoutExpectations]
 final class GameServiceTest extends TestCase
 {
     /**

@@ -11,12 +11,14 @@ use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
 use App\Service\Game\RematchServiceInterface;
 use App\Service\Sse\SseStreamServiceInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 
+#[AllowMockObjectsWithoutExpectations]
 class GameRoomControllerTest extends TestCase
 {
     private GameRoomServiceInterface&MockObject $gameRoomService;

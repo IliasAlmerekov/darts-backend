@@ -39,14 +39,10 @@
         "symfony/stimulus-bundle": "^2.31",
         "symfony/string": "7.3.*",
         "symfony/translation": "7.3.*",
-        "symfony/twig-bundle": "7.3.*",
         "symfony/uid": "7.3.*",
-        "symfony/ux-turbo": "^2.31",
         "symfony/validator": "7.3.*",
         "symfony/web-link": "7.3.*",
-        "symfony/yaml": "7.3.*",
-        "twig/extra-bundle": "^2.12|^3.22.1",
-        "twig/twig": "^2.12|^3.22.1"
+        "symfony/yaml": "7.3.*"
     },
     "config": {
         "allow-plugins": {
@@ -101,6 +97,7 @@
     },
     "require-dev": {
         "cyclonedx/cyclonedx-php-composer": "^6.0",
+        "dama/doctrine-test-bundle": "^8.4.1",
         "escapestudios/symfony2-coding-standard": "^3.16",
         "micheh/phpcs-gitlab": "^2.1",
         "phpunit/php-code-coverage": "^12.5",

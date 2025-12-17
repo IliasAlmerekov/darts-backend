@@ -78,7 +78,13 @@ END");
         $this->addSql('ALTER TABLE round_throws MODIFY timestamp DATETIME NOT NULL, MODIFY is_bust TINYINT(1) DEFAULT 0 NOT NULL, MODIFY is_double TINYINT(1) DEFAULT 0 NOT NULL, MODIFY is_triple TINYINT(1) DEFAULT 0 NOT NULL');
 
         $userTable = $schemaManager->introspectTable('user');
+        if (!$userTable->hasColumn('username')) {
+            $this->addSql('ALTER TABLE user ADD username VARCHAR(30) DEFAULT NULL');
+        }
+
         $this->addSql("UPDATE user SET username = CONCAT('user_', id) WHERE username = '' OR username IS NULL");
+        $this->addSql('ALTER TABLE user MODIFY username VARCHAR(30) NOT NULL');
+
         if ($userTable->hasIndex('UNIQ_IDENTIFIER_USERNAME')) {
             $this->addSql('DROP INDEX UNIQ_IDENTIFIER_USERNAME ON user');
         }

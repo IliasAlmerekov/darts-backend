@@ -6,6 +6,7 @@ namespace App\Tests\Controller;
 
 use App\Controller\RegistrationController;
 use App\Service\Registration\RegistrationServiceInterface;
+use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
@@ -13,6 +14,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+#[AllowMockObjectsWithoutExpectations]
 final class RegistrationControllerTest extends TestCase
 {
     private RegistrationController $controller;
