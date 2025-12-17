@@ -16,6 +16,8 @@ use Doctrine\ORM\EntityManagerInterface;
 /**
  * Service to handle aborting games.
  * This class is responsible for setting the game status to aborted.
+ *
+ * @psalm-suppress UnusedClass Routed by Symfony framework
  */
 final readonly class GameAbortService implements GameAbortServiceInterface
 {
