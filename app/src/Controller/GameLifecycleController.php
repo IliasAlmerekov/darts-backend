@@ -12,6 +12,7 @@ namespace App\Controller;
 use App\Dto\GameSettingsRequest;
 use App\Dto\StartGameRequest;
 use App\Entity\Game;
+use App\Service\Game\GameAbortServiceInterface;
 use App\Service\Game\GameFinishServiceInterface;
 use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Game\GameServiceInterface;
@@ -131,5 +132,22 @@ final class GameLifecycleController extends AbstractController
         $gameDto = $gameService->createGameDto($game);
 
         return $this->json($gameDto);
+    }
+
+    #[Route('/api/game/{gameId}/abort', name: 'app_game_abort', methods: ['PATCH'], format: 'json')]
+    /**
+     * @param Game                        $game
+     * @param GameAbortServiceInterface   $gameAbortService
+     *
+     * @return JsonResponse
+     */
+    public function abortGame(#[AttributeMapEntity(id: 'gameId')] Game $game, GameAbortServiceInterface $gameAbortService): Response
+    {
+        $gameAbortService->abortGame($game);
+
+        return $this->json([
+            'message' => 'Game aborted successfully',
+            'gameId' => $game->getGameId(),
+        ], Response::HTTP_OK);
     }
 }

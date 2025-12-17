@@ -159,7 +159,7 @@ final readonly class GameFinishService implements GameFinishServiceInterface
      *     roundAverage:float
      * }>
      */
-    private function buildFinishedPlayersList(int $gameId, int $finishedRounds, ?array $roundsPlayedMap = null, ?array $totalScoresMap = null): array
+    public function buildFinishedPlayersList(int $gameId, ?int $finishedRounds = null, ?array $roundsPlayedMap = null, ?array $totalScoresMap = null): array
     {
         $lastRoundsMap = $this->roundThrowsRepository->getLastRoundNumberForGame($gameId);
         $maxRoundNumber = $finishedRounds;
