@@ -1,0 +1,12 @@
+#
+# Zusätzliche (deutsche) Metadaten für die API-Dokumentation.
+# Diese Datei überschreibt die Standardwerte aus `config/packages/nelmio_api_doc.yaml`.
+#
+nelmio_api_doc:
+    documentation:
+        info:
+            title: Darts Backend API
+            description: |
+                OpenAPI-Dokumentation für Endpunkte unter `/api/*`.
+                Interaktive Ansicht unter `/api/doc`, JSON-Schema unter `/api/doc.json`.
+            version: 1.0.0

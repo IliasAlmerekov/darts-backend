@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Dto\GameSettingsRequest;
+use App\Dto\GameResponseDto;
 use App\Dto\SuccessMessageDto;
 use App\Dto\StartGameRequest;
 use App\Entity\Game;
@@ -20,6 +21,8 @@ use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Game\GameServiceInterface;
 use App\Service\Game\GameSettingsServiceInterface;
 use App\Service\Game\GameStartServiceInterface;
+use Nelmio\ApiDocBundle\Attribute\Model;
+use OpenApi\Attributes as OA;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity as AttributeMapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -40,6 +43,13 @@ final class GameLifecycleController extends AbstractController
      *
      * @return Game
      */
+    #[OA\Parameter(name: 'gameId', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
+    #[OA\RequestBody(required: true, content: new OA\JsonContent(ref: new Model(type: StartGameRequest::class)))]
+    #[OA\Response(
+        response: Response::HTTP_OK,
+        description: 'Aktualisierter Spielzustand nach dem Start.',
+        content: new OA\JsonContent(ref: new Model(type: Game::class, groups: ['game:read']))
+    )]
     #[ApiResponse(groups: ['game:read'])]
     #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'], format: 'json')]
     public function start(#[AttributeMapEntity(id: 'gameId')] Game $game, GameStartServiceInterface $gameStartService, #[MapRequestPayload] StartGameRequest $dto): Game
@@ -57,6 +67,12 @@ final class GameLifecycleController extends AbstractController
      *
      * @return mixed
      */
+    #[OA\RequestBody(required: true, content: new OA\JsonContent(ref: new Model(type: GameSettingsRequest::class)))]
+    #[OA\Response(
+        response: Response::HTTP_CREATED,
+        description: 'Spiel wurde mit Einstellungen erstellt.',
+        content: new OA\JsonContent(ref: new Model(type: GameResponseDto::class))
+    )]
     #[ApiResponse(status: Response::HTTP_CREATED)]
     #[Route('/api/game/settings', name: 'app_game_settings_create', methods: ['POST'], format: 'json')]
     public function createSettings(GameRoomServiceInterface $gameRoomService, GameSettingsServiceInterface $gameSettingsService, GameServiceInterface $gameService, #[MapRequestPayload] GameSettingsRequest $dto): mixed
@@ -78,6 +94,13 @@ final class GameLifecycleController extends AbstractController
      *
      * @return mixed
      */
+    #[OA\Parameter(name: 'gameId', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
+    #[OA\RequestBody(required: true, content: new OA\JsonContent(ref: new Model(type: GameSettingsRequest::class)))]
+    #[OA\Response(
+        response: Response::HTTP_OK,
+        description: 'Spieleinstellungen wurden aktualisiert.',
+        content: new OA\JsonContent(ref: new Model(type: GameResponseDto::class))
+    )]
     #[ApiResponse]
     #[Route('/api/game/{gameId}/settings', name: 'app_game_settings', methods: ['PATCH'], format: 'json')]
     public function updateSettings(#[AttributeMapEntity(id: 'gameId')] Game $game, GameSettingsServiceInterface $gameSettingsService, GameServiceInterface $gameService, #[MapRequestPayload] GameSettingsRequest $dto): mixed
@@ -95,6 +118,24 @@ final class GameLifecycleController extends AbstractController
      *
      * @return mixed
      */
+    #[OA\Parameter(name: 'gameId', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
+    #[OA\Response(
+        response: Response::HTTP_OK,
+        description: 'Spiel beenden und Endplatzierungen zurückgeben.',
+        content: new OA\JsonContent(
+            type: 'array',
+            items: new OA\Items(
+                type: 'object',
+                properties: [
+                    new OA\Property(property: 'playerId', type: 'integer', nullable: true, example: 1),
+                    new OA\Property(property: 'username', type: 'string', nullable: true, example: 'alice'),
+                    new OA\Property(property: 'position', type: 'integer', nullable: true, example: 1),
+                    new OA\Property(property: 'roundsPlayed', type: 'integer', nullable: true, example: 10),
+                    new OA\Property(property: 'roundAverage', type: 'number', format: 'float', example: 54.2),
+                ]
+            )
+        )
+    )]
     #[ApiResponse(groups: ['game:read'])]
     #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['GET'], format: 'json')]
     public function finished(#[AttributeMapEntity(id: 'gameId')] Game $game, GameFinishServiceInterface $gameFinishService): mixed
@@ -110,6 +151,12 @@ final class GameLifecycleController extends AbstractController
      *
      * @return mixed
      */
+    #[OA\Parameter(name: 'gameId', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
+    #[OA\Response(
+        response: Response::HTTP_OK,
+        description: 'Aktueller Spielzustand.',
+        content: new OA\JsonContent(ref: new Model(type: GameResponseDto::class))
+    )]
     #[ApiResponse]
     #[Route('/api/game/{gameId}', name: 'app_game_state', methods: ['GET'], format: 'json')]
     public function getGameState(#[AttributeMapEntity(id: 'gameId')] Game $game, GameServiceInterface $gameService): mixed
@@ -125,6 +172,12 @@ final class GameLifecycleController extends AbstractController
      *
      * @return SuccessMessageDto
      */
+    #[OA\Parameter(name: 'gameId', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
+    #[OA\Response(
+        response: Response::HTTP_OK,
+        description: 'Spiel wurde abgebrochen.',
+        content: new OA\JsonContent(ref: new Model(type: SuccessMessageDto::class))
+    )]
     #[ApiResponse]
     #[Route('/api/game/{gameId}/abort', name: 'app_game_abort', methods: ['PATCH'], format: 'json')]
     public function abortGame(#[AttributeMapEntity(id: 'gameId')] Game $game, GameAbortServiceInterface $gameAbortService): SuccessMessageDto

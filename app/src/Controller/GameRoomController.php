@@ -22,6 +22,8 @@ use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Game\RematchServiceInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
 use App\Service\Sse\SseStreamServiceInterface;
+use Nelmio\ApiDocBundle\Attribute\Model;
+use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
@@ -60,6 +62,22 @@ final class GameRoomController extends AbstractController
      *
      * @return array{success:bool,gameId:int|null}
      */
+    #[OA\RequestBody(
+        required: false,
+        content: new OA\JsonContent(ref: new Model(type: RoomCreateRequest::class))
+    )]
+    #[OA\Response(
+        response: Response::HTTP_OK,
+        description: 'Spielraum wurde erfolgreich erstellt (oder wiederverwendet).',
+        content: new OA\JsonContent(
+            type: 'object',
+            required: ['success', 'gameId'],
+            properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: true),
+                new OA\Property(property: 'gameId', type: 'integer', nullable: true, example: 123),
+            ]
+        )
+    )]
     #[ApiResponse]
     #[Route(path: '/api/room/create', name: 'room_create', methods: ['POST'], format: 'json')]
     public function roomCreateApi(#[MapRequestPayload] RoomCreateRequest $dto): array
@@ -82,6 +100,26 @@ final class GameRoomController extends AbstractController
      *
      * @return SuccessMessageDto
      */
+    #[OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
+    #[OA\Parameter(
+        name: 'playerId',
+        in: 'query',
+        required: false,
+        description: 'Spieler-ID, die entfernt werden soll. Wenn nicht angegeben, wird der authentifizierte User oder der Request-Body verwendet.',
+        schema: new OA\Schema(type: 'integer', nullable: true, example: 42)
+    )]
+    #[OA\RequestBody(
+        required: false,
+        description: 'Alternative Übergabe der playerId (falls nicht als Query-Parameter).',
+        content: new OA\JsonContent(ref: new Model(type: PlayerIdPayload::class))
+    )]
+    #[OA\Response(
+        response: Response::HTTP_OK,
+        description: 'Spieler wurde aus dem Spiel entfernt.',
+        content: new OA\JsonContent(ref: new Model(type: SuccessMessageDto::class))
+    )]
+    #[OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'playerId fehlt oder ist ungültig.')]
+    #[OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Spieler wurde im Spiel nicht gefunden.')]
     #[ApiResponse]
     #[Route(path: '/api/room/{id}', name: 'room_player_leave', methods: ['DELETE'], format: 'json')]
     public function playerLeave(int $id, #[MapQueryParameter] ?int $playerId = null, #[MapRequestPayload] ?PlayerIdPayload $payload = null): SuccessMessageDto
@@ -111,6 +149,18 @@ final class GameRoomController extends AbstractController
      *
      * @return array{success:bool,message?:string}
      */
+    #[OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
+    #[OA\RequestBody(required: true, content: new OA\JsonContent(ref: new Model(type: UpdatePlayerOrderRequest::class)))]
+    #[OA\Response(
+        response: Response::HTTP_OK,
+        description: 'Spielerpositionen wurden aktualisiert.',
+        content: new OA\JsonContent(
+            type: 'object',
+            required: ['success'],
+            properties: [new OA\Property(property: 'success', type: 'boolean', example: true)]
+        )
+    )]
+    #[OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Spiel nicht gefunden.')]
     #[ApiResponse]
     #[Route(path: '/api/room/{id}/positions', name: 'room_update_player_positions', methods: ['POST'], format: 'json')]
     public function updatePlayerOrder(int $id, #[MapRequestPayload] UpdatePlayerOrderRequest $dto): array
@@ -133,6 +183,13 @@ final class GameRoomController extends AbstractController
      *
      * @return StreamedResponse
      */
+    #[OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
+    #[OA\Response(
+        response: Response::HTTP_OK,
+        description: 'Server-Sent Events (SSE) Stream für Raum-Updates.',
+        content: new OA\MediaType(mediaType: 'text/event-stream')
+    )]
+    #[OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Spiel nicht gefunden.')]
     #[Route(path: '/api/room/{id}/stream', name: 'room_stream', methods: ['GET'])]
     public function roomStream(int $id, Request $request): StreamedResponse
     {
@@ -155,6 +212,36 @@ final class GameRoomController extends AbstractController
      *
      * @return array<string, mixed>
      */
+    #[OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
+    #[OA\Response(
+        response: Response::HTTP_CREATED,
+        description: 'Rematch-Spiel wurde erstellt.',
+        content: new OA\JsonContent(
+            type: 'object',
+            required: ['success'],
+            properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: true),
+                new OA\Property(property: 'gameId', type: 'integer', nullable: true, example: 456),
+                new OA\Property(property: 'invitationLink', type: 'string', nullable: true, example: '/api/invite/join/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'),
+                new OA\Property(
+                    property: 'finishedPlayers',
+                    type: 'array',
+                    items: new OA\Items(
+                        type: 'object',
+                        properties: [
+                            new OA\Property(property: 'playerId', type: 'integer', nullable: true, example: 1),
+                            new OA\Property(property: 'username', type: 'string', nullable: true, example: 'alice'),
+                            new OA\Property(property: 'position', type: 'integer', nullable: true, example: 1),
+                            new OA\Property(property: 'roundsPlayed', type: 'integer', nullable: true, example: 10),
+                            new OA\Property(property: 'roundAverage', type: 'number', format: 'float', example: 54.2),
+                        ]
+                    )
+                ),
+                new OA\Property(property: 'message', type: 'string', nullable: true, example: 'Vorheriges Spiel nicht gefunden'),
+                new OA\Property(property: 'status', type: 'integer', nullable: true, example: 404),
+            ]
+        )
+    )]
     #[ApiResponse(status: Response::HTTP_CREATED)]
     #[Route(path: '/api/room/{id}/rematch', name: 'room_rematch', methods: ['POST'])]
     public function rematch(int $id): array
