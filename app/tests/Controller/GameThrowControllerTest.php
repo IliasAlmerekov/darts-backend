@@ -15,7 +15,6 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 #[AllowMockObjectsWithoutExpectations]
@@ -44,8 +43,7 @@ final class GameThrowControllerTest extends TestCase
 
         $response = $this->controller->throw($game, $throwService, $gameService, $dto);
 
-        $this->assertInstanceOf(JsonResponse::class, $response);
-        $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
+        $this->assertInstanceOf(GameResponseDto::class, $response);
     }
 
     public function testThrowReturnsBadRequestOnInvalidArgument(): void
@@ -71,7 +69,7 @@ final class GameThrowControllerTest extends TestCase
 
         $response = $this->controller->undoThrow($game, $throwService, $gameService);
 
-        $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
+        $this->assertInstanceOf(GameResponseDto::class, $response);
     }
 
     private function dummyGameDto(): GameResponseDto

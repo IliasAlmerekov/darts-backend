@@ -10,8 +10,10 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Dto\GameSettingsRequest;
+use App\Dto\SuccessMessageDto;
 use App\Dto\StartGameRequest;
 use App\Entity\Game;
+use App\Http\Attribute\ApiResponse;
 use App\Service\Game\GameAbortServiceInterface;
 use App\Service\Game\GameFinishServiceInterface;
 use App\Service\Game\GameRoomServiceInterface;
@@ -20,7 +22,6 @@ use App\Service\Game\GameSettingsServiceInterface;
 use App\Service\Game\GameStartServiceInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity as AttributeMapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
@@ -37,14 +38,15 @@ final class GameLifecycleController extends AbstractController
      * @param GameStartServiceInterface $gameStartService
      * @param StartGameRequest          $dto
      *
-     * @return Response
+     * @return Game
      */
+    #[ApiResponse(groups: ['game:read'])]
     #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'], format: 'json')]
-    public function start(#[AttributeMapEntity(id: 'gameId')] Game $game, GameStartServiceInterface $gameStartService, #[MapRequestPayload] StartGameRequest $dto): Response
+    public function start(#[AttributeMapEntity(id: 'gameId')] Game $game, GameStartServiceInterface $gameStartService, #[MapRequestPayload] StartGameRequest $dto): Game
     {
         $gameStartService->start($game, $dto);
 
-        return $this->json($game, context: ['groups' => 'game:read']);
+        return $game;
     }
 
     /**
@@ -53,10 +55,11 @@ final class GameLifecycleController extends AbstractController
      * @param GameServiceInterface         $gameService
      * @param GameSettingsRequest          $dto
      *
-     * @return Response
+     * @return mixed
      */
+    #[ApiResponse(status: Response::HTTP_CREATED)]
     #[Route('/api/game/settings', name: 'app_game_settings_create', methods: ['POST'], format: 'json')]
-    public function createSettings(GameRoomServiceInterface $gameRoomService, GameSettingsServiceInterface $gameSettingsService, GameServiceInterface $gameService, #[MapRequestPayload] GameSettingsRequest $dto): Response
+    public function createSettings(GameRoomServiceInterface $gameRoomService, GameSettingsServiceInterface $gameSettingsService, GameServiceInterface $gameService, #[MapRequestPayload] GameSettingsRequest $dto): mixed
     {
         $game = $gameRoomService->createGame();
 
@@ -64,7 +67,7 @@ final class GameLifecycleController extends AbstractController
 
         $gameDto = $gameService->createGameDto($game);
 
-        return $this->json($gameDto, Response::HTTP_CREATED);
+        return $gameDto;
     }
 
     /**
@@ -73,57 +76,61 @@ final class GameLifecycleController extends AbstractController
      * @param GameServiceInterface         $gameService
      * @param GameSettingsRequest          $dto
      *
-     * @return Response
+     * @return mixed
      */
+    #[ApiResponse]
     #[Route('/api/game/{gameId}/settings', name: 'app_game_settings', methods: ['PATCH'], format: 'json')]
-    public function updateSettings(#[AttributeMapEntity(id: 'gameId')] Game $game, GameSettingsServiceInterface $gameSettingsService, GameServiceInterface $gameService, #[MapRequestPayload] GameSettingsRequest $dto): Response
+    public function updateSettings(#[AttributeMapEntity(id: 'gameId')] Game $game, GameSettingsServiceInterface $gameSettingsService, GameServiceInterface $gameService, #[MapRequestPayload] GameSettingsRequest $dto): mixed
     {
         $gameSettingsService->updateSettings($game, $dto);
 
         $gameDto = $gameService->createGameDto($game);
 
-        return $this->json($gameDto);
+        return $gameDto;
     }
 
     /**
      * @param Game                       $game
      * @param GameFinishServiceInterface $gameFinishService
      *
-     * @return Response
+     * @return mixed
      */
+    #[ApiResponse(groups: ['game:read'])]
     #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['GET'], format: 'json')]
-    public function finished(#[AttributeMapEntity(id: 'gameId')] Game $game, GameFinishServiceInterface $gameFinishService): Response
+    public function finished(#[AttributeMapEntity(id: 'gameId')] Game $game, GameFinishServiceInterface $gameFinishService): mixed
     {
         $result = $gameFinishService->finishGame($game);
 
-        return $this->json($result, context: ['groups' => 'game:read']);
+        return $result;
     }
 
     /**
      * @param Game                 $game
      * @param GameServiceInterface $gameService
      *
-     * @return JsonResponse
+     * @return mixed
      */
+    #[ApiResponse]
     #[Route('/api/game/{gameId}', name: 'app_game_state', methods: ['GET'], format: 'json')]
-    public function getGameState(#[AttributeMapEntity(id: 'gameId')] Game $game, GameServiceInterface $gameService): JsonResponse
+    public function getGameState(#[AttributeMapEntity(id: 'gameId')] Game $game, GameServiceInterface $gameService): mixed
     {
         $gameDto = $gameService->createGameDto($game);
 
-        return $this->json($gameDto);
+        return $gameDto;
     }
 
     /**
      * @param Game                      $game
      * @param GameAbortServiceInterface $gameAbortService
      *
-     * @return JsonResponse
+     * @return SuccessMessageDto
      */
+    #[ApiResponse]
     #[Route('/api/game/{gameId}/abort', name: 'app_game_abort', methods: ['PATCH'], format: 'json')]
-    public function abortGame(#[AttributeMapEntity(id: 'gameId')] Game $game, GameAbortServiceInterface $gameAbortService): Response
+    public function abortGame(#[AttributeMapEntity(id: 'gameId')] Game $game, GameAbortServiceInterface $gameAbortService): SuccessMessageDto
     {
         $gameAbortService->abortGame($game);
 
-        return $this->json(['message' => 'Game aborted successfully'], Response::HTTP_OK);
+        return new SuccessMessageDto('Game aborted successfully');
     }
 }

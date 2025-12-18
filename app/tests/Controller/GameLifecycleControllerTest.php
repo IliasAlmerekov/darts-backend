@@ -20,7 +20,6 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 #[AllowMockObjectsWithoutExpectations]
@@ -45,8 +44,7 @@ final class GameLifecycleControllerTest extends TestCase
 
         $response = $this->controller->start($game, $startService, $dto);
 
-        $this->assertInstanceOf(JsonResponse::class, $response);
-        $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
+        $this->assertSame($game, $response);
     }
 
     public function testStartReturnsBadRequestOnError(): void
@@ -76,7 +74,7 @@ final class GameLifecycleControllerTest extends TestCase
 
         $response = $this->controller->createSettings($roomService, $settingsService, $gameService, $dto);
 
-        $this->assertEquals(Response::HTTP_CREATED, $response->getStatusCode());
+        $this->assertInstanceOf(GameResponseDto::class, $response);
     }
 
     public function testUpdateSettingsReturnsBadRequestOnError(): void
@@ -99,7 +97,7 @@ final class GameLifecycleControllerTest extends TestCase
 
         $response = $this->controller->finished($game, $finishService);
 
-        $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
+        $this->assertIsArray($response);
     }
 
     public function testGetGameStateReturnsDto(): void
@@ -110,8 +108,7 @@ final class GameLifecycleControllerTest extends TestCase
 
         $response = $this->controller->getGameState($game, $gameService);
 
-        $this->assertInstanceOf(JsonResponse::class, $response);
-        $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
+        $this->assertInstanceOf(GameResponseDto::class, $response);
     }
 
     private function dummyGameDto(): GameResponseDto

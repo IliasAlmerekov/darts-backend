@@ -12,6 +12,7 @@ namespace App\Controller;
 use App\Entity\Game;
 use App\Entity\Invitation;
 use App\Entity\User;
+use App\Http\Attribute\ApiResponse;
 use App\Service\Invitation\InvitationServiceInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -32,15 +33,16 @@ final class InvitationController extends AbstractController
      * @param Game                       $game
      * @param InvitationServiceInterface $invitationService
      *
-     * @return Response
+     * @return array<array-key, mixed>
      */
+    #[ApiResponse(headers: ['X-Accel-Buffering' => 'no'])]
     #[Route('/api/invite/create/{id}', name: 'create_invitation', format: 'json')]
-    public function createInvitation(#[MapEntity(id: 'id')] Game $game, InvitationServiceInterface $invitationService): Response
+    public function createInvitation(#[MapEntity(id: 'id')] Game $game, InvitationServiceInterface $invitationService): array
     {
         $payload = $invitationService->getInvitationPayload($game);
-        $status = ($payload['success'] ?? false) ? Response::HTTP_OK : Response::HTTP_NOT_FOUND;
+        $payload['status'] = ($payload['success'] ?? false) ? Response::HTTP_OK : Response::HTTP_NOT_FOUND;
 
-        return $this->json($payload, $status, ['X-Accel-Buffering' => 'no']);
+        return $payload;
     }
 
     /**

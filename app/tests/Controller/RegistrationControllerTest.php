@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\Controller\RegistrationController;
+use App\Exception\Request\InvalidJsonBodyException;
 use App\Service\Registration\RegistrationServiceInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -48,8 +48,9 @@ final class RegistrationControllerTest extends TestCase
 
         $response = $this->controller->register($request, $service);
 
-        $this->assertInstanceOf(JsonResponse::class, $response);
-        $this->assertEquals(Response::HTTP_CREATED, $response->getStatusCode());
+        $this->assertIsArray($response);
+        $this->assertTrue($response['success']);
+        $this->assertSame(Response::HTTP_CREATED, $response['status']);
     }
 
     public function testRegisterReturnsBadRequestOnInvalidJson(): void
@@ -58,9 +59,8 @@ final class RegistrationControllerTest extends TestCase
         $service = $this->createMock(RegistrationServiceInterface::class);
         $service->expects($this->never())->method('register');
 
-        $response = $this->controller->register($request, $service);
-
-        $this->assertEquals(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
+        $this->expectException(InvalidJsonBodyException::class);
+        $this->controller->register($request, $service);
     }
 
     public function testRegisterReturnsServiceErrorPayload(): void
@@ -78,9 +78,9 @@ final class RegistrationControllerTest extends TestCase
 
         $response = $this->controller->register($request, $service);
 
-        $this->assertEquals(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
-        $data = json_decode((string) $response->getContent(), true);
-        $this->assertFalse($data['success']);
-        $this->assertArrayHasKey('errors', $data);
+        $this->assertIsArray($response);
+        $this->assertSame(Response::HTTP_BAD_REQUEST, $response['status']);
+        $this->assertFalse($response['success']);
+        $this->assertArrayHasKey('errors', $response);
     }
 }
