@@ -32,7 +32,6 @@ use Throwable;
  */
 final class GameLifecycleController extends AbstractController
 {
-    #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'], format: 'json')]
     /**
      * Starts a game with provided settings.
      *
@@ -42,6 +41,7 @@ final class GameLifecycleController extends AbstractController
      *
      * @return Response
      */
+    #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'], format: 'json')]
     public function start(#[AttributeMapEntity(id: 'gameId')] Game $game, GameStartServiceInterface $gameStartService, #[MapRequestPayload] StartGameRequest $dto): Response
     {
         try {
@@ -53,7 +53,6 @@ final class GameLifecycleController extends AbstractController
         return $this->json($game, context: ['groups' => 'game:read']);
     }
 
-    #[Route('/api/game/settings', name: 'app_game_settings_create', methods: ['POST'], format: 'json')]
     /**
      * @param GameRoomServiceInterface     $gameRoomService
      * @param GameSettingsServiceInterface $gameSettingsService
@@ -62,6 +61,7 @@ final class GameLifecycleController extends AbstractController
      *
      * @return Response
      */
+    #[Route('/api/game/settings', name: 'app_game_settings_create', methods: ['POST'], format: 'json')]
     public function createSettings(GameRoomServiceInterface $gameRoomService, GameSettingsServiceInterface $gameSettingsService, GameServiceInterface $gameService, #[MapRequestPayload] GameSettingsRequest $dto): Response
     {
         $game = $gameRoomService->createGame();
@@ -77,7 +77,6 @@ final class GameLifecycleController extends AbstractController
         return $this->json($gameDto, Response::HTTP_CREATED);
     }
 
-    #[Route('/api/game/{gameId}/settings', name: 'app_game_settings', methods: ['PATCH'], format: 'json')]
     /**
      * @param Game                         $game
      * @param GameSettingsServiceInterface $gameSettingsService
@@ -86,6 +85,7 @@ final class GameLifecycleController extends AbstractController
      *
      * @return Response
      */
+    #[Route('/api/game/{gameId}/settings', name: 'app_game_settings', methods: ['PATCH'], format: 'json')]
     public function updateSettings(#[AttributeMapEntity(id: 'gameId')] Game $game, GameSettingsServiceInterface $gameSettingsService, GameServiceInterface $gameService, #[MapRequestPayload] GameSettingsRequest $dto): Response
     {
         try {
@@ -99,13 +99,13 @@ final class GameLifecycleController extends AbstractController
         return $this->json($gameDto);
     }
 
-    #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['GET'], format: 'json')]
     /**
      * @param Game                       $game
      * @param GameFinishServiceInterface $gameFinishService
      *
      * @return Response
      */
+    #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['GET'], format: 'json')]
     public function finished(#[AttributeMapEntity(id: 'gameId')] Game $game, GameFinishServiceInterface $gameFinishService): Response
     {
         try {
@@ -120,27 +120,27 @@ final class GameLifecycleController extends AbstractController
         return $this->json($result, context: ['groups' => 'game:read']);
     }
 
-    #[Route('/api/game/{gameId}', name: 'app_game_state', methods: ['GET'], format: 'json')]
     /**
      * @param Game                 $game
      * @param GameServiceInterface $gameService
      *
      * @return JsonResponse
      */
+    #[Route('/api/game/{gameId}', name: 'app_game_state', methods: ['GET'], format: 'json')]
     public function getGameState(#[AttributeMapEntity(id: 'gameId')] Game $game, GameServiceInterface $gameService): JsonResponse
     {
         $gameDto = $gameService->createGameDto($game);
 
         return $this->json($gameDto);
     }
-    
-    #[Route('/api/game/{gameId}/abort', name: 'app_game_abort', methods: ['PATCH'], format: 'json')]
+
     /**
      * @param Game                      $game
      * @param GameAbortServiceInterface $gameAbortService
      *
      * @return JsonResponse
      */
+    #[Route('/api/game/{gameId}/abort', name: 'app_game_abort', methods: ['PATCH'], format: 'json')]
     public function abortGame(#[AttributeMapEntity(id: 'gameId')] Game $game, GameAbortServiceInterface $gameAbortService): Response
     {
         $gameAbortService->abortGame($game);

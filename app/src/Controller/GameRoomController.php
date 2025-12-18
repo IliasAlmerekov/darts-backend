@@ -48,7 +48,6 @@ final class GameRoomController extends AbstractController
     ) {
     }
 
-    #[Route(path: '/api/room/create', name: 'room_create', methods: ['POST'], format: 'json')]
     /**
      * Creates a game with optional preselected players.
      *
@@ -56,6 +55,7 @@ final class GameRoomController extends AbstractController
      *
      * @return Response
      */
+    #[Route(path: '/api/room/create', name: 'room_create', methods: ['POST'], format: 'json')]
     public function roomCreateApi(#[MapRequestPayload] RoomCreateRequest $dto): Response
     {
         $game = $this->gameRoomService->createGameWithPreviousPlayers(
@@ -67,7 +67,6 @@ final class GameRoomController extends AbstractController
         return $this->json(['success' => true, 'gameId' => $game->getGameId()]);
     }
 
-    #[Route(path: '/api/room/{id}', name: 'room_player_leave', methods: ['DELETE'], format: 'json')]
     /**
      * Removes a player from the room.
      *
@@ -77,6 +76,7 @@ final class GameRoomController extends AbstractController
      *
      * @return Response
      */
+    #[Route(path: '/api/room/{id}', name: 'room_player_leave', methods: ['DELETE'], format: 'json')]
     public function playerLeave(int $id, #[MapQueryParameter] ?int $playerId = null, #[MapRequestPayload] ?PlayerIdPayload $payload = null): Response
     {
         $user = $this->getUser();
@@ -113,7 +113,6 @@ final class GameRoomController extends AbstractController
         );
     }
 
-    #[Route(path: '/api/room/{id}/positions', name: 'room_update_player_positions', methods: ['POST'], format: 'json')]
     /**
      * Updates the positions of players in a room.
      *
@@ -122,6 +121,7 @@ final class GameRoomController extends AbstractController
      *
      * @return Response
      */
+    #[Route(path: '/api/room/{id}/positions', name: 'room_update_player_positions', methods: ['POST'], format: 'json')]
     public function updatePlayerOrder(int $id, #[MapRequestPayload] UpdatePlayerOrderRequest $dto): Response
     {
         $game = $this->gameRoomService->findGameById($id);
@@ -134,7 +134,6 @@ final class GameRoomController extends AbstractController
         return $this->json(['success' => true]);
     }
 
-    #[Route(path: '/api/room/{id}/stream', name: 'room_stream', methods: ['GET'])]
     /**
      * Streams SSE updates for a room.
      *
@@ -143,6 +142,7 @@ final class GameRoomController extends AbstractController
      *
      * @return StreamedResponse
      */
+    #[Route(path: '/api/room/{id}/stream', name: 'room_stream', methods: ['GET'])]
     public function roomStream(int $id, Request $request): StreamedResponse
     {
         if ($request->hasSession()) {
@@ -157,7 +157,6 @@ final class GameRoomController extends AbstractController
         return $this->sseStreamService->createPlayerStream($id);
     }
 
-    #[Route(path: '/api/room/{id}/rematch', name: 'room_rematch', methods: ['POST'])]
     /**
      * Creates a rematch for a finished game.
      *
@@ -165,6 +164,7 @@ final class GameRoomController extends AbstractController
      *
      * @return Response
      */
+    #[Route(path: '/api/room/{id}/rematch', name: 'room_rematch', methods: ['POST'])]
     public function rematch(int $id): Response
     {
         $result = $this->rematchService->createRematch($id);

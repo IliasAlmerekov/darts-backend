@@ -25,7 +25,6 @@ use Symfony\Component\Routing\Attribute\Route;
  */
 final class GameThrowController extends AbstractController
 {
-    #[Route('/api/game/{gameId}/throw', name: 'app_game_throw', methods: ['POST'], format: 'json')]
     /**
      * @param Game                      $game
      * @param GameThrowServiceInterface $gameThrowService
@@ -34,6 +33,7 @@ final class GameThrowController extends AbstractController
      *
      * @return Response
      */
+    #[Route('/api/game/{gameId}/throw', name: 'app_game_throw', methods: ['POST'], format: 'json')]
     public function throw(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameServiceInterface $gameService, #[MapRequestPayload] ThrowRequest $dto): Response
     {
         try {
@@ -47,7 +47,6 @@ final class GameThrowController extends AbstractController
         return $this->json($gameDto);
     }
 
-    #[Route('/api/game/{gameId}/throw', name: 'app_game_throw_undo', methods: ['DELETE'], format: 'json')]
     /**
      * @param Game                      $game
      * @param GameThrowServiceInterface $gameThrowService
@@ -55,6 +54,7 @@ final class GameThrowController extends AbstractController
      *
      * @return Response
      */
+    #[Route('/api/game/{gameId}/throw', name: 'app_game_throw_undo', methods: ['DELETE'], format: 'json')]
     public function undoThrow(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameServiceInterface $gameService): Response
     {
         $gameThrowService->undoLastThrow($game);

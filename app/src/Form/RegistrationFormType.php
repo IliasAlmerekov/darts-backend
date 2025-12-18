@@ -19,13 +19,13 @@ use Symfony\Component\Validator\Constraints\NotBlank;
  */
 final class RegistrationFormType extends AbstractType
 {
-    #[\Override]
     /**
      * @param FormBuilderInterface $builder
      * @param array<string, mixed> $options
      *
      * @return void
      */
+    #[\Override]
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
@@ -58,12 +58,12 @@ final class RegistrationFormType extends AbstractType
             ]);
     }
 
-    #[\Override]
     /**
      * @param OptionsResolver $resolver
      *
      * @return void
      */
+    #[\Override]
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([

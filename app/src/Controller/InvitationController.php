@@ -43,7 +43,6 @@ final class InvitationController extends AbstractController
         return $this->json($payload, $status, ['X-Accel-Buffering' => 'no']);
     }
 
-    #[Route('api/invite/join/{uuid}', name: 'join_invitation', format: 'json')]
     /**
      * Joins an invitation by UUID and stores it in session.
      *
@@ -52,6 +51,7 @@ final class InvitationController extends AbstractController
      *
      * @return Response
      */
+    #[Route('api/invite/join/{uuid}', name: 'join_invitation', format: 'json')]
     public function joinInvitation(#[MapEntity(mapping: ['uuid' => 'uuid'])] Invitation $invitation, SessionInterface $session): Response
     {
         $session->remove('invitation_uuid');
