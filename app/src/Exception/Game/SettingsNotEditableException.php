@@ -7,8 +7,14 @@ namespace App\Exception\Game;
 use App\Exception\ApiHttpException;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Thrown when attempting to update settings in an invalid game state.
+ */
 final class SettingsNotEditableException extends ApiHttpException
 {
+    /**
+     * @return void
+     */
     public function __construct()
     {
         parent::__construct(
@@ -18,4 +24,3 @@ final class SettingsNotEditableException extends ApiHttpException
         );
     }
 }
-

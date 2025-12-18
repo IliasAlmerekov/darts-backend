@@ -9,6 +9,9 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Dto\GameOverviewItemDto;
+use App\Dto\GameOverviewResponseDto;
+use App\Dto\PlayerStatsResponseDto;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Game\GameFinishServiceInterface;
@@ -44,23 +47,23 @@ final class GameStatsController extends AbstractController
         $items = [];
         foreach ($games as $game) {
             $stats = $gameFinishService->getGameStats($game);
-            $items[] = [
-                'id' => $stats['gameId'],
-                'date' => $stats['date']?->format(DateTimeInterface::ATOM),
-                'finishedAt' => $stats['finishedAt']?->format(DateTimeInterface::ATOM),
-                'playersCount' => count($stats['finishedPlayers']),
-                'winnerName' => $stats['winner']['username'] ?? null,
-                'winnerId' => $stats['winner']['id'] ?? null,
-                'winnerRounds' => $stats['winnerRoundsPlayed'],
-            ];
+            $items[] = new GameOverviewItemDto(
+                id: $stats['gameId'],
+                date: $stats['date']?->format(DateTimeInterface::ATOM),
+                finishedAt: $stats['finishedAt']?->format(DateTimeInterface::ATOM),
+                playersCount: count($stats['finishedPlayers']),
+                winnerName: $stats['winner']['username'] ?? null,
+                winnerId: $stats['winner']['id'] ?? null,
+                winnerRounds: $stats['winnerRoundsPlayed'],
+            );
         }
 
-        return $this->json([
-            'limit' => $limit,
-            'offset' => $offset,
-            'items' => $items,
-            'total' => $gameRepository->countFinishedGames(),
-        ]);
+        return $this->json(new GameOverviewResponseDto(
+            limit: $limit,
+            offset: $offset,
+            total: $gameRepository->countFinishedGames(),
+            items: $items,
+        ));
     }
 
     /**
@@ -82,12 +85,15 @@ final class GameStatsController extends AbstractController
         [$sortField, $sortDirection] = $this->parseSort($sort);
         $stats = $gameStatisticsService->getPlayerStats($limit, $offset, $sortField, $sortDirection);
 
-        return $this->json([
-            'limit' => $limit,
-            'offset' => $offset,
-            'total' => $roundThrowsRepository->countPlayersWithFinishedRounds(),
-            'items' => $stats,
-        ], context: ['groups' => 'stats:read']);
+        return $this->json(
+            new PlayerStatsResponseDto(
+                limit: $limit,
+                offset: $offset,
+                total: $roundThrowsRepository->countPlayersWithFinishedRounds(),
+                items: $stats
+            ),
+            context: ['groups' => 'stats:read']
+        );
     }
 
     /**

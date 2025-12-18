@@ -7,8 +7,14 @@ namespace App\Exception\Game;
 use App\Exception\ApiHttpException;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Thrown when an unsupported out mode is provided.
+ */
 final class InvalidOutModeException extends ApiHttpException
 {
+    /**
+     * @return void
+     */
     public function __construct()
     {
         parent::__construct(
@@ -18,4 +24,3 @@ final class InvalidOutModeException extends ApiHttpException
         );
     }
 }
-

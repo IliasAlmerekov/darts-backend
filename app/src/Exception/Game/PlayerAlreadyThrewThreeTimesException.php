@@ -7,8 +7,14 @@ namespace App\Exception\Game;
 use App\Exception\ApiHttpException;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Thrown when a player attempts to throw more than 3 times in a round.
+ */
 final class PlayerAlreadyThrewThreeTimesException extends ApiHttpException
 {
+    /**
+     * @return void
+     */
     public function __construct()
     {
         parent::__construct(
@@ -18,4 +24,3 @@ final class PlayerAlreadyThrewThreeTimesException extends ApiHttpException
         );
     }
 }
-
