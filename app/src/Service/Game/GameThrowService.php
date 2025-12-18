@@ -353,6 +353,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         $nextRound->setGame($game);
         $nextRound->setStartedAt(new DateTime());
         $game->addRound($nextRound);
+        $this->entityManager->persist($nextRound);
         $this->entityManager->flush();
     }
 }

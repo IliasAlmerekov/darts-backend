@@ -90,6 +90,24 @@ final class GameServiceTest extends TestCase
 
         $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
 
+        $roundThrowsRepository->method('count')
+            ->willReturnCallback(static function (array $criteria) use ($round, $user1): int {
+                if (($criteria['round'] ?? null) === $round && ($criteria['player'] ?? null) === $user1) {
+                    return 2;
+                }
+
+                return 0;
+            });
+
+        $roundThrowsRepository->method('findOneBy')
+            ->willReturnCallback(static function (array $criteria, ?array $orderBy = null) use ($round, $user1, $throw2): ?object {
+                if (($criteria['round'] ?? null) === $round && ($criteria['player'] ?? null) === $user1 && ['throwNumber' => 'DESC'] === $orderBy) {
+                    return $throw2;
+                }
+
+                return null;
+            });
+
         $roundThrowsRepository->method('findBy')
             ->willReturnCallback(
                 static function (
@@ -116,6 +134,77 @@ final class GameServiceTest extends TestCase
         self::assertTrue($firstPlayer->isActive);
         self::assertCount(2, $firstPlayer->currentRoundThrows);
         self::assertFalse($firstPlayer->isBust);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    public function testCreateGameDtoUsesLastThrowBustWhenNoThrowsInCurrentRound(): void
+    {
+        $game = new Game();
+        $this->setPrivateProperty($game, 'gameId', 10);
+        $game->setStatus(GameStatus::Started);
+        $game->setRound(2);
+        $game->setStartScore(301);
+
+        $round1 = new Round();
+        $round1->setRoundNumber(1);
+        $round1->setGame($game);
+
+        $user1 = new User()->setUsername('Hugh');
+        $this->setPrivateProperty($user1, 'id', 9);
+        $p1 = new GamePlayers()
+            ->setPlayer($user1)
+            ->setPosition(1)
+            ->setScore(26);
+        $game->addGamePlayer($p1);
+
+        $bustThrow = new RoundThrows()
+            ->setRound($round1)
+            ->setPlayer($user1)
+            ->setThrowNumber(3)
+            ->setValue(60)
+            ->setIsBust(true)
+            ->setIsDouble(false)
+            ->setIsTriple(true);
+
+        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
+        $roundRepository->method('findOneBy')
+            ->willReturnCallback(static function (array $criteria) use ($game): ?Round {
+                // current round (2) is not created yet
+                if (($criteria['game'] ?? null) === $game && ($criteria['roundNumber'] ?? null) === 2) {
+                    return null;
+                }
+
+                return null;
+            });
+        $roundRepository->method('findBy')
+            ->willReturn([$round1]);
+
+        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository->method('findLatestForGameAndPlayer')
+            ->willReturnCallback(static function (int $gameId, int $playerId) use ($bustThrow): ?RoundThrows {
+                if (10 === $gameId && 9 === $playerId) {
+                    return $bustThrow;
+                }
+
+                return null;
+            });
+        $roundThrowsRepository->method('findBy')
+            ->willReturnCallback(static function (array $criteria) use ($round1, $user1, $bustThrow): array {
+                if (($criteria['round'] ?? null) === $round1 && ($criteria['player'] ?? null) === $user1) {
+                    return [$bustThrow];
+                }
+
+                return [];
+            });
+
+        $service = new GameService($roundRepository, $roundThrowsRepository);
+        $dto = $service->createGameDto($game);
+
+        self::assertSame(2, $dto->currentRound);
+        self::assertCount(1, $dto->players);
+        self::assertTrue($dto->players[0]->isBust);
     }
 
     /**

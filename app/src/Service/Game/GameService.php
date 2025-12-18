@@ -80,17 +80,17 @@ final readonly class GameService implements GameServiceInterface
             $throwsCount = 0;
             $hasBusted = false;
             if ($roundEntity) {
-                $throws = $this->roundThrowsRepository->findBy([
+                $throwsCount = $this->roundThrowsRepository->count([
                     'round' => $roundEntity,
                     'player' => $user,
                 ]);
-                $throwsCount = count($throws);
                 // Check: War sein letzter Wurf ein Bust?
                 if ($throwsCount > 0) {
-                    $lastThrow = end($throws);
-                    if (false !== $lastThrow) {
-                        $hasBusted = $lastThrow->isBust();
-                    }
+                    $lastThrow = $this->roundThrowsRepository->findOneBy(
+                        ['round' => $roundEntity, 'player' => $user],
+                        ['throwNumber' => 'DESC']
+                    );
+                    $hasBusted = $lastThrow instanceof \App\Entity\RoundThrows && $lastThrow->isBust();
                 }
             }
 
@@ -176,6 +176,19 @@ final readonly class GameService implements GameServiceInterface
                     $lastThrow = end($throws);
                     if (false !== $lastThrow) {
                         $isBust = $lastThrow->isBust();
+                    }
+                }
+            }
+
+            // Wenn es in der aktuellen Runde noch keine Würfe gibt (oder die Runde-Entity noch nicht existiert),
+            // nehmen wir den letzten Wurf des Spielers insgesamt. Das hilft dem Client, den letzten Bust-Status
+            // direkt nach einem Bust bzw. beim Round-Wechsel korrekt anzuzeigen.
+            if (0 === $throwsThisRound && $isPlayerActive) {
+                $gameId = $game->getGameId();
+                if (null !== $gameId) {
+                    $latestThrowForPlayer = $this->roundThrowsRepository->findLatestForGameAndPlayer($gameId, $userId);
+                    if ($latestThrowForPlayer instanceof \App\Entity\RoundThrows) {
+                        $isBust = $latestThrowForPlayer->isBust();
                     }
                 }
             }
