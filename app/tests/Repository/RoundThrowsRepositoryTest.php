@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -93,7 +98,7 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
         $totals = $this->repo->getTotalScoreForGame($game->getGameId());
 
         $averages = array_map(
-            static fn (array $row): array => [
+            static fn(array $row): array => [
                 'playerId' => (int) $row['playerId'],
                 'roundNumber' => (int) $row['roundNumber'],
                 'average' => (float) $row['average'],
@@ -101,7 +106,7 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
             $averages
         );
 
-        usort($averages, static fn (array $a, array $b): int => [$a['roundNumber'], $a['playerId']] <=> [$b['roundNumber'], $b['playerId']]);
+        usort($averages, static fn(array $a, array $b): int => [$a['roundNumber'], $a['playerId']] <=> [$b['roundNumber'], $b['playerId']]);
 
         self::assertSame([
             ['playerId' => $player1->getId(), 'roundNumber' => 1, 'average' => 15.0],

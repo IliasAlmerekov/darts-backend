@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -25,17 +30,17 @@ interface PlayerManagementServiceInterface
     /**
      * Add a player to a game.
      *
-     * @param int $gameId   The game ID
-     * @param int $playerId The player ID to add
+     * @param int      $gameId   The game ID
+     * @param int      $playerId The player ID to add
+     * @param int|null $position Optional explicit position
      *
      * @return GamePlayers The created GamePlayers entity
      *
      * @throws ORMException
      *
      * @psalm-suppress PossiblyUnusedReturnValue
-     *
      */
-    public function addPlayer(int $gameId, int $playerId): GamePlayers;
+    public function addPlayer(int $gameId, int $playerId, ?int $position = null): GamePlayers;
 
     /**
      * Copy players from one game to another.
@@ -50,4 +55,14 @@ interface PlayerManagementServiceInterface
      * @return void
      */
     public function copyPlayers(int $fromGameId, int $toGameId, ?array $playerIds = null): void;
+
+    /**
+     * Update player positions for a game.
+     *
+     * @param int                                           $gameId
+     * @param list<array{playerId:int, position:int}>|array $positions
+     *
+     * @return void
+     */
+    public function updatePlayerPositions(int $gameId, array $positions): void;
 }

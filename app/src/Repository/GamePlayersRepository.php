@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -33,13 +38,23 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
      */
     public function findPlayersWithUserInfo(int $gameId): array
     {
-        return $this->createQueryBuilder('gamePlayer')
-            ->select('u.id as id', 'u.username as name')
+        $players = $this->createQueryBuilder('gamePlayer')
+            ->select('u.id as id', 'u.username as name', 'gamePlayer.position as position')
             ->innerJoin('gamePlayer.player', 'u')
             ->andWhere('gamePlayer.game = :gameId')
             ->setParameter('gameId', $gameId)
+            ->orderBy('gamePlayer.position', 'ASC')
+            ->addOrderBy('u.id', 'ASC')
             ->getQuery()
-            ->getResult();
+            ->getArrayResult();
+
+        return array_map(static function (array $player): array {
+            return [
+                'id' => isset($player['id']) ? (int) $player['id'] : null,
+                'name' => $player['name'] ?? null,
+                'position' => isset($player['position']) ? (int) $player['position'] : null,
+            ];
+        }, $players);
     }
 
     /**
@@ -69,6 +84,8 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
         return $this->createQueryBuilder('gp')
             ->andWhere('gp.game = :gameId')
             ->setParameter('gameId', $gameId)
+            ->orderBy('gp.position', 'ASC')
+            ->addOrderBy('gp.gamePlayerId', 'ASC')
             ->getQuery()
             ->getResult();
     }

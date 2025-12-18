@@ -11,6 +11,7 @@ namespace App\Dto;
 
 use Symfony\Component\Serializer\Attribute\SerializedName;
 use Symfony\Component\Validator\Constraints as Assert;
+use Webmozart\Assert\Assert as WebmozartAssert;
 
 /**
  * @psalm-immutable
@@ -30,12 +31,11 @@ final class StartGameRequest
     /**
      * @var list<int>|null
      */
-    #[Assert\When(expression: 'this.playerPositions !== null', constraints: [
-        new Assert\Count(min: 2, max: 10),
-        new Assert\All([
-            new Assert\Type('integer'),
-            new Assert\Positive(),
-        ]),
+    #[Assert\Type('array')]
+    #[Assert\Count(min: 2, max: 10)]
+    #[Assert\All([
+        new Assert\Type('integer'),
+        new Assert\Positive(),
     ])]
     public ?array $playerPositions = null;
 }

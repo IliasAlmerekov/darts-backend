@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -39,7 +44,7 @@ final class UserRepositoryTest extends KernelTestCase
 
         $result = $this->repository->findByIds([$user1->getId(), $user3->getId()]);
 
-        $ids = array_map(static fn (User $u): int => $u->getId(), $result);
+        $ids = array_map(static fn(User $u): int => $u->getId(), $result);
         sort($ids);
 
         self::assertSame([$user1->getId(), $user3->getId()], $ids);
@@ -69,7 +74,7 @@ final class UserRepositoryTest extends KernelTestCase
 
     public function testUpgradePasswordThrowsOnUnsupportedUser(): void
     {
-        $unsupportedUser = new class () implements PasswordAuthenticatedUserInterface {
+        $unsupportedUser = new class() implements PasswordAuthenticatedUserInterface {
             public function getPassword(): ?string
             {
                 return null;

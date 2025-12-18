@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -64,6 +69,30 @@ final class GameSetupServiceTest extends TestCase
 
         self::assertSame(1, $playerA->getPosition());
         self::assertSame(2, $playerB->getPosition());
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    public function testApplyInitialScoresAndPositionsKeepsExistingPositions(): void
+    {
+        $game = new Game();
+        $game->setStartScore(401);
+
+        $playerA = $this->createGamePlayer(30)->setPosition(3);
+        $playerB = $this->createGamePlayer(40)->setPosition(1);
+
+        $game->addGamePlayer($playerA);
+        $game->addGamePlayer($playerB);
+
+        $service = new GameSetupService();
+        $service->applyInitialScoresAndPositions($game);
+
+        self::assertSame(401, $playerA->getScore());
+        self::assertSame(401, $playerB->getScore());
+
+        self::assertSame(3, $playerA->getPosition());
+        self::assertSame(1, $playerB->getPosition());
     }
 
     /**

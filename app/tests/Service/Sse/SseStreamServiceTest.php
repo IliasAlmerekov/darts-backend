@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -50,8 +55,8 @@ final class SseStreamServiceTest extends TestCase
             ->method('getPlayersWithUserInfo')
             ->with(42)
             ->willReturn([
-                ['id' => 1, 'name' => 'u1'],
-                ['id' => 2, 'name' => 'u2'],
+                ['id' => 1, 'name' => 'u1', 'position' => 2],
+                ['id' => 2, 'name' => 'u2', 'position' => 1],
             ]);
 
         $this->roundThrowsRepository
@@ -89,6 +94,7 @@ final class SseStreamServiceTest extends TestCase
 
         self::assertStringContainsString('event: players', $output);
         self::assertStringContainsString('"count":2', $output);
+        self::assertStringContainsString('"position":1', $output);
         self::assertStringContainsString('event: throw', $output);
         self::assertStringContainsString('"id":99', $output);
     }

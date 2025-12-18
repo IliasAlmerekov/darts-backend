@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -31,6 +36,7 @@ final class GameRoomServiceTest extends TestCase
     {
         $this->gameRepository = $this->createMock(GameRepositoryInterface::class);
         $this->gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $this->gamePlayersRepository->method('findBy')->willReturn([]);
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
         $this->playerManagementService = new PlayerManagementService(
             $this->gamePlayersRepository,
