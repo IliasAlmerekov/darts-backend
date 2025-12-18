@@ -20,8 +20,8 @@ use Symfony\Component\Validator\Constraints\NotBlank;
 final class RegistrationFormType extends AbstractType
 {
     /**
-     * @param FormBuilderInterface       $builder
-     * @param array<array-key, mixed>    $options
+     * @param FormBuilderInterface    $builder
+     * @param array<array-key, mixed> $options
      *
      * @return void
      */

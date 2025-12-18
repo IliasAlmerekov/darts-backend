@@ -13,13 +13,15 @@ use Symfony\Component\Serializer\Annotation\Groups;
 
 /**
  * Response DTO for aggregated player stats.
+ *
+ * @psalm-suppress PossiblyUnusedProperty Used via Symfony Serializer
  */
 final class PlayerStatsResponseDto
 {
     /**
-     * @param int                 $limit
-     * @param int                 $offset
-     * @param int                 $total
+     * @param int                  $limit
+     * @param int                  $offset
+     * @param int                  $total
      * @param list<PlayerStatsDto> $items
      */
     public function __construct(
@@ -34,4 +36,3 @@ final class PlayerStatsResponseDto
     ) {
     }
 }
-

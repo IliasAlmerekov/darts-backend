@@ -11,6 +11,7 @@ namespace App\Controller;
 
 use App\Dto\GameOverviewItemDto;
 use App\Dto\GameOverviewResponseDto;
+use App\Dto\PlayerStatsDto;
 use App\Dto\PlayerStatsResponseDto;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
@@ -84,13 +85,15 @@ final class GameStatsController extends AbstractController
         $offset = max(0, $offset);
         [$sortField, $sortDirection] = $this->parseSort($sort);
         $stats = $gameStatisticsService->getPlayerStats($limit, $offset, $sortField, $sortDirection);
+        /** @var list<PlayerStatsDto> $items */
+        $items = array_values($stats);
 
         return $this->json(
             new PlayerStatsResponseDto(
                 limit: $limit,
                 offset: $offset,
                 total: $roundThrowsRepository->countPlayersWithFinishedRounds(),
-                items: $stats
+                items: $items
             ),
             context: ['groups' => 'stats:read']
         );

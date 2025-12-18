@@ -11,6 +11,8 @@ namespace App\Dto;
 
 /**
  * Item DTO for finished games overview.
+ *
+ * @psalm-suppress PossiblyUnusedProperty Used via Symfony Serializer
  */
 final class GameOverviewItemDto
 {
@@ -34,4 +36,3 @@ final class GameOverviewItemDto
     ) {
     }
 }
-

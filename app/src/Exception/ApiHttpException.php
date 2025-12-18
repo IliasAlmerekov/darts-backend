@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Exception;
 
-use Override;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Throwable;
 
@@ -14,12 +13,12 @@ use Throwable;
 class ApiHttpException extends HttpException implements ApiExceptionInterface
 {
     /**
-     * @param string                 $errorCode
-     * @param int                    $statusCode
-     * @param string                 $message
-     * @param Throwable|null         $previous
-     * @param array<string, string>  $headers
-     * @param int                    $code
+     * @param string                $errorCode
+     * @param int                   $statusCode
+     * @param string                $message
+     * @param Throwable|null        $previous
+     * @param array<string, string> $headers
+     * @param int                   $code
      */
     public function __construct(
         private readonly string $errorCode,
@@ -35,7 +34,7 @@ class ApiHttpException extends HttpException implements ApiExceptionInterface
     /**
      * @return string
      */
-    #[Override]
+    #[\Override]
     public function getErrorCode(): string
     {
         return $this->errorCode;
