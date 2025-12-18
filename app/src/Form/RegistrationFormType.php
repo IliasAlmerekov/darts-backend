@@ -21,7 +21,7 @@ final class RegistrationFormType extends AbstractType
 {
     /**
      * @param FormBuilderInterface $builder
-     * @param array<string, mixed> $options
+     * @param array<array-key, mixed> $options
      *
      * @return void
      */

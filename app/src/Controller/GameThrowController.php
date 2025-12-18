@@ -13,7 +13,6 @@ use App\Dto\ThrowRequest;
 use App\Entity\Game;
 use App\Service\Game\GameServiceInterface;
 use App\Service\Game\GameThrowServiceInterface;
-use InvalidArgumentException;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity as AttributeMapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -36,11 +35,7 @@ final class GameThrowController extends AbstractController
     #[Route('/api/game/{gameId}/throw', name: 'app_game_throw', methods: ['POST'], format: 'json')]
     public function throw(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameServiceInterface $gameService, #[MapRequestPayload] ThrowRequest $dto): Response
     {
-        try {
-            $gameThrowService->recordThrow($game, $dto);
-        } catch (InvalidArgumentException $e) {
-            return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
-        }
+        $gameThrowService->recordThrow($game, $dto);
 
         $gameDto = $gameService->createGameDto($game);
 

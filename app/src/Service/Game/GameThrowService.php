@@ -13,6 +13,8 @@ use App\Dto\ThrowRequest;
 use App\Entity\Game;
 use App\Entity\Round;
 use App\Entity\RoundThrows;
+use App\Exception\Game\PlayerAlreadyThrewThreeTimesException;
+use App\Exception\Game\PlayerNotFoundInGameException;
 use App\Enum\GameStatus;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\RoundRepositoryInterface;
@@ -20,7 +22,6 @@ use App\Repository\RoundThrowsRepositoryInterface;
 use DateTime;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
-use InvalidArgumentException;
 use Override;
 
 /**
@@ -57,7 +58,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             'player' => $dto->playerId,
         ]);
         if (null === $player) {
-            throw new InvalidArgumentException('Player not found in this game');
+            throw new PlayerNotFoundInGameException();
         }
 
         $round = $this->getCurrentRound($game);
@@ -66,7 +67,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             'player' => $player->getPlayer(),
         ]);
         if ($playerThrowsThisRound >= 3) {
-            throw new InvalidArgumentException('This player has already thrown 3 times in the current round.');
+            throw new PlayerAlreadyThrewThreeTimesException();
         }
 
         $throwNumber = $playerThrowsThisRound + 1;

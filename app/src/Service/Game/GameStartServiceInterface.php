@@ -6,7 +6,7 @@ namespace App\Service\Game;
 
 use App\Dto\StartGameRequest;
 use App\Entity\Game;
-use InvalidArgumentException;
+use App\Exception\ApiExceptionInterface;
 
 /**
  * Interface for game start service operations.
@@ -19,7 +19,7 @@ interface GameStartServiceInterface
      * @param Game             $game The game to start
      * @param StartGameRequest $dto  Game start configuration
      *
-     * @throws InvalidArgumentException If game cannot be started (e.g., not enough players)
+     * @throws ApiExceptionInterface If game cannot be started (e.g., not enough players)
      *
      * @return void
      */

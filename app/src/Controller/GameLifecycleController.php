@@ -18,14 +18,12 @@ use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Game\GameServiceInterface;
 use App\Service\Game\GameSettingsServiceInterface;
 use App\Service\Game\GameStartServiceInterface;
-use InvalidArgumentException;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity as AttributeMapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
-use Throwable;
 
 /**
  * Lifecycle endpoints for games: start, settings, finish, state.
@@ -44,11 +42,7 @@ final class GameLifecycleController extends AbstractController
     #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'], format: 'json')]
     public function start(#[AttributeMapEntity(id: 'gameId')] Game $game, GameStartServiceInterface $gameStartService, #[MapRequestPayload] StartGameRequest $dto): Response
     {
-        try {
-            $gameStartService->start($game, $dto);
-        } catch (InvalidArgumentException $e) {
-            return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
-        }
+        $gameStartService->start($game, $dto);
 
         return $this->json($game, context: ['groups' => 'game:read']);
     }
@@ -66,11 +60,7 @@ final class GameLifecycleController extends AbstractController
     {
         $game = $gameRoomService->createGame();
 
-        try {
-            $gameSettingsService->updateSettings($game, $dto);
-        } catch (InvalidArgumentException $e) {
-            return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
-        }
+        $gameSettingsService->updateSettings($game, $dto);
 
         $gameDto = $gameService->createGameDto($game);
 
@@ -88,11 +78,7 @@ final class GameLifecycleController extends AbstractController
     #[Route('/api/game/{gameId}/settings', name: 'app_game_settings', methods: ['PATCH'], format: 'json')]
     public function updateSettings(#[AttributeMapEntity(id: 'gameId')] Game $game, GameSettingsServiceInterface $gameSettingsService, GameServiceInterface $gameService, #[MapRequestPayload] GameSettingsRequest $dto): Response
     {
-        try {
-            $gameSettingsService->updateSettings($game, $dto);
-        } catch (InvalidArgumentException $e) {
-            return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
-        }
+        $gameSettingsService->updateSettings($game, $dto);
 
         $gameDto = $gameService->createGameDto($game);
 
@@ -108,14 +94,7 @@ final class GameLifecycleController extends AbstractController
     #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['GET'], format: 'json')]
     public function finished(#[AttributeMapEntity(id: 'gameId')] Game $game, GameFinishServiceInterface $gameFinishService): Response
     {
-        try {
-            $result = $gameFinishService->finishGame($game);
-        } catch (Throwable $e) {
-            return $this->json(
-                ['error' => 'An error occurred: '.$e->getMessage()],
-                Response::HTTP_INTERNAL_SERVER_ERROR
-            );
-        }
+        $result = $gameFinishService->finishGame($game);
 
         return $this->json($result, context: ['groups' => 'game:read']);
     }

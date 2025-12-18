@@ -12,10 +12,11 @@ namespace App\Service\Game;
 use App\Dto\StartGameRequest;
 use App\Entity\Game;
 use App\Entity\Round;
+use App\Exception\Game\GameMustHaveValidPlayerCountException;
+use App\Exception\Game\PlayerPositionsCountMismatchException;
 use App\Enum\GameStatus;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
-use InvalidArgumentException;
 use Override;
 
 /**
@@ -80,11 +81,11 @@ final readonly class GameStartService implements GameStartServiceInterface
     {
         $count = $game->getGamePlayers()->count();
         if ($count < 2 || $count > 10) {
-            throw new InvalidArgumentException('Game must have between 2 and 10 players to start.');
+            throw new GameMustHaveValidPlayerCountException();
         }
 
         if (null !== $dto->playerPositions && count($dto->playerPositions) !== $count) {
-            throw new InvalidArgumentException('Player positions count must match players in game.');
+            throw new PlayerPositionsCountMismatchException();
         }
     }
 }
