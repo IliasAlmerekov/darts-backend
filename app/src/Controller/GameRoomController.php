@@ -11,8 +11,13 @@ namespace App\Controller;
 
 use App\Dto\PlayerIdPayload;
 use App\Dto\RoomCreateRequest;
+use App\Dto\SuccessMessageDto;
 use App\Dto\UpdatePlayerOrderRequest;
 use App\Entity\User;
+use App\Exception\Game\GameNotFoundException;
+use App\Exception\Game\PlayerNotFoundInGameException;
+use App\Exception\Request\PlayerIdRequiredException;
+use App\Http\Attribute\ApiResponse;
 use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Game\RematchServiceInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
@@ -48,15 +53,16 @@ final class GameRoomController extends AbstractController
     ) {
     }
 
-    #[Route(path: '/api/room/create', name: 'room_create', methods: ['POST'], format: 'json')]
     /**
      * Creates a game with optional preselected players.
      *
      * @param RoomCreateRequest $dto
      *
-     * @return Response
+     * @return array{success:bool,gameId:int|null}
      */
-    public function roomCreateApi(#[MapRequestPayload] RoomCreateRequest $dto): Response
+    #[ApiResponse]
+    #[Route(path: '/api/room/create', name: 'room_create', methods: ['POST'], format: 'json')]
+    public function roomCreateApi(#[MapRequestPayload] RoomCreateRequest $dto): array
     {
         $game = $this->gameRoomService->createGameWithPreviousPlayers(
             $dto->previousGameId ?: null,
@@ -64,10 +70,9 @@ final class GameRoomController extends AbstractController
             $dto->excludePlayerIds ? array_values(array_map('intval', $dto->excludePlayerIds)) : null,
         );
 
-        return $this->json(['success' => true, 'gameId' => $game->getGameId()]);
+        return ['success' => true, 'gameId' => $game->getGameId()];
     }
 
-    #[Route(path: '/api/room/{id}', name: 'room_player_leave', methods: ['DELETE'], format: 'json')]
     /**
      * Removes a player from the room.
      *
@@ -75,9 +80,11 @@ final class GameRoomController extends AbstractController
      * @param int|null             $playerId
      * @param PlayerIdPayload|null $payload
      *
-     * @return Response
+     * @return SuccessMessageDto
      */
-    public function playerLeave(int $id, #[MapQueryParameter] ?int $playerId = null, #[MapRequestPayload] ?PlayerIdPayload $payload = null): Response
+    #[ApiResponse]
+    #[Route(path: '/api/room/{id}', name: 'room_player_leave', methods: ['DELETE'], format: 'json')]
+    public function playerLeave(int $id, #[MapQueryParameter] ?int $playerId = null, #[MapRequestPayload] ?PlayerIdPayload $payload = null): SuccessMessageDto
     {
         $user = $this->getUser();
         if ($user instanceof User) {
@@ -85,56 +92,39 @@ final class GameRoomController extends AbstractController
         }
         $playerId ??= $payload?->playerId;
         if (null === $playerId || $playerId <= 0) {
-            return $this->json(
-                [
-                    'success' => false,
-                    'message' => 'Player ID is required',
-                ],
-                Response::HTTP_BAD_REQUEST
-            );
+            throw new PlayerIdRequiredException();
         }
 
         $removed = $this->playerManagementService->removePlayer($id, $playerId);
         if (!$removed) {
-            return $this->json(
-                [
-                    'success' => false,
-                    'message' => 'Player not found in this game',
-                ],
-                Response::HTTP_NOT_FOUND
-            );
+            throw new PlayerNotFoundInGameException();
         }
 
-        return $this->json(
-            [
-                'success' => true,
-                'message' => 'Player removed from the game',
-            ]
-        );
+        return new SuccessMessageDto('Player removed from the game');
     }
 
-    #[Route(path: '/api/room/{id}/positions', name: 'room_update_player_positions', methods: ['POST'], format: 'json')]
     /**
      * Updates the positions of players in a room.
      *
      * @param int                      $id
      * @param UpdatePlayerOrderRequest $dto
      *
-     * @return Response
+     * @return array{success:bool,message?:string}
      */
-    public function updatePlayerOrder(int $id, #[MapRequestPayload] UpdatePlayerOrderRequest $dto): Response
+    #[ApiResponse]
+    #[Route(path: '/api/room/{id}/positions', name: 'room_update_player_positions', methods: ['POST'], format: 'json')]
+    public function updatePlayerOrder(int $id, #[MapRequestPayload] UpdatePlayerOrderRequest $dto): array
     {
         $game = $this->gameRoomService->findGameById($id);
         if (!$game) {
-            return $this->json(['success' => false, 'message' => 'Game not found'], Response::HTTP_NOT_FOUND);
+            throw new GameNotFoundException();
         }
 
         $this->playerManagementService->updatePlayerPositions($id, $dto->positions);
 
-        return $this->json(['success' => true]);
+        return ['success' => true];
     }
 
-    #[Route(path: '/api/room/{id}/stream', name: 'room_stream', methods: ['GET'])]
     /**
      * Streams SSE updates for a room.
      *
@@ -143,6 +133,7 @@ final class GameRoomController extends AbstractController
      *
      * @return StreamedResponse
      */
+    #[Route(path: '/api/room/{id}/stream', name: 'room_stream', methods: ['GET'])]
     public function roomStream(int $id, Request $request): StreamedResponse
     {
         if ($request->hasSession()) {
@@ -157,18 +148,23 @@ final class GameRoomController extends AbstractController
         return $this->sseStreamService->createPlayerStream($id);
     }
 
-    #[Route(path: '/api/room/{id}/rematch', name: 'room_rematch', methods: ['POST'])]
     /**
      * Creates a rematch for a finished game.
      *
      * @param int $id
      *
-     * @return Response
+     * @return array<string, mixed>
      */
-    public function rematch(int $id): Response
+    #[ApiResponse(status: Response::HTTP_CREATED)]
+    #[Route(path: '/api/room/{id}/rematch', name: 'room_rematch', methods: ['POST'])]
+    public function rematch(int $id): array
     {
         $result = $this->rematchService->createRematch($id);
 
-        return $this->json($result, $result['success'] ? Response::HTTP_CREATED : Response::HTTP_NOT_FOUND);
+        if (!($result['success'] ?? false)) {
+            $result['status'] = Response::HTTP_NOT_FOUND;
+        }
+
+        return $result;
     }
 }

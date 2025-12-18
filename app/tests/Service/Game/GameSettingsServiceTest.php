@@ -7,9 +7,12 @@ namespace App\Tests\Service;
 use App\Dto\GameSettingsRequest;
 use App\Entity\Game;
 use App\Enum\GameStatus;
+use App\Exception\Game\InvalidStartScoreException;
+use App\Exception\Game\NoSettingsProvidedException;
+use App\Exception\Game\SettingsNotEditableException;
+use App\Exception\Game\StartScoreCannotBeChangedAfterStartException;
 use App\Service\Game\GameSettingsService;
 use Doctrine\ORM\EntityManagerInterface;
-use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 final class GameSettingsServiceTest extends TestCase
@@ -45,7 +48,7 @@ final class GameSettingsServiceTest extends TestCase
 
         $service = new GameSettingsService($entityManager);
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(SettingsNotEditableException::class);
         $service->updateSettings($game, $dto);
     }
 
@@ -59,7 +62,7 @@ final class GameSettingsServiceTest extends TestCase
 
         $service = new GameSettingsService($entityManager);
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(NoSettingsProvidedException::class);
         $service->updateSettings($game, $dto);
     }
 
@@ -74,7 +77,7 @@ final class GameSettingsServiceTest extends TestCase
 
         $service = new GameSettingsService($entityManager);
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(InvalidStartScoreException::class);
         $service->updateSettings($game, $dto);
     }
 
@@ -108,7 +111,7 @@ final class GameSettingsServiceTest extends TestCase
 
         $service = new GameSettingsService($entityManager);
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(StartScoreCannotBeChangedAfterStartException::class);
         $service->updateSettings($game, $dto);
     }
 }

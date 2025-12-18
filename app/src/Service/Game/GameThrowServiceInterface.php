@@ -6,7 +6,7 @@ namespace App\Service\Game;
 
 use App\Dto\ThrowRequest;
 use App\Entity\Game;
-use InvalidArgumentException;
+use App\Exception\ApiExceptionInterface;
 
 /**
  * Interface for game throw service operations.
@@ -21,7 +21,7 @@ interface GameThrowServiceInterface
      * @param Game         $game The game to record the throw in
      * @param ThrowRequest $dto  The throw data (player, value, double/triple flags)
      *
-     * @throws InvalidArgumentException If player not found in game or player already threw 3 times
+     * @throws ApiExceptionInterface If player not found in game or player already threw 3 times
      *
      * @return void
      */

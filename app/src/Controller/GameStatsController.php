@@ -9,13 +9,17 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Dto\GameOverviewItemDto;
+use App\Dto\GameOverviewResponseDto;
+use App\Dto\PlayerStatsResponseDto;
+use App\Http\Attribute\ApiResponse;
+use App\Http\Pagination;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Game\GameFinishServiceInterface;
 use App\Service\Game\GameStatisticsServiceInterface;
 use DateTimeInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -32,35 +36,35 @@ final class GameStatsController extends AbstractController
      * @param int                        $limit
      * @param int                        $offset
      *
-     * @return Response
+     * @return GameOverviewResponseDto
      */
+    #[ApiResponse]
     #[Route('/api/games/overview', name: 'app_games_overview', methods: ['GET'], format: 'json')]
-    public function gamesOverview(GameRepositoryInterface $gameRepository, GameFinishServiceInterface $gameFinishService, #[MapQueryParameter] int $limit = 100, #[MapQueryParameter] int $offset = 0): Response
+    public function gamesOverview(GameRepositoryInterface $gameRepository, GameFinishServiceInterface $gameFinishService, #[MapQueryParameter] int $limit = 100, #[MapQueryParameter] int $offset = 0): GameOverviewResponseDto
     {
-        $limit = max(1, min(100, $limit));
-        $offset = max(0, $offset);
-        $games = $gameRepository->findFinished($limit, $offset);
+        $pagination = Pagination::from($limit, $offset, defaultLimit: 100, maxLimit: 100);
+        $games = $gameRepository->findFinished($pagination->limit, $pagination->offset);
 
         $items = [];
         foreach ($games as $game) {
             $stats = $gameFinishService->getGameStats($game);
-            $items[] = [
-                'id' => $stats['gameId'],
-                'date' => $stats['date']?->format(DateTimeInterface::ATOM),
-                'finishedAt' => $stats['finishedAt']?->format(DateTimeInterface::ATOM),
-                'playersCount' => count($stats['finishedPlayers']),
-                'winnerName' => $stats['winner']['username'] ?? null,
-                'winnerId' => $stats['winner']['id'] ?? null,
-                'winnerRounds' => $stats['winnerRoundsPlayed'],
-            ];
+            $items[] = new GameOverviewItemDto(
+                id: $stats['gameId'],
+                date: $stats['date']?->format(DateTimeInterface::ATOM),
+                finishedAt: $stats['finishedAt']?->format(DateTimeInterface::ATOM),
+                playersCount: count($stats['finishedPlayers']),
+                winnerName: $stats['winner']['username'] ?? null,
+                winnerId: $stats['winner']['id'] ?? null,
+                winnerRounds: $stats['winnerRoundsPlayed'],
+            );
         }
 
-        return $this->json([
-            'limit' => $limit,
-            'offset' => $offset,
-            'items' => $items,
-            'total' => $gameRepository->countFinishedGames(),
-        ]);
+        return new GameOverviewResponseDto(
+            limit: $pagination->limit,
+            offset: $pagination->offset,
+            total: $gameRepository->countFinishedGames(),
+            items: $items,
+        );
     }
 
     /**
@@ -72,22 +76,23 @@ final class GameStatsController extends AbstractController
      * @param int                            $offset
      * @param string                         $sort
      *
-     * @return Response
+     * @return PlayerStatsResponseDto
      */
+    #[ApiResponse(groups: ['stats:read'])]
     #[Route('/api/players/stats', name: 'app_players_stats', methods: ['GET'], format: 'json')]
-    public function playerStats(GameStatisticsServiceInterface $gameStatisticsService, RoundThrowsRepositoryInterface $roundThrowsRepository, #[MapQueryParameter] int $limit = 20, #[MapQueryParameter] int $offset = 0, #[MapQueryParameter] string $sort = 'average:desc'): Response
+    public function playerStats(GameStatisticsServiceInterface $gameStatisticsService, RoundThrowsRepositoryInterface $roundThrowsRepository, #[MapQueryParameter] int $limit = 20, #[MapQueryParameter] int $offset = 0, #[MapQueryParameter] string $sort = 'average:desc'): PlayerStatsResponseDto
     {
-        $limit = max(1, min(100, $limit));
-        $offset = max(0, $offset);
+        $pagination = Pagination::from($limit, $offset, defaultLimit: 20, maxLimit: 100);
         [$sortField, $sortDirection] = $this->parseSort($sort);
-        $stats = $gameStatisticsService->getPlayerStats($limit, $offset, $sortField, $sortDirection);
+        $stats = $gameStatisticsService->getPlayerStats($pagination->limit, $pagination->offset, $sortField, $sortDirection);
+        $items = array_values($stats);
 
-        return $this->json([
-            'limit' => $limit,
-            'offset' => $offset,
-            'total' => $roundThrowsRepository->countPlayersWithFinishedRounds(),
-            'items' => $stats,
-        ], context: ['groups' => 'stats:read']);
+        return new PlayerStatsResponseDto(
+            limit: $pagination->limit,
+            offset: $pagination->offset,
+            total: $roundThrowsRepository->countPlayersWithFinishedRounds(),
+            items: $items
+        );
     }
 
     /**

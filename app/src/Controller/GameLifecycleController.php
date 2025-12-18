@@ -10,29 +10,27 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Dto\GameSettingsRequest;
+use App\Dto\SuccessMessageDto;
 use App\Dto\StartGameRequest;
 use App\Entity\Game;
+use App\Http\Attribute\ApiResponse;
 use App\Service\Game\GameAbortServiceInterface;
 use App\Service\Game\GameFinishServiceInterface;
 use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Game\GameServiceInterface;
 use App\Service\Game\GameSettingsServiceInterface;
 use App\Service\Game\GameStartServiceInterface;
-use InvalidArgumentException;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity as AttributeMapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
-use Throwable;
 
 /**
  * Lifecycle endpoints for games: start, settings, finish, state.
  */
 final class GameLifecycleController extends AbstractController
 {
-    #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'], format: 'json')]
     /**
      * Starts a game with provided settings.
      *
@@ -40,111 +38,99 @@ final class GameLifecycleController extends AbstractController
      * @param GameStartServiceInterface $gameStartService
      * @param StartGameRequest          $dto
      *
-     * @return Response
+     * @return Game
      */
-    public function start(#[AttributeMapEntity(id: 'gameId')] Game $game, GameStartServiceInterface $gameStartService, #[MapRequestPayload] StartGameRequest $dto): Response
+    #[ApiResponse(groups: ['game:read'])]
+    #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'], format: 'json')]
+    public function start(#[AttributeMapEntity(id: 'gameId')] Game $game, GameStartServiceInterface $gameStartService, #[MapRequestPayload] StartGameRequest $dto): Game
     {
-        try {
-            $gameStartService->start($game, $dto);
-        } catch (InvalidArgumentException $e) {
-            return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
-        }
+        $gameStartService->start($game, $dto);
 
-        return $this->json($game, context: ['groups' => 'game:read']);
+        return $game;
     }
 
-    #[Route('/api/game/settings', name: 'app_game_settings_create', methods: ['POST'], format: 'json')]
     /**
      * @param GameRoomServiceInterface     $gameRoomService
      * @param GameSettingsServiceInterface $gameSettingsService
      * @param GameServiceInterface         $gameService
      * @param GameSettingsRequest          $dto
      *
-     * @return Response
+     * @return mixed
      */
-    public function createSettings(GameRoomServiceInterface $gameRoomService, GameSettingsServiceInterface $gameSettingsService, GameServiceInterface $gameService, #[MapRequestPayload] GameSettingsRequest $dto): Response
+    #[ApiResponse(status: Response::HTTP_CREATED)]
+    #[Route('/api/game/settings', name: 'app_game_settings_create', methods: ['POST'], format: 'json')]
+    public function createSettings(GameRoomServiceInterface $gameRoomService, GameSettingsServiceInterface $gameSettingsService, GameServiceInterface $gameService, #[MapRequestPayload] GameSettingsRequest $dto): mixed
     {
         $game = $gameRoomService->createGame();
 
-        try {
-            $gameSettingsService->updateSettings($game, $dto);
-        } catch (InvalidArgumentException $e) {
-            return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
-        }
+        $gameSettingsService->updateSettings($game, $dto);
 
         $gameDto = $gameService->createGameDto($game);
 
-        return $this->json($gameDto, Response::HTTP_CREATED);
+        return $gameDto;
     }
 
-    #[Route('/api/game/{gameId}/settings', name: 'app_game_settings', methods: ['PATCH'], format: 'json')]
     /**
      * @param Game                         $game
      * @param GameSettingsServiceInterface $gameSettingsService
      * @param GameServiceInterface         $gameService
      * @param GameSettingsRequest          $dto
      *
-     * @return Response
+     * @return mixed
      */
-    public function updateSettings(#[AttributeMapEntity(id: 'gameId')] Game $game, GameSettingsServiceInterface $gameSettingsService, GameServiceInterface $gameService, #[MapRequestPayload] GameSettingsRequest $dto): Response
+    #[ApiResponse]
+    #[Route('/api/game/{gameId}/settings', name: 'app_game_settings', methods: ['PATCH'], format: 'json')]
+    public function updateSettings(#[AttributeMapEntity(id: 'gameId')] Game $game, GameSettingsServiceInterface $gameSettingsService, GameServiceInterface $gameService, #[MapRequestPayload] GameSettingsRequest $dto): mixed
     {
-        try {
-            $gameSettingsService->updateSettings($game, $dto);
-        } catch (InvalidArgumentException $e) {
-            return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
-        }
+        $gameSettingsService->updateSettings($game, $dto);
 
         $gameDto = $gameService->createGameDto($game);
 
-        return $this->json($gameDto);
+        return $gameDto;
     }
 
-    #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['GET'], format: 'json')]
     /**
      * @param Game                       $game
      * @param GameFinishServiceInterface $gameFinishService
      *
-     * @return Response
+     * @return mixed
      */
-    public function finished(#[AttributeMapEntity(id: 'gameId')] Game $game, GameFinishServiceInterface $gameFinishService): Response
+    #[ApiResponse(groups: ['game:read'])]
+    #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['GET'], format: 'json')]
+    public function finished(#[AttributeMapEntity(id: 'gameId')] Game $game, GameFinishServiceInterface $gameFinishService): mixed
     {
-        try {
-            $result = $gameFinishService->finishGame($game);
-        } catch (Throwable $e) {
-            return $this->json(
-                ['error' => 'An error occurred: '.$e->getMessage()],
-                Response::HTTP_INTERNAL_SERVER_ERROR
-            );
-        }
+        $result = $gameFinishService->finishGame($game);
 
-        return $this->json($result, context: ['groups' => 'game:read']);
+        return $result;
     }
 
-    #[Route('/api/game/{gameId}', name: 'app_game_state', methods: ['GET'], format: 'json')]
     /**
      * @param Game                 $game
      * @param GameServiceInterface $gameService
      *
-     * @return JsonResponse
+     * @return mixed
      */
-    public function getGameState(#[AttributeMapEntity(id: 'gameId')] Game $game, GameServiceInterface $gameService): JsonResponse
+    #[ApiResponse]
+    #[Route('/api/game/{gameId}', name: 'app_game_state', methods: ['GET'], format: 'json')]
+    public function getGameState(#[AttributeMapEntity(id: 'gameId')] Game $game, GameServiceInterface $gameService): mixed
     {
         $gameDto = $gameService->createGameDto($game);
 
-        return $this->json($gameDto);
+        return $gameDto;
     }
-    
-    #[Route('/api/game/{gameId}/abort', name: 'app_game_abort', methods: ['PATCH'], format: 'json')]
+
     /**
      * @param Game                      $game
      * @param GameAbortServiceInterface $gameAbortService
      *
-     * @return JsonResponse
+     * @return SuccessMessageDto
      */
-    public function abortGame(#[AttributeMapEntity(id: 'gameId')] Game $game, GameAbortServiceInterface $gameAbortService): Response
+    #[ApiResponse]
+    #[Route('/api/game/{gameId}/abort', name: 'app_game_abort', methods: ['PATCH'], format: 'json')]
+    public function abortGame(#[AttributeMapEntity(id: 'gameId')] Game $game, GameAbortServiceInterface $gameAbortService): SuccessMessageDto
     {
         $gameAbortService->abortGame($game);
 
-        return $this->json(['message' => 'Game aborted successfully'], Response::HTTP_OK);
+        return new SuccessMessageDto('Game aborted successfully');
     }
 }

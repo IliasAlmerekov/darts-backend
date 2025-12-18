@@ -9,17 +9,17 @@ use App\Dto\GameSettingsRequest;
 use App\Dto\StartGameRequest;
 use App\Dto\GameResponseDto;
 use App\Entity\Game;
+use App\Exception\Game\GameMustHaveValidPlayerCountException;
+use App\Exception\Game\NoSettingsProvidedException;
 use App\Service\Game\GameFinishServiceInterface;
 use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Game\GameServiceInterface;
 use App\Service\Game\GameSettingsServiceInterface;
 use App\Service\Game\GameStartServiceInterface;
-use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 #[AllowMockObjectsWithoutExpectations]
@@ -44,8 +44,7 @@ final class GameLifecycleControllerTest extends TestCase
 
         $response = $this->controller->start($game, $startService, $dto);
 
-        $this->assertInstanceOf(JsonResponse::class, $response);
-        $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
+        $this->assertSame($game, $response);
     }
 
     public function testStartReturnsBadRequestOnError(): void
@@ -53,11 +52,10 @@ final class GameLifecycleControllerTest extends TestCase
         $game = $this->createMock(Game::class);
         $dto = new StartGameRequest();
         $startService = $this->createMock(GameStartServiceInterface::class);
-        $startService->method('start')->willThrowException(new InvalidArgumentException('bad'));
+        $startService->method('start')->willThrowException(new GameMustHaveValidPlayerCountException());
 
-        $response = $this->controller->start($game, $startService, $dto);
-
-        $this->assertEquals(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
+        $this->expectException(GameMustHaveValidPlayerCountException::class);
+        $this->controller->start($game, $startService, $dto);
     }
 
     public function testCreateSettingsCreatesGame(): void
@@ -76,7 +74,7 @@ final class GameLifecycleControllerTest extends TestCase
 
         $response = $this->controller->createSettings($roomService, $settingsService, $gameService, $dto);
 
-        $this->assertEquals(Response::HTTP_CREATED, $response->getStatusCode());
+        $this->assertInstanceOf(GameResponseDto::class, $response);
     }
 
     public function testUpdateSettingsReturnsBadRequestOnError(): void
@@ -84,12 +82,11 @@ final class GameLifecycleControllerTest extends TestCase
         $dto = new GameSettingsRequest();
         $game = $this->createMock(Game::class);
         $settingsService = $this->createMock(GameSettingsServiceInterface::class);
-        $settingsService->method('updateSettings')->willThrowException(new InvalidArgumentException('bad'));
+        $settingsService->method('updateSettings')->willThrowException(new NoSettingsProvidedException());
         $gameService = $this->createMock(GameServiceInterface::class);
 
-        $response = $this->controller->updateSettings($game, $settingsService, $gameService, $dto);
-
-        $this->assertEquals(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
+        $this->expectException(NoSettingsProvidedException::class);
+        $this->controller->updateSettings($game, $settingsService, $gameService, $dto);
     }
 
     public function testFinishedReturnsResult(): void
@@ -100,7 +97,7 @@ final class GameLifecycleControllerTest extends TestCase
 
         $response = $this->controller->finished($game, $finishService);
 
-        $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
+        $this->assertIsArray($response);
     }
 
     public function testGetGameStateReturnsDto(): void
@@ -111,8 +108,7 @@ final class GameLifecycleControllerTest extends TestCase
 
         $response = $this->controller->getGameState($game, $gameService);
 
-        $this->assertInstanceOf(JsonResponse::class, $response);
-        $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
+        $this->assertInstanceOf(GameResponseDto::class, $response);
     }
 
     private function dummyGameDto(): GameResponseDto

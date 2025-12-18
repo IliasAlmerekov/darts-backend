@@ -6,9 +6,13 @@ namespace App\Service\Game;
 
 use App\Dto\GameSettingsRequest;
 use App\Entity\Game;
+use App\Exception\Game\InvalidOutModeException;
+use App\Exception\Game\InvalidStartScoreException;
+use App\Exception\Game\NoSettingsProvidedException;
+use App\Exception\Game\SettingsNotEditableException;
+use App\Exception\Game\StartScoreCannotBeChangedAfterStartException;
 use App\Enum\GameStatus;
 use Doctrine\ORM\EntityManagerInterface;
-use InvalidArgumentException;
 use Override;
 
 /**
@@ -44,16 +48,16 @@ final readonly class GameSettingsService implements GameSettingsServiceInterface
         $isLobby = GameStatus::Lobby === $status;
         $isStarted = GameStatus::Started === $status;
         if (!$isLobby && !$isStarted) {
-            throw new InvalidArgumentException('Settings can only be changed while the game is in the lobby or started.');
+            throw new SettingsNotEditableException();
         }
 
         if (null === $dto->startScore && null === $dto->outMode && null === $dto->doubleOut && null === $dto->tripleOut) {
-            throw new InvalidArgumentException('No settings provided to update.');
+            throw new NoSettingsProvidedException();
         }
 
         if (null !== $dto->startScore) {
             if ($isStarted) {
-                throw new InvalidArgumentException('startScore cannot be changed after the game has started.');
+                throw new StartScoreCannotBeChangedAfterStartException();
             }
             $this->guardStartScore($dto->startScore);
             $game->setStartScore($dto->startScore);
@@ -74,7 +78,7 @@ final readonly class GameSettingsService implements GameSettingsServiceInterface
                 $doubleOut = false;
                 $tripleOut = true;
             } else {
-                throw new InvalidArgumentException('outMode must be one of: singleout, doubleout, tripleout.');
+                throw new InvalidOutModeException();
             }
         } else {
             if (null !== $dto->doubleOut) {
@@ -100,7 +104,7 @@ final readonly class GameSettingsService implements GameSettingsServiceInterface
     private function guardStartScore(int $startScore): void
     {
         if (!in_array($startScore, self::ALLOWED_START_SCORES, true)) {
-            throw new InvalidArgumentException('startScore must be one of: 101, 201, 301, 401, 501.');
+            throw new InvalidStartScoreException();
         }
     }
 }

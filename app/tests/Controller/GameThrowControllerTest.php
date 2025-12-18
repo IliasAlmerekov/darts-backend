@@ -8,14 +8,13 @@ use App\Controller\GameThrowController;
 use App\Dto\ThrowRequest;
 use App\Dto\GameResponseDto;
 use App\Entity\Game;
+use App\Exception\Game\PlayerAlreadyThrewThreeTimesException;
 use App\Service\Game\GameServiceInterface;
 use App\Service\Game\GameThrowServiceInterface;
-use InvalidArgumentException;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 #[AllowMockObjectsWithoutExpectations]
@@ -44,8 +43,7 @@ final class GameThrowControllerTest extends TestCase
 
         $response = $this->controller->throw($game, $throwService, $gameService, $dto);
 
-        $this->assertInstanceOf(JsonResponse::class, $response);
-        $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
+        $this->assertInstanceOf(GameResponseDto::class, $response);
     }
 
     public function testThrowReturnsBadRequestOnInvalidArgument(): void
@@ -53,12 +51,11 @@ final class GameThrowControllerTest extends TestCase
         $game = $this->createMock(Game::class);
         $dto = new ThrowRequest();
         $throwService = $this->createMock(GameThrowServiceInterface::class);
-        $throwService->method('recordThrow')->willThrowException(new InvalidArgumentException('bad'));
+        $throwService->method('recordThrow')->willThrowException(new PlayerAlreadyThrewThreeTimesException());
         $gameService = $this->createMock(GameServiceInterface::class);
 
-        $response = $this->controller->throw($game, $throwService, $gameService, $dto);
-
-        $this->assertEquals(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
+        $this->expectException(PlayerAlreadyThrewThreeTimesException::class);
+        $this->controller->throw($game, $throwService, $gameService, $dto);
     }
 
     public function testUndoThrowSuccess(): void
@@ -72,7 +69,7 @@ final class GameThrowControllerTest extends TestCase
 
         $response = $this->controller->undoThrow($game, $throwService, $gameService);
 
-        $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
+        $this->assertInstanceOf(GameResponseDto::class, $response);
     }
 
     private function dummyGameDto(): GameResponseDto

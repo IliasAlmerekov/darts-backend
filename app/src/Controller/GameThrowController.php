@@ -11,12 +11,11 @@ namespace App\Controller;
 
 use App\Dto\ThrowRequest;
 use App\Entity\Game;
+use App\Http\Attribute\ApiResponse;
 use App\Service\Game\GameServiceInterface;
 use App\Service\Game\GameThrowServiceInterface;
-use InvalidArgumentException;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity as AttributeMapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -25,41 +24,39 @@ use Symfony\Component\Routing\Attribute\Route;
  */
 final class GameThrowController extends AbstractController
 {
-    #[Route('/api/game/{gameId}/throw', name: 'app_game_throw', methods: ['POST'], format: 'json')]
     /**
      * @param Game                      $game
      * @param GameThrowServiceInterface $gameThrowService
      * @param GameServiceInterface      $gameService
      * @param ThrowRequest              $dto
      *
-     * @return Response
+     * @return mixed
      */
-    public function throw(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameServiceInterface $gameService, #[MapRequestPayload] ThrowRequest $dto): Response
+    #[ApiResponse]
+    #[Route('/api/game/{gameId}/throw', name: 'app_game_throw', methods: ['POST'], format: 'json')]
+    public function throw(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameServiceInterface $gameService, #[MapRequestPayload] ThrowRequest $dto): mixed
     {
-        try {
-            $gameThrowService->recordThrow($game, $dto);
-        } catch (InvalidArgumentException $e) {
-            return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
-        }
+        $gameThrowService->recordThrow($game, $dto);
 
         $gameDto = $gameService->createGameDto($game);
 
-        return $this->json($gameDto);
+        return $gameDto;
     }
 
-    #[Route('/api/game/{gameId}/throw', name: 'app_game_throw_undo', methods: ['DELETE'], format: 'json')]
     /**
      * @param Game                      $game
      * @param GameThrowServiceInterface $gameThrowService
      * @param GameServiceInterface      $gameService
      *
-     * @return Response
+     * @return mixed
      */
-    public function undoThrow(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameServiceInterface $gameService): Response
+    #[ApiResponse]
+    #[Route('/api/game/{gameId}/throw', name: 'app_game_throw_undo', methods: ['DELETE'], format: 'json')]
+    public function undoThrow(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameServiceInterface $gameService): mixed
     {
         $gameThrowService->undoLastThrow($game);
         $gameDto = $gameService->createGameDto($game);
 
-        return $this->json($gameDto);
+        return $gameDto;
     }
 }

@@ -9,10 +9,10 @@ use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Enum\GameStatus;
+use App\Exception\Game\GameMustHaveValidPlayerCountException;
 use App\Service\Game\GameSetupService;
 use App\Service\Game\GameStartService;
 use Doctrine\ORM\EntityManagerInterface;
-use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 
@@ -63,7 +63,7 @@ final class GameStartServiceTest extends TestCase
 
         $service = new GameStartService($setupService, $em);
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(GameMustHaveValidPlayerCountException::class);
         $service->start($game, new StartGameRequest());
     }
 }

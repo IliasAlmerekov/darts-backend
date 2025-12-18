@@ -15,7 +15,6 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 #[AllowMockObjectsWithoutExpectations]
@@ -68,7 +67,7 @@ class GameRoomControllerTest extends TestCase
 
         $response = $this->controller->roomCreateApi($dto);
 
-        $this->assertInstanceOf(Response::class, $response);
+        $this->assertIsArray($response);
     }
     public function testRematchReturnsSuccess(): void
     {
@@ -84,16 +83,10 @@ class GameRoomControllerTest extends TestCase
             ->with($gameId)
             ->willReturn($expectedResult);
 
-        // Container Mock (für $this->json())
-        $this->container->method('has')->willReturn(false);
-
         $response = $this->controller->rematch($gameId);
 
-        $this->assertInstanceOf(JsonResponse::class, $response);
-        $this->assertEquals(Response::HTTP_CREATED, $response->getStatusCode()); // 201
-
-        $data = json_decode($response->getContent(), true);
-        $this->assertTrue($data['success']);
-        $this->assertEquals(99, $data['gameId']);
+        $this->assertIsArray($response);
+        $this->assertTrue($response['success']);
+        $this->assertEquals(99, $response['gameId']);
     }
 }

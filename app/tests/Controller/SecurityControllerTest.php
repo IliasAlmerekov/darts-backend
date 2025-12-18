@@ -11,7 +11,6 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
@@ -87,16 +86,11 @@ class SecurityControllerTest extends TestCase
 
         $response = $this->controller->login($authenticationUtils);
 
-        $this->assertInstanceOf(Response::class, $response);
-        $this->assertEquals(200, $response->getStatusCode());
-
-        $content = $response->getContent();
-        $this->assertNotFalse($content);
-        $data = json_decode($content, true);
-        $this->assertTrue($data['success']);
-        $this->assertEquals(1, $data['id']);
-        $this->assertEquals('testuser', $data['username']);
-        $this->assertEquals('/api/login/success', $data['redirect']);
+        $this->assertIsArray($response);
+        $this->assertTrue($response['success']);
+        $this->assertEquals(1, $response['id']);
+        $this->assertEquals('testuser', $response['username']);
+        $this->assertEquals('/api/login/success', $response['redirect']);
     }
 
     /**
@@ -125,14 +119,9 @@ class SecurityControllerTest extends TestCase
 
         $response = $this->controller->login($authenticationUtils);
 
-        $this->assertInstanceOf(Response::class, $response);
-        $this->assertEquals(200, $response->getStatusCode());
-
-        $content = $response->getContent();
-        $this->assertNotFalse($content);
-        $data = json_decode($content, true);
-        $this->assertFalse($data['success']);
-        $this->assertEquals('john@example.com', $data['last_username']);
-        $this->assertNull($data['error']);
+        $this->assertIsArray($response);
+        $this->assertFalse($response['success']);
+        $this->assertEquals('john@example.com', $response['last_username']);
+        $this->assertNull($response['error']);
     }
 }

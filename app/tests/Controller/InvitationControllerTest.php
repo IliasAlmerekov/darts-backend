@@ -12,7 +12,6 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Uid\Uuid;
@@ -54,10 +53,9 @@ final class InvitationControllerTest extends TestCase
 
         $response = $this->controller->createInvitation($game, $invitationService);
 
-        $this->assertInstanceOf(JsonResponse::class, $response);
-        $data = json_decode((string) $response->getContent(), true);
-        $this->assertTrue($data['success']);
-        $this->assertEquals($gameId, $data['gameId']);
+        $this->assertIsArray($response);
+        $this->assertTrue($response['success']);
+        $this->assertEquals($gameId, $response['gameId']);
     }
 
     public function testCreateInvitationCreatesNewInvitationWhenNotExists(): void
@@ -84,10 +82,8 @@ final class InvitationControllerTest extends TestCase
 
         $response = $this->controller->createInvitation($game, $invitationService);
 
-        $this->assertInstanceOf(JsonResponse::class, $response);
-        $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
-        $data = json_decode((string) $response->getContent(), true);
-        $this->assertTrue($data['success']);
-        $this->assertEquals($gameId, $data['gameId']);
+        $this->assertIsArray($response);
+        $this->assertTrue($response['success']);
+        $this->assertEquals($gameId, $response['gameId']);
     }
 }

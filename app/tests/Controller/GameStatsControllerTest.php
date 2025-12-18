@@ -10,12 +10,14 @@ use App\Repository\GameRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Game\GameFinishServiceInterface;
 use App\Service\Game\GameStatisticsServiceInterface;
+use App\Dto\PlayerStatsDto;
+use App\Dto\GameOverviewResponseDto;
+use App\Dto\PlayerStatsResponseDto;
 use DateTimeImmutable;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 #[AllowMockObjectsWithoutExpectations]
@@ -50,21 +52,19 @@ final class GameStatsControllerTest extends TestCase
 
         $response = $this->controller->gamesOverview($gameRepo, $finishService, 10, 0);
 
-        $this->assertInstanceOf(JsonResponse::class, $response);
-        $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
+        $this->assertInstanceOf(GameOverviewResponseDto::class, $response);
     }
 
     public function testPlayerStatsReturnsData(): void
     {
         $statsService = $this->createMock(GameStatisticsServiceInterface::class);
-        $statsService->method('getPlayerStats')->willReturn([['id' => 1, 'average' => 50]]);
+        $statsService->method('getPlayerStats')->willReturn([new PlayerStatsDto(1, 'p', 1, 50.0)]);
 
         $throwsRepo = $this->createMock(RoundThrowsRepositoryInterface::class);
         $throwsRepo->method('countPlayersWithFinishedRounds')->willReturn(1);
 
         $response = $this->controller->playerStats($statsService, $throwsRepo, 20, 0, 'average:desc');
 
-        $this->assertInstanceOf(JsonResponse::class, $response);
-        $this->assertEquals(Response::HTTP_OK, $response->getStatusCode());
+        $this->assertInstanceOf(PlayerStatsResponseDto::class, $response);
     }
 }

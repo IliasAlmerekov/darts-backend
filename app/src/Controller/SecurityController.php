@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Exception\Security\UserNotAuthenticatedException;
+use App\Http\Attribute\ApiResponse;
 use App\Service\Security\SecurityServiceInterface;
 use LogicException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -25,32 +27,34 @@ final class SecurityController extends AbstractController
      *
      * @param AuthenticationUtils $authenticationUtils
      *
-     * @return Response
+     * @return array<array-key, mixed>
      */
+    #[ApiResponse]
     #[Route(path: '/api/login', name: 'app_login', methods: ['GET', 'POST'], format: 'json')]
-    public function login(AuthenticationUtils $authenticationUtils): Response
+    public function login(AuthenticationUtils $authenticationUtils): array
     {
         $user = $this->getUser();
         if ($user) {
             $id = method_exists($user, 'getId') ? $user->getId() : null;
 
-            return $this->json([
+            return [
                 'success' => true,
                 'id' => $id,
                 'username' => $user->getUserIdentifier(),
                 'roles' => $user instanceof User ? $user->getStoredRoles() : $user->getRoles(),
                 'redirect' => '/api/login/success',
-            ]);
+            ];
         }
 
         $error = $authenticationUtils->getLastAuthenticationError();
         $lastUsername = $authenticationUtils->getLastUsername();
 
-        return $this->json([
+        return [
             'success' => false,
             'last_username' => $lastUsername,
             'error' => $error?->getMessage(),
-        ], $error ? Response::HTTP_UNAUTHORIZED : Response::HTTP_OK);
+            'status' => $error ? Response::HTTP_UNAUTHORIZED : Response::HTTP_OK,
+        ];
     }
 
     /**
@@ -68,7 +72,7 @@ final class SecurityController extends AbstractController
     {
         $user = $this->getUser();
         if (!$user instanceof User) {
-            return $this->json(['error' => 'User not authenticated'], Response::HTTP_UNAUTHORIZED);
+            throw new UserNotAuthenticatedException();
         }
 
         return $securityService->buildLoginSuccessResponse($user, $request->getSession());
