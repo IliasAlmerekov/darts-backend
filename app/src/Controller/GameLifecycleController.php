@@ -32,6 +32,7 @@ use Symfony\Component\Routing\Attribute\Route;
 /**
  * Lifecycle endpoints for games: start, settings, finish, state.
  */
+#[OA\Tag(name: 'Game Lifecycle')]
 final class GameLifecycleController extends AbstractController
 {
     /**
@@ -60,6 +61,8 @@ final class GameLifecycleController extends AbstractController
     }
 
     /**
+     * Creates a game and applies settings.
+     *
      * @param GameRoomServiceInterface     $gameRoomService
      * @param GameSettingsServiceInterface $gameSettingsService
      * @param GameServiceInterface         $gameService
@@ -87,6 +90,8 @@ final class GameLifecycleController extends AbstractController
     }
 
     /**
+     * Updates settings for an existing game.
+     *
      * @param Game                         $game
      * @param GameSettingsServiceInterface $gameSettingsService
      * @param GameServiceInterface         $gameService
@@ -113,6 +118,8 @@ final class GameLifecycleController extends AbstractController
     }
 
     /**
+     * Finishes a game and returns final standings.
+     *
      * @param Game                       $game
      * @param GameFinishServiceInterface $gameFinishService
      *
@@ -146,6 +153,8 @@ final class GameLifecycleController extends AbstractController
     }
 
     /**
+     * Returns the current game state.
+     *
      * @param Game                 $game
      * @param GameServiceInterface $gameService
      *
@@ -167,6 +176,8 @@ final class GameLifecycleController extends AbstractController
     }
 
     /**
+     * Aborts a game.
+     *
      * @param Game                      $game
      * @param GameAbortServiceInterface $gameAbortService
      *

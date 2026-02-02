@@ -22,6 +22,7 @@ use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Game\RematchServiceInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
 use App\Service\Sse\SseStreamServiceInterface;
+use Doctrine\ORM\Exception\ORMException;
 use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -37,6 +38,7 @@ use Symfony\Component\Routing\Attribute\Route;
  * creating rooms, and viewing room details.
  * Also get as JSON responses for API requests.
  */
+#[OA\Tag(name: 'Game Rooms')]
 final class GameRoomController extends AbstractController
 {
     /**
@@ -61,6 +63,8 @@ final class GameRoomController extends AbstractController
      * @param RoomCreateRequest $dto
      *
      * @return array{success:bool,gameId:int|null}
+     *
+     * @throws ORMException
      */
     #[OA\RequestBody(
         required: false,
@@ -70,12 +74,12 @@ final class GameRoomController extends AbstractController
         response: Response::HTTP_OK,
         description: 'Spielraum wurde erfolgreich erstellt (oder wiederverwendet).',
         content: new OA\JsonContent(
-            type: 'object',
             required: ['success', 'gameId'],
             properties: [
                 new OA\Property(property: 'success', type: 'boolean', example: true),
-                new OA\Property(property: 'gameId', type: 'integer', nullable: true, example: 123),
-            ]
+                new OA\Property(property: 'gameId', type: 'integer', example: 123, nullable: true),
+            ],
+            type: 'object'
         )
     )]
     #[ApiResponse]
@@ -103,14 +107,14 @@ final class GameRoomController extends AbstractController
     #[OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
     #[OA\Parameter(
         name: 'playerId',
+        description: 'Spieler-ID, die entfernt werden soll. Wenn nicht angegeben, wird der authentifizierte User oder der Request-Body verwendet.',
         in: 'query',
         required: false,
-        description: 'Spieler-ID, die entfernt werden soll. Wenn nicht angegeben, wird der authentifizierte User oder der Request-Body verwendet.',
-        schema: new OA\Schema(type: 'integer', nullable: true, example: 42)
+        schema: new OA\Schema(type: 'integer', example: 42, nullable: true)
     )]
     #[OA\RequestBody(
-        required: false,
         description: 'Alternative Übergabe der playerId (falls nicht als Query-Parameter).',
+        required: false,
         content: new OA\JsonContent(ref: new Model(type: PlayerIdPayload::class))
     )]
     #[OA\Response(
@@ -155,9 +159,9 @@ final class GameRoomController extends AbstractController
         response: Response::HTTP_OK,
         description: 'Spielerpositionen wurden aktualisiert.',
         content: new OA\JsonContent(
-            type: 'object',
             required: ['success'],
-            properties: [new OA\Property(property: 'success', type: 'boolean', example: true)]
+            properties: [new OA\Property(property: 'success', type: 'boolean', example: true)],
+            type: 'object'
         )
     )]
     #[OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Spiel nicht gefunden.')]
@@ -211,35 +215,37 @@ final class GameRoomController extends AbstractController
      * @param int $id
      *
      * @return array<string, mixed>
+     *
+     * @throws ORMException
      */
     #[OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
     #[OA\Response(
         response: Response::HTTP_CREATED,
         description: 'Rematch-Spiel wurde erstellt.',
         content: new OA\JsonContent(
-            type: 'object',
             required: ['success'],
             properties: [
                 new OA\Property(property: 'success', type: 'boolean', example: true),
-                new OA\Property(property: 'gameId', type: 'integer', nullable: true, example: 456),
-                new OA\Property(property: 'invitationLink', type: 'string', nullable: true, example: '/api/invite/join/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'),
+                new OA\Property(property: 'gameId', type: 'integer', example: 456, nullable: true),
+                new OA\Property(property: 'invitationLink', type: 'string', example: '/api/invite/join/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', nullable: true),
                 new OA\Property(
                     property: 'finishedPlayers',
                     type: 'array',
                     items: new OA\Items(
-                        type: 'object',
                         properties: [
-                            new OA\Property(property: 'playerId', type: 'integer', nullable: true, example: 1),
-                            new OA\Property(property: 'username', type: 'string', nullable: true, example: 'alice'),
-                            new OA\Property(property: 'position', type: 'integer', nullable: true, example: 1),
-                            new OA\Property(property: 'roundsPlayed', type: 'integer', nullable: true, example: 10),
+                            new OA\Property(property: 'playerId', type: 'integer', example: 1, nullable: true),
+                            new OA\Property(property: 'username', type: 'string', example: 'alice', nullable: true),
+                            new OA\Property(property: 'position', type: 'integer', example: 1, nullable: true),
+                            new OA\Property(property: 'roundsPlayed', type: 'integer', example: 10, nullable: true),
                             new OA\Property(property: 'roundAverage', type: 'number', format: 'float', example: 54.2),
-                        ]
+                        ],
+                        type: 'object'
                     )
                 ),
-                new OA\Property(property: 'message', type: 'string', nullable: true, example: 'Vorheriges Spiel nicht gefunden'),
-                new OA\Property(property: 'status', type: 'integer', nullable: true, example: 404),
-            ]
+                new OA\Property(property: 'message', type: 'string', example: 'Vorheriges Spiel nicht gefunden', nullable: true),
+                new OA\Property(property: 'status', type: 'integer', example: 404, nullable: true),
+            ],
+            type: 'object'
         )
     )]
     #[ApiResponse(status: Response::HTTP_CREATED)]

@@ -26,9 +26,12 @@ use Symfony\Component\Routing\Attribute\Route;
 /**
  * Endpoints for recording and undoing throws.
  */
+#[OA\Tag(name: 'Game Throws')]
 final class GameThrowController extends AbstractController
 {
     /**
+     * Records a throw for the current player.
+     *
      * @param Game                      $game
      * @param GameThrowServiceInterface $gameThrowService
      * @param GameServiceInterface      $gameService
@@ -55,6 +58,8 @@ final class GameThrowController extends AbstractController
     }
 
     /**
+     * Undoes the last recorded throw.
+     *
      * @param Game                      $game
      * @param GameThrowServiceInterface $gameThrowService
      * @param GameServiceInterface      $gameService

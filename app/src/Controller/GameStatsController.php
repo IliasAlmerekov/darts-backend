@@ -28,6 +28,7 @@ use Symfony\Component\Routing\Attribute\Route;
 /**
  * Endpoints for game and player statistics.
  */
+#[OA\Tag(name: 'Statistics')]
 final class GameStatsController extends AbstractController
 {
     /**
@@ -111,9 +112,9 @@ final class GameStatsController extends AbstractController
     )]
     #[OA\Parameter(
         name: 'sort',
+        description: "Sortierung im Format `average:asc|desc` oder `gamesplayed:asc|desc`.",
         in: 'query',
         required: false,
-        description: "Sortierung im Format `average:asc|desc` oder `gamesplayed:asc|desc`.",
         schema: new OA\Schema(type: 'string', default: 'average:desc', example: 'average:desc')
     )]
     #[OA\Response(

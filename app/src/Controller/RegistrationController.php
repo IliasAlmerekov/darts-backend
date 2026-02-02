@@ -12,6 +12,7 @@ namespace App\Controller;
 use App\Exception\Request\InvalidJsonBodyException;
 use App\Http\Attribute\ApiResponse;
 use App\Service\Registration\RegistrationServiceInterface;
+use Nelmio\ApiDocBundle\Attribute\Security;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,6 +22,7 @@ use Symfony\Component\Routing\Attribute\Route;
 /**
  * Controller to handle user registration.
  */
+#[OA\Tag(name: 'Registration')]
 final class RegistrationController extends AbstractController
 {
     /**
@@ -75,6 +77,7 @@ final class RegistrationController extends AbstractController
             ]
         )
     )]
+    #[Security(name: null)]
     #[ApiResponse]
     #[Route('/api/register', name: 'app_register', methods: ['POST'], format: 'json')]
     public function register(Request $request, RegistrationServiceInterface $registrationService): array

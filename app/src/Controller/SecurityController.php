@@ -9,6 +9,7 @@ use App\Exception\Security\UserNotAuthenticatedException;
 use App\Http\Attribute\ApiResponse;
 use App\Service\Security\SecurityServiceInterface;
 use LogicException;
+use Nelmio\ApiDocBundle\Attribute\Security;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,6 +22,7 @@ use Symfony\Component\HttpFoundation\Request;
  *
  * @psalm-suppress UnusedClass Routed by Symfony framework
  */
+#[OA\Tag(name: 'Authentication')]
 final class SecurityController extends AbstractController
 {
     /**
@@ -61,6 +63,7 @@ final class SecurityController extends AbstractController
             ]
         )
     )]
+    #[Security(name: null)]
     #[ApiResponse]
     #[Route(path: '/api/login', name: 'app_login', methods: ['GET', 'POST'], format: 'json')]
     public function login(AuthenticationUtils $authenticationUtils): array
@@ -127,6 +130,8 @@ final class SecurityController extends AbstractController
     }
 
     /**
+     * Logs out the current user.
+     *
      * @return void
      *
      * @psalm-suppress PossiblyUnusedMethod Handled by Symfony firewall logout

@@ -13,6 +13,7 @@ use App\Entity\Game;
 use App\Entity\Invitation;
 use App\Http\Attribute\ApiResponse;
 use App\Service\Invitation\InvitationServiceInterface;
+use Nelmio\ApiDocBundle\Attribute\Security;
 use OpenApi\Attributes as OA;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -25,6 +26,7 @@ use Symfony\Component\Routing\Attribute\Route;
  * joining via invitation links, and processing invitations.
  * Also get as JSON responses for API requests.
  */
+#[OA\Tag(name: 'Invitations')]
 final class InvitationController extends AbstractController
 {
     /**
@@ -95,6 +97,7 @@ final class InvitationController extends AbstractController
             new OA\Header(header: 'Location', description: 'Frontend-URL', schema: new OA\Schema(type: 'string')),
         ]
     )]
+    #[Security(name: null)]
     #[Route('api/invite/join/{uuid}', name: 'join_invitation', format: 'json')]
     public function joinInvitation(#[MapEntity(mapping: ['uuid' => 'uuid'])] Invitation $invitation, SessionInterface $session): Response
     {
