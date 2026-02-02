@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Security;
 
 use App\Exception\Game\PlayerAlreadyThrewThreeTimesException;
+use App\Exception\Game\GameIdMissingException;
 use App\Security\ErrorController;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -24,7 +25,18 @@ final class ErrorControllerTest extends TestCase
         $data = json_decode((string) $response->getContent(), true);
         self::assertIsArray($data);
         self::assertSame(false, $data['success'] ?? null);
-        self::assertSame('PLAYER_THROWS_LIMIT_REACHED', $data['error'] ?? null);
+        self::assertSame('GAME_PLAYER_THROWS_LIMIT_REACHED', $data['error'] ?? null);
+    }
+
+    public function testRendersGameIdMissingExceptionAsJson(): void
+    {
+        $controller = new ErrorController();
+        $response = $controller->show(new GameIdMissingException());
+
+        self::assertSame(Response::HTTP_INTERNAL_SERVER_ERROR, $response->getStatusCode());
+
+        $data = json_decode((string) $response->getContent(), true);
+        self::assertSame('GAME_ID_MISSING', $data['error'] ?? null);
     }
 
     public function testRendersNotFoundAsJson(): void
@@ -49,4 +61,3 @@ final class ErrorControllerTest extends TestCase
         self::assertSame('INTERNAL_SERVER_ERROR', $data['error'] ?? null);
     }
 }
-

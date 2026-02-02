@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace App\Exception\Request;
 
 use App\Exception\ApiHttpException;
+use App\Exception\ErrorCode;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -23,7 +24,7 @@ final class InvalidJsonBodyException extends ApiHttpException
     public function __construct()
     {
         parent::__construct(
-            'INVALID_JSON_BODY',
+            ErrorCode::RequestInvalidJsonBody,
             Response::HTTP_BAD_REQUEST,
             'Ungültiger JSON-Body. Bitte überprüfe das Datenformat.'
         );

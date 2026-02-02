@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace App\Exception\Request;
 
 use App\Exception\ApiHttpException;
+use App\Exception\ErrorCode;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -23,7 +24,7 @@ final class PlayerIdRequiredException extends ApiHttpException
     public function __construct()
     {
         parent::__construct(
-            'PLAYER_ID_REQUIRED',
+            ErrorCode::RequestPlayerIdRequired,
             Response::HTTP_BAD_REQUEST,
             'Player ID is required'
         );

@@ -13,6 +13,7 @@ use App\Dto\GameResponseDto;
 use App\Dto\PlayerResponseDto;
 use App\Dto\ThrowResponseDto;
 use App\Entity\Game;
+use App\Exception\Game\GameIdMissingException;
 use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
 use Override;
@@ -80,17 +81,17 @@ final readonly class GameService implements GameServiceInterface
             $throwsCount = 0;
             $hasBusted = false;
             if ($roundEntity) {
-                $throws = $this->roundThrowsRepository->findBy([
+                $throwsCount = $this->roundThrowsRepository->count([
                     'round' => $roundEntity,
                     'player' => $user,
                 ]);
-                $throwsCount = count($throws);
                 // Check: War sein letzter Wurf ein Bust?
                 if ($throwsCount > 0) {
-                    $lastThrow = end($throws);
-                    if (false !== $lastThrow) {
-                        $hasBusted = $lastThrow->isBust();
-                    }
+                    $lastThrow = $this->roundThrowsRepository->findOneBy(
+                        ['round' => $roundEntity, 'player' => $user],
+                        ['throwNumber' => 'DESC']
+                    );
+                    $hasBusted = $lastThrow instanceof \App\Entity\RoundThrows && $lastThrow->isBust();
                 }
             }
 
@@ -180,6 +181,19 @@ final readonly class GameService implements GameServiceInterface
                 }
             }
 
+            // Wenn es in der aktuellen Runde noch keine Würfe gibt (oder die Runde-Entity noch nicht existiert),
+            // nehmen wir den letzten Wurf des Spielers insgesamt. Das hilft dem Client, den letzten Bust-Status
+            // direkt nach einem Bust bzw. beim Round-Wechsel korrekt anzuzeigen.
+            if (0 === $throwsThisRound && $isPlayerActive) {
+                $gameId = $game->getGameId();
+                if (null !== $gameId) {
+                    $latestThrowForPlayer = $this->roundThrowsRepository->findLatestForGameAndPlayer($gameId, $userId);
+                    if ($latestThrowForPlayer instanceof \App\Entity\RoundThrows) {
+                        $isBust = $latestThrowForPlayer->isBust();
+                    }
+                }
+            }
+
             // Baue roundHistory: alle Runden mit Würfen für diesen Spieler
             $allRounds = $this->roundRepository->findBy(['game' => $game], ['roundNumber' => 'ASC']);
             foreach ($allRounds as $round) {
@@ -230,7 +244,7 @@ final readonly class GameService implements GameServiceInterface
 
         $gameId = $game->getGameId();
         if (null === $gameId) {
-            throw new \RuntimeException('Game ID cannot be null');
+            throw new GameIdMissingException();
         }
 
         return new GameResponseDto(

@@ -9,6 +9,8 @@ use App\Exception\Security\UserNotAuthenticatedException;
 use App\Http\Attribute\ApiResponse;
 use App\Service\Security\SecurityServiceInterface;
 use LogicException;
+use Nelmio\ApiDocBundle\Attribute\Security;
+use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -20,6 +22,7 @@ use Symfony\Component\HttpFoundation\Request;
  *
  * @psalm-suppress UnusedClass Routed by Symfony framework
  */
+#[OA\Tag(name: 'Authentication')]
 final class SecurityController extends AbstractController
 {
     /**
@@ -29,6 +32,38 @@ final class SecurityController extends AbstractController
      *
      * @return array<array-key, mixed>
      */
+    #[OA\RequestBody(
+        required: false,
+        description: 'Login-Daten für POST-Requests (Standard Symfony-Form-Felder).',
+        content: new OA\MediaType(
+            mediaType: 'application/x-www-form-urlencoded',
+            schema: new OA\Schema(
+                type: 'object',
+                properties: [
+                    new OA\Property(property: '_username', type: 'string', example: 'alice'),
+                    new OA\Property(property: '_password', type: 'string', example: 'secret'),
+                ]
+            )
+        )
+    )]
+    #[OA\Response(
+        response: Response::HTTP_OK,
+        description: 'Login-Status. Wenn authentifiziert, enthält die Antwort eine Weiterleitung zu `/api/login/success`.',
+        content: new OA\JsonContent(
+            type: 'object',
+            properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: true),
+                new OA\Property(property: 'id', type: 'integer', nullable: true, example: 1),
+                new OA\Property(property: 'username', type: 'string', nullable: true, example: 'alice'),
+                new OA\Property(property: 'roles', type: 'array', items: new OA\Items(type: 'string'), example: ['ROLE_PLAYER']),
+                new OA\Property(property: 'redirect', type: 'string', nullable: true, example: '/api/login/success'),
+                new OA\Property(property: 'last_username', type: 'string', nullable: true, example: 'alice'),
+                new OA\Property(property: 'error', type: 'string', nullable: true, example: 'Ungültige Zugangsdaten.'),
+                new OA\Property(property: 'status', type: 'integer', nullable: true, example: 401),
+            ]
+        )
+    )]
+    #[Security(name: null)]
     #[ApiResponse]
     #[Route(path: '/api/login', name: 'app_login', methods: ['GET', 'POST'], format: 'json')]
     public function login(AuthenticationUtils $authenticationUtils): array
@@ -67,6 +102,22 @@ final class SecurityController extends AbstractController
      *
      * @psalm-suppress PossiblyUnusedMethod Symfony route entry point
      */
+    #[OA\Response(
+        response: Response::HTTP_OK,
+        description: 'Login-Erfolg inkl. Redirect-Ziel fürs Frontend.',
+        content: new OA\JsonContent(
+            type: 'object',
+            required: ['success', 'redirect'],
+            properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: true),
+                new OA\Property(property: 'roles', type: 'array', items: new OA\Items(type: 'string'), example: ['ROLE_PLAYER']),
+                new OA\Property(property: 'id', type: 'integer', nullable: true, example: 1),
+                new OA\Property(property: 'username', type: 'string', nullable: true, example: 'alice'),
+                new OA\Property(property: 'redirect', type: 'string', example: 'http://localhost:5173/joined'),
+            ]
+        )
+    )]
+    #[OA\Response(response: Response::HTTP_UNAUTHORIZED, description: 'User ist nicht authentifiziert.')]
     #[Route('/api/login/success', name: 'login_success', format: 'json')]
     public function loginSuccess(Request $request, SecurityServiceInterface $securityService): Response
     {
@@ -79,6 +130,8 @@ final class SecurityController extends AbstractController
     }
 
     /**
+     * Logs out the current user.
+     *
      * @return void
      *
      * @psalm-suppress PossiblyUnusedMethod Handled by Symfony firewall logout

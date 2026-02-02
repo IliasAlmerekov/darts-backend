@@ -9,9 +9,9 @@ use App\Exception\ErrorCode;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Thrown when a game has an invalid number of players for the requested action.
+ * Thrown when a game entity is missing an identifier.
  */
-final class GameMustHaveValidPlayerCountException extends ApiHttpException
+final class GameIdMissingException extends ApiHttpException
 {
     /**
      * @return void
@@ -19,9 +19,9 @@ final class GameMustHaveValidPlayerCountException extends ApiHttpException
     public function __construct()
     {
         parent::__construct(
-            ErrorCode::GameInvalidPlayerCount,
-            Response::HTTP_BAD_REQUEST,
-            'Game must have between 2 and 10 players to start.'
+            ErrorCode::GameIdMissing,
+            Response::HTTP_INTERNAL_SERVER_ERROR,
+            'Game ID is missing.'
         );
     }
 }
