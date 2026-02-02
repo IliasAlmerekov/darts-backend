@@ -20,7 +20,9 @@ security:
             form_login:
                 login_path: app_login
                 check_path: app_login
-                enable_csrf: false # irgendwann wieder auf true setzen
+                enable_csrf: true
+                csrf_parameter: _csrf_token
+                csrf_token_id: authenticate
                 default_target_path: login_success
             logout:
                 path: app_logout
@@ -39,6 +41,7 @@ security:
         - { path: /api/room/waiting, roles: ROLE_PLAYER }
         - { path: ^/api/room, roles: ROLE_ADMIN }
         - { path: ^/api/invite/create/, roles: ROLE_ADMIN }
+        - { path: ^/api/game, roles: [ROLE_PLAYER, ROLE_ADMIN] }
         - { path: ^/api/login, roles: PUBLIC_ACCESS}
         - { path: ^/api/register, roles: PUBLIC_ACCESS}
 
