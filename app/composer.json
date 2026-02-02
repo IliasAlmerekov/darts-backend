@@ -102,7 +102,7 @@
         "escapestudios/symfony2-coding-standard": "^3.16",
         "micheh/phpcs-gitlab": "^2.1",
         "phpunit/php-code-coverage": "^12.5",
-        "phpunit/phpunit": "^12.4",
+        "phpunit/phpunit": "^12.5.8",
         "psalm/plugin-symfony": "*",
         "roave/security-advisories": "dev-latest",
         "symfony/browser-kit": "7.3.*",

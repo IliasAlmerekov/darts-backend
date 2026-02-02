@@ -13,6 +13,7 @@ use App\Dto\GameResponseDto;
 use App\Dto\PlayerResponseDto;
 use App\Dto\ThrowResponseDto;
 use App\Entity\Game;
+use App\Exception\Game\GameIdMissingException;
 use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
 use Override;
@@ -243,7 +244,7 @@ final readonly class GameService implements GameServiceInterface
 
         $gameId = $game->getGameId();
         if (null === $gameId) {
-            throw new \RuntimeException('Game ID cannot be null');
+            throw new GameIdMissingException();
         }
 
         return new GameResponseDto(

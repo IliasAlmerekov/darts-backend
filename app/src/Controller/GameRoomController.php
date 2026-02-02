@@ -203,7 +203,7 @@ final class GameRoomController extends AbstractController
 
         $game = $this->gameRoomService->findGameById($id);
         if (!$game) {
-            throw $this->createNotFoundException('Game not found');
+            throw new GameNotFoundException();
         }
 
         return $this->sseStreamService->createPlayerStream($id);

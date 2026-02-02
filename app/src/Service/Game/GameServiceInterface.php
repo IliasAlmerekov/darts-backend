@@ -36,7 +36,7 @@ interface GameServiceInterface
      *
      * @return GameResponseDto Complete game data transfer object
      *
-     * @throws \RuntimeException If game ID is null
+     * @throws \App\Exception\Game\GameIdMissingException If game ID is null
      */
     public function createGameDto(Game $game): GameResponseDto;
 }

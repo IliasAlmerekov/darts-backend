@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace App\Exception\Security;
 
 use App\Exception\ApiHttpException;
+use App\Exception\ErrorCode;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -23,7 +24,7 @@ final class UserNotAuthenticatedException extends ApiHttpException
     public function __construct()
     {
         parent::__construct(
-            'USER_NOT_AUTHENTICATED',
+            ErrorCode::SecurityUserNotAuthenticated,
             Response::HTTP_UNAUTHORIZED,
             'User not authenticated'
         );

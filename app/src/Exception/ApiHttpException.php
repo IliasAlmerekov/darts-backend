@@ -12,8 +12,10 @@ use Throwable;
  */
 class ApiHttpException extends HttpException implements ApiExceptionInterface
 {
+    private readonly string $errorCode;
+
     /**
-     * @param string                $errorCode
+     * @param ErrorCode|string      $errorCode
      * @param int                   $statusCode
      * @param string                $message
      * @param Throwable|null        $previous
@@ -21,13 +23,14 @@ class ApiHttpException extends HttpException implements ApiExceptionInterface
      * @param int                   $code
      */
     public function __construct(
-        private readonly string $errorCode,
+        ErrorCode|string $errorCode,
         int $statusCode,
         string $message = '',
         ?Throwable $previous = null,
         array $headers = [],
         int $code = 0
     ) {
+        $this->errorCode = $errorCode instanceof ErrorCode ? $errorCode->value : $errorCode;
         parent::__construct($statusCode, $message, $previous, $headers, $code);
     }
 
