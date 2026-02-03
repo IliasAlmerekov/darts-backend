@@ -15,6 +15,7 @@ use App\Entity\Round;
 use App\Exception\Game\GameMustHaveValidPlayerCountException;
 use App\Exception\Game\PlayerPositionsCountMismatchException;
 use App\Enum\GameStatus;
+use App\Service\Security\GameAccessServiceInterface;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use Override;
@@ -28,10 +29,11 @@ use Override;
 final readonly class GameStartService implements GameStartServiceInterface
 {
     /**
-     * @param GameSetupService       $gameSetupService
-     * @param EntityManagerInterface $entityManager
+     * @param GameSetupService            $gameSetupService
+     * @param EntityManagerInterface      $entityManager
+     * @param GameAccessServiceInterface  $gameAccessService
      */
-    public function __construct(private GameSetupService $gameSetupService, private EntityManagerInterface $entityManager)
+    public function __construct(private GameSetupService $gameSetupService, private EntityManagerInterface $entityManager, private GameAccessServiceInterface $gameAccessService)
     {
     }
 
@@ -44,6 +46,7 @@ final readonly class GameStartService implements GameStartServiceInterface
     #[Override]
     public function start(Game $game, StartGameRequest $dto): void
     {
+        $this->gameAccessService->assertPlayerInGameOrAdmin($game);
         $this->guardPlayerCount($game, $dto);
         $game->setStatus(GameStatus::Started);
         if (null !== $dto->startScore) {

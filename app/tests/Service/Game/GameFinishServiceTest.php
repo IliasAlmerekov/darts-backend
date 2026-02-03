@@ -12,6 +12,7 @@ use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Game\GameFinishService;
+use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
@@ -66,12 +67,7 @@ final class GameFinishServiceTest extends TestCase
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::once())->method('flush');
 
-        $service = new GameFinishService(
-            $entityManager,
-            $gamePlayersRepository,
-            $roundThrowsRepository,
-            $roundRepository
-        );
+        $service = $this->createService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $roundRepository);
 
         $finishedPlayers = $service->finishGame($game);
 
@@ -163,12 +159,7 @@ final class GameFinishServiceTest extends TestCase
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
 
-        $service = new GameFinishService(
-            $entityManager,
-            $gamePlayersRepository,
-            $roundThrowsRepository,
-            $roundRepository
-        );
+        $service = $this->createService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $roundRepository);
 
         $stats = $service->getGameStats($game);
 
@@ -186,5 +177,23 @@ final class GameFinishServiceTest extends TestCase
     {
         $ref = new ReflectionProperty($object, $property);
         $ref->setValue($object, $value);
+    }
+
+    private function createService(
+        EntityManagerInterface $entityManager,
+        GamePlayersRepositoryInterface $gamePlayersRepository,
+        RoundThrowsRepositoryInterface $roundThrowsRepository,
+        RoundRepositoryInterface $roundRepository
+    ): GameFinishService {
+        $access = $this->createMock(GameAccessServiceInterface::class);
+        $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+
+        return new GameFinishService(
+            $entityManager,
+            $gamePlayersRepository,
+            $roundThrowsRepository,
+            $roundRepository,
+            $access
+        );
     }
 }

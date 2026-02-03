@@ -37,6 +37,21 @@ interface GameFinishServiceInterface
     public function getGameStats(Game $game): array;
 
     /**
+     * Get the list of finished players for a game without mutating state.
+     *
+     * @param Game $game
+     *
+     * @return list<array{
+     *     playerId:int|null,
+     *     username:string|null,
+     *     position:int|null,
+     *     roundsPlayed:int|null,
+     *     roundAverage:float
+     * }>
+     */
+    public function getFinishedPlayers(Game $game): array;
+
+    /**
      * Build the list of finished players for a game.
      *
      * @param int                    $gameId

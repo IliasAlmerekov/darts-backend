@@ -16,6 +16,7 @@ use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
 use App\Service\Game\GameRoomService;
 use App\Service\Player\PlayerManagementService;
+use App\Service\Security\GameAccessServiceInterface;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
@@ -31,6 +32,7 @@ final class GameRoomServiceTest extends TestCase
     private GamePlayersRepositoryInterface $gamePlayersRepository;
     private EntityManagerInterface $entityManager;
     private PlayerManagementService $playerManagementService;
+    private GameAccessServiceInterface $gameAccessService;
 
     protected function setUp(): void
     {
@@ -42,6 +44,9 @@ final class GameRoomServiceTest extends TestCase
             $this->gamePlayersRepository,
             $this->entityManager
         );
+        $this->gameAccessService = $this->createMock(GameAccessServiceInterface::class);
+        $this->gameAccessService->method('requireAuthenticatedUser')->willReturn(new User());
+        $this->gameAccessService->method('assertPlayerInGameOrAdmin')->willReturn(new User());
     }
 
     public function testCreateGamePersistsAndSetsDate(): void
@@ -158,7 +163,8 @@ final class GameRoomServiceTest extends TestCase
             $this->gameRepository,
             $this->gamePlayersRepository,
             $this->entityManager,
-            $this->playerManagementService
+            $this->playerManagementService,
+            $this->gameAccessService
         );
     }
 

@@ -42,12 +42,15 @@ final readonly class SecurityService implements SecurityServiceInterface
     #[Override]
     public function buildLoginSuccessResponse(User $user, SessionInterface $session): Response
     {
+        $payload = $this->buildUserPayload($user);
+
         if (in_array('ROLE_ADMIN', $user->getRoles(), true)) {
             return new JsonResponse([
                 'success' => true,
-                'roles' => $user->getStoredRoles(),
-                'id' => $user->getId(),
-                'username' => $user->getUserIdentifier(),
+                'roles' => $payload['roles'],
+                'id' => $payload['id'],
+                'email' => $payload['email'],
+                'username' => $payload['username'],
                 'redirect' => $this->frontendUrl.'/start',
             ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
         }
@@ -58,10 +61,26 @@ final readonly class SecurityService implements SecurityServiceInterface
 
         return new JsonResponse([
             'success' => true,
-            'roles' => $user->getStoredRoles(),
-            'id' => $user->getId(),
-            'username' => $user->getUserIdentifier(),
+            'roles' => $payload['roles'],
+            'id' => $payload['id'],
+            'email' => $payload['email'],
+            'username' => $payload['username'],
             'redirect' => $this->frontendUrl.'/joined',
         ]);
+    }
+
+    /**
+     * @param User $user
+     *
+     * @return array{id:int|null,email:string|null,username:string|null,roles:list<string>}
+     */
+    private function buildUserPayload(User $user): array
+    {
+        return [
+            'id' => $user->getId(),
+            'email' => $user->getEmail(),
+            'username' => $user->getUsername(),
+            'roles' => $user->getStoredRoles(),
+        ];
     }
 }

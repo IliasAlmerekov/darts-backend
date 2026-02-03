@@ -12,6 +12,7 @@ use App\Exception\Game\NoSettingsProvidedException;
 use App\Exception\Game\SettingsNotEditableException;
 use App\Exception\Game\StartScoreCannotBeChangedAfterStartException;
 use App\Enum\GameStatus;
+use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Override;
 
@@ -27,11 +28,12 @@ final readonly class GameSettingsService implements GameSettingsServiceInterface
     private const ALLOWED_START_SCORES = [101, 201, 301, 401, 501];
 
     /**
-     * @param EntityManagerInterface $entityManager
+     * @param EntityManagerInterface     $entityManager
+     * @param GameAccessServiceInterface $gameAccessService
      *
      * @psalm-suppress PossiblyUnusedMethod Reason: constructor is used by Symfony autowiring.
      */
-    public function __construct(private EntityManagerInterface $entityManager)
+    public function __construct(private EntityManagerInterface $entityManager, private GameAccessServiceInterface $gameAccessService)
     {
     }
 
@@ -44,6 +46,7 @@ final readonly class GameSettingsService implements GameSettingsServiceInterface
     #[Override]
     public function updateSettings(Game $game, GameSettingsRequest $dto): void
     {
+        $this->gameAccessService->assertPlayerInGameOrAdmin($game);
         $status = $game->getStatus();
         $isLobby = GameStatus::Lobby === $status;
         $isStarted = GameStatus::Started === $status;

@@ -14,6 +14,7 @@ use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Game\GameThrowService;
+use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
@@ -91,7 +92,8 @@ final class GameThrowServiceTest extends TestCase
             $gamePlayersRepository,
             $roundRepository,
             $roundThrowsRepository,
-            $entityManager
+            $entityManager,
+            $this->createAccessService()
         );
 
         $service->recordThrow($game, $dto);
@@ -111,5 +113,13 @@ final class GameThrowServiceTest extends TestCase
     {
         $ref = new ReflectionProperty($object, $property);
         $ref->setValue($object, $value);
+    }
+
+    private function createAccessService(): GameAccessServiceInterface
+    {
+        $access = $this->createMock(GameAccessServiceInterface::class);
+        $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+
+        return $access;
     }
 }

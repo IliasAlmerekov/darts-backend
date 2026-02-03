@@ -16,6 +16,7 @@ use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\InvitationRepositoryInterface;
 use App\Repository\UserRepositoryInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
+use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Override;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -38,6 +39,7 @@ final readonly class InvitationService implements InvitationServiceInterface
      * @param PlayerManagementServiceInterface $playerManagementService
      * @param EntityManagerInterface           $entityManager
      * @param RouterInterface                  $router
+     * @param GameAccessServiceInterface       $gameAccessService
      */
     public function __construct(
         private InvitationRepositoryInterface $invitationRepository,
@@ -46,6 +48,7 @@ final readonly class InvitationService implements InvitationServiceInterface
         private PlayerManagementServiceInterface $playerManagementService,
         private EntityManagerInterface $entityManager,
         private RouterInterface $router,
+        private GameAccessServiceInterface $gameAccessService,
     ) {
     }
 
@@ -87,6 +90,7 @@ final readonly class InvitationService implements InvitationServiceInterface
     #[Override]
     public function getInvitationPayload(Game $game): array
     {
+        $this->gameAccessService->assertPlayerInGameOrAdmin($game);
         $gameId = $game->getGameId();
         if (null === $gameId) {
             return ['success' => false, 'message' => 'Game not found'];
@@ -112,6 +116,7 @@ final readonly class InvitationService implements InvitationServiceInterface
     #[Override]
     public function getUsersForGame(Game $game): array
     {
+        $this->gameAccessService->assertPlayerInGameOrAdmin($game);
         $gameId = $game->getGameId();
         if (null === $gameId) {
             return [];

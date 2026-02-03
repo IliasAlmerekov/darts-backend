@@ -15,6 +15,7 @@ use App\Repository\InvitationRepositoryInterface;
 use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Game\GameFinishServiceInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
+use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -36,10 +37,11 @@ final readonly class RematchService implements RematchServiceInterface
      * @param InvitationRepositoryInterface    $invitationRepository
      * @param EntityManagerInterface           $entityManager
      * @param UrlGeneratorInterface            $urlGenerator
+     * @param GameAccessServiceInterface       $gameAccessService
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
-    public function __construct(private GameRoomServiceInterface $gameRoomService, private PlayerManagementServiceInterface $playerManagementService, private GameFinishServiceInterface $gameFinishService, private InvitationRepositoryInterface $invitationRepository, private EntityManagerInterface $entityManager, private UrlGeneratorInterface $urlGenerator)
+    public function __construct(private GameRoomServiceInterface $gameRoomService, private PlayerManagementServiceInterface $playerManagementService, private GameFinishServiceInterface $gameFinishService, private InvitationRepositoryInterface $invitationRepository, private EntityManagerInterface $entityManager, private UrlGeneratorInterface $urlGenerator, private GameAccessServiceInterface $gameAccessService)
     {
     }
 
@@ -57,6 +59,7 @@ final readonly class RematchService implements RematchServiceInterface
         if (!$oldGame) {
             return ['success' => false, 'message' => 'Previous game not found'];
         }
+        $this->gameAccessService->assertPlayerInGameOrAdmin($oldGame);
 
         $newGame = $this->gameRoomService->createGame();
         $newGame->setStatus(GameStatus::Lobby);

@@ -14,6 +14,7 @@ use App\Dto\GameResponseDto;
 use App\Dto\SuccessMessageDto;
 use App\Dto\StartGameRequest;
 use App\Entity\Game;
+use App\Exception\ApiExceptionInterface;
 use App\Http\Attribute\ApiResponse;
 use App\Service\Game\GameAbortServiceInterface;
 use App\Service\Game\GameFinishServiceInterface;
@@ -38,11 +39,12 @@ final class GameLifecycleController extends AbstractController
     /**
      * Starts a game with provided settings.
      *
-     * @param Game                      $game
+     * @param Game $game
      * @param GameStartServiceInterface $gameStartService
-     * @param StartGameRequest          $dto
+     * @param StartGameRequest $dto
      *
      * @return Game
+     * @throws ApiExceptionInterface
      */
     #[OA\Parameter(name: 'gameId', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
     #[OA\RequestBody(required: true, content: new OA\JsonContent(ref: new Model(type: StartGameRequest::class)))]
@@ -143,13 +145,46 @@ final class GameLifecycleController extends AbstractController
             )
         )
     )]
-    #[ApiResponse(groups: ['game:read'])]
-    #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['GET'], format: 'json')]
-    public function finished(#[AttributeMapEntity(id: 'gameId')] Game $game, GameFinishServiceInterface $gameFinishService): mixed
+    #[ApiResponse]
+    #[Route('/api/game/{gameId}/finish', name: 'app_game_finish', methods: ['POST'], format: 'json')]
+    public function finish(#[AttributeMapEntity(id: 'gameId')] Game $game, GameFinishServiceInterface $gameFinishService): mixed
     {
         $result = $gameFinishService->finishGame($game);
 
         return $result;
+    }
+
+    /**
+     * Returns final standings without mutating game state.
+     *
+     * @param Game                       $game
+     * @param GameFinishServiceInterface $gameFinishService
+     *
+     * @return mixed
+     */
+    #[OA\Parameter(name: 'gameId', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
+    #[OA\Response(
+        response: Response::HTTP_OK,
+        description: 'Endplatzierungen des Spiels (read-only).',
+        content: new OA\JsonContent(
+            type: 'array',
+            items: new OA\Items(
+                type: 'object',
+                properties: [
+                    new OA\Property(property: 'playerId', type: 'integer', nullable: true, example: 1),
+                    new OA\Property(property: 'username', type: 'string', nullable: true, example: 'alice'),
+                    new OA\Property(property: 'position', type: 'integer', nullable: true, example: 1),
+                    new OA\Property(property: 'roundsPlayed', type: 'integer', nullable: true, example: 10),
+                    new OA\Property(property: 'roundAverage', type: 'number', format: 'float', example: 54.2),
+                ]
+            )
+        )
+    )]
+    #[ApiResponse]
+    #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['GET'], format: 'json')]
+    public function finished(#[AttributeMapEntity(id: 'gameId')] Game $game, GameFinishServiceInterface $gameFinishService): mixed
+    {
+        return $gameFinishService->getFinishedPlayers($game);
     }
 
     /**

@@ -6,12 +6,14 @@ namespace App\Tests\Service;
 
 use App\Dto\GameSettingsRequest;
 use App\Entity\Game;
+use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Exception\Game\InvalidStartScoreException;
 use App\Exception\Game\NoSettingsProvidedException;
 use App\Exception\Game\SettingsNotEditableException;
 use App\Exception\Game\StartScoreCannotBeChangedAfterStartException;
 use App\Service\Game\GameSettingsService;
+use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 
@@ -28,7 +30,7 @@ final class GameSettingsServiceTest extends TestCase
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::once())->method('flush');
 
-        $service = new GameSettingsService($entityManager);
+        $service = $this->createService($entityManager);
         $service->updateSettings($game, $dto);
 
         self::assertSame(501, $game->getStartScore());
@@ -46,7 +48,7 @@ final class GameSettingsServiceTest extends TestCase
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::never())->method('flush');
 
-        $service = new GameSettingsService($entityManager);
+        $service = $this->createService($entityManager);
 
         $this->expectException(SettingsNotEditableException::class);
         $service->updateSettings($game, $dto);
@@ -60,7 +62,7 @@ final class GameSettingsServiceTest extends TestCase
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::never())->method('flush');
 
-        $service = new GameSettingsService($entityManager);
+        $service = $this->createService($entityManager);
 
         $this->expectException(NoSettingsProvidedException::class);
         $service->updateSettings($game, $dto);
@@ -75,7 +77,7 @@ final class GameSettingsServiceTest extends TestCase
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::never())->method('flush');
 
-        $service = new GameSettingsService($entityManager);
+        $service = $this->createService($entityManager);
 
         $this->expectException(InvalidStartScoreException::class);
         $service->updateSettings($game, $dto);
@@ -92,7 +94,7 @@ final class GameSettingsServiceTest extends TestCase
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::once())->method('flush');
 
-        $service = new GameSettingsService($entityManager);
+        $service = $this->createService($entityManager);
         $service->updateSettings($game, $dto);
 
         self::assertTrue($game->isDoubleOut());
@@ -109,9 +111,17 @@ final class GameSettingsServiceTest extends TestCase
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::never())->method('flush');
 
-        $service = new GameSettingsService($entityManager);
+        $service = $this->createService($entityManager);
 
         $this->expectException(StartScoreCannotBeChangedAfterStartException::class);
         $service->updateSettings($game, $dto);
+    }
+
+    private function createService(EntityManagerInterface $entityManager): GameSettingsService
+    {
+        $access = $this->createMock(GameAccessServiceInterface::class);
+        $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+
+        return new GameSettingsService($entityManager, $access);
     }
 }

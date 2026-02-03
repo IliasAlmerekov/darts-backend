@@ -39,6 +39,8 @@ final class SecurityServiceTest extends TestCase
         $payload = json_decode($response->getContent() ?: '{}', true, 512, JSON_THROW_ON_ERROR);
         self::assertSame('/start', parse_url($payload['redirect'], PHP_URL_PATH));
         self::assertSame($user->getId(), $payload['id']);
+        self::assertSame($user->getEmail(), $payload['email']);
+        self::assertSame($user->getUsername(), $payload['username']);
         self::assertSame($user->getStoredRoles(), $payload['roles']);
     }
 
@@ -73,6 +75,8 @@ final class SecurityServiceTest extends TestCase
         $payload = json_decode($response->getContent() ?: '{}', true, 512, JSON_THROW_ON_ERROR);
         self::assertSame('/joined', parse_url($payload['redirect'], PHP_URL_PATH));
         self::assertSame($user->getId(), $payload['id']);
+        self::assertSame($user->getEmail(), $payload['email']);
+        self::assertSame($user->getUsername(), $payload['username']);
         self::assertSame($user->getStoredRoles(), $payload['roles']);
     }
 
