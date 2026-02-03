@@ -12,6 +12,7 @@ use App\Enum\GameStatus;
 use App\Exception\Game\GameMustHaveValidPlayerCountException;
 use App\Service\Game\GameSetupService;
 use App\Service\Game\GameStartService;
+use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
@@ -38,7 +39,7 @@ final class GameStartServiceTest extends TestCase
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects(self::once())->method('flush');
 
-        $service = new GameStartService($setupService, $em);
+        $service = new GameStartService($setupService, $em, $this->createAccessService());
         $service->start($game, $dto);
 
         self::assertSame(GameStatus::Started, $game->getStatus());
@@ -61,9 +62,17 @@ final class GameStartServiceTest extends TestCase
         $setupService = new GameSetupService();
         $em = $this->createMock(EntityManagerInterface::class);
 
-        $service = new GameStartService($setupService, $em);
+        $service = new GameStartService($setupService, $em, $this->createAccessService());
 
         $this->expectException(GameMustHaveValidPlayerCountException::class);
         $service->start($game, new StartGameRequest());
+    }
+
+    private function createAccessService(): GameAccessServiceInterface
+    {
+        $access = $this->createMock(GameAccessServiceInterface::class);
+        $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+
+        return $access;
     }
 }

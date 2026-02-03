@@ -15,6 +15,7 @@ use App\Enum\GameStatus;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
+use App\Service\Security\GameAccessServiceInterface;
 use DateTimeImmutable;
 use DateTimeInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -30,8 +31,9 @@ final readonly class GameFinishService implements GameFinishServiceInterface
      * @param GamePlayersRepositoryInterface $gamePlayersRepository
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
      * @param RoundRepositoryInterface       $roundRepository
+     * @param GameAccessServiceInterface     $gameAccessService
      */
-    public function __construct(private EntityManagerInterface $entityManager, private GamePlayersRepositoryInterface $gamePlayersRepository, private RoundThrowsRepositoryInterface $roundThrowsRepository, private RoundRepositoryInterface $roundRepository)
+    public function __construct(private EntityManagerInterface $entityManager, private GamePlayersRepositoryInterface $gamePlayersRepository, private RoundThrowsRepositoryInterface $roundThrowsRepository, private RoundRepositoryInterface $roundRepository, private GameAccessServiceInterface $gameAccessService)
     {
     }
 
@@ -44,6 +46,7 @@ final readonly class GameFinishService implements GameFinishServiceInterface
     #[\Override]
     public function finishGame(Game $game, ?DateTimeInterface $finishedAt = null): array
     {
+        $this->gameAccessService->assertPlayerInGameOrAdmin($game);
         $game->setStatus(GameStatus::Finished);
         $timestamp = $finishedAt instanceof DateTimeImmutable
             ? $finishedAt
@@ -74,7 +77,6 @@ final readonly class GameFinishService implements GameFinishServiceInterface
             foreach ($players as $player) {
                 if (true === $player->isWinner()) {
                     $winner = $player->getPlayer();
-                    $game->setWinner($winner);
                     break;
                 }
             }
@@ -112,6 +114,27 @@ final readonly class GameFinishService implements GameFinishServiceInterface
             'winnerRoundAverage' => $winnerAverage,
             'finishedPlayers' => $finishedPlayers,
         ];
+    }
+
+    /**
+     * @param Game $game
+     *
+     * @return list<array{
+     *     playerId:int|null,
+     *     username:string|null,
+     *     position:int|null,
+     *     roundsPlayed:int|null,
+     *     roundAverage:float
+     * }>
+     */
+    #[\Override]
+    public function getFinishedPlayers(Game $game): array
+    {
+        $this->gameAccessService->assertPlayerInGameOrAdmin($game);
+        $gameId = (int) $game->getGameId();
+        $finishedRounds = $this->roundRepository->countFinishedRounds($gameId);
+
+        return $this->buildFinishedPlayersList($gameId, $finishedRounds);
     }
 
     /**

@@ -29,7 +29,7 @@ final class RegistrationControllerTest extends TestCase
 
     public function testRegisterReturnsCreatedOnSuccess(): void
     {
-        $request = Request::create('/api/register', 'POST', server: ['CONTENT_TYPE' => 'application/json'], content: '{"username":"new","email":"new@example.com","plainPassword":"pass"}');
+        $request = Request::create('/api/register', 'POST', server: ['CONTENT_TYPE' => 'application/json'], content: '{"username":"new","email":"new@example.com","plainPassword":"pass","_csrf_token":"csrf-token"}');
 
         $service = $this->createMock(RegistrationServiceInterface::class);
         $service->expects($this->once())
@@ -38,6 +38,7 @@ final class RegistrationControllerTest extends TestCase
                 'username' => 'new',
                 'email' => 'new@example.com',
                 'plainPassword' => 'pass',
+                '_csrf_token' => 'csrf-token',
             ])
             ->willReturn([
                 'success' => true,

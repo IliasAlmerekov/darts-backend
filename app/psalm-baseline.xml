@@ -124,11 +124,6 @@
       <code><![CDATA[setThrowId]]></code>
     </PossiblyUnusedMethod>
   </file>
-  <file src="src/Entity/User.php">
-    <PossiblyUnusedMethod>
-      <code><![CDATA[getEmail]]></code>
-    </PossiblyUnusedMethod>
-  </file>
   <file src="src/Security/ErrorController.php">
     <UnusedClass>
       <code><![CDATA[ErrorController]]></code>

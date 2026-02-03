@@ -18,6 +18,7 @@ use App\Repository\InvitationRepositoryInterface;
 use App\Repository\UserRepositoryInterface;
 use App\Service\Invitation\InvitationService;
 use App\Service\Player\PlayerManagementServiceInterface;
+use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -36,6 +37,7 @@ final class InvitationServiceTest extends TestCase
     private PlayerManagementServiceInterface&MockObject $playerManagementService;
     private EntityManagerInterface&MockObject $entityManager;
     private RouterInterface&MockObject $router;
+    private GameAccessServiceInterface&MockObject $gameAccessService;
     private InvitationService $service;
 
     protected function setUp(): void
@@ -46,6 +48,8 @@ final class InvitationServiceTest extends TestCase
         $this->playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
         $this->router = $this->createMock(RouterInterface::class);
+        $this->gameAccessService = $this->createMock(GameAccessServiceInterface::class);
+        $this->gameAccessService->method('assertPlayerInGameOrAdmin')->willReturn(new User());
 
         $this->service = new InvitationService(
             $this->invitationRepository,
@@ -53,7 +57,8 @@ final class InvitationServiceTest extends TestCase
             $this->userRepository,
             $this->playerManagementService,
             $this->entityManager,
-            $this->router
+            $this->router,
+            $this->gameAccessService
         );
     }
 

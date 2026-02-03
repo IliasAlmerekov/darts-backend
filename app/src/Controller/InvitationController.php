@@ -154,7 +154,7 @@ final class InvitationController extends AbstractController
             ]
         )
     )]
-    #[Route('api/invite/process', name: 'process_invitation')]
+    #[Route('api/invite/process', name: 'process_invitation', methods: ['POST'], format: 'json')]
     public function processInvitation(SessionInterface $session, InvitationServiceInterface $invitationService): Response
     {
         $result = $invitationService->processInvitation($session, $this->getUser());

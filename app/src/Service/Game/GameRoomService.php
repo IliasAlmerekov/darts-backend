@@ -13,6 +13,7 @@ use App\Entity\Game;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Service\Player\PlayerManagementService;
+use App\Service\Security\GameAccessServiceInterface;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
@@ -28,8 +29,9 @@ final readonly class GameRoomService implements GameRoomServiceInterface
      * @param GamePlayersRepositoryInterface $gamePlayersRepository
      * @param EntityManagerInterface         $entityManager
      * @param PlayerManagementService        $playerManagementService
+     * @param GameAccessServiceInterface     $gameAccessService
      */
-    public function __construct(private GameRepositoryInterface $gameRepository, private GamePlayersRepositoryInterface $gamePlayersRepository, private EntityManagerInterface $entityManager, private PlayerManagementService $playerManagementService)
+    public function __construct(private GameRepositoryInterface $gameRepository, private GamePlayersRepositoryInterface $gamePlayersRepository, private EntityManagerInterface $entityManager, private PlayerManagementService $playerManagementService, private GameAccessServiceInterface $gameAccessService)
     {
     }
 
@@ -39,6 +41,7 @@ final readonly class GameRoomService implements GameRoomServiceInterface
     #[Override]
     public function createGame(): Game
     {
+        $this->gameAccessService->requireAuthenticatedUser();
         $game = new Game();
         $game->setDate(new DateTime());
         $this->entityManager->persist($game);
@@ -70,6 +73,7 @@ final readonly class GameRoomService implements GameRoomServiceInterface
             if (null !== $previousGameId) {
                 $previousGame = $this->findGameById($previousGameId);
                 if (null !== $previousGame) {
+                    $this->gameAccessService->assertPlayerInGameOrAdmin($previousGame);
                     $this->playerManagementService->copyPlayers($previousGameId, (int) $game->getGameId(), $ids);
                 }
             } else {

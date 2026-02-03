@@ -27,6 +27,7 @@ services:
     App\Service\Invitation\InvitationServiceInterface: '@App\Service\Invitation\InvitationService'
     App\Service\Registration\RegistrationServiceInterface: '@App\Service\Registration\RegistrationService'
     App\Service\Security\SecurityServiceInterface: '@App\Service\Security\SecurityService'
+    App\Service\Security\GameAccessServiceInterface: '@App\Service\Security\GameAccessService'
     App\Service\Game\GameStartServiceInterface: '@App\Service\Game\GameStartService'
     App\Service\Game\GameSettingsServiceInterface: '@App\Service\Game\GameSettingsService'
     App\Service\Game\GameRoomServiceInterface: '@App\Service\Game\GameRoomService'

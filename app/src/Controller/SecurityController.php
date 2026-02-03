@@ -15,6 +15,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
+use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -34,14 +35,15 @@ final class SecurityController extends AbstractController
      */
     #[OA\RequestBody(
         required: false,
-        description: 'Login-Daten für POST-Requests (Standard Symfony-Form-Felder).',
+        description: 'Login-Daten für POST-Requests (Standard Symfony-Form-Felder). _username erwartet die E-Mail-Adresse.',
         content: new OA\MediaType(
             mediaType: 'application/x-www-form-urlencoded',
             schema: new OA\Schema(
                 type: 'object',
                 properties: [
-                    new OA\Property(property: '_username', type: 'string', example: 'alice'),
+                    new OA\Property(property: '_username', type: 'string', example: 'alice@example.com'),
                     new OA\Property(property: '_password', type: 'string', example: 'secret'),
+                    new OA\Property(property: '_csrf_token', type: 'string', example: 'csrf-token'),
                 ]
             )
         )
@@ -54,6 +56,7 @@ final class SecurityController extends AbstractController
             properties: [
                 new OA\Property(property: 'success', type: 'boolean', example: true),
                 new OA\Property(property: 'id', type: 'integer', nullable: true, example: 1),
+                new OA\Property(property: 'email', type: 'string', nullable: true, example: 'alice@example.com'),
                 new OA\Property(property: 'username', type: 'string', nullable: true, example: 'alice'),
                 new OA\Property(property: 'roles', type: 'array', items: new OA\Items(type: 'string'), example: ['ROLE_PLAYER']),
                 new OA\Property(property: 'redirect', type: 'string', nullable: true, example: '/api/login/success'),
@@ -71,11 +74,14 @@ final class SecurityController extends AbstractController
         $user = $this->getUser();
         if ($user) {
             $id = method_exists($user, 'getId') ? $user->getId() : null;
+            $email = $user instanceof User ? $user->getEmail() : $user->getUserIdentifier();
+            $username = $user instanceof User ? $user->getUsername() : null;
 
             return [
                 'success' => true,
                 'id' => $id,
-                'username' => $user->getUserIdentifier(),
+                'email' => $email,
+                'username' => $username,
                 'roles' => $user instanceof User ? $user->getStoredRoles() : $user->getRoles(),
                 'redirect' => '/api/login/success',
             ];
@@ -112,6 +118,7 @@ final class SecurityController extends AbstractController
                 new OA\Property(property: 'success', type: 'boolean', example: true),
                 new OA\Property(property: 'roles', type: 'array', items: new OA\Items(type: 'string'), example: ['ROLE_PLAYER']),
                 new OA\Property(property: 'id', type: 'integer', nullable: true, example: 1),
+                new OA\Property(property: 'email', type: 'string', nullable: true, example: 'alice@example.com'),
                 new OA\Property(property: 'username', type: 'string', nullable: true, example: 'alice'),
                 new OA\Property(property: 'redirect', type: 'string', example: 'http://localhost:5173/joined'),
             ]
@@ -142,5 +149,43 @@ final class SecurityController extends AbstractController
         throw new LogicException(
             'This method can be blank - it will be intercepted by the logout key on your firewall.'
         );
+    }
+
+    /**
+     * Returns CSRF tokens for authentication flows.
+     *
+     * @param CsrfTokenManagerInterface $csrfTokenManager
+     *
+     * @return array{success:bool,tokens:array<string,string>}
+     */
+    #[OA\Response(
+        response: Response::HTTP_OK,
+        description: 'CSRF-Tokens für Login/Registration.',
+        content: new OA\JsonContent(
+            type: 'object',
+            required: ['success', 'tokens'],
+            properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: true),
+                new OA\Property(
+                    property: 'tokens',
+                    type: 'object',
+                    additionalProperties: new OA\AdditionalProperties(type: 'string'),
+                    example: ['authenticate' => 'csrf-token', 'user_registration' => 'csrf-token']
+                ),
+            ]
+        )
+    )]
+    #[Security(name: null)]
+    #[ApiResponse]
+    #[Route(path: '/api/csrf', name: 'app_csrf_tokens', methods: ['GET'], format: 'json')]
+    public function csrfTokens(CsrfTokenManagerInterface $csrfTokenManager): array
+    {
+        return [
+            'success' => true,
+            'tokens' => [
+                'authenticate' => $csrfTokenManager->getToken('authenticate')->getValue(),
+                'user_registration' => $csrfTokenManager->getToken('user_registration')->getValue(),
+            ],
+        ];
     }
 }

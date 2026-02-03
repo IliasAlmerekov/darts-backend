@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service;
 
 use App\Entity\Game;
+use App\Entity\User;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\InvitationRepositoryInterface;
@@ -14,6 +15,7 @@ use App\Service\Game\GameFinishService;
 use App\Service\Game\GameRoomService;
 use App\Service\Player\PlayerManagementService;
 use App\Service\Game\RematchService;
+use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
@@ -30,11 +32,14 @@ final class RematchServiceTest extends TestCase
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $playerManagementService = new PlayerManagementService($gamePlayersRepository, $entityManager);
-        $gameRoomService = new GameRoomService($gameRepository, $gamePlayersRepository, $entityManager, $playerManagementService);
+        $access = $this->createMock(GameAccessServiceInterface::class);
+        $access->method('requireAuthenticatedUser')->willReturn(new User());
+        $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+        $gameRoomService = new GameRoomService($gameRepository, $gamePlayersRepository, $entityManager, $playerManagementService, $access);
 
         $roundRepository = $this->createMock(RoundRepositoryInterface::class);
         $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
-        $gameFinishService = new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $roundRepository);
+        $gameFinishService = new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $roundRepository, $access);
         $invitationRepository = $this->createMock(InvitationRepositoryInterface::class);
         $urlGenerator = $this->createMock(UrlGeneratorInterface::class);
 
@@ -44,7 +49,8 @@ final class RematchServiceTest extends TestCase
             $gameFinishService,
             $invitationRepository,
             $entityManager,
-            $urlGenerator
+            $urlGenerator,
+            $access
         );
 
         $result = $service->createRematch(42);
@@ -73,7 +79,10 @@ final class RematchServiceTest extends TestCase
         $entityManager->expects(self::atLeastOnce())->method('flush');
 
         $playerManagementService = new PlayerManagementService($gamePlayersRepository, $entityManager);
-        $gameRoomService = new GameRoomService($gameRepository, $gamePlayersRepository, $entityManager, $playerManagementService);
+        $access = $this->createMock(GameAccessServiceInterface::class);
+        $access->method('requireAuthenticatedUser')->willReturn(new User());
+        $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+        $gameRoomService = new GameRoomService($gameRepository, $gamePlayersRepository, $entityManager, $playerManagementService, $access);
 
         $roundRepository = $this->createMock(RoundRepositoryInterface::class);
         $roundRepository->method('countFinishedRounds')->willReturn(0);
@@ -86,7 +95,8 @@ final class RematchServiceTest extends TestCase
             $entityManager,
             $gamePlayersRepository,
             $roundThrowsRepository,
-            $roundRepository
+            $roundRepository,
+            $access
         );
 
         $invitationRepository = $this->createMock(InvitationRepositoryInterface::class);
@@ -101,7 +111,8 @@ final class RematchServiceTest extends TestCase
             $gameFinishService,
             $invitationRepository,
             $entityManager,
-            $urlGenerator
+            $urlGenerator,
+            $access
         );
 
         $result = $service->createRematch(42);

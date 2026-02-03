@@ -11,6 +11,7 @@ namespace App\Service\Game;
 
 use App\Entity\Game;
 use App\Enum\GameStatus;
+use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -22,9 +23,10 @@ use Doctrine\ORM\EntityManagerInterface;
 final readonly class GameAbortService implements GameAbortServiceInterface
 {
     /**
-     * @param EntityManagerInterface $entityManager
+     * @param EntityManagerInterface     $entityManager
+     * @param GameAccessServiceInterface $gameAccessService
      */
-    public function __construct(private EntityManagerInterface $entityManager)
+    public function __construct(private EntityManagerInterface $entityManager, private GameAccessServiceInterface $gameAccessService)
     {
     }
 
@@ -38,6 +40,7 @@ final readonly class GameAbortService implements GameAbortServiceInterface
     #[\Override]
     public function abortGame(Game $game): void
     {
+        $this->gameAccessService->assertPlayerInGameOrAdmin($game);
         $game->setStatus(GameStatus::Aborted);
         $this->entityManager->flush();
     }

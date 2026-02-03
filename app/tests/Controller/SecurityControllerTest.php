@@ -35,11 +35,14 @@ class SecurityControllerTest extends TestCase
     private function createUserMock(
         int $id,
         string $username,
+        string $email,
         array $roles = ['ROLE_USER']
     ): User&MockObject {
         $user = $this->createMock(User::class);
         $user->method('getId')->willReturn($id);
-        $user->method('getUserIdentifier')->willReturn($username);
+        $user->method('getUserIdentifier')->willReturn($email);
+        $user->method('getUsername')->willReturn($username);
+        $user->method('getEmail')->willReturn($email);
         $user->method('getRoles')->willReturn($roles);
         $user->method('getStoredRoles')->willReturn($roles);
         return $user;
@@ -67,7 +70,7 @@ class SecurityControllerTest extends TestCase
      */
     public function testLoginRedirectsWhenUserAlreadyLoggedIn(): void
     {
-        $user = $this->createUserMock(1, 'testuser');
+        $user = $this->createUserMock(1, 'testuser', 'testuser@example.com');
         $tokenStorage = $this->createTokenStorageWithUser($user);
 
         $authenticationUtils = $this->createMock(AuthenticationUtils::class);
@@ -89,6 +92,7 @@ class SecurityControllerTest extends TestCase
         $this->assertIsArray($response);
         $this->assertTrue($response['success']);
         $this->assertEquals(1, $response['id']);
+        $this->assertEquals('testuser@example.com', $response['email']);
         $this->assertEquals('testuser', $response['username']);
         $this->assertEquals('/api/login/success', $response['redirect']);
     }

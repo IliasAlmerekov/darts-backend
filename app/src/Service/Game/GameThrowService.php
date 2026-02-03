@@ -19,6 +19,7 @@ use App\Enum\GameStatus;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
+use App\Service\Security\GameAccessServiceInterface;
 use DateTime;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
@@ -37,10 +38,11 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      * @param RoundRepositoryInterface       $roundRepository
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
      * @param EntityManagerInterface         $entityManager
+     * @param GameAccessServiceInterface     $gameAccessService
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
-    public function __construct(private GamePlayersRepositoryInterface $gamePlayersRepository, private RoundRepositoryInterface $roundRepository, private RoundThrowsRepositoryInterface $roundThrowsRepository, private EntityManagerInterface $entityManager)
+    public function __construct(private GamePlayersRepositoryInterface $gamePlayersRepository, private RoundRepositoryInterface $roundRepository, private RoundThrowsRepositoryInterface $roundThrowsRepository, private EntityManagerInterface $entityManager, private GameAccessServiceInterface $gameAccessService)
     {
     }
 
@@ -53,6 +55,11 @@ final readonly class GameThrowService implements GameThrowServiceInterface
     #[Override]
     public function recordThrow(Game $game, ThrowRequest $dto): void
     {
+        $user = $this->gameAccessService->assertPlayerInGameOrAdmin($game);
+        if (null !== $dto->playerId) {
+            $this->gameAccessService->assertPlayerMatches($user, $dto->playerId);
+        }
+
         $player = $this->gamePlayersRepository->findOneBy([
             'game' => $game->getGameId(),
             'player' => $dto->playerId,
@@ -191,6 +198,8 @@ final readonly class GameThrowService implements GameThrowServiceInterface
     #[Override]
     public function undoLastThrow(Game $game): void
     {
+        $this->gameAccessService->assertPlayerInGameOrAdmin($game);
+
         $gameId = $game->getGameId();
         if (null === $gameId) {
             return;
