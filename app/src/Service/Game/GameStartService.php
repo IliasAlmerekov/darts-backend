@@ -29,9 +29,9 @@ use Override;
 final readonly class GameStartService implements GameStartServiceInterface
 {
     /**
-     * @param GameSetupService            $gameSetupService
-     * @param EntityManagerInterface      $entityManager
-     * @param GameAccessServiceInterface  $gameAccessService
+     * @param GameSetupService           $gameSetupService
+     * @param EntityManagerInterface     $entityManager
+     * @param GameAccessServiceInterface $gameAccessService
      */
     public function __construct(private GameSetupService $gameSetupService, private EntityManagerInterface $entityManager, private GameAccessServiceInterface $gameAccessService)
     {

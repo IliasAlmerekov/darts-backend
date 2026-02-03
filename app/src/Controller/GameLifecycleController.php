@@ -39,11 +39,12 @@ final class GameLifecycleController extends AbstractController
     /**
      * Starts a game with provided settings.
      *
-     * @param Game $game
+     * @param Game                      $game
      * @param GameStartServiceInterface $gameStartService
-     * @param StartGameRequest $dto
+     * @param StartGameRequest          $dto
      *
      * @return Game
+     *
      * @throws ApiExceptionInterface
      */
     #[OA\Parameter(name: 'gameId', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]

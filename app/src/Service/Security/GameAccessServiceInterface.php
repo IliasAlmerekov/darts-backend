@@ -27,6 +27,8 @@ interface GameAccessServiceInterface
     /**
      * Ensure the current user is admin.
      *
+     * @psalm-suppress PossiblyUnusedMethod Reason: reserved for admin-only flows.
+     *
      * @return User
      */
     public function assertAdmin(): User;

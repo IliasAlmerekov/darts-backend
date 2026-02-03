@@ -119,7 +119,7 @@ final class GameSettingsServiceTest extends TestCase
 
     private function createService(EntityManagerInterface $entityManager): GameSettingsService
     {
-        $access = $this->createMock(GameAccessServiceInterface::class);
+        $access = $this->createStub(GameAccessServiceInterface::class);
         $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
 
         return new GameSettingsService($entityManager, $access);

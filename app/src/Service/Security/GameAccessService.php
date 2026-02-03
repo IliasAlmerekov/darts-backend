@@ -20,11 +20,13 @@ use Symfony\Bundle\SecurityBundle\Security;
 
 /**
  * Enforces game-related authorization rules.
+ *
+ * @psalm-suppress UnusedClass Reason: service is wired via Symfony DI.
  */
 final readonly class GameAccessService implements GameAccessServiceInterface
 {
     /**
-     * @param Security                     $security
+     * @param Security                       $security
      * @param GamePlayersRepositoryInterface $gamePlayersRepository
      */
     public function __construct(private Security $security, private GamePlayersRepositoryInterface $gamePlayersRepository)
