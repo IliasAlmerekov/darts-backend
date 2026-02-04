@@ -38,6 +38,7 @@ services:
     App\Service\Game\GameAbortServiceInterface: '@App\Service\Game\GameAbortService'
     App\Service\Game\RematchServiceInterface: '@App\Service\Game\RematchService'
     App\Service\Player\PlayerManagementServiceInterface: '@App\Service\Player\PlayerManagementService'
+    App\Service\Player\GuestPlayerServiceInterface: '@App\Service\Player\GuestPlayerService'
     App\Service\Sse\SseStreamServiceInterface: '@App\Service\Sse\SseStreamService'
 
     # add more service definitions when explicit configuration is needed

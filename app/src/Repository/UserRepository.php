@@ -67,6 +67,23 @@ final class UserRepository extends ServiceEntityRepository implements UserReposi
             ->getResult();
     }
 
+    /**
+     * @param string $username
+     *
+     * @return User|null
+     */
+    public function findOneByUsername(string $username): ?User
+    {
+        $result = $this->createQueryBuilder('u')
+            ->andWhere('u.username = :username')
+            ->setParameter('username', $username)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        return $result instanceof User ? $result : null;
+    }
+
     //    /**
     //     * @return User[] Returns an array of User objects
     //     */

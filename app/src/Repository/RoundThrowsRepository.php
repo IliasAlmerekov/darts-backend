@@ -226,7 +226,7 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
         return $this->createQueryBuilder('rt')
             ->select(
                 'u.id AS playerId',
-                'u.username AS username',
+                "CASE WHEN u.isGuest = true THEN CONCAT(u.username, ' (Guest)') ELSE u.username END AS username",
                 'COUNT(DISTINCT g.gameId) AS gamesPlayed',
                 "SUM(CASE WHEN rt.isBust = true THEN 0 ELSE rt.value END) AS totalValue",
                 'COUNT(DISTINCT r.roundId) AS roundsFinished',

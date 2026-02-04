@@ -111,7 +111,7 @@ final readonly class InvitationService implements InvitationServiceInterface
     /**
      * @param Game $game
      *
-     * @return array<int, mixed>
+     * @return array<int, array{id:int|null,username:string|null}>
      */
     #[Override]
     public function getUsersForGame(Game $game): array
@@ -128,7 +128,19 @@ final readonly class InvitationService implements InvitationServiceInterface
             $players
         )));
 
-        return [] === $playerIds ? [] : $this->userRepository->findBy(['id' => $playerIds]);
+        if ([] === $playerIds) {
+            return [];
+        }
+
+        /** @var User[] $users */
+        $users = $this->userRepository->findBy(['id' => $playerIds]);
+
+        return array_map(static function (User $user): array {
+            return [
+                'id' => $user->getId(),
+                'username' => $user->getDisplayName(),
+            ];
+        }, $users);
     }
 
     /**

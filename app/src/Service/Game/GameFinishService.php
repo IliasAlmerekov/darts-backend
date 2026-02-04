@@ -107,7 +107,7 @@ final readonly class GameFinishService implements GameFinishServiceInterface
             'winner' => $winner
                 ? [
                     'id' => $winner->getId(),
-                    'username' => $winner->getUsername(),
+                    'username' => $winner->getDisplayName(),
                 ]
                 : null,
             'winnerRoundsPlayed' => $winnerRounds,
@@ -198,7 +198,7 @@ final readonly class GameFinishService implements GameFinishServiceInterface
             $roundAverage = $roundsPlayed > 0 ? (float) $totalScore / (float) $roundsPlayed : 0.0;
             $result[] = [
                 'playerId' => $playerId,
-                'username' => $user?->getUsername(),
+                'username' => $user?->getDisplayName(),
                 'position' => $player->getPosition(),
                 'roundsPlayed' => $roundsPlayed,
                 'roundAverage' => $roundAverage,
