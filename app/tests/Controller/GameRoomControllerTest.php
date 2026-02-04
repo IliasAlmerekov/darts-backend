@@ -9,6 +9,7 @@ use App\Entity\Game;
 use App\Dto\RoomCreateRequest;
 use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
+use App\Service\Player\GuestPlayerServiceInterface;
 use App\Service\Game\RematchServiceInterface;
 use App\Service\Sse\SseStreamServiceInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -23,23 +24,26 @@ class GameRoomControllerTest extends TestCase
     private GameRoomServiceInterface&MockObject $gameRoomService;
     private PlayerManagementServiceInterface&MockObject $playerManagementService;
     private RematchServiceInterface&MockObject $rematchService;
+    private GuestPlayerServiceInterface&MockObject $guestPlayerService;
     private SseStreamServiceInterface&MockObject $sseStreamService;
     private GameRoomController $controller;
     private ContainerInterface&MockObject $container;
 
     protected function setUp(): void
     {
-        // Mock aller 4 Services
+        // Mock aller Services
         $this->gameRoomService = $this->createMock(GameRoomServiceInterface::class);
         $this->playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
         $this->rematchService = $this->createMock(RematchServiceInterface::class);
+        $this->guestPlayerService = $this->createMock(GuestPlayerServiceInterface::class);
         $this->sseStreamService = $this->createMock(SseStreamServiceInterface::class);
 
-        // Controller mit allen 4 Dependencies instanziieren
+        // Controller mit allen Dependencies instanziieren
         $this->controller = new GameRoomController(
             $this->gameRoomService,
             $this->playerManagementService,
             $this->rematchService,
+            $this->guestPlayerService,
             $this->sseStreamService
         );
 

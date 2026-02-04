@@ -136,8 +136,8 @@ final readonly class GameService implements GameServiceInterface
             }
 
             $userId = $user->getId();
-            $username = $user->getUsername();
-            if (null === $userId || null === $username) {
+            $displayName = $user->getDisplayName();
+            if (null === $userId || null === $displayName) {
                 continue;
             }
 
@@ -231,7 +231,7 @@ final readonly class GameService implements GameServiceInterface
             }
             $playerDtos[] = new PlayerResponseDto(
                 id: $userId,
-                name: $username,
+                name: $displayName,
                 score: $gamePlayer->getScore() ?? $game->getStartScore(),
                 isActive: $isActive,
                 isBust: $isBust,

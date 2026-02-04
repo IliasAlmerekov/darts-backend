@@ -47,7 +47,7 @@ interface InvitationServiceInterface
      *
      * @param Game $game
      *
-     * @return array<int, mixed>
+     * @return array<int, array{id:int|null,username:string|null}>
      */
     public function getUsersForGame(Game $game): array;
 }

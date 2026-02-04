@@ -39,7 +39,11 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
     public function findPlayersWithUserInfo(int $gameId): array
     {
         $players = $this->createQueryBuilder('gamePlayer')
-            ->select('u.id as id', 'u.username as name', 'gamePlayer.position as position')
+            ->select(
+                'u.id as id',
+                "CASE WHEN u.isGuest = true THEN CONCAT(u.username, ' (Guest)') ELSE u.username END as name",
+                'gamePlayer.position as position'
+            )
             ->innerJoin('gamePlayer.player', 'u')
             ->andWhere('gamePlayer.game = :gameId')
             ->setParameter('gameId', $gameId)

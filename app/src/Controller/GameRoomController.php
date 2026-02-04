@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Dto\GuestPlayerRequest;
 use App\Dto\PlayerIdPayload;
 use App\Dto\RoomCreateRequest;
 use App\Dto\SuccessMessageDto;
@@ -16,10 +17,12 @@ use App\Dto\UpdatePlayerOrderRequest;
 use App\Entity\User;
 use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\PlayerNotFoundInGameException;
+use App\Exception\Request\UsernameAlreadyTakenException;
 use App\Exception\Request\PlayerIdRequiredException;
 use App\Http\Attribute\ApiResponse;
 use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Game\RematchServiceInterface;
+use App\Service\Player\GuestPlayerServiceInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
 use App\Service\Sse\SseStreamServiceInterface;
 use Doctrine\ORM\Exception\ORMException;
@@ -45,6 +48,7 @@ final class GameRoomController extends AbstractController
      * @param GameRoomServiceInterface         $gameRoomService
      * @param PlayerManagementServiceInterface $playerManagementService
      * @param RematchServiceInterface          $rematchService
+     * @param GuestPlayerServiceInterface      $guestPlayerService
      * @param SseStreamServiceInterface        $sseStreamService
      *
      * @return void
@@ -53,6 +57,7 @@ final class GameRoomController extends AbstractController
         private readonly GameRoomServiceInterface $gameRoomService,
         private readonly PlayerManagementServiceInterface $playerManagementService,
         private readonly RematchServiceInterface $rematchService,
+        private readonly GuestPlayerServiceInterface $guestPlayerService,
         private readonly SseStreamServiceInterface $sseStreamService,
     ) {
     }
@@ -143,6 +148,85 @@ final class GameRoomController extends AbstractController
         }
 
         return new SuccessMessageDto('Player removed from the game');
+    }
+
+    /**
+     * Adds a guest player to the room.
+     *
+     * @param int                $id
+     * @param GuestPlayerRequest $dto
+     *
+     * @return Response
+     */
+    #[OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
+    #[OA\RequestBody(required: true, content: new OA\JsonContent(ref: new Model(type: GuestPlayerRequest::class)))]
+    #[OA\Response(
+        response: Response::HTTP_OK,
+        description: 'Gast-Spieler wurde dem Spiel hinzugefügt.',
+        content: new OA\JsonContent(
+            type: 'object',
+            required: ['success', 'player'],
+            properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: true),
+                new OA\Property(
+                    property: 'player',
+                    type: 'object',
+                    properties: [
+                        new OA\Property(property: 'id', type: 'integer', example: 123),
+                        new OA\Property(property: 'name', type: 'string', example: 'Alex (Guest)'),
+                        new OA\Property(property: 'position', type: 'integer', nullable: true, example: 2),
+                    ]
+                ),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: Response::HTTP_CONFLICT,
+        description: 'Username ist bereits vergeben.',
+        content: new OA\JsonContent(
+            type: 'object',
+            required: ['success', 'error', 'message'],
+            properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: false),
+                new OA\Property(property: 'error', type: 'string', example: 'USERNAME_TAKEN'),
+                new OA\Property(property: 'message', type: 'string', example: 'The name is already taken'),
+                new OA\Property(
+                    property: 'suggestions',
+                    type: 'array',
+                    items: new OA\Items(type: 'string'),
+                    example: ['Alex 2', 'Alex 3', 'Alex 4']
+                ),
+            ]
+        )
+    )]
+    #[ApiResponse]
+    #[Route(path: '/api/room/{id}/guest', name: 'room_player_guest_add', methods: ['POST'], format: 'json')]
+    public function addGuestPlayer(int $id, #[MapRequestPayload] GuestPlayerRequest $dto): Response
+    {
+        $game = $this->gameRoomService->findGameById($id);
+        if (!$game) {
+            throw new GameNotFoundException();
+        }
+
+        try {
+            $player = $this->guestPlayerService->createGuestPlayer($game, (string) $dto->username);
+        } catch (UsernameAlreadyTakenException $exception) {
+            return $this->json([
+                'success' => false,
+                'error' => 'USERNAME_TAKEN',
+                'message' => 'The name is already taken',
+                'suggestions' => $exception->getSuggestions(),
+            ], Response::HTTP_CONFLICT);
+        }
+
+        return $this->json([
+            'success' => true,
+            'player' => [
+                'id' => $player['playerId'],
+                'name' => $player['name'],
+                'position' => $player['position'],
+            ],
+        ]);
     }
 
     /**

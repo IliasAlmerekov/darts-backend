@@ -32,6 +32,13 @@ interface UserRepositoryInterface extends PasswordUpgraderInterface
     public function findByIds(array $ids): array;
 
     /**
+     * @param string $username
+     *
+     * @return User|null
+     */
+    public function findOneByUsername(string $username): ?User;
+
+    /**
      * @param array<string, mixed>       $criteria
      * @param array<string, string>|null $orderBy
      * @param int|null                   $limit

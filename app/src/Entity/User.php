@@ -40,6 +40,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     #[ORM\Column]
     private ?string $password = null;
+    #[ORM\Column(options: ['default' => false])]
+    private bool $isGuest = false;
 
     /**
      * @return int|null
@@ -158,6 +160,45 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->password = $password;
 
         return $this;
+    }
+
+    /**
+     * @return bool
+     *
+     * @psalm-suppress PossiblyUnusedMethod
+     */
+    public function isGuest(): bool
+    {
+        return $this->isGuest;
+    }
+
+    /**
+     * @param bool $isGuest
+     *
+     * @return static
+     */
+    public function setIsGuest(bool $isGuest): static
+    {
+        $this->isGuest = $isGuest;
+
+        return $this;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getDisplayName(): ?string
+    {
+        $username = $this->username;
+        if (null === $username) {
+            return null;
+        }
+
+        if ($this->isGuest) {
+            return $username.' (Guest)';
+        }
+
+        return $username;
     }
 
     /**

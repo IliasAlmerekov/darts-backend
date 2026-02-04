@@ -149,7 +149,12 @@ final class InvitationServiceTest extends TestCase
         self::assertTrue($payload['success']);
         self::assertSame(30, $payload['gameId']);
         self::assertSame('/join/abc', $payload['invitationLink']);
-        self::assertSame([$user], $payload['users']);
+        self::assertSame([
+            [
+                'id' => $user->getId(),
+                'username' => $user->getUsername(),
+            ],
+        ], $payload['users']);
     }
 
     public function testProcessInvitationRejectsWhenUserNotLoggedIn(): void

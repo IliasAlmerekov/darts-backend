@@ -74,6 +74,20 @@ final class GamePlayersRepositoryTest extends KernelTestCase
         self::assertFalse($this->repository->isPlayerInGame($game->getGameId(), $otherUser->getId()));
     }
 
+    public function testFindPlayersWithUserInfoMarksGuestNames(): void
+    {
+        $game = $this->createGame();
+        $guest = $this->createUser('alex', isGuest: true);
+        $this->persistGamePlayer($game, $guest, position: 1);
+        $this->entityManager->flush();
+
+        $result = $this->repository->findPlayersWithUserInfo($game->getGameId());
+
+        self::assertCount(1, $result);
+        self::assertSame($guest->getId(), (int) $result[0]['id']);
+        self::assertSame('alex (Guest)', $result[0]['name']);
+    }
+
     public function testFindByGameId(): void
     {
         $game = $this->createGame();
@@ -117,12 +131,13 @@ final class GamePlayersRepositoryTest extends KernelTestCase
         return $game;
     }
 
-    private function createUser(string $username): User
+    private function createUser(string $username, bool $isGuest = false): User
     {
         $user = (new User())
             ->setUsername($username)
             ->setEmail($username . '@test.dev')
-            ->setPassword('secret');
+            ->setPassword('secret')
+            ->setIsGuest($isGuest);
 
         $this->entityManager->persist($user);
 
