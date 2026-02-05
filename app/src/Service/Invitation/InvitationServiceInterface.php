@@ -33,6 +33,15 @@ interface InvitationServiceInterface
     public function getInvitationPayload(Game $game): array;
 
     /**
+     * Ensures that the game can be joined (lobby state).
+     *
+     * @param int $gameId
+     *
+     * @return void
+     */
+    public function assertGameJoinable(int $gameId): void;
+
+    /**
      * Processes an invitation join flow for the current user from session.
      *
      * @param SessionInterface $session

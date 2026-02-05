@@ -13,7 +13,11 @@ use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\Invitation;
 use App\Entity\User;
+use App\Enum\GameStatus;
+use App\Exception\Game\GameJoinNotAllowedException;
+use App\Exception\Game\GameNotFoundException;
 use App\Repository\GamePlayersRepositoryInterface;
+use App\Repository\GameRepositoryInterface;
 use App\Repository\InvitationRepositoryInterface;
 use App\Repository\UserRepositoryInterface;
 use App\Service\Invitation\InvitationService;
@@ -33,6 +37,7 @@ final class InvitationServiceTest extends TestCase
 {
     private InvitationRepositoryInterface&MockObject $invitationRepository;
     private GamePlayersRepositoryInterface&MockObject $gamePlayersRepository;
+    private GameRepositoryInterface&MockObject $gameRepository;
     private UserRepositoryInterface&MockObject $userRepository;
     private PlayerManagementServiceInterface&MockObject $playerManagementService;
     private EntityManagerInterface&MockObject $entityManager;
@@ -44,6 +49,7 @@ final class InvitationServiceTest extends TestCase
     {
         $this->invitationRepository = $this->createMock(InvitationRepositoryInterface::class);
         $this->gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $this->gameRepository = $this->createMock(GameRepositoryInterface::class);
         $this->userRepository = $this->createMock(UserRepositoryInterface::class);
         $this->playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
@@ -54,6 +60,7 @@ final class InvitationServiceTest extends TestCase
         $this->service = new InvitationService(
             $this->invitationRepository,
             $this->gamePlayersRepository,
+            $this->gameRepository,
             $this->userRepository,
             $this->playerManagementService,
             $this->entityManager,
@@ -167,10 +174,73 @@ final class InvitationServiceTest extends TestCase
         self::assertSame(Response::HTTP_UNAUTHORIZED, $response->getStatusCode());
     }
 
+    public function testAssertGameJoinableThrowsWhenGameMissing(): void
+    {
+        $this->gameRepository
+            ->expects(self::once())
+            ->method('find')
+            ->with(404)
+            ->willReturn(null);
+
+        $this->expectException(GameNotFoundException::class);
+
+        $this->service->assertGameJoinable(404);
+    }
+
+    public function testAssertGameJoinableThrowsWhenNotInLobby(): void
+    {
+        $game = (new Game())->setGameId(12)->setStatus(GameStatus::Started);
+        $this->gameRepository
+            ->expects(self::once())
+            ->method('find')
+            ->with(12)
+            ->willReturn($game);
+
+        $this->expectException(GameJoinNotAllowedException::class);
+
+        $this->service->assertGameJoinable(12);
+    }
+
+    public function testGetUsersForGameReturnsEmptyWhenNoGameId(): void
+    {
+        $game = new Game();
+
+        $this->gamePlayersRepository->expects(self::never())->method('findByGameId');
+        $this->userRepository->expects(self::never())->method('findBy');
+
+        $result = $this->service->getUsersForGame($game);
+
+        self::assertSame([], $result);
+    }
+
+    public function testGetUsersForGameReturnsEmptyWhenNoPlayers(): void
+    {
+        $game = (new Game())->setGameId(55);
+
+        $this->gamePlayersRepository
+            ->expects(self::once())
+            ->method('findByGameId')
+            ->with(55)
+            ->willReturn([]);
+
+        $this->userRepository->expects(self::never())->method('findBy');
+
+        $result = $this->service->getUsersForGame($game);
+
+        self::assertSame([], $result);
+    }
+
     public function testProcessInvitationAddsPlayerToGameAndRedirects(): void
     {
         $session = $this->createMock(SessionInterface::class);
         $session->expects(self::once())->method('get')->with('game_id')->willReturn(50);
+
+        $game = (new Game())->setGameId(50)->setStatus(GameStatus::Lobby);
+        $this->gameRepository
+            ->expects(self::once())
+            ->method('find')
+            ->with(50)
+            ->willReturn($game);
 
         $removedKeys = [];
         $session->expects(self::exactly(2))
@@ -200,6 +270,25 @@ final class InvitationServiceTest extends TestCase
         self::assertArrayHasKey('redirect', $content);
         sort($removedKeys);
         self::assertSame(['game_id', 'invitation_uuid'], $removedKeys);
+    }
+
+    public function testProcessInvitationRejectsWhenGameAlreadyStarted(): void
+    {
+        $session = $this->createMock(SessionInterface::class);
+        $session->expects(self::once())->method('get')->with('game_id')->willReturn(60);
+
+        $game = (new Game())->setGameId(60)->setStatus(GameStatus::Started);
+        $this->gameRepository
+            ->expects(self::once())
+            ->method('find')
+            ->with(60)
+            ->willReturn($game);
+
+        $user = $this->createUserWithId(8, 'player2', 'p2@test');
+
+        $this->expectException(GameJoinNotAllowedException::class);
+
+        $this->service->processInvitation($session, $user);
     }
 
     private function createUserWithId(int $id, string $username, string $email): User
