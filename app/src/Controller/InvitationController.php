@@ -80,8 +80,9 @@ final class InvitationController extends AbstractController
     /**
      * Joins an invitation by UUID and stores it in session.
      *
-     * @param Invitation       $invitation
-     * @param SessionInterface $session
+     * @param Invitation                 $invitation
+     * @param SessionInterface           $session
+     * @param InvitationServiceInterface $invitationService
      *
      * @return Response
      */

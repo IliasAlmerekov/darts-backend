@@ -15,6 +15,7 @@ use App\Entity\Invitation;
 use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Exception\Game\GameJoinNotAllowedException;
+use App\Exception\Game\GameNotFoundException;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\InvitationRepositoryInterface;
@@ -171,6 +172,62 @@ final class InvitationServiceTest extends TestCase
 
         self::assertInstanceOf(JsonResponse::class, $response);
         self::assertSame(Response::HTTP_UNAUTHORIZED, $response->getStatusCode());
+    }
+
+    public function testAssertGameJoinableThrowsWhenGameMissing(): void
+    {
+        $this->gameRepository
+            ->expects(self::once())
+            ->method('find')
+            ->with(404)
+            ->willReturn(null);
+
+        $this->expectException(GameNotFoundException::class);
+
+        $this->service->assertGameJoinable(404);
+    }
+
+    public function testAssertGameJoinableThrowsWhenNotInLobby(): void
+    {
+        $game = (new Game())->setGameId(12)->setStatus(GameStatus::Started);
+        $this->gameRepository
+            ->expects(self::once())
+            ->method('find')
+            ->with(12)
+            ->willReturn($game);
+
+        $this->expectException(GameJoinNotAllowedException::class);
+
+        $this->service->assertGameJoinable(12);
+    }
+
+    public function testGetUsersForGameReturnsEmptyWhenNoGameId(): void
+    {
+        $game = new Game();
+
+        $this->gamePlayersRepository->expects(self::never())->method('findByGameId');
+        $this->userRepository->expects(self::never())->method('findBy');
+
+        $result = $this->service->getUsersForGame($game);
+
+        self::assertSame([], $result);
+    }
+
+    public function testGetUsersForGameReturnsEmptyWhenNoPlayers(): void
+    {
+        $game = (new Game())->setGameId(55);
+
+        $this->gamePlayersRepository
+            ->expects(self::once())
+            ->method('findByGameId')
+            ->with(55)
+            ->willReturn([]);
+
+        $this->userRepository->expects(self::never())->method('findBy');
+
+        $result = $this->service->getUsersForGame($game);
+
+        self::assertSame([], $result);
     }
 
     public function testProcessInvitationAddsPlayerToGameAndRedirects(): void
