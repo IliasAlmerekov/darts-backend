@@ -11,6 +11,7 @@ namespace App\Controller;
 
 use App\Entity\Game;
 use App\Entity\Invitation;
+use App\Exception\Game\GameNotFoundException;
 use App\Http\Attribute\ApiResponse;
 use App\Service\Invitation\InvitationServiceInterface;
 use Nelmio\ApiDocBundle\Attribute\Security;
@@ -99,11 +100,17 @@ final class InvitationController extends AbstractController
     )]
     #[Security(name: null)]
     #[Route('api/invite/join/{uuid}', name: 'join_invitation', format: 'json')]
-    public function joinInvitation(#[MapEntity(mapping: ['uuid' => 'uuid'])] Invitation $invitation, SessionInterface $session): Response
+    public function joinInvitation(#[MapEntity(mapping: ['uuid' => 'uuid'])] Invitation $invitation, SessionInterface $session, InvitationServiceInterface $invitationService): Response
     {
+        $gameId = $invitation->getGameId();
+        if (null === $gameId) {
+            throw new GameNotFoundException();
+        }
+
+        $invitationService->assertGameJoinable($gameId);
         $session->remove('invitation_uuid');
         $session->set('invitation_uuid', $invitation->getUuid());
-        $session->set('game_id', $invitation->getGameId());
+        $session->set('game_id', $gameId);
 
         $frontendUrl = rtrim($_ENV['FRONTEND_URL'] ?? 'http://localhost:5173', '/');
 

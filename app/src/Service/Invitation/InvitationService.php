@@ -12,7 +12,11 @@ namespace App\Service\Invitation;
 use App\Entity\Game;
 use App\Entity\Invitation;
 use App\Entity\User;
+use App\Enum\GameStatus;
+use App\Exception\Game\GameJoinNotAllowedException;
+use App\Exception\Game\GameNotFoundException;
 use App\Repository\GamePlayersRepositoryInterface;
+use App\Repository\GameRepositoryInterface;
 use App\Repository\InvitationRepositoryInterface;
 use App\Repository\UserRepositoryInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
@@ -35,6 +39,7 @@ final readonly class InvitationService implements InvitationServiceInterface
     /**
      * @param InvitationRepositoryInterface    $invitationRepository
      * @param GamePlayersRepositoryInterface   $gamePlayersRepository
+     * @param GameRepositoryInterface          $gameRepository
      * @param UserRepositoryInterface          $userRepository
      * @param PlayerManagementServiceInterface $playerManagementService
      * @param EntityManagerInterface           $entityManager
@@ -44,6 +49,7 @@ final readonly class InvitationService implements InvitationServiceInterface
     public function __construct(
         private InvitationRepositoryInterface $invitationRepository,
         private GamePlayersRepositoryInterface $gamePlayersRepository,
+        private GameRepositoryInterface $gameRepository,
         private UserRepositoryInterface $userRepository,
         private PlayerManagementServiceInterface $playerManagementService,
         private EntityManagerInterface $entityManager,
@@ -109,6 +115,25 @@ final readonly class InvitationService implements InvitationServiceInterface
     }
 
     /**
+     * @param int $gameId
+     *
+     * @return void
+     */
+    #[Override]
+    public function assertGameJoinable(int $gameId): void
+    {
+        $game = $this->gameRepository->find($gameId);
+        if (!$game instanceof Game) {
+            throw new GameNotFoundException();
+        }
+
+        $status = $game->getStatus();
+        if (GameStatus::Lobby !== $status) {
+            throw new GameJoinNotAllowedException($status);
+        }
+    }
+
+    /**
      * @param Game $game
      *
      * @return array<int, array{id:int|null,username:string|null}>
@@ -160,6 +185,8 @@ final readonly class InvitationService implements InvitationServiceInterface
         if (!$gameId) {
             return new JsonResponse(['success' => false, 'redirect' => '/start'], Response::HTTP_BAD_REQUEST);
         }
+        $gameId = (int) $gameId;
+        $this->assertGameJoinable($gameId);
 
         $userId = $user->getId();
         if (null === $userId) {

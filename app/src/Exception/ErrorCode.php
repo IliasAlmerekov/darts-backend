@@ -19,6 +19,7 @@ enum ErrorCode: string
     case GamePlayerPositionsCountMismatch = 'GAME_PLAYER_POSITIONS_COUNT_MISMATCH';
     case GameSettingsNotEditable = 'GAME_SETTINGS_NOT_EDITABLE';
     case GameStartScoreChangeNotAllowed = 'GAME_START_SCORE_CHANGE_NOT_ALLOWED';
+    case GameJoinNotAllowed = 'GAME_JOIN_NOT_ALLOWED';
     case GameIdMissing = 'GAME_ID_MISSING';
     case RequestInvalidJsonBody = 'REQUEST_INVALID_JSON_BODY';
     case RequestPlayerIdRequired = 'REQUEST_PLAYER_ID_REQUIRED';
