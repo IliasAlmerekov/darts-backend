@@ -96,7 +96,6 @@
   </file>
   <file src="src/Entity/GamePlayers.php">
     <PossiblyUnusedMethod>
-      <code><![CDATA[getGamePlayerId]]></code>
       <code><![CDATA[setGamePlayerId]]></code>
     </PossiblyUnusedMethod>
   </file>
@@ -118,11 +117,15 @@
   <file src="src/Entity/RoundThrows.php">
     <PossiblyUnusedMethod>
       <code><![CDATA[getGame]]></code>
-      <code><![CDATA[getThrowId]]></code>
       <code><![CDATA[getThrowNumber]]></code>
       <code><![CDATA[getTimestamp]]></code>
       <code><![CDATA[setThrowId]]></code>
     </PossiblyUnusedMethod>
+  </file>
+  <file src="src/Security/ApiAuthenticationEntryPoint.php">
+    <UnusedClass>
+      <code><![CDATA[ApiAuthenticationEntryPoint]]></code>
+    </UnusedClass>
   </file>
   <file src="src/Security/ErrorController.php">
     <UnusedClass>

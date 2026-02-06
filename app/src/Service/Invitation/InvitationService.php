@@ -21,6 +21,7 @@ use App\Repository\InvitationRepositoryInterface;
 use App\Repository\UserRepositoryInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
 use App\Service\Security\GameAccessServiceInterface;
+use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Override;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -67,25 +68,28 @@ final readonly class InvitationService implements InvitationServiceInterface
     public function createOrGetInvitation(Game $game): Invitation
     {
         $gameId = $game->getGameId();
-        $invitation = null;
-        if (null !== $gameId) {
+        if (null === $gameId) {
+            throw new GameNotFoundException();
+        }
+
+        return $this->entityManager->wrapInTransaction(function () use ($game, $gameId): Invitation {
+            if ($this->entityManager->contains($game)) {
+                $this->entityManager->lock($game, LockMode::PESSIMISTIC_WRITE);
+            }
+
             $candidate = $this->invitationRepository->findOneBy(['gameId' => $gameId]);
             if ($candidate instanceof Invitation) {
-                $invitation = $candidate;
+                return $candidate;
             }
-        }
 
-        if (null === $invitation) {
             $invitation = new Invitation();
             $invitation->setUuid(Uuid::v4());
-            if (null !== $gameId) {
-                $invitation->setGameId($gameId);
-            }
+            $invitation->setGameId($gameId);
             $this->entityManager->persist($invitation);
             $this->entityManager->flush();
-        }
 
-        return $invitation;
+            return $invitation;
+        });
     }
 
     /**

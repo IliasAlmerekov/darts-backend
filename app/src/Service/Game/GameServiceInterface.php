@@ -39,4 +39,14 @@ interface GameServiceInterface
      * @throws \App\Exception\Game\GameIdMissingException If game ID is null
      */
     public function createGameDto(Game $game): GameResponseDto;
+
+    /**
+     * Build a stable version hash for quick game-state change detection.
+     * Used by clients that poll frequently to skip unchanged payloads.
+     *
+     * @param Game $game The game entity
+     *
+     * @return string Deterministic version hash for the current game state
+     */
+    public function buildStateVersion(Game $game): string;
 }

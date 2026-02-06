@@ -95,7 +95,7 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     public function copyPlayers(int $fromGameId, int $toGameId, ?array $playerIds = null): void
     {
         $oldGamePlayers = $this->gamePlayersRepository->findByGameId($fromGameId);
-        $filter = null !== $playerIds ? array_map('intval', $playerIds) : null;
+        $filter = $playerIds;
         $orderIndex = 0;
         foreach ($oldGamePlayers as $oldGamePlayer) {
             $player = $oldGamePlayer->getPlayer();

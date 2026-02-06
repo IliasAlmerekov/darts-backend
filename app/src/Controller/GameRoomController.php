@@ -91,10 +91,17 @@ final class GameRoomController extends AbstractController
     #[Route(path: '/api/room/create', name: 'room_create', methods: ['POST'], format: 'json')]
     public function roomCreateApi(#[MapRequestPayload] RoomCreateRequest $dto): array
     {
+        $includePlayerIds = null !== $dto->playerIds && [] !== $dto->playerIds
+            ? $dto->playerIds
+            : null;
+        $excludePlayerIds = null !== $dto->excludePlayerIds && [] !== $dto->excludePlayerIds
+            ? $dto->excludePlayerIds
+            : null;
+
         $game = $this->gameRoomService->createGameWithPreviousPlayers(
-            $dto->previousGameId ?: null,
-            $dto->playerIds ? array_values(array_map('intval', $dto->playerIds)) : null,
-            $dto->excludePlayerIds ? array_values(array_map('intval', $dto->excludePlayerIds)) : null,
+            $dto->previousGameId,
+            $includePlayerIds,
+            $excludePlayerIds,
         );
 
         return ['success' => true, 'gameId' => $game->getGameId()];

@@ -20,6 +20,7 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 #[AllowMockObjectsWithoutExpectations]
@@ -100,15 +101,63 @@ final class GameLifecycleControllerTest extends TestCase
         $this->assertIsArray($response);
     }
 
-    public function testGetGameStateReturnsDto(): void
+    public function testGetGameStateReturnsJsonWithVersionHeaders(): void
     {
         $game = $this->createMock(Game::class);
         $gameService = $this->createMock(GameServiceInterface::class);
-        $gameService->method('createGameDto')->willReturn($this->dummyGameDto());
+        $gameService->expects($this->once())
+            ->method('buildStateVersion')
+            ->with($game)
+            ->willReturn('state-v1');
+        $gameService->expects($this->once())
+            ->method('createGameDto')
+            ->with($game)
+            ->willReturn($this->dummyGameDto());
 
-        $response = $this->controller->getGameState($game, $gameService);
+        $request = new Request();
+        $response = $this->controller->getGameState($game, $gameService, $request);
 
-        $this->assertInstanceOf(GameResponseDto::class, $response);
+        $this->assertInstanceOf(Response::class, $response);
+        $this->assertSame(Response::HTTP_OK, $response->getStatusCode());
+        $this->assertSame('state-v1', $response->headers->get('X-Game-State-Version'));
+        $this->assertSame('"state-v1"', $response->headers->get('ETag'));
+    }
+
+    public function testGetGameStateReturnsNotModifiedWhenSinceMatches(): void
+    {
+        $game = $this->createMock(Game::class);
+        $gameService = $this->createMock(GameServiceInterface::class);
+        $gameService->expects($this->once())
+            ->method('buildStateVersion')
+            ->with($game)
+            ->willReturn('state-v1');
+        $gameService->expects($this->never())
+            ->method('createGameDto');
+
+        $request = new Request();
+        $response = $this->controller->getGameState($game, $gameService, $request, 'state-v1');
+
+        $this->assertSame(Response::HTTP_NOT_MODIFIED, $response->getStatusCode());
+        $this->assertSame('state-v1', $response->headers->get('X-Game-State-Version'));
+    }
+
+    public function testGetGameStateReturnsNotModifiedWhenIfNoneMatchMatches(): void
+    {
+        $game = $this->createMock(Game::class);
+        $gameService = $this->createMock(GameServiceInterface::class);
+        $gameService->expects($this->once())
+            ->method('buildStateVersion')
+            ->with($game)
+            ->willReturn('state-v1');
+        $gameService->expects($this->never())
+            ->method('createGameDto');
+
+        $request = new Request();
+        $request->headers->set('If-None-Match', '"state-v1"');
+
+        $response = $this->controller->getGameState($game, $gameService, $request);
+
+        $this->assertSame(Response::HTTP_NOT_MODIFIED, $response->getStatusCode());
     }
 
     private function dummyGameDto(): GameResponseDto

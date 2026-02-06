@@ -45,25 +45,25 @@ final class RegistrationFormType extends AbstractType
                     new NotBlank([
                         'message' => 'Please enter a username',
                     ]),
-                    new Length([
-                        'min' => 3,
-                        'max' => 30,
-                        'minMessage' => 'Your username should be at least {{ limit }} characters',
-                        'maxMessage' => 'Your username should be at most {{ limit }} characters',
-                    ]),
+                    new Length(
+                        min: 3,
+                        max: 30,
+                        minMessage: 'Your username should be at least {{ limit }} characters',
+                        maxMessage: 'Your username should be at most {{ limit }} characters',
+                    ),
                 ],
             ])
             ->add('plainPassword', PasswordType::class, [
                 'mapped' => false,
                 'constraints' => [
                     new NotBlank([
-                        'message' => 'Bitte gib ein Passwort ein.',
+                        'message' => 'Please enter a password',
                     ]),
-                    new Length([
-                        'min' => 6,
-                        'minMessage' => 'Dein Passwort sollte mindestens {{ limit }} Zeichen lang sein.',
-                        'max' => 4096,
-                    ]),
+                    new Length(
+                        min: 6,
+                        minMessage: 'Your password should be at least {{ limit }} characters long.',
+                        max: 4096,
+                    ),
                 ],
             ]);
     }

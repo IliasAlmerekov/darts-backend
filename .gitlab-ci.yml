@@ -98,8 +98,8 @@ test:php:
   variables:
     APP_ENV: test
     MYSQL_ROOT_PASSWORD: root123
-    MYSQL_DATABASE: testphp_db_test
-    DATABASE_URL: "mysql://root:root123@mysql:3306/testphp_db_test?serverVersion=8.0&charset=utf8mb4"
+    MYSQL_DATABASE: testphp_db
+    DATABASE_URL: "mysql://root:root123@mysql:3306/testphp_db?serverVersion=8.0.32&charset=utf8mb4"
   script:
     - cd app
     #
