@@ -64,9 +64,9 @@ final readonly class GameRoomService implements GameRoomServiceInterface
     {
         $game = $this->createGame();
         if (null !== $includePlayerIds) {
-            $ids = array_values(array_unique(array_map('intval', $includePlayerIds)));
+            $ids = array_values(array_unique($includePlayerIds));
             if (null !== $excludePlayerIds) {
-                $excludeSet = array_fill_keys(array_map('intval', $excludePlayerIds), true);
+                $excludeSet = array_fill_keys($excludePlayerIds, true);
                 $ids = array_values(array_filter($ids, static fn(int $pid): bool => !isset($excludeSet[$pid])));
             }
 

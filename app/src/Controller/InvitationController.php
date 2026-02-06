@@ -68,7 +68,7 @@ final class InvitationController extends AbstractController
     )]
     #[OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Spiel nicht gefunden.')]
     #[ApiResponse(headers: ['X-Accel-Buffering' => 'no'])]
-    #[Route('/api/invite/create/{id}', name: 'create_invitation', format: 'json')]
+    #[Route('/api/invite/create/{id}', name: 'create_invitation', methods: ['POST'], format: 'json')]
     public function createInvitation(#[MapEntity(id: 'id')] Game $game, InvitationServiceInterface $invitationService): array
     {
         $payload = $invitationService->getInvitationPayload($game);

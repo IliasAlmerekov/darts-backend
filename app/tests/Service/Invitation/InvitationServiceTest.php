@@ -53,6 +53,10 @@ final class InvitationServiceTest extends TestCase
         $this->userRepository = $this->createMock(UserRepositoryInterface::class);
         $this->playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
+        $this->entityManager
+            ->method('wrapInTransaction')
+            ->willReturnCallback(static fn(callable $func) => $func());
+        $this->entityManager->method('contains')->willReturn(false);
         $this->router = $this->createMock(RouterInterface::class);
         $this->gameAccessService = $this->createMock(GameAccessServiceInterface::class);
         $this->gameAccessService->method('assertPlayerInGameOrAdmin')->willReturn(new User());

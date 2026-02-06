@@ -26,7 +26,9 @@ use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity as AttributeMapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -193,22 +195,46 @@ final class GameLifecycleController extends AbstractController
      *
      * @param Game                 $game
      * @param GameServiceInterface $gameService
+     * @param Request              $request
+     * @param string|null          $since
      *
-     * @return mixed
+     * @return Response
      */
     #[OA\Parameter(name: 'gameId', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
+    #[OA\Parameter(
+        name: 'since',
+        description: 'Optional stateVersion from the previous response. If unchanged, endpoint returns 304.',
+        in: 'query',
+        required: false,
+        schema: new OA\Schema(type: 'string', example: 'c9a4f0d9...')
+    )]
     #[OA\Response(
         response: Response::HTTP_OK,
         description: 'Aktueller Spielzustand.',
         content: new OA\JsonContent(ref: new Model(type: GameResponseDto::class))
     )]
+    #[OA\Response(response: Response::HTTP_NOT_MODIFIED, description: 'Spielzustand hat sich seit der letzten Version nicht geändert.')]
     #[ApiResponse]
     #[Route('/api/game/{gameId}', name: 'app_game_state', methods: ['GET'], format: 'json')]
-    public function getGameState(#[AttributeMapEntity(id: 'gameId')] Game $game, GameServiceInterface $gameService): mixed
+    public function getGameState(#[AttributeMapEntity(id: 'gameId')] Game $game, GameServiceInterface $gameService, Request $request, #[MapQueryParameter] ?string $since = null): Response
     {
-        $gameDto = $gameService->createGameDto($game);
+        $stateVersion = $gameService->buildStateVersion($game);
+        $isNotModified = $this->isMatchingVersion($request->headers->get('If-None-Match'), $stateVersion) || $since === $stateVersion;
+        if ($isNotModified) {
+            return new Response('', Response::HTTP_NOT_MODIFIED, [
+                'ETag' => '"'.$stateVersion.'"',
+                'Cache-Control' => 'private, no-cache',
+                'X-Game-State-Version' => $stateVersion,
+            ]);
+        }
 
-        return $gameDto;
+        $gameDto = $gameService->createGameDto($game);
+        $response = $this->json($gameDto);
+        $response->headers->set('ETag', '"'.$stateVersion.'"');
+        $response->headers->set('Cache-Control', 'private, no-cache');
+        $response->headers->set('X-Game-State-Version', $stateVersion);
+
+        return $response;
     }
 
     /**
@@ -232,5 +258,36 @@ final class GameLifecycleController extends AbstractController
         $gameAbortService->abortGame($game);
 
         return new SuccessMessageDto('Game aborted successfully');
+    }
+
+    /**
+     * @param string|null $ifNoneMatch
+     * @param string      $stateVersion
+     *
+     * @return bool
+     */
+    private function isMatchingVersion(?string $ifNoneMatch, string $stateVersion): bool
+    {
+        if (null === $ifNoneMatch || '' === trim($ifNoneMatch)) {
+            return false;
+        }
+
+        foreach (explode(',', $ifNoneMatch) as $candidate) {
+            $token = trim($candidate);
+            if ('*' === $token) {
+                return true;
+            }
+
+            if (str_starts_with($token, 'W/')) {
+                $token = substr($token, 2);
+            }
+
+            $token = trim($token, "\"' \t\n\r\0\x0B");
+            if ($stateVersion === $token) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

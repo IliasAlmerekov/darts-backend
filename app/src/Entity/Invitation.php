@@ -21,7 +21,7 @@ class Invitation
     private ?int $id = null;
     #[ORM\Column(length: 255, unique: true)]
     private ?string $uuid = null;
-    #[ORM\Column]
+    #[ORM\Column(unique: true)]
     private ?int $gameId = null;
 
     /**

@@ -64,7 +64,7 @@ class Game
     #[ORM\Column(nullable: true)]
     private ?int $round = null;
 
-    #[ORM\Column(type: Types::TIME_IMMUTABLE, nullable: true)]
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?DateTimeImmutable $finishedAt = null;
 
     /**

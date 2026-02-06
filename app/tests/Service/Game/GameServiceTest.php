@@ -210,6 +210,73 @@ final class GameServiceTest extends TestCase
     /**
      * @throws ReflectionException
      */
+    public function testBuildStateVersionIsStableForSameState(): void
+    {
+        $game = new Game();
+        $this->setPrivateProperty($game, 'gameId', 77);
+        $game->setStatus(GameStatus::Lobby);
+        $game->setRound(1);
+        $game->setStartScore(301);
+
+        $user = new User()->setUsername('Alex');
+        $this->setPrivateProperty($user, 'id', 15);
+        $gamePlayer = (new GamePlayers())
+            ->setPlayer($user)
+            ->setPosition(1)
+            ->setScore(301);
+        $game->addGamePlayer($gamePlayer);
+
+        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
+        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository->method('findEntityLatestForGame')->willReturn(null);
+
+        $service = new GameService($roundRepository, $roundThrowsRepository);
+
+        $firstVersion = $service->buildStateVersion($game);
+        $secondVersion = $service->buildStateVersion($game);
+
+        self::assertSame($firstVersion, $secondVersion);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    public function testBuildStateVersionChangesWhenLatestThrowChanges(): void
+    {
+        $game = new Game();
+        $this->setPrivateProperty($game, 'gameId', 88);
+        $game->setStatus(GameStatus::Started);
+        $game->setRound(2);
+        $game->setStartScore(501);
+
+        $user = new User()->setUsername('Sam');
+        $this->setPrivateProperty($user, 'id', 25);
+        $gamePlayer = (new GamePlayers())
+            ->setPlayer($user)
+            ->setPosition(1)
+            ->setScore(401);
+        $game->addGamePlayer($gamePlayer);
+
+        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
+        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+
+        $firstThrow = (new RoundThrows())->setThrowId(10);
+        $secondThrow = (new RoundThrows())->setThrowId(11);
+        $roundThrowsRepository->method('findEntityLatestForGame')
+            ->with(88)
+            ->willReturnOnConsecutiveCalls($firstThrow, $secondThrow);
+
+        $service = new GameService($roundRepository, $roundThrowsRepository);
+
+        $firstVersion = $service->buildStateVersion($game);
+        $secondVersion = $service->buildStateVersion($game);
+
+        self::assertNotSame($firstVersion, $secondVersion);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
     private function setPrivateProperty(object $object, string $property, mixed $value): void
     {
         $ref = new ReflectionProperty($object, $property);
