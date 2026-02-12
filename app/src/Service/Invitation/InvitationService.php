@@ -15,6 +15,7 @@ use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Exception\Game\GameJoinNotAllowedException;
 use App\Exception\Game\GameNotFoundException;
+use App\Exception\Game\GameRoomFullException;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\InvitationRepositoryInterface;
@@ -37,6 +38,8 @@ use Symfony\Component\Uid\Uuid;
  */
 final readonly class InvitationService implements InvitationServiceInterface
 {
+    private const int MAX_GAME_PLAYERS = 10;
+
     /**
      * @param InvitationRepositoryInterface    $invitationRepository
      * @param GamePlayersRepositoryInterface   $gamePlayersRepository
@@ -134,6 +137,11 @@ final readonly class InvitationService implements InvitationServiceInterface
         $status = $game->getStatus();
         if (GameStatus::Lobby !== $status) {
             throw new GameJoinNotAllowedException($status);
+        }
+
+        $playersCount = $this->gamePlayersRepository->count(['game' => $gameId]);
+        if ($playersCount >= self::MAX_GAME_PLAYERS) {
+            throw new GameRoomFullException(self::MAX_GAME_PLAYERS);
         }
     }
 

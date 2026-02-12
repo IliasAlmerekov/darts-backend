@@ -16,6 +16,7 @@ use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Exception\Game\GameJoinNotAllowedException;
 use App\Exception\Game\GameNotFoundException;
+use App\Exception\Game\GameRoomFullException;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\InvitationRepositoryInterface;
@@ -205,6 +206,26 @@ final class InvitationServiceTest extends TestCase
         $this->service->assertGameJoinable(12);
     }
 
+    public function testAssertGameJoinableThrowsWhenRoomIsFull(): void
+    {
+        $game = (new Game())->setGameId(13)->setStatus(GameStatus::Lobby);
+        $this->gameRepository
+            ->expects(self::once())
+            ->method('find')
+            ->with(13)
+            ->willReturn($game);
+
+        $this->gamePlayersRepository
+            ->expects(self::once())
+            ->method('count')
+            ->with(['game' => 13])
+            ->willReturn(10);
+
+        $this->expectException(GameRoomFullException::class);
+
+        $this->service->assertGameJoinable(13);
+    }
+
     public function testGetUsersForGameReturnsEmptyWhenNoGameId(): void
     {
         $game = new Game();
@@ -245,6 +266,11 @@ final class InvitationServiceTest extends TestCase
             ->method('find')
             ->with(50)
             ->willReturn($game);
+        $this->gamePlayersRepository
+            ->expects(self::once())
+            ->method('count')
+            ->with(['game' => 50])
+            ->willReturn(4);
 
         $removedKeys = [];
         $session->expects(self::exactly(2))
@@ -291,6 +317,36 @@ final class InvitationServiceTest extends TestCase
         $user = $this->createUserWithId(8, 'player2', 'p2@test');
 
         $this->expectException(GameJoinNotAllowedException::class);
+
+        $this->service->processInvitation($session, $user);
+    }
+
+    public function testProcessInvitationRejectsWhenRoomIsFull(): void
+    {
+        $session = $this->createMock(SessionInterface::class);
+        $session->expects(self::once())->method('get')->with('game_id')->willReturn(61);
+
+        $game = (new Game())->setGameId(61)->setStatus(GameStatus::Lobby);
+        $this->gameRepository
+            ->expects(self::once())
+            ->method('find')
+            ->with(61)
+            ->willReturn($game);
+        $this->gamePlayersRepository
+            ->expects(self::once())
+            ->method('count')
+            ->with(['game' => 61])
+            ->willReturn(10);
+        $this->gamePlayersRepository
+            ->expects(self::never())
+            ->method('isPlayerInGame');
+        $this->playerManagementService
+            ->expects(self::never())
+            ->method('addPlayer');
+
+        $user = $this->createUserWithId(9, 'player3', 'p3@test');
+
+        $this->expectException(GameRoomFullException::class);
 
         $this->service->processInvitation($session, $user);
     }

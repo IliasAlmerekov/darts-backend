@@ -99,6 +99,10 @@ final class InvitationController extends AbstractController
             new OA\Header(header: 'Location', description: 'Frontend-URL', schema: new OA\Schema(type: 'string')),
         ]
     )]
+    #[OA\Response(
+        response: Response::HTTP_CONFLICT,
+        description: 'Spiel kann nicht gejoint werden (z. B. nicht mehr in Lobby oder Raum bereits voll).'
+    )]
     #[Security(name: null)]
     #[Route('api/invite/join/{uuid}', name: 'join_invitation', format: 'json')]
     public function joinInvitation(#[MapEntity(mapping: ['uuid' => 'uuid'])] Invitation $invitation, SessionInterface $session, InvitationServiceInterface $invitationService): Response
@@ -161,6 +165,10 @@ final class InvitationController extends AbstractController
                 new OA\Property(property: 'redirect', type: 'string', example: '/start'),
             ]
         )
+    )]
+    #[OA\Response(
+        response: Response::HTTP_CONFLICT,
+        description: 'Spiel kann nicht gejoint werden (z. B. nicht mehr in Lobby oder Raum bereits voll).'
     )]
     #[Route('api/invite/process', name: 'process_invitation', methods: ['POST'], format: 'json')]
     public function processInvitation(SessionInterface $session, InvitationServiceInterface $invitationService): Response
