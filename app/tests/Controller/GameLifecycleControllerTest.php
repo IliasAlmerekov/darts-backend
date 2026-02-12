@@ -12,6 +12,7 @@ use App\Entity\Game;
 use App\Exception\Game\GameMustHaveValidPlayerCountException;
 use App\Exception\Game\NoSettingsProvidedException;
 use App\Service\Game\GameFinishServiceInterface;
+use App\Service\Game\GameReopenServiceInterface;
 use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Game\GameServiceInterface;
 use App\Service\Game\GameSettingsServiceInterface;
@@ -94,11 +95,33 @@ final class GameLifecycleControllerTest extends TestCase
     {
         $game = $this->createMock(Game::class);
         $finishService = $this->createMock(GameFinishServiceInterface::class);
-        $finishService->method('finishGame')->willReturn(['ok' => true]);
+        $finishService->method('getFinishedPlayers')->willReturn([
+            [
+                'playerId' => 1,
+                'username' => 'player',
+                'position' => 1,
+                'roundsPlayed' => 5,
+                'roundAverage' => 60.0,
+            ],
+        ]);
 
         $response = $this->controller->finished($game, $finishService);
 
         $this->assertIsArray($response);
+    }
+
+    public function testReopenReturnsGameState(): void
+    {
+        $game = $this->createMock(Game::class);
+        $reopenService = $this->createMock(GameReopenServiceInterface::class);
+        $reopenService->expects($this->once())->method('reopen')->with($game);
+
+        $gameService = $this->createMock(GameServiceInterface::class);
+        $gameService->method('createGameDto')->willReturn($this->dummyGameDto());
+
+        $response = $this->controller->reopen($game, $reopenService, $gameService);
+
+        $this->assertInstanceOf(GameResponseDto::class, $response);
     }
 
     public function testGetGameStateReturnsJsonWithVersionHeaders(): void

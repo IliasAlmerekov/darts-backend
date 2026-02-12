@@ -6,6 +6,7 @@ namespace App\Tests\Controller;
 
 use App\Controller\GameStatsController;
 use App\Entity\Game;
+use App\Exception\Game\GameNotFoundException;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Game\GameFinishServiceInterface;
@@ -53,6 +54,41 @@ final class GameStatsControllerTest extends TestCase
         $response = $this->controller->gamesOverview($gameRepo, $finishService, 10, 0);
 
         $this->assertInstanceOf(GameOverviewResponseDto::class, $response);
+    }
+
+    public function testGameDetailsReturnsStats(): void
+    {
+        $game = $this->createMock(Game::class);
+        $gameRepo = $this->createMock(GameRepositoryInterface::class);
+        $gameRepo->method('find')->with(42)->willReturn($game);
+
+        $finishService = $this->createMock(GameFinishServiceInterface::class);
+        $finishService->method('getGameStats')->with($game)->willReturn([
+            'gameId' => 42,
+            'date' => new DateTimeImmutable(),
+            'finishedAt' => new DateTimeImmutable(),
+            'winner' => ['username' => 'winner', 'id' => 10],
+            'winnerRoundsPlayed' => 8,
+            'winnerRoundAverage' => 45.2,
+            'finishedPlayers' => [],
+        ]);
+
+        $response = $this->controller->gameDetails(42, $gameRepo, $finishService);
+
+        $this->assertIsArray($response);
+        $this->assertSame(42, $response['gameId']);
+    }
+
+    public function testGameDetailsThrowsWhenGameMissing(): void
+    {
+        $gameRepo = $this->createMock(GameRepositoryInterface::class);
+        $gameRepo->method('find')->with(999)->willReturn(null);
+
+        $finishService = $this->createMock(GameFinishServiceInterface::class);
+        $finishService->expects($this->never())->method('getGameStats');
+
+        $this->expectException(GameNotFoundException::class);
+        $this->controller->gameDetails(999, $gameRepo, $finishService);
     }
 
     public function testPlayerStatsReturnsData(): void

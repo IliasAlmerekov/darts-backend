@@ -12,6 +12,8 @@ namespace App\Controller;
 use App\Dto\GameOverviewItemDto;
 use App\Dto\GameOverviewResponseDto;
 use App\Dto\PlayerStatsResponseDto;
+use App\Entity\Game;
+use App\Exception\Game\GameNotFoundException;
 use App\Http\Attribute\ApiResponse;
 use App\Http\Pagination;
 use App\Repository\GameRepositoryInterface;
@@ -85,6 +87,47 @@ final class GameStatsController extends AbstractController
             total: $gameRepository->countFinishedGames(),
             items: $items,
         );
+    }
+
+    /**
+     * Returns details for a single game from overview context.
+     *
+     * @param int                        $gameId
+     * @param GameRepositoryInterface    $gameRepository
+     * @param GameFinishServiceInterface $gameFinishService
+     *
+     * @return array<string, mixed>
+     */
+    #[OA\Parameter(
+        name: 'gameId',
+        in: 'path',
+        required: true,
+        schema: new OA\Schema(type: 'integer', example: 123)
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Details eines einzelnen Spiels.',
+        content: new OA\JsonContent(
+            type: 'object',
+            properties: [
+                new OA\Property(property: 'gameId', type: 'integer', example: 123),
+                new OA\Property(property: 'winnerRoundsPlayed', type: 'integer', example: 8),
+                new OA\Property(property: 'winnerRoundAverage', type: 'number', format: 'float', example: 45.2),
+                new OA\Property(property: 'finishedPlayers', type: 'array', items: new OA\Items(type: 'object')),
+            ]
+        )
+    )]
+    #[OA\Response(response: 404, description: 'Spiel nicht gefunden.')]
+    #[ApiResponse]
+    #[Route('/api/games/{gameId}', name: 'app_games_details', methods: ['GET'], format: 'json', requirements: ['gameId' => '\d+'])]
+    public function gameDetails(int $gameId, GameRepositoryInterface $gameRepository, GameFinishServiceInterface $gameFinishService): array
+    {
+        $game = $gameRepository->find($gameId);
+        if (!$game instanceof Game) {
+            throw new GameNotFoundException();
+        }
+
+        return $gameFinishService->getGameStats($game);
     }
 
     /**
