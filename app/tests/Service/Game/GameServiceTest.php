@@ -277,6 +277,53 @@ final class GameServiceTest extends TestCase
     /**
      * @throws ReflectionException
      */
+    public function testCalculateActivePlayerUsesGamePlayerIdWhenPositionsAreEqual(): void
+    {
+        $game = new Game();
+        $this->setPrivateProperty($game, 'gameId', 90);
+        $game->setStatus(GameStatus::Started);
+        $game->setRound(1);
+        $game->setStartScore(301);
+
+        $round = (new Round())
+            ->setRoundNumber(1)
+            ->setGame($game);
+
+        $userOne = new User()->setUsername('One');
+        $this->setPrivateProperty($userOne, 'id', 1);
+        $playerOne = (new GamePlayers())
+            ->setPlayer($userOne)
+            ->setPosition(1)
+            ->setScore(301);
+        $this->setPrivateProperty($playerOne, 'gamePlayerId', 20);
+
+        $userTwo = new User()->setUsername('Two');
+        $this->setPrivateProperty($userTwo, 'id', 2);
+        $playerTwo = (new GamePlayers())
+            ->setPlayer($userTwo)
+            ->setPosition(1)
+            ->setScore(301);
+        $this->setPrivateProperty($playerTwo, 'gamePlayerId', 10);
+
+        $game->addGamePlayer($playerOne);
+        $game->addGamePlayer($playerTwo);
+
+        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
+        $roundRepository->method('findOneBy')->willReturn($round);
+
+        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository->method('count')->willReturn(0);
+        $roundThrowsRepository->method('findOneBy')->willReturn(null);
+
+        $service = new GameService($roundRepository, $roundThrowsRepository);
+        $activePlayerId = $service->calculateActivePlayer($game);
+
+        self::assertSame(2, $activePlayerId);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
     private function setPrivateProperty(object $object, string $property, mixed $value): void
     {
         $ref = new ReflectionProperty($object, $property);

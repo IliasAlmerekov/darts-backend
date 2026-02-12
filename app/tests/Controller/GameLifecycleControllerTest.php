@@ -17,10 +17,12 @@ use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Game\GameServiceInterface;
 use App\Service\Game\GameSettingsServiceInterface;
 use App\Service\Game\GameStartServiceInterface;
+use App\Service\Security\GameAccessServiceInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -73,8 +75,12 @@ final class GameLifecycleControllerTest extends TestCase
 
         $gameService = $this->createMock(GameServiceInterface::class);
         $gameService->method('createGameDto')->willReturn($this->dummyGameDto());
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects($this->once())
+            ->method('wrapInTransaction')
+            ->willReturnCallback(static fn(callable $func) => $func());
 
-        $response = $this->controller->createSettings($roomService, $settingsService, $gameService, $dto);
+        $response = $this->controller->createSettings($roomService, $settingsService, $gameService, $entityManager, $dto);
 
         $this->assertInstanceOf(GameResponseDto::class, $response);
     }
@@ -127,6 +133,10 @@ final class GameLifecycleControllerTest extends TestCase
     public function testGetGameStateReturnsJsonWithVersionHeaders(): void
     {
         $game = $this->createMock(Game::class);
+        $gameAccessService = $this->createMock(GameAccessServiceInterface::class);
+        $gameAccessService->expects($this->once())
+            ->method('assertPlayerInGameOrAdmin')
+            ->with($game);
         $gameService = $this->createMock(GameServiceInterface::class);
         $gameService->expects($this->once())
             ->method('buildStateVersion')
@@ -138,7 +148,7 @@ final class GameLifecycleControllerTest extends TestCase
             ->willReturn($this->dummyGameDto());
 
         $request = new Request();
-        $response = $this->controller->getGameState($game, $gameService, $request);
+        $response = $this->controller->getGameState($game, $gameAccessService, $gameService, $request);
 
         $this->assertInstanceOf(Response::class, $response);
         $this->assertSame(Response::HTTP_OK, $response->getStatusCode());
@@ -149,6 +159,10 @@ final class GameLifecycleControllerTest extends TestCase
     public function testGetGameStateReturnsNotModifiedWhenSinceMatches(): void
     {
         $game = $this->createMock(Game::class);
+        $gameAccessService = $this->createMock(GameAccessServiceInterface::class);
+        $gameAccessService->expects($this->once())
+            ->method('assertPlayerInGameOrAdmin')
+            ->with($game);
         $gameService = $this->createMock(GameServiceInterface::class);
         $gameService->expects($this->once())
             ->method('buildStateVersion')
@@ -158,7 +172,7 @@ final class GameLifecycleControllerTest extends TestCase
             ->method('createGameDto');
 
         $request = new Request();
-        $response = $this->controller->getGameState($game, $gameService, $request, 'state-v1');
+        $response = $this->controller->getGameState($game, $gameAccessService, $gameService, $request, 'state-v1');
 
         $this->assertSame(Response::HTTP_NOT_MODIFIED, $response->getStatusCode());
         $this->assertSame('state-v1', $response->headers->get('X-Game-State-Version'));
@@ -167,6 +181,10 @@ final class GameLifecycleControllerTest extends TestCase
     public function testGetGameStateReturnsNotModifiedWhenIfNoneMatchMatches(): void
     {
         $game = $this->createMock(Game::class);
+        $gameAccessService = $this->createMock(GameAccessServiceInterface::class);
+        $gameAccessService->expects($this->once())
+            ->method('assertPlayerInGameOrAdmin')
+            ->with($game);
         $gameService = $this->createMock(GameServiceInterface::class);
         $gameService->expects($this->once())
             ->method('buildStateVersion')
@@ -178,7 +196,7 @@ final class GameLifecycleControllerTest extends TestCase
         $request = new Request();
         $request->headers->set('If-None-Match', '"state-v1"');
 
-        $response = $this->controller->getGameState($game, $gameService, $request);
+        $response = $this->controller->getGameState($game, $gameAccessService, $gameService, $request);
 
         $this->assertSame(Response::HTTP_NOT_MODIFIED, $response->getStatusCode());
     }

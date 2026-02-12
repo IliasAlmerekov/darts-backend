@@ -62,8 +62,7 @@ final readonly class GameService implements GameServiceInterface
             'roundNumber' => $currentRoundNumber,
         ]);
         // Sortiere Spieler nach Position (wichtig für die Reihenfolge!)
-        $gamePlayers = $game->getGamePlayers()->toArray();
-        usort($gamePlayers, fn($a, $b) => $a->getPosition() <=> $b->getPosition());
+        $gamePlayers = $this->sortedGamePlayers($game);
         // Gehe alle Spieler der Reihe nach durch
         foreach ($gamePlayers as $gamePlayer) {
             $user = $gamePlayer->getPlayer();
@@ -125,8 +124,7 @@ final readonly class GameService implements GameServiceInterface
             'roundNumber' => $currentRoundNumber,
         ]);
         // Sortiere Spieler nach Position (Reihenfolge im Spiel)
-        $gamePlayers = $game->getGamePlayers()->toArray();
-        usort($gamePlayers, fn($a, $b) => $a->getPosition() <=> $b->getPosition());
+        $gamePlayers = $this->sortedGamePlayers($game);
         $calculatedActivePlayerId = $this->calculateActivePlayer($game);
         // DTOs für Spieler erstellen
         $playerDtos = [];
@@ -327,5 +325,30 @@ final readonly class GameService implements GameServiceInterface
         }
 
         return hash('sha256', $encodedPayload);
+    }
+
+    /**
+     * @param Game $game
+     *
+     * @return list<GamePlayers>
+     */
+    private function sortedGamePlayers(Game $game): array
+    {
+        /** @var list<GamePlayers> $gamePlayers */
+        $gamePlayers = $game->getGamePlayers()->toArray();
+        usort($gamePlayers, static function (GamePlayers $left, GamePlayers $right): int {
+            $leftPosition = $left->getPosition() ?? PHP_INT_MAX;
+            $rightPosition = $right->getPosition() ?? PHP_INT_MAX;
+            if ($leftPosition !== $rightPosition) {
+                return $leftPosition <=> $rightPosition;
+            }
+
+            $leftId = $left->getGamePlayerId() ?? PHP_INT_MAX;
+            $rightId = $right->getGamePlayerId() ?? PHP_INT_MAX;
+
+            return $leftId <=> $rightId;
+        });
+
+        return $gamePlayers;
     }
 }
