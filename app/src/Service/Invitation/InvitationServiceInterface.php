@@ -33,7 +33,7 @@ interface InvitationServiceInterface
     public function getInvitationPayload(Game $game): array;
 
     /**
-     * Ensures that the game can be joined (lobby state).
+     * Ensures that the game can be joined (lobby state and room capacity).
      *
      * @param int $gameId
      *

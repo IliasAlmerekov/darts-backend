@@ -11,6 +11,7 @@ enum ErrorCode: string
 {
     case GameInvalidPlayerCount = 'GAME_INVALID_PLAYER_COUNT';
     case GameNotFound = 'GAME_NOT_FOUND';
+    case GameRoomFull = 'GAME_ROOM_FULL';
     case GameInvalidOutMode = 'GAME_INVALID_OUT_MODE';
     case GameInvalidStartScore = 'GAME_INVALID_START_SCORE';
     case GameNoSettingsProvided = 'GAME_NO_SETTINGS_PROVIDED';

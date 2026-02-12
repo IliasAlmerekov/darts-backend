@@ -6,6 +6,7 @@ namespace App\Tests\Security;
 
 use App\Exception\Game\PlayerAlreadyThrewThreeTimesException;
 use App\Exception\Game\GameIdMissingException;
+use App\Exception\Game\GameRoomFullException;
 use App\Security\ErrorController;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -37,6 +38,17 @@ final class ErrorControllerTest extends TestCase
 
         $data = json_decode((string) $response->getContent(), true);
         self::assertSame('GAME_ID_MISSING', $data['error'] ?? null);
+    }
+
+    public function testRendersGameRoomFullExceptionAsJson(): void
+    {
+        $controller = new ErrorController();
+        $response = $controller->show(new GameRoomFullException(10));
+
+        self::assertSame(Response::HTTP_CONFLICT, $response->getStatusCode());
+
+        $data = json_decode((string) $response->getContent(), true);
+        self::assertSame('GAME_ROOM_FULL', $data['error'] ?? null);
     }
 
     public function testRendersNotFoundAsJson(): void
