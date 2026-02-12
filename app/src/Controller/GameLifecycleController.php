@@ -18,6 +18,7 @@ use App\Exception\ApiExceptionInterface;
 use App\Http\Attribute\ApiResponse;
 use App\Service\Game\GameAbortServiceInterface;
 use App\Service\Game\GameFinishServiceInterface;
+use App\Service\Game\GameReopenServiceInterface;
 use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Game\GameServiceInterface;
 use App\Service\Game\GameSettingsServiceInterface;
@@ -158,6 +159,30 @@ final class GameLifecycleController extends AbstractController
     }
 
     /**
+     * Reopens a finished game and returns current state.
+     *
+     * @param Game                       $game
+     * @param GameReopenServiceInterface $gameReopenService
+     * @param GameServiceInterface       $gameService
+     *
+     * @return mixed
+     */
+    #[OA\Parameter(name: 'gameId', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
+    #[OA\Response(
+        response: Response::HTTP_OK,
+        description: 'Spiel wurde wieder geöffnet und befindet sich erneut im started-Status.',
+        content: new OA\JsonContent(ref: new Model(type: GameResponseDto::class))
+    )]
+    #[ApiResponse]
+    #[Route('/api/game/{gameId}/reopen', name: 'app_game_reopen', methods: ['PATCH'], format: 'json')]
+    public function reopen(#[AttributeMapEntity(id: 'gameId')] Game $game, GameReopenServiceInterface $gameReopenService, GameServiceInterface $gameService): mixed
+    {
+        $gameReopenService->reopen($game);
+
+        return $gameService->createGameDto($game);
+    }
+
+    /**
      * Returns final standings without mutating game state.
      *
      * @param Game                       $game
@@ -185,6 +210,7 @@ final class GameLifecycleController extends AbstractController
     )]
     #[ApiResponse]
     #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['GET'], format: 'json')]
+    #[Route('/api/games/{gameId}/finished', name: 'app_games_finished', methods: ['GET'], format: 'json', requirements: ['gameId' => '\d+'])]
     public function finished(#[AttributeMapEntity(id: 'gameId')] Game $game, GameFinishServiceInterface $gameFinishService): mixed
     {
         return $gameFinishService->getFinishedPlayers($game);

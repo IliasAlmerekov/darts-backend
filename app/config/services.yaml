@@ -35,6 +35,7 @@ services:
     App\Service\Game\GameServiceInterface: '@App\Service\Game\GameService'
     App\Service\Game\GameStatisticsServiceInterface: '@App\Service\Game\GameStatisticsService'
     App\Service\Game\GameFinishServiceInterface: '@App\Service\Game\GameFinishService'
+    App\Service\Game\GameReopenServiceInterface: '@App\Service\Game\GameReopenService'
     App\Service\Game\GameAbortServiceInterface: '@App\Service\Game\GameAbortService'
     App\Service\Game\RematchServiceInterface: '@App\Service\Game\RematchService'
     App\Service\Player\PlayerManagementServiceInterface: '@App\Service\Player\PlayerManagementService'
