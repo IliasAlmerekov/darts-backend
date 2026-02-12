@@ -11,7 +11,9 @@ use App\Entity\Round;
 use App\Entity\RoundThrows;
 use App\Entity\User;
 use App\Enum\GameStatus;
+use App\Exception\Game\GamePlayerNotActiveException;
 use App\Exception\Game\GameThrowNotAllowedException;
+use App\Exception\Game\InvalidThrowException;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
@@ -79,7 +81,7 @@ final class GameThrowServiceTest extends TestCase
 
         $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
         $roundThrowsRepository->method('count')
-            ->willReturnOnConsecutiveCalls(0, 1);
+            ->willReturnOnConsecutiveCalls(0, 0, 1);
         $roundThrowsRepository->method('findOneBy')
             ->willReturn(null);
 
@@ -115,7 +117,7 @@ final class GameThrowServiceTest extends TestCase
     /**
      * @throws ReflectionException
      */
-    public function testRecordThrowFromLobbyAutoStartsGame(): void
+    public function testRecordThrowFromLobbyThrowsWhenGameNotStarted(): void
     {
         $game = new Game();
         $this->setPrivateProperty($game, 'gameId', 10);
@@ -145,24 +147,14 @@ final class GameThrowServiceTest extends TestCase
         $dto->value = 20;
 
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
-        $gamePlayersRepository->method('findOneBy')
-            ->with(['game' => 10, 'player' => 1])
-            ->willReturn($player1);
+        $gamePlayersRepository->expects(self::never())->method('findOneBy');
 
         $roundRepository = $this->createMock(RoundRepositoryInterface::class);
-        $roundRepository->method('findOneBy')
-            ->with(['game' => $game, 'roundNumber' => 1])
-            ->willReturn($round);
-
         $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
-        $roundThrowsRepository->method('count')
-            ->willReturnOnConsecutiveCalls(0, 1);
-        $roundThrowsRepository->method('findOneBy')
-            ->willReturn(null);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->expects(self::once())->method('persist');
-        $entityManager->expects(self::once())->method('flush');
+        $entityManager->expects(self::never())->method('persist');
+        $entityManager->expects(self::never())->method('flush');
 
         $service = new GameThrowService(
             $gamePlayersRepository,
@@ -172,12 +164,8 @@ final class GameThrowServiceTest extends TestCase
             $this->createAccessService()
         );
 
+        $this->expectException(GameThrowNotAllowedException::class);
         $service->recordThrow($game, $dto);
-
-        self::assertSame(GameStatus::Started, $game->getStatus());
-        self::assertSame(1, $game->getRound());
-        self::assertSame(30, $player1->getScore());
-        self::assertSame(50, $player2->getScore());
     }
 
     /**
@@ -212,6 +200,274 @@ final class GameThrowServiceTest extends TestCase
         );
 
         $this->expectException(GameThrowNotAllowedException::class);
+        $service->recordThrow($game, $dto);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    public function testRecordThrowThrowsWhenThrowIsBothDoubleAndTriple(): void
+    {
+        $game = new Game();
+        $this->setPrivateProperty($game, 'gameId', 10);
+        $game->setStartScore(301);
+        $game->setRound(1);
+        $game->setStatus(GameStatus::Started);
+
+        $round = (new Round())
+            ->setRoundNumber(1)
+            ->setGame($game);
+
+        $user1 = (new User())->setUsername('Player 1');
+        $this->setPrivateProperty($user1, 'id', 1);
+        $player1 = (new GamePlayers())
+            ->setPlayer($user1)
+            ->setScore(301)
+            ->setPosition(1);
+        $game->addGamePlayer($player1);
+
+        $dto = new ThrowRequest();
+        $dto->playerId = 1;
+        $dto->value = 20;
+        $dto->isDouble = true;
+        $dto->isTriple = true;
+
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $gamePlayersRepository->method('findOneBy')
+            ->with(['game' => 10, 'player' => 1])
+            ->willReturn($player1);
+
+        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
+        $roundRepository->method('findOneBy')
+            ->with(['game' => $game, 'roundNumber' => 1])
+            ->willReturn($round);
+
+        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository->method('count')->willReturn(0);
+        $roundThrowsRepository->method('findOneBy')->willReturn(null);
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::never())->method('persist');
+        $entityManager->expects(self::never())->method('flush');
+
+        $service = new GameThrowService(
+            $gamePlayersRepository,
+            $roundRepository,
+            $roundThrowsRepository,
+            $entityManager,
+            $this->createAccessService()
+        );
+
+        $this->expectException(InvalidThrowException::class);
+        $service->recordThrow($game, $dto);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    public function testRecordThrowThrowsWhenTripleBaseValueIsOutOfRange(): void
+    {
+        $game = new Game();
+        $this->setPrivateProperty($game, 'gameId', 10);
+        $game->setStartScore(301);
+        $game->setRound(1);
+        $game->setStatus(GameStatus::Started);
+
+        $round = (new Round())
+            ->setRoundNumber(1)
+            ->setGame($game);
+
+        $user1 = (new User())->setUsername('Player 1');
+        $this->setPrivateProperty($user1, 'id', 1);
+        $player1 = (new GamePlayers())
+            ->setPlayer($user1)
+            ->setScore(301)
+            ->setPosition(1);
+        $game->addGamePlayer($player1);
+
+        $dto = new ThrowRequest();
+        $dto->playerId = 1;
+        $dto->value = 25;
+        $dto->isDouble = false;
+        $dto->isTriple = true;
+
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $gamePlayersRepository->method('findOneBy')
+            ->with(['game' => 10, 'player' => 1])
+            ->willReturn($player1);
+
+        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
+        $roundRepository->method('findOneBy')
+            ->with(['game' => $game, 'roundNumber' => 1])
+            ->willReturn($round);
+
+        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository->method('count')->willReturn(0);
+        $roundThrowsRepository->method('findOneBy')->willReturn(null);
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::never())->method('persist');
+        $entityManager->expects(self::never())->method('flush');
+
+        $service = new GameThrowService(
+            $gamePlayersRepository,
+            $roundRepository,
+            $roundThrowsRepository,
+            $entityManager,
+            $this->createAccessService()
+        );
+
+        $this->expectException(InvalidThrowException::class);
+        $service->recordThrow($game, $dto);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    public function testRecordThrowThrowsWhenPlayerIsNotActive(): void
+    {
+        $game = new Game();
+        $this->setPrivateProperty($game, 'gameId', 10);
+        $game->setStartScore(50);
+        $game->setRound(1);
+        $game->setStatus(GameStatus::Started);
+
+        $round = new Round();
+        $round->setRoundNumber(1);
+        $round->setGame($game);
+
+        $user1 = new User()->setUsername('Player 1');
+        $this->setPrivateProperty($user1, 'id', 1);
+        $player1 = new GamePlayers()
+            ->setPlayer($user1)
+            ->setScore(50)
+            ->setPosition(1);
+        $game->addGamePlayer($player1);
+
+        $user2 = new User()->setUsername('Player 2');
+        $this->setPrivateProperty($user2, 'id', 2);
+        $player2 = new GamePlayers()
+            ->setPlayer($user2)
+            ->setScore(40)
+            ->setPosition(2);
+        $game->addGamePlayer($player2);
+
+        $dto = new ThrowRequest();
+        $dto->playerId = 2;
+        $dto->value = 20;
+
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $gamePlayersRepository->method('findOneBy')
+            ->with(['game' => 10, 'player' => 2])
+            ->willReturn($player2);
+
+        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
+        $roundRepository->method('findOneBy')
+            ->with(['game' => $game, 'roundNumber' => 1])
+            ->willReturn($round);
+
+        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository->method('count')
+            ->willReturn(0);
+        $roundThrowsRepository->method('findOneBy')
+            ->willReturn(null);
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::never())->method('persist');
+        $entityManager->expects(self::never())->method('flush');
+
+        $service = new GameThrowService(
+            $gamePlayersRepository,
+            $roundRepository,
+            $roundThrowsRepository,
+            $entityManager,
+            $this->createAccessService()
+        );
+
+        $this->expectException(GamePlayerNotActiveException::class);
+        $service->recordThrow($game, $dto);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    public function testRecordThrowThrowsWhenPlayerAlreadyBustedInRound(): void
+    {
+        $game = new Game();
+        $this->setPrivateProperty($game, 'gameId', 10);
+        $game->setStartScore(50);
+        $game->setRound(1);
+        $game->setStatus(GameStatus::Started);
+
+        $round = new Round();
+        $round->setRoundNumber(1);
+        $round->setGame($game);
+
+        $user1 = new User()->setUsername('Player 1');
+        $this->setPrivateProperty($user1, 'id', 1);
+        $player1 = new GamePlayers()
+            ->setPlayer($user1)
+            ->setScore(50)
+            ->setPosition(1);
+        $game->addGamePlayer($player1);
+
+        $user2 = new User()->setUsername('Player 2');
+        $this->setPrivateProperty($user2, 'id', 2);
+        $player2 = new GamePlayers()
+            ->setPlayer($user2)
+            ->setScore(50)
+            ->setPosition(2);
+        $game->addGamePlayer($player2);
+
+        $bustThrow = (new RoundThrows())
+            ->setGame($game)
+            ->setRound($round)
+            ->setPlayer($user1)
+            ->setThrowNumber(1)
+            ->setValue(60)
+            ->setIsBust(true)
+            ->setScore(50)
+            ->setTimestamp(new DateTime());
+
+        $dto = new ThrowRequest();
+        $dto->playerId = 1;
+        $dto->value = 20;
+
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $gamePlayersRepository->method('findOneBy')
+            ->with(['game' => 10, 'player' => 1])
+            ->willReturn($player1);
+
+        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
+        $roundRepository->method('findOneBy')
+            ->with(['game' => $game, 'roundNumber' => 1])
+            ->willReturn($round);
+
+        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository->method('count')
+            ->willReturnOnConsecutiveCalls(1, 0);
+        $roundThrowsRepository->method('findOneBy')
+            ->willReturnCallback(static function (array $criteria, ?array $orderBy = null) use ($user1, $bustThrow): ?object {
+                if (($criteria['player'] ?? null) === $user1 && ['throwNumber' => 'DESC'] === $orderBy) {
+                    return $bustThrow;
+                }
+
+                return null;
+            });
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::never())->method('persist');
+        $entityManager->expects(self::never())->method('flush');
+
+        $service = new GameThrowService(
+            $gamePlayersRepository,
+            $roundRepository,
+            $roundThrowsRepository,
+            $entityManager,
+            $this->createAccessService()
+        );
+
+        $this->expectException(GamePlayerNotActiveException::class);
         $service->recordThrow($game, $dto);
     }
 
@@ -340,7 +596,7 @@ final class GameThrowServiceTest extends TestCase
         $normalLast = (new GamePlayers())
             ->setPlayer($normalLastUser)
             ->setScore(10)
-            ->setPosition(1);
+            ->setPosition(4);
 
         $guestWinnerUser = (new User())->setUsername('Guest Winner')->setIsGuest(true);
         $this->setPrivateProperty($guestWinnerUser, 'id', 2);
@@ -393,7 +649,7 @@ final class GameThrowServiceTest extends TestCase
 
         $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
         $roundThrowsRepository->method('count')
-            ->willReturnOnConsecutiveCalls(0, 0);
+            ->willReturnOnConsecutiveCalls(0, 0, 0);
         $roundThrowsRepository->method('findOneBy')
             ->willReturn(null);
 

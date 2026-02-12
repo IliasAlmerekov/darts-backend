@@ -21,7 +21,7 @@ interface GameThrowServiceInterface
      * @param Game         $game The game to record the throw in
      * @param ThrowRequest $dto  The throw data (player, value, double/triple flags)
      *
-     * @throws ApiExceptionInterface If player not found in game or player already threw 3 times
+     * @throws ApiExceptionInterface If the throw is invalid for current turn/state
      *
      * @return void
      */

@@ -6,7 +6,12 @@ namespace App\Tests\Security;
 
 use App\Exception\Game\PlayerAlreadyThrewThreeTimesException;
 use App\Exception\Game\GameIdMissingException;
+use App\Exception\Game\InvalidThrowException;
+use App\Exception\Game\GamePlayerNotActiveException;
+use App\Exception\Game\InvalidPlayerOrderException;
 use App\Exception\Game\GameRoomFullException;
+use App\Exception\Game\GameStartNotAllowedException;
+use App\Enum\GameStatus;
 use App\Security\ErrorController;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -49,6 +54,50 @@ final class ErrorControllerTest extends TestCase
 
         $data = json_decode((string) $response->getContent(), true);
         self::assertSame('GAME_ROOM_FULL', $data['error'] ?? null);
+    }
+
+    public function testRendersGamePlayerNotActiveExceptionAsJson(): void
+    {
+        $controller = new ErrorController();
+        $response = $controller->show(new GamePlayerNotActiveException(2, 1));
+
+        self::assertSame(Response::HTTP_CONFLICT, $response->getStatusCode());
+
+        $data = json_decode((string) $response->getContent(), true);
+        self::assertSame('GAME_PLAYER_NOT_ACTIVE', $data['error'] ?? null);
+    }
+
+    public function testRendersInvalidThrowExceptionAsJson(): void
+    {
+        $controller = new ErrorController();
+        $response = $controller->show(new InvalidThrowException('Invalid throw'));
+
+        self::assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
+
+        $data = json_decode((string) $response->getContent(), true);
+        self::assertSame('GAME_INVALID_THROW', $data['error'] ?? null);
+    }
+
+    public function testRendersInvalidPlayerOrderExceptionAsJson(): void
+    {
+        $controller = new ErrorController();
+        $response = $controller->show(new InvalidPlayerOrderException('Invalid order'));
+
+        self::assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
+
+        $data = json_decode((string) $response->getContent(), true);
+        self::assertSame('GAME_INVALID_PLAYER_ORDER', $data['error'] ?? null);
+    }
+
+    public function testRendersGameStartNotAllowedExceptionAsJson(): void
+    {
+        $controller = new ErrorController();
+        $response = $controller->show(new GameStartNotAllowedException(GameStatus::Started));
+
+        self::assertSame(Response::HTTP_CONFLICT, $response->getStatusCode());
+
+        $data = json_decode((string) $response->getContent(), true);
+        self::assertSame('GAME_START_NOT_ALLOWED', $data['error'] ?? null);
     }
 
     public function testRendersNotFoundAsJson(): void

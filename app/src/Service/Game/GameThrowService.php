@@ -15,6 +15,8 @@ use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\Round;
 use App\Entity\RoundThrows;
+use App\Exception\Game\InvalidThrowException;
+use App\Exception\Game\GamePlayerNotActiveException;
 use App\Exception\Game\GameThrowNotAllowedException;
 use App\Exception\Game\PlayerAlreadyThrewThreeTimesException;
 use App\Exception\Game\PlayerNotFoundInGameException;
@@ -66,15 +68,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         $user = $this->gameAccessService->assertPlayerInGameOrAdmin($game);
 
         $status = $game->getStatus();
-        if (GameStatus::Lobby === $status) {
-            $game->setStatus(GameStatus::Started);
-            if (null === $game->getRound()) {
-                $game->setRound(1);
-            }
-            foreach ($game->getGamePlayers() as $gamePlayer) {
-                $gamePlayer->setScore($game->getStartScore());
-            }
-        } elseif (GameStatus::Started !== $status) {
+        if (GameStatus::Started !== $status) {
             throw new GameThrowNotAllowedException($status);
         }
 
@@ -91,6 +85,12 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         }
 
         $round = $this->getCurrentRound($game);
+        $requestedPlayerId = $dto->playerId;
+        if (null === $requestedPlayerId) {
+            throw new PlayerNotFoundInGameException();
+        }
+        $this->assertActivePlayer($game, $round, $requestedPlayerId);
+
         $playerThrowsThisRound = $this->roundThrowsRepository->count([
             'round' => $round,
             'player' => $player->getPlayer(),
@@ -101,9 +101,11 @@ final readonly class GameThrowService implements GameThrowServiceInterface
 
         $throwNumber = $playerThrowsThisRound + 1;
         $baseValue = $dto->value ?? 0;
-        $finalValue = $baseValue;
         $isDouble = $dto->isDouble ?? false;
         $isTriple = $dto->isTriple ?? false;
+        $this->assertValidThrowInput($baseValue, $isDouble, $isTriple);
+
+        $finalValue = $baseValue;
         if ($isTriple) {
             $finalValue = $baseValue * 3;
         } elseif ($isDouble) {
@@ -364,6 +366,78 @@ final readonly class GameThrowService implements GameThrowServiceInterface
     }
 
     /**
+     * @param Game  $game
+     * @param Round $round
+     * @param int   $requestedPlayerId
+     *
+     * @return void
+     */
+    private function assertActivePlayer(Game $game, Round $round, int $requestedPlayerId): void
+    {
+        $activePlayerId = $this->resolveActivePlayerId($game, $round);
+        if (null !== $activePlayerId && $activePlayerId === $requestedPlayerId) {
+            return;
+        }
+
+        throw new GamePlayerNotActiveException($requestedPlayerId, $activePlayerId);
+    }
+
+    /**
+     * @param Game  $game
+     * @param Round $round
+     *
+     * @return int|null
+     */
+    private function resolveActivePlayerId(Game $game, Round $round): ?int
+    {
+        $gamePlayers = $game->getGamePlayers()->toArray();
+        usort($gamePlayers, static function (GamePlayers $left, GamePlayers $right): int {
+            $leftPosition = $left->getPosition() ?? PHP_INT_MAX;
+            $rightPosition = $right->getPosition() ?? PHP_INT_MAX;
+            if ($leftPosition !== $rightPosition) {
+                return $leftPosition <=> $rightPosition;
+            }
+
+            $leftId = $left->getGamePlayerId() ?? PHP_INT_MAX;
+            $rightId = $right->getGamePlayerId() ?? PHP_INT_MAX;
+
+            return $leftId <=> $rightId;
+        });
+
+        foreach ($gamePlayers as $gamePlayer) {
+            $player = $gamePlayer->getPlayer();
+            if (null === $player) {
+                continue;
+            }
+
+            $playerScore = $gamePlayer->getScore() ?? $game->getStartScore();
+            if (0 === $playerScore) {
+                continue;
+            }
+
+            $throwsCount = $this->roundThrowsRepository->count([
+                'round' => $round,
+                'player' => $player,
+            ]);
+            if ($throwsCount >= 3) {
+                continue;
+            }
+
+            $latestThrow = $this->roundThrowsRepository->findOneBy(
+                ['round' => $round, 'player' => $player],
+                ['throwNumber' => 'DESC']
+            );
+            if ($latestThrow instanceof RoundThrows && $latestThrow->isBust()) {
+                continue;
+            }
+
+            return $player->getId();
+        }
+
+        return null;
+    }
+
+    /**
      * Normalize final standings to unique positions (1..N).
      * Keeps finished players first (ordered by their existing finish position),
      * then appends unfinished players preserving their previous order.
@@ -420,6 +494,28 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             foreach ($game->getGamePlayers() as $gamePlayer) {
                 $gamePlayer->setIsWinner($gamePlayer === $winnerPlayer);
             }
+        }
+    }
+
+    /**
+     * @param int  $baseValue
+     * @param bool $isDouble
+     * @param bool $isTriple
+     *
+     * @return void
+     */
+    private function assertValidThrowInput(int $baseValue, bool $isDouble, bool $isTriple): void
+    {
+        if ($isDouble && $isTriple) {
+            throw new InvalidThrowException('Throw cannot be both double and triple at the same time.');
+        }
+
+        if ($isTriple && ($baseValue < 0 || $baseValue > 20)) {
+            throw new InvalidThrowException('Triple throws require a base value between 0 and 20.');
+        }
+
+        if ($isDouble && ($baseValue < 0 || $baseValue > 20) && 25 !== $baseValue) {
+            throw new InvalidThrowException('Double throws require a base value between 0 and 20, or 25 for bull.');
         }
     }
 }

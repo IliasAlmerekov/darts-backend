@@ -12,6 +12,7 @@ namespace App\Tests\Service\Player;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\User;
+use App\Exception\Game\InvalidPlayerOrderException;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Service\Player\PlayerManagementService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -159,6 +160,43 @@ final class PlayerManagementServiceTest extends TestCase
         self::assertSame(3, $result->getPosition());
     }
 
+    public function testAddPlayerUsesHighestExistingPositionWhenRepositoryOrderIsUnsorted(): void
+    {
+        $existingLow = (new GamePlayers())->setPosition(2);
+        $existingHigh = (new GamePlayers())->setPosition(10);
+        $existingMiddle = (new GamePlayers())->setPosition(5);
+
+        $this->gamePlayersRepository
+            ->expects(self::once())
+            ->method('findBy')
+            ->with(['game' => 301])
+            ->willReturn([$existingHigh, $existingLow, $existingMiddle]);
+
+        $this->entityManager
+            ->expects(self::exactly(2))
+            ->method('getReference')
+            ->willReturnCallback(static function (string $class, int $id) {
+                if ($class === Game::class) {
+                    return (new Game())->setGameId($id);
+                }
+                if ($class === User::class) {
+                    $user = new User();
+                    (new \ReflectionProperty(User::class, 'id'))->setValue($user, $id);
+
+                    return $user;
+                }
+
+                throw new \LogicException('Unexpected getReference call');
+            });
+
+        $this->entityManager->expects(self::once())->method('persist')->with(self::isInstanceOf(GamePlayers::class));
+        $this->entityManager->expects(self::once())->method('flush');
+
+        $result = $this->service->addPlayer(301, 401);
+
+        self::assertSame(11, $result->getPosition());
+    }
+
     public function testCopyPlayersCopiesOnlyFilteredPlayers(): void
     {
         $sourcePlayer1 = (new GamePlayers())->setPlayer($this->userWithId(1))->setPosition(2);
@@ -218,12 +256,122 @@ final class PlayerManagementServiceTest extends TestCase
         $this->entityManager->expects(self::once())->method('flush');
 
         $this->service->updatePlayerPositions(42, [
-            ['playerId' => 2, 'position' => 5],
-            ['playerId' => 3, 'position' => 10],
+            ['playerId' => 2, 'position' => 1],
+            ['playerId' => 1, 'position' => 2],
         ]);
 
-        self::assertSame(1, $playerOne->getPosition());
-        self::assertSame(5, $playerTwo->getPosition());
+        self::assertSame(2, $playerOne->getPosition());
+        self::assertSame(1, $playerTwo->getPosition());
+    }
+
+    public function testUpdatePlayerPositionsThrowsOnDuplicatePlayerIds(): void
+    {
+        $this->gamePlayersRepository->expects(self::never())->method('findBy');
+        $this->entityManager->expects(self::never())->method('flush');
+
+        $this->expectException(InvalidPlayerOrderException::class);
+
+        $this->service->updatePlayerPositions(42, [
+            ['playerId' => 2, 'position' => 1],
+            ['playerId' => 2, 'position' => 2],
+        ]);
+    }
+
+    public function testUpdatePlayerPositionsThrowsOnDuplicatePositions(): void
+    {
+        $this->gamePlayersRepository->expects(self::never())->method('findBy');
+        $this->entityManager->expects(self::never())->method('flush');
+
+        $this->expectException(InvalidPlayerOrderException::class);
+
+        $this->service->updatePlayerPositions(42, [
+            ['playerId' => 2, 'position' => 1],
+            ['playerId' => 3, 'position' => 1],
+        ]);
+    }
+
+    public function testUpdatePlayerPositionsThrowsWhenPartialUpdateCreatesDuplicateWithExistingPosition(): void
+    {
+        $playerOne = (new GamePlayers())->setPlayer($this->userWithId(1))->setPosition(1);
+        $playerTwo = (new GamePlayers())->setPlayer($this->userWithId(2))->setPosition(2);
+
+        $this->gamePlayersRepository
+            ->expects(self::once())
+            ->method('findBy')
+            ->with(['game' => 42])
+            ->willReturn([$playerOne, $playerTwo]);
+
+        $this->entityManager->expects(self::never())->method('flush');
+
+        $this->expectException(InvalidPlayerOrderException::class);
+
+        $this->service->updatePlayerPositions(42, [
+            ['playerId' => 2, 'position' => 1],
+        ]);
+    }
+
+    public function testUpdatePlayerPositionsThrowsWhenPayloadDoesNotIncludeAllPlayers(): void
+    {
+        $playerOne = (new GamePlayers())->setPlayer($this->userWithId(1))->setPosition(1);
+        $playerTwo = (new GamePlayers())->setPlayer($this->userWithId(2))->setPosition(2);
+
+        $this->gamePlayersRepository
+            ->expects(self::once())
+            ->method('findBy')
+            ->with(['game' => 42])
+            ->willReturn([$playerOne, $playerTwo]);
+
+        $this->entityManager->expects(self::never())->method('flush');
+
+        $this->expectException(InvalidPlayerOrderException::class);
+
+        $this->service->updatePlayerPositions(42, [
+            ['playerId' => 1, 'position' => 1],
+        ]);
+    }
+
+    public function testUpdatePlayerPositionsThrowsWhenPayloadContainsUnknownPlayer(): void
+    {
+        $playerOne = (new GamePlayers())->setPlayer($this->userWithId(1))->setPosition(1);
+        $playerTwo = (new GamePlayers())->setPlayer($this->userWithId(2))->setPosition(2);
+
+        $this->gamePlayersRepository
+            ->expects(self::once())
+            ->method('findBy')
+            ->with(['game' => 42])
+            ->willReturn([$playerOne, $playerTwo]);
+
+        $this->entityManager->expects(self::never())->method('flush');
+
+        $this->expectException(InvalidPlayerOrderException::class);
+
+        $this->service->updatePlayerPositions(42, [
+            ['playerId' => 1, 'position' => 1],
+            ['playerId' => 3, 'position' => 2],
+        ]);
+    }
+
+    public function testUpdatePlayerPositionsThrowsWhenPositionsAreNotContiguous(): void
+    {
+        $playerOne = (new GamePlayers())->setPlayer($this->userWithId(1))->setPosition(1);
+        $playerTwo = (new GamePlayers())->setPlayer($this->userWithId(2))->setPosition(2);
+        $playerThree = (new GamePlayers())->setPlayer($this->userWithId(3))->setPosition(3);
+
+        $this->gamePlayersRepository
+            ->expects(self::once())
+            ->method('findBy')
+            ->with(['game' => 42])
+            ->willReturn([$playerOne, $playerTwo, $playerThree]);
+
+        $this->entityManager->expects(self::never())->method('flush');
+
+        $this->expectException(InvalidPlayerOrderException::class);
+
+        $this->service->updatePlayerPositions(42, [
+            ['playerId' => 1, 'position' => 1],
+            ['playerId' => 2, 'position' => 3],
+            ['playerId' => 3, 'position' => 4],
+        ]);
     }
 
     private function userWithId(int $id): User
