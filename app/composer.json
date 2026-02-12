@@ -1,4 +1,6 @@
 {
+    "name": "darts/backend",
+    "description": "Darts backend API built with Symfony.",
     "type": "project",
     "license": "proprietary",
     "minimum-stability": "stable",
