@@ -214,16 +214,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     public function getDisplayName(): ?string
     {
-        $name = $this->displayName ?? $this->username;
-        if (null === $name) {
-            return null;
-        }
-
-        if ($this->isGuest) {
-            return $name.' (Guest)';
-        }
-
-        return $name;
+        return $this->displayName ?? $this->username;
     }
 
     /**

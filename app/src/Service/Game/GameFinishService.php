@@ -261,8 +261,6 @@ final readonly class GameFinishService implements GameFinishServiceInterface
             return null;
         }
 
-        return $user->isGuest()
-            ? $baseName.' (Guest)'
-            : $baseName;
+        return $baseName;
     }
 }

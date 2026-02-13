@@ -84,7 +84,7 @@ final readonly class GuestPlayerService implements GuestPlayerServiceInterface
 
         return [
             'playerId' => $guestId,
-            'name' => (string) $guest->getDisplayName(),
+            'name' => $normalized,
             'position' => $gamePlayer->getPosition(),
             'isGuest' => true,
         ];

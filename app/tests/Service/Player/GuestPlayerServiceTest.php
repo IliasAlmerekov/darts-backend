@@ -74,8 +74,9 @@ final class GuestPlayerServiceTest extends TestCase
         $result = $service->createGuestPlayer($game, 'Alex');
 
         self::assertSame(55, $result['playerId']);
-        self::assertSame('Alex (Guest)', $result['name']);
+        self::assertSame('Alex', $result['name']);
         self::assertSame(2, $result['position']);
+        self::assertTrue($result['isGuest']);
     }
 
     public function testCreateGuestPlayerThrowsWhenUsernameTaken(): void

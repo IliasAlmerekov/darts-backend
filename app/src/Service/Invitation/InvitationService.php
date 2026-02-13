@@ -177,9 +177,7 @@ final readonly class InvitationService implements InvitationServiceInterface
 
             $users[] = [
                 'id' => $user->getId(),
-                'username' => $user->isGuest()
-                    ? $baseName.' (Guest)'
-                    : $baseName,
+                'username' => $baseName,
             ];
         }
 

@@ -85,7 +85,8 @@ final class GamePlayersRepositoryTest extends KernelTestCase
 
         self::assertCount(1, $result);
         self::assertSame($guest->getId(), (int) $result[0]['id']);
-        self::assertSame('alex (Guest)', $result[0]['name']);
+        self::assertSame('alex', $result[0]['name']);
+        self::assertTrue($result[0]['isGuest']);
     }
 
     public function testFindByGameId(): void

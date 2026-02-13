@@ -180,7 +180,7 @@ final class GameRoomController extends AbstractController
                     type: 'object',
                     properties: [
                         new OA\Property(property: 'id', type: 'integer', example: 123),
-                        new OA\Property(property: 'name', type: 'string', example: 'Alex (Guest)'),
+                        new OA\Property(property: 'name', type: 'string', example: 'Alex'),
                         new OA\Property(property: 'position', type: 'integer', nullable: true, example: 2),
                         new OA\Property(property: 'isGuest', type: 'boolean', example: true),
                     ]
