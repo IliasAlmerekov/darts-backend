@@ -20,7 +20,7 @@ interface GuestPlayerServiceInterface
      * @param Game   $game
      * @param string $username
      *
-     * @return array{playerId:int,name:string,position:int|null}
+     * @return array{playerId:int,name:string,position:int|null,isGuest:bool}
      */
     public function createGuestPlayer(Game $game, string $username): array;
 }

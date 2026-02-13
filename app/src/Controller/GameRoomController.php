@@ -182,6 +182,7 @@ final class GameRoomController extends AbstractController
                         new OA\Property(property: 'id', type: 'integer', example: 123),
                         new OA\Property(property: 'name', type: 'string', example: 'Alex (Guest)'),
                         new OA\Property(property: 'position', type: 'integer', nullable: true, example: 2),
+                        new OA\Property(property: 'isGuest', type: 'boolean', example: true),
                     ]
                 ),
             ]
@@ -232,6 +233,7 @@ final class GameRoomController extends AbstractController
                 'id' => $player['playerId'],
                 'name' => $player['name'],
                 'position' => $player['position'],
+                'isGuest' => $player['isGuest'],
             ],
         ]);
     }
