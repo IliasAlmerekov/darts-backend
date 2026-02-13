@@ -23,10 +23,10 @@ services:
   mysql:
     image: mysql:8.0
     environment:
-      MYSQL_DATABASE: testphp_db
-      MYSQL_USER: dev_user
-      MYSQL_PASSWORD: devuser123
-      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-testphp_db}
+      MYSQL_USER: ${MYSQL_USER:-dev_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-change_me}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change_me_root}
     ports:
       - "3310:3306"
     volumes:
