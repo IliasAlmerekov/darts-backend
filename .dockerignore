@@ -1,0 +1,12 @@
+.git
+.gitignore
+.idea
+
+app/vendor
+app/var
+app/build
+app/.phpunit.cache
+
+app/.env.local
+app/.env.local.php
+app/.env.*.local
