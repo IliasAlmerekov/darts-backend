@@ -145,10 +145,8 @@ final class InvitationServiceTest extends TestCase
             ->willReturn([$player]);
 
         $this->userRepository
-            ->expects(self::once())
-            ->method('findBy')
-            ->with(['id' => [$user->getId()]])
-            ->willReturn([$user]);
+            ->expects(self::never())
+            ->method('findBy');
 
         $this->router
             ->expects(self::once())
@@ -164,7 +162,7 @@ final class InvitationServiceTest extends TestCase
         self::assertSame([
             [
                 'id' => $user->getId(),
-                'username' => $user->getUsername(),
+                'username' => $user->getDisplayName(),
             ],
         ], $payload['users']);
     }

@@ -160,24 +160,30 @@ final readonly class InvitationService implements InvitationServiceInterface
         }
 
         $players = $this->gamePlayersRepository->findByGameId($gameId);
-        $playerIds = array_values(array_filter(array_map(
-            static fn($player) => $player->getPlayer()?->getId(),
-            $players
-        )));
+        $users = [];
+        foreach ($players as $player) {
+            $user = $player->getPlayer();
+            if (!$user instanceof User) {
+                continue;
+            }
 
-        if ([] === $playerIds) {
-            return [];
+            $baseName = $player->getDisplayNameSnapshot();
+            if (null === $baseName || '' === trim($baseName)) {
+                $baseName = $user->getDisplayNameRaw() ?? $user->getUsername();
+            }
+            if (null === $baseName || '' === trim($baseName)) {
+                continue;
+            }
+
+            $users[] = [
+                'id' => $user->getId(),
+                'username' => $user->isGuest()
+                    ? $baseName.' (Guest)'
+                    : $baseName,
+            ];
         }
 
-        /** @var User[] $users */
-        $users = $this->userRepository->findBy(['id' => $playerIds]);
-
-        return array_map(static function (User $user): array {
-            return [
-                'id' => $user->getId(),
-                'username' => $user->getDisplayName(),
-            ];
-        }, $users);
+        return $users;
     }
 
     /**

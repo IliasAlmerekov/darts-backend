@@ -13,7 +13,7 @@ use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Exception\Request\UsernameAlreadyTakenException;
-use App\Repository\UserRepositoryInterface;
+use App\Repository\GamePlayersRepositoryInterface;
 use App\Service\Player\GuestPlayerService;
 use App\Service\Player\PlayerManagementServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -25,22 +25,22 @@ final class GuestPlayerServiceTest extends TestCase
     public function testCreateGuestPlayerCreatesUserAndAddsToGame(): void
     {
         $game = (new Game())->setGameId(10);
-        $userRepository = $this->createMock(UserRepositoryInterface::class);
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
         $passwordHasher = $this->createMock(UserPasswordHasherInterface::class);
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $service = new GuestPlayerService(
-            $userRepository,
+            $gamePlayersRepository,
             $playerManagementService,
             $passwordHasher,
             $entityManager,
         );
 
-        $userRepository
+        $gamePlayersRepository
             ->expects(self::once())
-            ->method('findOneByUsername')
-            ->with('Alex')
-            ->willReturn(null);
+            ->method('findByGameId')
+            ->with(10)
+            ->willReturn([]);
 
         $passwordHasher
             ->expects(self::once())
@@ -53,6 +53,10 @@ final class GuestPlayerServiceTest extends TestCase
             ->method('persist')
             ->with(self::isInstanceOf(User::class))
             ->willReturnCallback(static function (User $user): void {
+                self::assertSame('Alex', $user->getDisplayNameRaw());
+                self::assertTrue($user->isGuest());
+                self::assertNotNull($user->getUsername());
+                self::assertStringStartsWith('guest_', (string) $user->getUsername());
                 (new \ReflectionProperty(User::class, 'id'))->setValue($user, 55);
             });
 
@@ -77,31 +81,28 @@ final class GuestPlayerServiceTest extends TestCase
     public function testCreateGuestPlayerThrowsWhenUsernameTaken(): void
     {
         $game = (new Game())->setGameId(10);
-        $userRepository = $this->createMock(UserRepositoryInterface::class);
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $service = new GuestPlayerService(
-            $userRepository,
+            $gamePlayersRepository,
             $this->createStub(PlayerManagementServiceInterface::class),
             $this->createStub(UserPasswordHasherInterface::class),
             $this->createStub(EntityManagerInterface::class),
         );
 
-        $userRepository
-            ->expects(self::atLeastOnce())
-            ->method('findOneByUsername')
-            ->willReturnCallback(static function (string $username): ?User {
-                if ('Alex' === $username) {
-                    return new User();
-                }
-
-                return null;
-            });
+        $existingPlayer = new GamePlayers();
+        $existingPlayer->setDisplayNameSnapshot('Alex');
+        $gamePlayersRepository
+            ->expects(self::once())
+            ->method('findByGameId')
+            ->with(10)
+            ->willReturn([$existingPlayer]);
 
         try {
             $service->createGuestPlayer($game, 'Alex');
             self::fail('Expected exception was not thrown.');
         } catch (UsernameAlreadyTakenException $exception) {
             self::assertSame('Alex', $exception->getUsername());
-            self::assertNotEmpty($exception->getSuggestions());
+            self::assertSame([], $exception->getSuggestions());
         }
     }
 }

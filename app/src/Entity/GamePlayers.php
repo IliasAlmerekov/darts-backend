@@ -30,6 +30,8 @@ class GamePlayers
     private ?int $score = null;
     #[ORM\Column(nullable: true)]
     private ?bool $isWinner = null;
+    #[ORM\Column(length: 30)]
+    private ?string $displayNameSnapshot = null;
 
     /**
      * @return Game|null
@@ -67,6 +69,12 @@ class GamePlayers
     public function setPlayer(?User $player): static
     {
         $this->player = $player;
+        if (null !== $player && (null === $this->displayNameSnapshot || '' === $this->displayNameSnapshot)) {
+            $displayName = $player->getDisplayNameRaw() ?? $player->getUsername();
+            if (null !== $displayName && '' !== $displayName) {
+                $this->displayNameSnapshot = $displayName;
+            }
+        }
 
         return $this;
     }
@@ -147,6 +155,26 @@ class GamePlayers
     public function setIsWinner(?bool $isWinner): static
     {
         $this->isWinner = $isWinner;
+
+        return $this;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getDisplayNameSnapshot(): ?string
+    {
+        return $this->displayNameSnapshot;
+    }
+
+    /**
+     * @param string $displayNameSnapshot
+     *
+     * @return static
+     */
+    public function setDisplayNameSnapshot(string $displayNameSnapshot): static
+    {
+        $this->displayNameSnapshot = $displayNameSnapshot;
 
         return $this;
     }

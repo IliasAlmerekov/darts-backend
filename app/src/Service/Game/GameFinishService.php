@@ -89,10 +89,12 @@ final readonly class GameFinishService implements GameFinishServiceInterface
             $totalScoresMap
         );
         $winnerRounds = 0;
+        $winnerName = null;
         if (null !== $winnerId) {
             foreach ($finishedPlayers as $fp) {
                 if ($fp['playerId'] === $winnerId) {
                     $winnerRounds = $fp['roundsPlayed'];
+                    $winnerName = $fp['username'];
                     break;
                 }
             }
@@ -107,7 +109,7 @@ final readonly class GameFinishService implements GameFinishServiceInterface
             'winner' => $winner
                 ? [
                     'id' => $winner->getId(),
-                    'username' => $winner->getDisplayName(),
+                    'username' => $winnerName,
                 ]
                 : null,
             'winnerRoundsPlayed' => $winnerRounds,
@@ -198,7 +200,7 @@ final readonly class GameFinishService implements GameFinishServiceInterface
             $roundAverage = $roundsPlayed > 0 ? (float) $totalScore / (float) $roundsPlayed : 0.0;
             $result[] = [
                 'playerId' => $playerId,
-                'username' => $user?->getDisplayName(),
+                'username' => $this->resolveGamePlayerDisplayName($player),
                 'position' => $player->getPosition(),
                 'roundsPlayed' => $roundsPlayed,
                 'roundAverage' => $roundAverage,
@@ -237,5 +239,30 @@ final readonly class GameFinishService implements GameFinishServiceInterface
                 $player->setIsWinner($player === $winnerPlayer);
             }
         }
+    }
+
+    /**
+     * @param GamePlayers $player
+     *
+     * @return string|null
+     */
+    private function resolveGamePlayerDisplayName(GamePlayers $player): ?string
+    {
+        $user = $player->getPlayer();
+        if (null === $user) {
+            return null;
+        }
+
+        $baseName = $player->getDisplayNameSnapshot();
+        if (null === $baseName || '' === trim($baseName)) {
+            $baseName = $user->getDisplayNameRaw() ?? $user->getUsername();
+        }
+        if (null === $baseName || '' === trim($baseName)) {
+            return null;
+        }
+
+        return $user->isGuest()
+            ? $baseName.' (Guest)'
+            : $baseName;
     }
 }

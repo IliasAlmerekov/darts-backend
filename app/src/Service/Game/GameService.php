@@ -91,7 +91,7 @@ final readonly class GameService implements GameServiceInterface
             }
 
             $userId = $user->getId();
-            $displayName = $user->getDisplayName();
+            $displayName = $this->resolveGamePlayerDisplayName($gamePlayer);
             if (null === $userId || null === $displayName) {
                 continue;
             }
@@ -252,5 +252,30 @@ final readonly class GameService implements GameServiceInterface
         });
 
         return $gamePlayers;
+    }
+
+    /**
+     * @param GamePlayers $gamePlayer
+     *
+     * @return string|null
+     */
+    private function resolveGamePlayerDisplayName(GamePlayers $gamePlayer): ?string
+    {
+        $user = $gamePlayer->getPlayer();
+        if (null === $user) {
+            return null;
+        }
+
+        $baseName = $gamePlayer->getDisplayNameSnapshot();
+        if (null === $baseName || '' === trim($baseName)) {
+            $baseName = $user->getDisplayNameRaw() ?? $user->getUsername();
+        }
+        if (null === $baseName || '' === trim($baseName)) {
+            return null;
+        }
+
+        return $user->isGuest()
+            ? $baseName.' (Guest)'
+            : $baseName;
     }
 }
