@@ -194,6 +194,7 @@ final readonly class GameService implements GameServiceInterface
                 throwsInCurrentRound: $throwsThisRound,
                 currentRoundThrows: $currentRoundThrows,
                 roundHistory: $roundHistory,
+                isGuest: $user->isGuest(),
             );
         }
 

@@ -45,7 +45,7 @@ final readonly class GuestPlayerService implements GuestPlayerServiceInterface
      * @param Game   $game
      * @param string $username
      *
-     * @return array{playerId:int,name:string,position:int|null}
+     * @return array{playerId:int,name:string,position:int|null,isGuest:bool}
      */
     #[Override]
     public function createGuestPlayer(Game $game, string $username): array
@@ -86,6 +86,7 @@ final readonly class GuestPlayerService implements GuestPlayerServiceInterface
             'playerId' => $guestId,
             'name' => (string) $guest->getDisplayName(),
             'position' => $gamePlayer->getPosition(),
+            'isGuest' => true,
         ];
     }
 
