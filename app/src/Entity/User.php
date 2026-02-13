@@ -28,6 +28,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?int $id = null;
     #[ORM\Column(length: 30)]
     private ?string $username = null;
+    #[ORM\Column(length: 30)]
+    private ?string $displayName = null;
     #[ORM\Column(length: 180)]
     private ?string $email = null;
     /**
@@ -67,6 +69,29 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setUsername(string $username): static
     {
         $this->username = $username;
+        if (null === $this->displayName || '' === $this->displayName) {
+            $this->displayName = $username;
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getDisplayNameRaw(): ?string
+    {
+        return $this->displayName;
+    }
+
+    /**
+     * @param string $displayName
+     *
+     * @return static
+     */
+    public function setDisplayName(string $displayName): static
+    {
+        $this->displayName = $displayName;
 
         return $this;
     }
@@ -189,16 +214,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     public function getDisplayName(): ?string
     {
-        $username = $this->username;
-        if (null === $username) {
+        $name = $this->displayName ?? $this->username;
+        if (null === $name) {
             return null;
         }
 
         if ($this->isGuest) {
-            return $username.' (Guest)';
+            return $name.' (Guest)';
         }
 
-        return $username;
+        return $name;
     }
 
     /**

@@ -51,10 +51,20 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
                 'rt.timestamp AS timestamp',
                 'r.roundNumber AS roundNumber',
                 'u.id AS playerId',
-                'u.username AS playerName'
+                "CASE
+                    WHEN gp.displayNameSnapshot IS NOT NULL AND gp.displayNameSnapshot <> '' THEN gp.displayNameSnapshot
+                    WHEN u.displayName IS NOT NULL AND u.displayName <> '' THEN u.displayName
+                    ELSE u.username
+                END AS playerName"
             )
             ->innerJoin('rt.round', 'r')
             ->innerJoin('rt.player', 'u')
+            ->leftJoin(
+                GamePlayers::class,
+                'gp',
+                'WITH',
+                'gp.game = rt.game AND gp.player = rt.player'
+            )
             ->andWhere('rt.game = :gameId')
             ->setParameter('gameId', $gameId)
             ->orderBy('rt.throwId', 'DESC')
@@ -226,7 +236,7 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
         return $this->createQueryBuilder('rt')
             ->select(
                 'u.id AS playerId',
-                "CASE WHEN u.isGuest = true THEN CONCAT(u.username, ' (Guest)') ELSE u.username END AS username",
+                'u.displayName AS username',
                 'COUNT(DISTINCT g.gameId) AS gamesPlayed',
                 "SUM(CASE WHEN rt.isBust = true THEN 0 ELSE rt.value END) AS totalValue",
                 'COUNT(DISTINCT r.roundId) AS roundsFinished',
@@ -236,9 +246,10 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
             ->innerJoin('rt.game', 'g')
             ->innerJoin('rt.round', 'r')
             ->andWhere('g.status = :status')
+            ->andWhere('u.isGuest = false')
             ->andWhere('r.finishedAt IS NOT NULL')
             ->setParameter('status', GameStatus::Finished)
-            ->groupBy('u.id', 'u.username')
+            ->groupBy('u.id', 'u.displayName')
             ->orderBy($orderColumn, $direction)
             ->setFirstResult($offset)
             ->setMaxResults($limit)
@@ -259,6 +270,7 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
             ->innerJoin('rt.game', 'g')
             ->innerJoin('rt.round', 'r')
             ->andWhere('g.status = :status')
+            ->andWhere('u.isGuest = false')
             ->andWhere('r.finishedAt IS NOT NULL')
             ->setParameter('status', GameStatus::Finished)
             ->getQuery()

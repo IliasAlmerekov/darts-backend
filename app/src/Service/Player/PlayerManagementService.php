@@ -71,9 +71,12 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     #[Override]
     public function addPlayer(int $gameId, int $playerId, ?int $position = null): GamePlayers
     {
+        /** @var User|null $player */
+        $player = $this->entityManager->getReference(User::class, $playerId);
         $gamePlayer = new GamePlayers();
         $gamePlayer->setGame($this->entityManager->getReference(Game::class, $gameId));
-        $gamePlayer->setPlayer($this->entityManager->getReference(User::class, $playerId));
+        $gamePlayer->setPlayer($player);
+        $gamePlayer->setDisplayNameSnapshot($this->resolveDisplayNameSnapshot($player, $playerId));
         $gamePlayer->setPosition($this->resolvePosition($position, $gameId));
         $this->entityManager->persist($gamePlayer);
         $this->entityManager->flush();
@@ -254,5 +257,24 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
         }
 
         return $maxPosition + 1;
+    }
+
+    /**
+     * @param User|null $player
+     * @param int       $playerId
+     *
+     * @return string
+     */
+    private function resolveDisplayNameSnapshot(?User $player, int $playerId): string
+    {
+        if (null === $player) {
+            return sprintf('player_%d', $playerId);
+        }
+
+        $displayName = $player->getDisplayNameRaw() ?? $player->getUsername();
+
+        return null !== $displayName && '' !== $displayName
+            ? $displayName
+            : sprintf('player_%d', $playerId);
     }
 }

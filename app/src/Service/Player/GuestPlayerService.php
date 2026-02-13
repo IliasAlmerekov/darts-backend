@@ -10,10 +10,11 @@ declare(strict_types=1);
 namespace App\Service\Player;
 
 use App\Entity\Game;
+use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Exception\Game\GameIdMissingException;
 use App\Exception\Request\UsernameAlreadyTakenException;
-use App\Repository\UserRepositoryInterface;
+use App\Repository\GamePlayersRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Override;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -26,17 +27,14 @@ use Symfony\Component\Uid\Uuid;
  */
 final readonly class GuestPlayerService implements GuestPlayerServiceInterface
 {
-    private const int MAX_USERNAME_LENGTH = 30;
-    private const int SUGGESTION_LIMIT = 3;
-
     /**
-     * @param UserRepositoryInterface          $userRepository
+     * @param GamePlayersRepositoryInterface   $gamePlayersRepository
      * @param PlayerManagementServiceInterface $playerManagementService
      * @param UserPasswordHasherInterface      $passwordHasher
      * @param EntityManagerInterface           $entityManager
      */
     public function __construct(
-        private UserRepositoryInterface $userRepository,
+        private GamePlayersRepositoryInterface $gamePlayersRepository,
         private PlayerManagementServiceInterface $playerManagementService,
         private UserPasswordHasherInterface $passwordHasher,
         private EntityManagerInterface $entityManager,
@@ -57,13 +55,14 @@ final readonly class GuestPlayerService implements GuestPlayerServiceInterface
             throw new \InvalidArgumentException('Username cannot be empty');
         }
 
-        if (null !== $this->userRepository->findOneByUsername($normalized)) {
-            throw new UsernameAlreadyTakenException($normalized, $this->buildSuggestions($normalized));
+        if ($this->isNameTakenInGame($game, $normalized)) {
+            throw new UsernameAlreadyTakenException($normalized, []);
         }
 
         $guest = new User();
         $guest
-            ->setUsername($normalized)
+            ->setUsername($this->generateGuestUsername())
+            ->setDisplayName($normalized)
             ->setEmail($this->generateGuestEmail())
             ->setPassword($this->passwordHasher->hashPassword($guest, $this->generateRandomPassword()))
             ->setRoles(['ROLE_GUEST'])
@@ -91,25 +90,67 @@ final readonly class GuestPlayerService implements GuestPlayerServiceInterface
     }
 
     /**
-     * @param string $base
+     * @param Game   $game
+     * @param string $name
      *
-     * @return list<string>
+     * @return bool
      */
-    private function buildSuggestions(string $base): array
+    private function isNameTakenInGame(Game $game, string $name): bool
     {
-        $suggestions = [];
-        $suffix = 2;
-        while (count($suggestions) < self::SUGGESTION_LIMIT && $suffix < 20) {
-            $candidate = $base.' '.$suffix;
-            if ($this->getLength($candidate) <= self::MAX_USERNAME_LENGTH
-                && null === $this->userRepository->findOneByUsername($candidate)
-            ) {
-                $suggestions[] = $candidate;
-            }
-            $suffix++;
+        $gameId = $game->getGameId();
+        if (null === $gameId) {
+            return false;
         }
 
-        return $suggestions;
+        $normalizedTarget = $this->normalizeName($name);
+        foreach ($this->gamePlayersRepository->findByGameId($gameId) as $gamePlayer) {
+            $existingName = $this->resolveNameFromGamePlayer($gamePlayer);
+            if ($this->normalizeName($existingName) === $normalizedTarget) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return string
+     */
+    private function generateGuestUsername(): string
+    {
+        return sprintf('guest_%s', Uuid::v4()->toBase58());
+    }
+
+    /**
+     * @param GamePlayers $gamePlayer
+     *
+     * @return string
+     */
+    private function resolveNameFromGamePlayer(GamePlayers $gamePlayer): string
+    {
+        $snapshot = $gamePlayer->getDisplayNameSnapshot();
+        if (null !== $snapshot && '' !== trim($snapshot)) {
+            return trim($snapshot);
+        }
+
+        $user = $gamePlayer->getPlayer();
+        $name = $user?->getDisplayNameRaw() ?? $user?->getUsername();
+
+        return null !== $name ? trim($name) : '';
+    }
+
+    /**
+     * @param string $value
+     *
+     * @return string
+     */
+    private function normalizeName(string $value): string
+    {
+        $value = trim($value);
+
+        return function_exists('mb_strtolower')
+            ? mb_strtolower($value)
+            : strtolower($value);
     }
 
     /**
@@ -126,19 +167,5 @@ final readonly class GuestPlayerService implements GuestPlayerServiceInterface
     private function generateRandomPassword(): string
     {
         return bin2hex(random_bytes(16));
-    }
-
-    /**
-     * @param string $value
-     *
-     * @return int
-     */
-    private function getLength(string $value): int
-    {
-        if (function_exists('mb_strlen')) {
-            return mb_strlen($value);
-        }
-
-        return strlen($value);
     }
 }
