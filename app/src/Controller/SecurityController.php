@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Entity\User;
-use App\Exception\Security\UserNotAuthenticatedException;
 use App\Http\Attribute\ApiResponse;
 use App\Service\Security\SecurityServiceInterface;
 use LogicException;
@@ -130,7 +129,11 @@ final class SecurityController extends AbstractController
     {
         $user = $this->getUser();
         if (!$user instanceof User) {
-            throw new UserNotAuthenticatedException();
+            return $this->json([
+                'success' => false,
+                'error' => 'USER_NOT_AUTHENTICATED',
+                'message' => 'User not authenticated',
+            ], Response::HTTP_OK);
         }
 
         return $securityService->buildLoginSuccessResponse($user, $request->getSession());
