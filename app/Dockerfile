@@ -9,8 +9,7 @@ RUN composer install \
     --no-interaction \
     --no-progress \
     --prefer-dist \
-    --optimize-autoloader \
-    --classmap-authoritative
+    --optimize-autoloader
 
 FROM php:8.4-cli-alpine AS app
 
