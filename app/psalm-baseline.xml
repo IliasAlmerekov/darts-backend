@@ -50,19 +50,6 @@
       <code><![CDATA[$winnerId]]></code>
     </PossiblyUnusedProperty>
   </file>
-  <file src="src/Dto/PlayerResponseDto.php">
-    <PossiblyUnusedProperty>
-      <code><![CDATA[$currentRoundThrows]]></code>
-      <code><![CDATA[$id]]></code>
-      <code><![CDATA[$isActive]]></code>
-      <code><![CDATA[$isBust]]></code>
-      <code><![CDATA[$name]]></code>
-      <code><![CDATA[$position]]></code>
-      <code><![CDATA[$roundHistory]]></code>
-      <code><![CDATA[$score]]></code>
-      <code><![CDATA[$throwsInCurrentRound]]></code>
-    </PossiblyUnusedProperty>
-  </file>
   <file src="src/Dto/PlayerStatsDto.php">
     <PossiblyUnusedProperty>
       <code><![CDATA[$gamesPlayed]]></code>
