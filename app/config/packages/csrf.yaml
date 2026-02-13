@@ -9,3 +9,4 @@ framework:
             - submit
             - authenticate
             - logout
+            - user_registration
