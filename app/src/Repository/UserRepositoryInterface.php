@@ -32,6 +32,8 @@ interface UserRepositoryInterface extends PasswordUpgraderInterface
     public function findByIds(array $ids): array;
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param string $username
      *
      * @return User|null
@@ -39,6 +41,8 @@ interface UserRepositoryInterface extends PasswordUpgraderInterface
     public function findOneByUsername(string $username): ?User;
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param array<string, mixed>       $criteria
      * @param array<string, string>|null $orderBy
      * @param int|null                   $limit

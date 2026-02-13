@@ -11,6 +11,8 @@ namespace App\Dto;
 
 /**
  * Compact payload for a single recorded throw.
+ *
+ * @psalm-suppress PossiblyUnusedProperty Used via Symfony Serializer
  */
 final class ThrowDeltaDto
 {

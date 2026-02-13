@@ -11,6 +11,8 @@ namespace App\Dto;
 
 /**
  * Lightweight acknowledgement payload returned after a throw write.
+ *
+ * @psalm-suppress PossiblyUnusedProperty Used via Symfony Serializer
  */
 final class ThrowAckDto
 {

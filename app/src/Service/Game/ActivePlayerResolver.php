@@ -13,6 +13,8 @@ use Override;
 
 /**
  * Computes which player is currently active according to round/score/bust rules.
+ *
+ * @psalm-suppress UnusedClass Reason: service is auto-wired by the container and used through DI.
  */
 final readonly class ActivePlayerResolver implements ActivePlayerResolverInterface
 {

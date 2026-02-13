@@ -13,6 +13,8 @@ use Override;
 
 /**
  * Builds deterministic state hashes for game payload cache/version checks.
+ *
+ * @psalm-suppress UnusedClass Reason: service is auto-wired by the container and used through DI.
  */
 final readonly class GameStateVersionService implements GameStateVersionServiceInterface
 {

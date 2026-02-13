@@ -211,6 +211,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     /**
      * @return string|null
+     *
+     * @psalm-suppress PossiblyUnusedMethod
      */
     public function getDisplayName(): ?string
     {
