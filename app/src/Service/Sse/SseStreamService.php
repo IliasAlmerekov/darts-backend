@@ -35,8 +35,7 @@ final readonly class SseStreamService implements SseStreamServiceInterface
         private GameRoomServiceInterface $gameRoomService,
         private RoundThrowsRepositoryInterface $roundThrowsRepository,
         private GameDeltaServiceInterface $gameDeltaService,
-    )
-    {
+    ) {
     }
 
     /**
