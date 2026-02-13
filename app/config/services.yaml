@@ -33,6 +33,8 @@ services:
     App\Service\Game\GameRoomServiceInterface: '@App\Service\Game\GameRoomService'
     App\Service\Game\GameThrowServiceInterface: '@App\Service\Game\GameThrowService'
     App\Service\Game\GameServiceInterface: '@App\Service\Game\GameService'
+    App\Service\Game\ActivePlayerResolverInterface: '@App\Service\Game\ActivePlayerResolver'
+    App\Service\Game\GameStateVersionServiceInterface: '@App\Service\Game\GameStateVersionService'
     App\Service\Game\GameStatisticsServiceInterface: '@App\Service\Game\GameStatisticsService'
     App\Service\Game\GameFinishServiceInterface: '@App\Service\Game\GameFinishService'
     App\Service\Game\GameReopenServiceInterface: '@App\Service\Game\GameReopenService'

@@ -17,7 +17,6 @@ use App\Entity\GamePlayers;
 use App\Exception\Game\GameIdMissingException;
 use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
-use DateTimeInterface;
 use Override;
 
 /**
@@ -28,13 +27,19 @@ use Override;
 final readonly class GameService implements GameServiceInterface
 {
     /**
-     * @param RoundRepositoryInterface       $roundRepository
-     * @param RoundThrowsRepositoryInterface $roundThrowsRepository
+     * @param RoundRepositoryInterface         $roundRepository
+     * @param RoundThrowsRepositoryInterface   $roundThrowsRepository
+     * @param ActivePlayerResolverInterface    $activePlayerResolver
+     * @param GameStateVersionServiceInterface $gameStateVersionService
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
-    public function __construct(private RoundRepositoryInterface $roundRepository, private RoundThrowsRepositoryInterface $roundThrowsRepository)
-    {
+    public function __construct(
+        private RoundRepositoryInterface $roundRepository,
+        private RoundThrowsRepositoryInterface $roundThrowsRepository,
+        private ActivePlayerResolverInterface $activePlayerResolver,
+        private GameStateVersionServiceInterface $gameStateVersionService,
+    ) {
     }
 
 
@@ -55,57 +60,7 @@ final readonly class GameService implements GameServiceInterface
     #[Override]
     public function calculateActivePlayer(Game $game): ?int
     {
-        $currentRoundNumber = $game->getRound() ?? 1;
-        // Hole die aktuelle Runde aus der DB
-        $roundEntity = $this->roundRepository->findOneBy([
-            'game' => $game,
-            'roundNumber' => $currentRoundNumber,
-        ]);
-        // Sortiere Spieler nach Position (wichtig für die Reihenfolge!)
-        $gamePlayers = $this->sortedGamePlayers($game);
-        // Gehe alle Spieler der Reihe nach durch
-        foreach ($gamePlayers as $gamePlayer) {
-            $user = $gamePlayer->getPlayer();
-            if (null === $user) {
-                continue;
-                // Spieler ohne User-Entity überspringen
-            }
-
-            // Check: Hat der Spieler das Spiel schon beendet? (Score = 0)
-            $playerScore = $gamePlayer->getScore() ?? $game->getStartScore();
-            if (0 === $playerScore) {
-                continue;
-                // Ja → Dieser Spieler ist fertig, nächster!
-            }
-
-            // Check: Wie viele Würfe hat er in DIESER Runde?
-            $throwsCount = 0;
-            $hasBusted = false;
-            if ($roundEntity) {
-                $throwsCount = $this->roundThrowsRepository->count([
-                    'round' => $roundEntity,
-                    'player' => $user,
-                ]);
-                // Check: War sein letzter Wurf ein Bust?
-                if ($throwsCount > 0) {
-                    $lastThrow = $this->roundThrowsRepository->findOneBy(
-                        ['round' => $roundEntity, 'player' => $user],
-                        ['throwNumber' => 'DESC']
-                    );
-                    $hasBusted = $lastThrow instanceof \App\Entity\RoundThrows && $lastThrow->isBust();
-                }
-            }
-
-            // Entscheidung: Darf dieser Spieler werfen?
-            if ($throwsCount < 3 && !$hasBusted) {
-                return $user->getId();
-                // Dieser Spieler ist dran!
-            }
-        }
-
-        // Wenn wir hier ankommen: Alle Spieler haben 3 Würfe oder sind bust.
-        // Die Runde ist zu Ende, kein Spieler ist aktiv
-        return null;
+        return $this->activePlayerResolver->resolveActivePlayer($game);
     }
 
 
@@ -271,60 +226,7 @@ final readonly class GameService implements GameServiceInterface
     #[Override]
     public function buildStateVersion(Game $game): string
     {
-        $gameId = $game->getGameId();
-        if (null === $gameId) {
-            throw new GameIdMissingException();
-        }
-
-        /** @var list<GamePlayers> $gamePlayers */
-        $gamePlayers = $game->getGamePlayers()->toArray();
-        usort($gamePlayers, static function (GamePlayers $left, GamePlayers $right): int {
-            $leftPosition = $left->getPosition() ?? PHP_INT_MAX;
-            $rightPosition = $right->getPosition() ?? PHP_INT_MAX;
-            if ($leftPosition !== $rightPosition) {
-                return $leftPosition <=> $rightPosition;
-            }
-
-            $leftId = $left->getGamePlayerId() ?? PHP_INT_MAX;
-            $rightId = $right->getGamePlayerId() ?? PHP_INT_MAX;
-
-            return $leftId <=> $rightId;
-        });
-
-        $playerChunks = [];
-        foreach ($gamePlayers as $gamePlayer) {
-            $isWinner = $gamePlayer->isWinner();
-            $playerChunks[] = implode(':', [
-                (string) ($gamePlayer->getPlayer()?->getId() ?? 'n'),
-                (string) ($gamePlayer->getPosition() ?? 'n'),
-                (string) ($gamePlayer->getScore() ?? 'n'),
-                null === $isWinner ? 'n' : ($isWinner ? '1' : '0'),
-            ]);
-        }
-
-        $latestThrowId = $this->roundThrowsRepository
-            ->findEntityLatestForGame($gameId)
-            ?->getThrowId();
-
-        $payload = [
-            'gameId' => $gameId,
-            'status' => $game->getStatus()->value,
-            'round' => $game->getRound(),
-            'winnerId' => $game->getWinner()?->getId(),
-            'startScore' => $game->getStartScore(),
-            'doubleOut' => $game->isDoubleOut(),
-            'tripleOut' => $game->isTripleOut(),
-            'finishedAt' => $game->getFinishedAt()?->format(DateTimeInterface::ATOM),
-            'latestThrowId' => $latestThrowId,
-            'players' => $playerChunks,
-        ];
-
-        $encodedPayload = json_encode($payload);
-        if (false === $encodedPayload) {
-            $encodedPayload = serialize($payload);
-        }
-
-        return hash('sha256', $encodedPayload);
+        return $this->gameStateVersionService->buildStateVersion($game);
     }
 
     /**

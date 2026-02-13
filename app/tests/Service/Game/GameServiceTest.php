@@ -12,7 +12,9 @@ use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
+use App\Service\Game\ActivePlayerResolver;
 use App\Service\Game\GameService;
+use App\Service\Game\GameStateVersionService;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use ReflectionException;
@@ -120,7 +122,12 @@ final class GameServiceTest extends TestCase
                 }
             );
 
-        $service = new GameService($roundRepository, $roundThrowsRepository);
+        $service = new GameService(
+            $roundRepository,
+            $roundThrowsRepository,
+            new ActivePlayerResolver($roundRepository, $roundThrowsRepository),
+            new GameStateVersionService($roundThrowsRepository),
+        );
         $dto = $service->createGameDto($game);
 
         self::assertSame(10, $dto->id);
@@ -199,7 +206,12 @@ final class GameServiceTest extends TestCase
                 return [];
             });
 
-        $service = new GameService($roundRepository, $roundThrowsRepository);
+        $service = new GameService(
+            $roundRepository,
+            $roundThrowsRepository,
+            new ActivePlayerResolver($roundRepository, $roundThrowsRepository),
+            new GameStateVersionService($roundThrowsRepository),
+        );
         $dto = $service->createGameDto($game);
 
         self::assertSame(2, $dto->currentRound);
@@ -230,7 +242,12 @@ final class GameServiceTest extends TestCase
         $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
         $roundThrowsRepository->method('findEntityLatestForGame')->willReturn(null);
 
-        $service = new GameService($roundRepository, $roundThrowsRepository);
+        $service = new GameService(
+            $roundRepository,
+            $roundThrowsRepository,
+            new ActivePlayerResolver($roundRepository, $roundThrowsRepository),
+            new GameStateVersionService($roundThrowsRepository),
+        );
 
         $firstVersion = $service->buildStateVersion($game);
         $secondVersion = $service->buildStateVersion($game);
@@ -266,7 +283,12 @@ final class GameServiceTest extends TestCase
             ->with(88)
             ->willReturnOnConsecutiveCalls($firstThrow, $secondThrow);
 
-        $service = new GameService($roundRepository, $roundThrowsRepository);
+        $service = new GameService(
+            $roundRepository,
+            $roundThrowsRepository,
+            new ActivePlayerResolver($roundRepository, $roundThrowsRepository),
+            new GameStateVersionService($roundThrowsRepository),
+        );
 
         $firstVersion = $service->buildStateVersion($game);
         $secondVersion = $service->buildStateVersion($game);
@@ -315,7 +337,12 @@ final class GameServiceTest extends TestCase
         $roundThrowsRepository->method('count')->willReturn(0);
         $roundThrowsRepository->method('findOneBy')->willReturn(null);
 
-        $service = new GameService($roundRepository, $roundThrowsRepository);
+        $service = new GameService(
+            $roundRepository,
+            $roundThrowsRepository,
+            new ActivePlayerResolver($roundRepository, $roundThrowsRepository),
+            new GameStateVersionService($roundThrowsRepository),
+        );
         $activePlayerId = $service->calculateActivePlayer($game);
 
         self::assertSame(2, $activePlayerId);
