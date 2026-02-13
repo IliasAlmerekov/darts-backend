@@ -11,16 +11,18 @@ namespace App\Dto;
 
 /**
  * Compact scoreboard row used in delta updates.
+ *
+ * @psalm-suppress PossiblyUnusedProperty Used via Symfony Serializer
  */
 final class ScoreboardPlayerDeltaDto
 {
     /**
-     * @param int      $playerId
-     * @param string   $name
-     * @param int      $score
-     * @param int|null $position
-     * @param bool     $isActive
-     * @param bool     $isGuest
+     * @param int       $playerId
+     * @param string    $name
+     * @param int       $score
+     * @param int|null  $position
+     * @param bool      $isActive
+     * @param bool      $isGuest
      * @param bool|null $isBust
      */
     public function __construct(

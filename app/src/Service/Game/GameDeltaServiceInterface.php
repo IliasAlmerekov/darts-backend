@@ -13,8 +13,8 @@ use App\Entity\Game;
 interface GameDeltaServiceInterface
 {
     /**
-     * @param Game                            $game
-     * @param array<string, mixed>|null       $latestThrow
+     * @param Game                      $game
+     * @param array<string, mixed>|null $latestThrow
      *
      * @return ThrowAckDto
      */
