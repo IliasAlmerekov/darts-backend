@@ -23,6 +23,8 @@ use Override;
 
 /**
  * Builds compact throw acknowledgements for low-latency clients.
+ *
+ * @psalm-suppress UnusedClass Reason: service is auto-wired by the container and used through DI.
  */
 final readonly class GameDeltaService implements GameDeltaServiceInterface
 {

@@ -11,6 +11,8 @@ namespace App\Dto;
 
 /**
  * Delta for scoreboard-related changes after a throw.
+ *
+ * @psalm-suppress PossiblyUnusedProperty Used via Symfony Serializer
  */
 final class ScoreboardDeltaDto
 {

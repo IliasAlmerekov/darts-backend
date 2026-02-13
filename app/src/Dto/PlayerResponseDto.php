@@ -11,6 +11,8 @@ namespace App\Dto;
 
 /**
  * This class is used to serialize player stats
+ *
+ * @psalm-suppress PossiblyUnusedProperty Used via Symfony Serializer
  */
 final class PlayerResponseDto
 {

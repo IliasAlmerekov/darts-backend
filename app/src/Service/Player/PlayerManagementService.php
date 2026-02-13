@@ -71,7 +71,6 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     #[Override]
     public function addPlayer(int $gameId, int $playerId, ?int $position = null): GamePlayers
     {
-        /** @var User|null $player */
         $player = $this->entityManager->getReference(User::class, $playerId);
         $gamePlayer = new GamePlayers();
         $gamePlayer->setGame($this->entityManager->getReference(Game::class, $gameId));
