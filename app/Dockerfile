@@ -40,8 +40,8 @@ USER symfony
 
 ENV APP_ENV=prod
 ENV APP_DEBUG=0
-ENV PORT=8080
+ENV PORT=10000
 
-EXPOSE 8080
+EXPOSE 10000
 
-CMD ["sh", "-c", "php -d variables_order=EGPCS -S 0.0.0.0:${PORT} -t public public/index.php"]
+CMD ["sh", "-c", "exec php -d variables_order=EGPCS -S 0.0.0.0:${PORT:-10000} -t public public/index.php"]
