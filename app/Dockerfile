@@ -5,6 +5,7 @@ WORKDIR /app
 COPY app/composer.json app/composer.lock app/symfony.lock ./
 RUN composer install \
     --no-dev \
+    --no-scripts \
     --no-interaction \
     --no-progress \
     --prefer-dist \
