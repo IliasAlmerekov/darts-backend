@@ -24,3 +24,11 @@ Notes:
 
 The root `docker-compose.yaml` provides PHP, Nginx, and MySQL for local development.
 
+## Deployment
+
+For production prerequisites and rollout steps see `DEPLOYMENT_DE.md`.
+Before pushing to a public repository run:
+
+```bash
+./scripts/check-secrets.sh
+```
