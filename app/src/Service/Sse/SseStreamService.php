@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Service\Sse;
 
+use App\Service\Game\GameDeltaServiceInterface;
 use App\Service\Game\GameRoomServiceInterface;
 use DateTimeInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -26,10 +27,15 @@ final readonly class SseStreamService implements SseStreamServiceInterface
     /**
      * @param GameRoomServiceInterface       $gameRoomService
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
+     * @param GameDeltaServiceInterface      $gameDeltaService
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
-    public function __construct(private GameRoomServiceInterface $gameRoomService, private RoundThrowsRepositoryInterface $roundThrowsRepository)
+    public function __construct(
+        private GameRoomServiceInterface $gameRoomService,
+        private RoundThrowsRepositoryInterface $roundThrowsRepository,
+        private GameDeltaServiceInterface $gameDeltaService,
+    )
     {
     }
 
@@ -69,13 +75,25 @@ final readonly class SseStreamService implements SseStreamServiceInterface
                 if (is_array($latestThrow) && isset($latestThrow['id']) && $latestThrow['id'] !== $lastThrowId) {
                     $lastThrowId = $latestThrow['id'];
                     $eventId++;
-                    if ($latestThrow['timestamp'] instanceof DateTimeInterface) {
+                    $game = $this->gameRoomService->findGameById($gameId);
+                    $deltaPayload = $latestThrow;
+                    if (null !== $game) {
+                        $ack = $this->gameDeltaService->buildThrowAck($game, $latestThrow);
+                        $deltaPayload = [
+                            'gameId' => $ack->gameId,
+                            'stateVersion' => $ack->stateVersion,
+                            'throw' => $ack->throw,
+                            'scoreboardDelta' => $ack->scoreboardDelta,
+                            'serverTs' => $ack->serverTs,
+                        ];
+                    } elseif ($latestThrow['timestamp'] instanceof DateTimeInterface) {
                         $latestThrow['timestamp'] = $latestThrow['timestamp']->format(DateTimeInterface::ATOM);
+                        $deltaPayload = $latestThrow;
                     }
 
                     echo 'id: '.$eventId."\n";
                     echo "event: throw\n";
-                    $jsonEncoded = json_encode($latestThrow);
+                    $jsonEncoded = json_encode($deltaPayload);
                     if (false !== $jsonEncoded) {
                         echo 'data: '.$jsonEncoded."\n\n";
                     }

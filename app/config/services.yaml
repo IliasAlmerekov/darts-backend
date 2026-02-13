@@ -35,6 +35,7 @@ services:
     App\Service\Game\GameServiceInterface: '@App\Service\Game\GameService'
     App\Service\Game\ActivePlayerResolverInterface: '@App\Service\Game\ActivePlayerResolver'
     App\Service\Game\GameStateVersionServiceInterface: '@App\Service\Game\GameStateVersionService'
+    App\Service\Game\GameDeltaServiceInterface: '@App\Service\Game\GameDeltaService'
     App\Service\Game\GameStatisticsServiceInterface: '@App\Service\Game\GameStatisticsService'
     App\Service\Game\GameFinishServiceInterface: '@App\Service\Game\GameFinishService'
     App\Service\Game\GameReopenServiceInterface: '@App\Service\Game\GameReopenService'
