@@ -15,6 +15,7 @@ Diese Anleitung bereitet das Symfony-Backend fuer ein sicheres Deployment vor un
    - `APP_ENV=prod`
    - `APP_DEBUG=0`
    - `APP_SECRET` (stark, mindestens 32 Zeichen)
+   - `SYMFONY_TRUSTED_PROXIES` (z. B. `*` bei Managed Reverse Proxy wie Render)
    - `DATABASE_URL`
    - `CORS_ALLOW_ORIGIN`
    - `FRONTEND_URL`
