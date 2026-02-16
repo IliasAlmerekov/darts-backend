@@ -30,6 +30,13 @@ use Symfony\Component\Routing\Attribute\Route;
 #[OA\Tag(name: 'Invitations')]
 final class InvitationController extends AbstractController
 {
+    private string $frontendUrl;
+
+    public function __construct(string $frontendUrl)
+    {
+        $this->frontendUrl = rtrim($frontendUrl, '/');
+    }
+
     /**
      * Creates or returns an invitation for the given game.
      *
@@ -117,9 +124,7 @@ final class InvitationController extends AbstractController
         $session->set('invitation_uuid', $invitation->getUuid());
         $session->set('game_id', $gameId);
 
-        $frontendUrl = rtrim($_ENV['FRONTEND_URL'] ?? 'http://localhost:5173', '/');
-
-        return $this->redirect($frontendUrl.'/');
+        return $this->redirect($this->frontendUrl.'/');
     }
 
     /**

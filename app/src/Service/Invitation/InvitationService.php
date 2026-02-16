@@ -50,6 +50,7 @@ final readonly class InvitationService implements InvitationServiceInterface
      * @param EntityManagerInterface           $entityManager
      * @param RouterInterface                  $router
      * @param GameAccessServiceInterface       $gameAccessService
+     * @param string                           $frontendUrl
      */
     public function __construct(
         private InvitationRepositoryInterface $invitationRepository,
@@ -60,6 +61,7 @@ final readonly class InvitationService implements InvitationServiceInterface
         private EntityManagerInterface $entityManager,
         private RouterInterface $router,
         private GameAccessServiceInterface $gameAccessService,
+        private string $frontendUrl,
     ) {
     }
 
@@ -223,11 +225,9 @@ final readonly class InvitationService implements InvitationServiceInterface
         $session->remove('invitation_uuid');
         $session->remove('game_id');
 
-        $frontendUrl = rtrim($_ENV['FRONTEND_URL'] ?? 'http://localhost:5173', '/');
-
         return new JsonResponse([
             'success' => true,
-            'redirect' => $frontendUrl.'/joined',
+            'redirect' => rtrim($this->frontendUrl, '/').'/joined',
         ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
     }
 }
