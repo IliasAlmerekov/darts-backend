@@ -28,8 +28,7 @@ final readonly class SecurityService implements SecurityServiceInterface
     public function __construct(
         private InvitationServiceInterface $invitationService,
         private string $frontendUrl,
-    )
-    {
+    ) {
     }
 
     /**
