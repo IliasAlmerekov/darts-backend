@@ -27,6 +27,7 @@ use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use DateTime;
 use DateTimeImmutable;
+use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Override;
 
@@ -214,6 +215,22 @@ final readonly class GameThrowService implements GameThrowServiceInterface
     {
         $this->gameAccessService->assertPlayerInGameOrAdmin($game);
 
+        $this->entityManager->wrapInTransaction(function () use ($game): void {
+            if ($this->entityManager->contains($game)) {
+                $this->entityManager->lock($game, LockMode::PESSIMISTIC_WRITE);
+            }
+
+            $this->undoLastThrowUnlocked($game);
+        });
+    }
+
+    /**
+     * @param Game $game
+     *
+     * @return void
+     */
+    private function undoLastThrowUnlocked(Game $game): void
+    {
         $gameId = $game->getGameId();
         if (null === $gameId) {
             return;

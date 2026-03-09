@@ -16,11 +16,14 @@ use App\Http\Attribute\ApiResponse;
 use App\Service\Invitation\InvitationServiceInterface;
 use Nelmio\ApiDocBundle\Attribute\Security;
 use OpenApi\Attributes as OA;
+use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Throwable;
 
 /**
  * This class handles invitation-related actions such as creating invitations,
@@ -32,9 +35,42 @@ final class InvitationController extends AbstractController
 {
     private string $frontendUrl;
 
-    public function __construct(string $frontendUrl)
-    {
+    /**
+     * @param string          $frontendUrl
+     * @param LoggerInterface $logger
+     */
+    public function __construct(
+        string $frontendUrl,
+        private readonly LoggerInterface $logger,
+    ) {
         $this->frontendUrl = rtrim($frontendUrl, '/');
+    }
+
+    /**
+     * Lightweight readiness endpoint for proxy health checks.
+     *
+     * @return JsonResponse
+     */
+    #[OA\Response(
+        response: Response::HTTP_OK,
+        description: 'Backend is reachable and ready to accept API traffic.',
+        content: new OA\JsonContent(
+            type: 'object',
+            required: ['success', 'status'],
+            properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: true),
+                new OA\Property(property: 'status', type: 'string', example: 'ok'),
+            ]
+        )
+    )]
+    #[Security(name: null)]
+    #[Route('/api/health', name: 'api_health', methods: ['GET'], format: 'json')]
+    public function health(): JsonResponse
+    {
+        return $this->json([
+            'success' => true,
+            'status' => 'ok',
+        ]);
     }
 
     /**
@@ -116,15 +152,43 @@ final class InvitationController extends AbstractController
     {
         $gameId = $invitation->getGameId();
         if (null === $gameId) {
+            $this->logger->warning('Invite join request is missing a game id.', [
+                'invitationUuid' => $invitation->getUuid(),
+            ]);
             throw new GameNotFoundException();
         }
 
-        $invitationService->assertGameJoinable($gameId);
-        $session->remove('invitation_uuid');
-        $session->set('invitation_uuid', $invitation->getUuid());
-        $session->set('game_id', $gameId);
+        $invitationUuid = $invitation->getUuid();
+        $redirectTarget = $this->frontendUrl.'/';
 
-        return $this->redirect($this->frontendUrl.'/');
+        $this->logger->info('Invite join request received.', [
+            'gameId' => $gameId,
+            'invitationUuid' => $invitationUuid,
+        ]);
+
+        try {
+            $invitationService->assertGameJoinable($gameId);
+            $session->remove('invitation_uuid');
+            $session->set('invitation_uuid', $invitationUuid);
+            $session->set('game_id', $gameId);
+
+            $this->logger->info('Invite join session prepared successfully.', [
+                'gameId' => $gameId,
+                'invitationUuid' => $invitationUuid,
+                'redirect' => $redirectTarget,
+            ]);
+
+            return $this->redirect($redirectTarget);
+        } catch (Throwable $throwable) {
+            $this->logger->error('Invite join request failed.', [
+                'gameId' => $gameId,
+                'invitationUuid' => $invitationUuid,
+                'exceptionClass' => $throwable::class,
+                'exceptionMessage' => $throwable->getMessage(),
+            ]);
+
+            throw $throwable;
+        }
     }
 
     /**
@@ -178,8 +242,30 @@ final class InvitationController extends AbstractController
     #[Route('api/invite/process', name: 'process_invitation', methods: ['POST'], format: 'json')]
     public function processInvitation(SessionInterface $session, InvitationServiceInterface $invitationService): Response
     {
-        $result = $invitationService->processInvitation($session, $this->getUser());
+        $user = $this->getUser();
+        $userId = is_object($user) && method_exists($user, 'getId') ? $user->getId() : null;
 
-        return $result;
+        $this->logger->info('Invite process request received.', [
+            'userId' => $userId,
+        ]);
+
+        try {
+            $result = $invitationService->processInvitation($session, $user);
+
+            $this->logger->info('Invite process request completed.', [
+                'userId' => $userId,
+                'statusCode' => $result->getStatusCode(),
+            ]);
+
+            return $result;
+        } catch (Throwable $throwable) {
+            $this->logger->error('Invite process request failed.', [
+                'userId' => $userId,
+                'exceptionClass' => $throwable::class,
+                'exceptionMessage' => $throwable->getMessage(),
+            ]);
+
+            throw $throwable;
+        }
     }
 }

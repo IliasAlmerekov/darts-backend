@@ -113,7 +113,6 @@ final readonly class InvitationService implements InvitationServiceInterface
         }
 
         $invitation = $this->createOrGetInvitation($game);
-        $users = [];
         try {
             $users = $this->getUsersForGame($game);
         } catch (Throwable) {
