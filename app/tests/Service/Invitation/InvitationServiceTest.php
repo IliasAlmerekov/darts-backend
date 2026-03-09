@@ -70,7 +70,8 @@ final class InvitationServiceTest extends TestCase
             $this->playerManagementService,
             $this->entityManager,
             $this->router,
-            $this->gameAccessService
+            $this->gameAccessService,
+            'http://example.test/app',
         );
     }
 
@@ -152,13 +153,13 @@ final class InvitationServiceTest extends TestCase
             ->expects(self::once())
             ->method('generate')
             ->with('join_invitation', ['uuid' => 'abc'])
-            ->willReturn('/join/abc');
+            ->willReturn('/api/invite/join/abc');
 
         $payload = $this->service->getInvitationPayload($game);
 
         self::assertTrue($payload['success']);
         self::assertSame(30, $payload['gameId']);
-        self::assertSame('/join/abc', $payload['invitationLink']);
+        self::assertSame('/api/invite/join/abc', $payload['invitationLink']);
         self::assertSame([
             [
                 'id' => $user->getId(),
@@ -295,7 +296,7 @@ final class InvitationServiceTest extends TestCase
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
         $content = json_decode($response->getContent() ?: '{}', true, 512, JSON_THROW_ON_ERROR);
         self::assertTrue($content['success']);
-        self::assertArrayHasKey('redirect', $content);
+        self::assertSame('http://example.test/app/joined', $content['redirect'] ?? null);
         sort($removedKeys);
         self::assertSame(['game_id', 'invitation_uuid'], $removedKeys);
     }
