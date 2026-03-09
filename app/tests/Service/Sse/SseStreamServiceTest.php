@@ -28,7 +28,10 @@ function flush(): void
 
 namespace App\Tests\Service\Sse;
 
+use App\Dto\ScoreboardDeltaDto;
+use App\Dto\ThrowAckDto;
 use App\Service\Game\GameRoomServiceInterface;
+use App\Service\Game\GameDeltaServiceInterface;
 use App\Service\Sse\SseStreamService;
 use App\Repository\RoundThrowsRepositoryInterface;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -39,13 +42,15 @@ final class SseStreamServiceTest extends TestCase
 {
     private GameRoomServiceInterface&MockObject $gameRoomService;
     private RoundThrowsRepositoryInterface&MockObject $roundThrowsRepository;
+    private GameDeltaServiceInterface&MockObject $gameDeltaService;
     private SseStreamService $service;
 
     protected function setUp(): void
     {
         $this->gameRoomService = $this->createMock(GameRoomServiceInterface::class);
         $this->roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
-        $this->service = new SseStreamService($this->gameRoomService, $this->roundThrowsRepository);
+        $this->gameDeltaService = $this->createMock(GameDeltaServiceInterface::class);
+        $this->service = new SseStreamService($this->gameRoomService, $this->roundThrowsRepository, $this->gameDeltaService);
     }
 
     public function testCreatePlayerStreamProducesEventsAndHeaders(): void
@@ -77,6 +82,32 @@ final class SseStreamServiceTest extends TestCase
                 'playerName' => 'u1',
             ]);
 
+        $game = new \App\Entity\Game();
+        $game->setGameId(42);
+        $this->gameRoomService
+            ->expects(self::once())
+            ->method('findGameById')
+            ->with(42)
+            ->willReturn($game);
+
+        $this->gameDeltaService
+            ->expects(self::once())
+            ->method('buildThrowAck')
+            ->with($game, self::isType('array'))
+            ->willReturn(new ThrowAckDto(
+                success: true,
+                gameId: 42,
+                stateVersion: 'v1',
+                throw: null,
+                scoreboardDelta: new ScoreboardDeltaDto(
+                    changedPlayers: [],
+                    winnerId: null,
+                    status: 'started',
+                    currentRound: 1,
+                ),
+                serverTs: '2026-02-13T00:00:00+00:00',
+            ));
+
         $response = $this->service->createPlayerStream(42);
 
         self::assertInstanceOf(StreamedResponse::class, $response);
@@ -96,6 +127,6 @@ final class SseStreamServiceTest extends TestCase
         self::assertStringContainsString('"count":2', $output);
         self::assertStringContainsString('"position":1', $output);
         self::assertStringContainsString('event: throw', $output);
-        self::assertStringContainsString('"id":99', $output);
+        self::assertStringContainsString('"stateVersion":"v1"', $output);
     }
 }

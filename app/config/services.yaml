@@ -24,17 +24,30 @@ services:
     App\Repository\InvitationRepositoryInterface: '@App\Repository\InvitationRepository'
     App\Repository\PlayerStatsRepositoryInterface: '@App\Repository\PlayerStatsRepository'
     App\Repository\UserRepositoryInterface: '@App\Repository\UserRepository'
+    App\Controller\InvitationController:
+        arguments:
+            $frontendUrl: "%frontend_url%"
     App\Service\Invitation\InvitationServiceInterface: '@App\Service\Invitation\InvitationService'
+    App\Service\Invitation\InvitationService:
+        arguments:
+            $frontendUrl: "%frontend_url%"
     App\Service\Registration\RegistrationServiceInterface: '@App\Service\Registration\RegistrationService'
     App\Service\Security\SecurityServiceInterface: '@App\Service\Security\SecurityService'
+    App\Service\Security\SecurityService:
+        arguments:
+            $frontendUrl: "%frontend_url%"
     App\Service\Security\GameAccessServiceInterface: '@App\Service\Security\GameAccessService'
     App\Service\Game\GameStartServiceInterface: '@App\Service\Game\GameStartService'
     App\Service\Game\GameSettingsServiceInterface: '@App\Service\Game\GameSettingsService'
     App\Service\Game\GameRoomServiceInterface: '@App\Service\Game\GameRoomService'
     App\Service\Game\GameThrowServiceInterface: '@App\Service\Game\GameThrowService'
     App\Service\Game\GameServiceInterface: '@App\Service\Game\GameService'
+    App\Service\Game\ActivePlayerResolverInterface: '@App\Service\Game\ActivePlayerResolver'
+    App\Service\Game\GameStateVersionServiceInterface: '@App\Service\Game\GameStateVersionService'
+    App\Service\Game\GameDeltaServiceInterface: '@App\Service\Game\GameDeltaService'
     App\Service\Game\GameStatisticsServiceInterface: '@App\Service\Game\GameStatisticsService'
     App\Service\Game\GameFinishServiceInterface: '@App\Service\Game\GameFinishService'
+    App\Service\Game\GameReopenServiceInterface: '@App\Service\Game\GameReopenService'
     App\Service\Game\GameAbortServiceInterface: '@App\Service\Game\GameAbortService'
     App\Service\Game\RematchServiceInterface: '@App\Service\Game\RematchService'
     App\Service\Player\PlayerManagementServiceInterface: '@App\Service\Player\PlayerManagementService'

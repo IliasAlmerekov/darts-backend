@@ -23,7 +23,7 @@ final class SecurityServiceTest extends TestCase
     protected function setUp(): void
     {
         $this->invitationService = $this->createMock(InvitationServiceInterface::class);
-        $this->service = new SecurityService($this->invitationService);
+        $this->service = new SecurityService($this->invitationService, 'http://frontend.test');
     }
 
     public function testAdminGetsStartRedirect(): void

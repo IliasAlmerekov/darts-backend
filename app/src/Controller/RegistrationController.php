@@ -37,12 +37,11 @@ final class RegistrationController extends AbstractController
         required: true,
         content: new OA\JsonContent(
             type: 'object',
-            required: ['username', 'email', 'plainPassword', '_csrf_token'],
+            required: ['username', 'email', 'plainPassword'],
             properties: [
                 new OA\Property(property: 'username', type: 'string', example: 'alice'),
                 new OA\Property(property: 'email', type: 'string', format: 'email', example: 'alice@example.com'),
                 new OA\Property(property: 'plainPassword', type: 'string', format: 'password', example: 'secret'),
-                new OA\Property(property: '_csrf_token', type: 'string', example: 'csrf-token'),
             ]
         )
     )]

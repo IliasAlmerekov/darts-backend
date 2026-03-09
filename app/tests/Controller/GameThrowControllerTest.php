@@ -6,15 +6,19 @@ namespace App\Tests\Controller;
 
 use App\Controller\GameThrowController;
 use App\Dto\ThrowRequest;
+use App\Dto\ThrowAckDto;
+use App\Dto\ScoreboardDeltaDto;
 use App\Dto\GameResponseDto;
 use App\Entity\Game;
 use App\Exception\Game\PlayerAlreadyThrewThreeTimesException;
+use App\Service\Game\GameDeltaServiceInterface;
 use App\Service\Game\GameServiceInterface;
 use App\Service\Game\GameThrowServiceInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 #[AllowMockObjectsWithoutExpectations]
@@ -32,7 +36,7 @@ final class GameThrowControllerTest extends TestCase
 
     public function testThrowSuccess(): void
     {
-        $game = $this->createMock(Game::class);
+        $game = (new Game())->setGameId(123);
         $dto = new ThrowRequest();
 
         $throwService = $this->createMock(GameThrowServiceInterface::class);
@@ -43,7 +47,10 @@ final class GameThrowControllerTest extends TestCase
 
         $response = $this->controller->throw($game, $throwService, $gameService, $dto);
 
-        $this->assertInstanceOf(GameResponseDto::class, $response);
+        $this->assertInstanceOf(JsonResponse::class, $response);
+        $this->assertSame('true', $response->headers->get('Deprecation'));
+        $this->assertSame('Wed, 30 Sep 2026 23:59:59 GMT', $response->headers->get('Sunset'));
+        $this->assertSame('</api/game/123/throw/delta>; rel="successor-version"', $response->headers->get('Link'));
     }
 
     public function testThrowReturnsBadRequestOnInvalidArgument(): void
@@ -72,6 +79,25 @@ final class GameThrowControllerTest extends TestCase
         $this->assertInstanceOf(GameResponseDto::class, $response);
     }
 
+    public function testThrowDeltaSuccess(): void
+    {
+        $game = (new Game())->setGameId(777);
+        $dto = new ThrowRequest();
+        $throwService = $this->createMock(GameThrowServiceInterface::class);
+        $throwService->expects(self::once())->method('recordThrow')->with($game, $dto);
+
+        $deltaService = $this->createMock(GameDeltaServiceInterface::class);
+        $deltaService->expects(self::once())
+            ->method('buildThrowAck')
+            ->with($game)
+            ->willReturn($this->dummyThrowAckDto());
+
+        $response = $this->controller->throwDelta($game, $throwService, $deltaService, $dto);
+
+        self::assertInstanceOf(ThrowAckDto::class, $response);
+        self::assertSame(777, $response->gameId);
+    }
+
     private function dummyGameDto(): GameResponseDto
     {
         return new GameResponseDto(
@@ -83,6 +109,23 @@ final class GameThrowControllerTest extends TestCase
             players: [],
             winnerId: null,
             settings: []
+        );
+    }
+
+    private function dummyThrowAckDto(): ThrowAckDto
+    {
+        return new ThrowAckDto(
+            success: true,
+            gameId: 777,
+            stateVersion: 'state-v1',
+            throw: null,
+            scoreboardDelta: new ScoreboardDeltaDto(
+                changedPlayers: [],
+                winnerId: null,
+                status: 'started',
+                currentRound: 1,
+            ),
+            serverTs: '2026-02-13T00:00:00+00:00',
         );
     }
 }

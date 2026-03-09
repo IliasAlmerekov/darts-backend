@@ -41,8 +41,9 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
         $players = $this->createQueryBuilder('gamePlayer')
             ->select(
                 'u.id as id',
-                "CASE WHEN u.isGuest = true THEN CONCAT(u.username, ' (Guest)') ELSE u.username END as name",
-                'gamePlayer.position as position'
+                'gamePlayer.displayNameSnapshot as name',
+                'gamePlayer.position as position',
+                'u.isGuest as isGuest'
             )
             ->innerJoin('gamePlayer.player', 'u')
             ->andWhere('gamePlayer.game = :gameId')
@@ -57,6 +58,7 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
                 'id' => isset($player['id']) ? (int) $player['id'] : null,
                 'name' => $player['name'] ?? null,
                 'position' => isset($player['position']) ? (int) $player['position'] : null,
+                'isGuest' => isset($player['isGuest']) ? (bool) $player['isGuest'] : false,
             ];
         }, $players);
     }

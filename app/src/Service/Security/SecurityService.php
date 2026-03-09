@@ -21,14 +21,14 @@ use Symfony\Component\HttpFoundation\Session\SessionInterface;
  */
 final readonly class SecurityService implements SecurityServiceInterface
 {
-    private string $frontendUrl;
-
     /**
      * @param InvitationServiceInterface $invitationService
+     * @param string                     $frontendUrl
      */
-    public function __construct(private InvitationServiceInterface $invitationService)
-    {
-        $this->frontendUrl = rtrim($_ENV['FRONTEND_URL'] ?? 'http://localhost:5173', '/');
+    public function __construct(
+        private InvitationServiceInterface $invitationService,
+        private string $frontendUrl,
+    ) {
     }
 
     /**
@@ -51,7 +51,7 @@ final readonly class SecurityService implements SecurityServiceInterface
                 'id' => $payload['id'],
                 'email' => $payload['email'],
                 'username' => $payload['username'],
-                'redirect' => $this->frontendUrl.'/start',
+                'redirect' => rtrim($this->frontendUrl, '/').'/start',
             ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
         }
 
@@ -65,7 +65,7 @@ final readonly class SecurityService implements SecurityServiceInterface
             'id' => $payload['id'],
             'email' => $payload['email'],
             'username' => $payload['username'],
-            'redirect' => $this->frontendUrl.'/joined',
+            'redirect' => rtrim($this->frontendUrl, '/').'/joined',
         ]);
     }
 

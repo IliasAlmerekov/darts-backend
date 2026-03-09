@@ -13,6 +13,7 @@ use App\Dto\StartGameRequest;
 use App\Entity\Game;
 use App\Entity\Round;
 use App\Exception\Game\GameMustHaveValidPlayerCountException;
+use App\Exception\Game\GameStartNotAllowedException;
 use App\Exception\Game\PlayerPositionsCountMismatchException;
 use App\Enum\GameStatus;
 use App\Service\Security\GameAccessServiceInterface;
@@ -47,6 +48,10 @@ final readonly class GameStartService implements GameStartServiceInterface
     public function start(Game $game, StartGameRequest $dto): void
     {
         $this->gameAccessService->assertPlayerInGameOrAdmin($game);
+        $status = $game->getStatus();
+        if (GameStatus::Lobby !== $status) {
+            throw new GameStartNotAllowedException($status);
+        }
         $this->guardPlayerCount($game, $dto);
         $game->setStatus(GameStatus::Started);
         if (null !== $dto->startScore) {

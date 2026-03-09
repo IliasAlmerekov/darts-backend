@@ -1,4 +1,5 @@
 <?php
+
 /**
  * This file is part of the darts backend.
  *
@@ -11,8 +12,12 @@ namespace App\Service\Game;
 
 use App\Dto\ThrowRequest;
 use App\Entity\Game;
+use App\Entity\GamePlayers;
 use App\Entity\Round;
 use App\Entity\RoundThrows;
+use App\Exception\Game\InvalidThrowException;
+use App\Exception\Game\GamePlayerNotActiveException;
+use App\Exception\Game\GameThrowNotAllowedException;
 use App\Exception\Game\PlayerAlreadyThrewThreeTimesException;
 use App\Exception\Game\PlayerNotFoundInGameException;
 use App\Enum\GameStatus;
@@ -22,6 +27,7 @@ use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use DateTime;
 use DateTimeImmutable;
+use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Override;
 
@@ -42,8 +48,13 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
-    public function __construct(private GamePlayersRepositoryInterface $gamePlayersRepository, private RoundRepositoryInterface $roundRepository, private RoundThrowsRepositoryInterface $roundThrowsRepository, private EntityManagerInterface $entityManager, private GameAccessServiceInterface $gameAccessService)
-    {
+    public function __construct(
+        private GamePlayersRepositoryInterface $gamePlayersRepository,
+        private RoundRepositoryInterface $roundRepository,
+        private RoundThrowsRepositoryInterface $roundThrowsRepository,
+        private EntityManagerInterface $entityManager,
+        private GameAccessServiceInterface $gameAccessService,
+    ) {
     }
 
     /**
@@ -56,6 +67,12 @@ final readonly class GameThrowService implements GameThrowServiceInterface
     public function recordThrow(Game $game, ThrowRequest $dto): void
     {
         $user = $this->gameAccessService->assertPlayerInGameOrAdmin($game);
+
+        $status = $game->getStatus();
+        if (GameStatus::Started !== $status) {
+            throw new GameThrowNotAllowedException($status);
+        }
+
         if (null !== $dto->playerId) {
             $this->gameAccessService->assertPlayerMatches($user, $dto->playerId);
         }
@@ -69,6 +86,12 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         }
 
         $round = $this->getCurrentRound($game);
+        $requestedPlayerId = $dto->playerId;
+        if (null === $requestedPlayerId) {
+            throw new PlayerNotFoundInGameException();
+        }
+        $this->assertActivePlayer($game, $round, $requestedPlayerId);
+
         $playerThrowsThisRound = $this->roundThrowsRepository->count([
             'round' => $round,
             'player' => $player->getPlayer(),
@@ -79,9 +102,11 @@ final readonly class GameThrowService implements GameThrowServiceInterface
 
         $throwNumber = $playerThrowsThisRound + 1;
         $baseValue = $dto->value ?? 0;
-        $finalValue = $baseValue;
         $isDouble = $dto->isDouble ?? false;
         $isTriple = $dto->isTriple ?? false;
+        $this->assertValidThrowInput($baseValue, $isDouble, $isTriple);
+
+        $finalValue = $baseValue;
         if ($isTriple) {
             $finalValue = $baseValue * 3;
         } elseif ($isDouble) {
@@ -98,13 +123,13 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         $roundThrow->setIsDouble($isDouble);
         $roundThrow->setIsTriple($isTriple);
         $roundThrow->setTimestamp(new DateTime());
-// Berechne den neuen Score
+        // Berechne den neuen Score
         $newScore = $currentScore - $finalValue;
         $wouldFinishGame = (0 === $newScore);
-// Hole Game-Mode Einstellungen
+        // Hole Game-Mode Einstellungen
         $isDoubleOutMode = $game->isDoubleOut();
         $isTripleOutMode = $game->isTripleOut();
-// bust regeln
+        // bust regeln
         $isBust =
             // Score unter 0
             ($newScore < 0) ||
@@ -122,7 +147,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             ($wouldFinishGame && $isTripleOutMode && !$isTriple);
         $roundThrow->setIsBust($isBust);
         if ($isBust) {
-        // Bei bust Score auf Stand vor der Runde zurücksetzen
+            // Bei bust Score auf Stand vor der Runde zurücksetzen
             $previousThrowsInRound = $this->roundThrowsRepository->findBy([
                 'round' => $round,
                 'player' => $player->getPlayer(),
@@ -141,10 +166,10 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             $roundThrow->setScore($resetScore);
             $player->setScore($resetScore);
         } else {
-        // Kein Bust: Score normal aktualisieren
+            // Kein Bust: Score normal aktualisieren
             $player->setScore($newScore);
             $roundThrow->setScore($newScore);
-        // Check, ob der Spieler gewonnen hat
+            // Check, ob der Spieler gewonnen hat
             if (0 === $newScore && $currentScore > 0) {
                 $finishedPlayers = $this->gamePlayersRepository->countFinishedPlayers((int) $game->getGameId());
                 $player->setPosition($finishedPlayers + 1);
@@ -170,17 +195,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
                 if ($activePlayers <= 1) {
                     $game->setStatus(GameStatus::Finished);
                     $game->setFinishedAt(new DateTimeImmutable());
-                    if (1 === $activePlayers) {
-                        $finishedPlayers = $this->gamePlayersRepository->countFinishedPlayers(
-                            (int) $game->getGameId()
-                        );
-                        foreach ($game->getGamePlayers() as $gamePlayer) {
-                            $playerScore = $gamePlayer->getScore() ?? $game->getStartScore();
-                            if ($playerScore > 0 && null === $gamePlayer->getPosition()) {
-                                $gamePlayer->setPosition($finishedPlayers + 1);
-                            }
-                        }
-                    }
+                    $this->normalizeFinishedGamePositions($game);
                 }
             }
         }
@@ -200,6 +215,22 @@ final readonly class GameThrowService implements GameThrowServiceInterface
     {
         $this->gameAccessService->assertPlayerInGameOrAdmin($game);
 
+        $this->entityManager->wrapInTransaction(function () use ($game): void {
+            if ($this->entityManager->contains($game)) {
+                $this->entityManager->lock($game, LockMode::PESSIMISTIC_WRITE);
+            }
+
+            $this->undoLastThrowUnlocked($game);
+        });
+    }
+
+    /**
+     * @param Game $game
+     *
+     * @return void
+     */
+    private function undoLastThrowUnlocked(Game $game): void
+    {
         $gameId = $game->getGameId();
         if (null === $gameId) {
             return;
@@ -236,21 +267,11 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             }
         }
 
-        // Game-Status zurücksetzen, falls nötig
-        if ($game->getStatus() === GameStatus::Finished) {
-            $activePlayers = 0;
-            foreach ($game->getGamePlayers() as $gamePlayer) {
-                $playerScore = $gamePlayer->getScore() ?? $game->getStartScore();
-                if ($playerScore > 0) {
-                    $activePlayers++;
-                }
-            }
-
-            // Wenn wieder mehr als 1 Spieler aktiv ist, Status auf Started setzen
-            if ($activePlayers > 1) {
-                $game->setStatus(GameStatus::Started);
-                $game->setFinishedAt(null);
-            }
+        // Wenn der letzte Wurf in einem finished Game rückgängig gemacht wird,
+        // muss das Spiel wieder fortsetzbar sein.
+        if (GameStatus::Finished === $game->getStatus()) {
+            $game->setStatus(GameStatus::Started);
+            $game->setFinishedAt(null);
         }
 
         foreach ($game->getGamePlayers() as $gamePlayer) {
@@ -273,15 +294,10 @@ final readonly class GameThrowService implements GameThrowServiceInterface
                 : $lastThrowRoundNumber
         );
 
-        $winnerPlayer = $this->gamePlayersRepository->findOneBy([
-            'game' => $game->getGameId(),
-            'position' => 1,
-        ]);
         foreach ($game->getGamePlayers() as $gamePlayer) {
             $gamePlayer->setIsWinner(false);
         }
-        $game->setWinner($winnerPlayer?->getPlayer());
-        $winnerPlayer?->setIsWinner(true);
+        $game->setWinner(null);
 
         $this->entityManager->flush();
     }
@@ -347,7 +363,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
                 );
                 if (null === $latestThrow || !$latestThrow->isBust()) {
                     return;
-        // Noch nicht alle AKTIVEN Spieler haben 3 Würfe gemacht
+                    // Noch nicht alle AKTIVEN Spieler haben 3 Würfe gemacht
                 }
             }
         }
@@ -364,5 +380,159 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         $game->addRound($nextRound);
         $this->entityManager->persist($nextRound);
         $this->entityManager->flush();
+    }
+
+    /**
+     * @param Game  $game
+     * @param Round $round
+     * @param int   $requestedPlayerId
+     *
+     * @return void
+     */
+    private function assertActivePlayer(Game $game, Round $round, int $requestedPlayerId): void
+    {
+        $activePlayerId = $this->resolveActivePlayerId($game, $round);
+        if (null !== $activePlayerId && $activePlayerId === $requestedPlayerId) {
+            return;
+        }
+
+        throw new GamePlayerNotActiveException($requestedPlayerId, $activePlayerId);
+    }
+
+    /**
+     * @param Game  $game
+     * @param Round $round
+     *
+     * @return int|null
+     */
+    private function resolveActivePlayerId(Game $game, Round $round): ?int
+    {
+        $gamePlayers = $game->getGamePlayers()->toArray();
+        usort($gamePlayers, static function (GamePlayers $left, GamePlayers $right): int {
+            $leftPosition = $left->getPosition() ?? PHP_INT_MAX;
+            $rightPosition = $right->getPosition() ?? PHP_INT_MAX;
+            if ($leftPosition !== $rightPosition) {
+                return $leftPosition <=> $rightPosition;
+            }
+
+            $leftId = $left->getGamePlayerId() ?? PHP_INT_MAX;
+            $rightId = $right->getGamePlayerId() ?? PHP_INT_MAX;
+
+            return $leftId <=> $rightId;
+        });
+
+        foreach ($gamePlayers as $gamePlayer) {
+            $player = $gamePlayer->getPlayer();
+            if (null === $player) {
+                continue;
+            }
+
+            $playerScore = $gamePlayer->getScore() ?? $game->getStartScore();
+            if (0 === $playerScore) {
+                continue;
+            }
+
+            $throwsCount = $this->roundThrowsRepository->count([
+                'round' => $round,
+                'player' => $player,
+            ]);
+            if ($throwsCount >= 3) {
+                continue;
+            }
+
+            $latestThrow = $this->roundThrowsRepository->findOneBy(
+                ['round' => $round, 'player' => $player],
+                ['throwNumber' => 'DESC']
+            );
+            if ($latestThrow instanceof RoundThrows && $latestThrow->isBust()) {
+                continue;
+            }
+
+            return $player->getId();
+        }
+
+        return null;
+    }
+
+    /**
+     * Normalize final standings to unique positions (1..N).
+     * Keeps finished players first (ordered by their existing finish position),
+     * then appends unfinished players preserving their previous order.
+     *
+     * @param Game $game
+     *
+     * @return void
+     */
+    private function normalizeFinishedGamePositions(Game $game): void
+    {
+        $finishedPlayers = [];
+        $unfinishedPlayers = [];
+        foreach ($game->getGamePlayers() as $gamePlayer) {
+            $score = $gamePlayer->getScore() ?? $game->getStartScore();
+            if (0 === $score) {
+                $finishedPlayers[] = $gamePlayer;
+
+                continue;
+            }
+
+            $unfinishedPlayers[] = $gamePlayer;
+        }
+
+        $sortByPosition = static function (GamePlayers $left, GamePlayers $right): int {
+            $leftPosition = $left->getPosition() ?? PHP_INT_MAX;
+            $rightPosition = $right->getPosition() ?? PHP_INT_MAX;
+            if ($leftPosition !== $rightPosition) {
+                return $leftPosition <=> $rightPosition;
+            }
+
+            $leftId = $left->getGamePlayerId() ?? PHP_INT_MAX;
+            $rightId = $right->getGamePlayerId() ?? PHP_INT_MAX;
+
+            return $leftId <=> $rightId;
+        };
+
+        usort($finishedPlayers, $sortByPosition);
+        usort($unfinishedPlayers, $sortByPosition);
+
+        $position = 1;
+        foreach ($finishedPlayers as $finishedPlayer) {
+            $finishedPlayer->setPosition($position);
+            $position++;
+        }
+
+        foreach ($unfinishedPlayers as $unfinishedPlayer) {
+            $unfinishedPlayer->setPosition($position);
+            $position++;
+        }
+
+        if ([] !== $finishedPlayers) {
+            $winnerPlayer = $finishedPlayers[0];
+            $game->setWinner($winnerPlayer->getPlayer());
+            foreach ($game->getGamePlayers() as $gamePlayer) {
+                $gamePlayer->setIsWinner($gamePlayer === $winnerPlayer);
+            }
+        }
+    }
+
+    /**
+     * @param int  $baseValue
+     * @param bool $isDouble
+     * @param bool $isTriple
+     *
+     * @return void
+     */
+    private function assertValidThrowInput(int $baseValue, bool $isDouble, bool $isTriple): void
+    {
+        if ($isDouble && $isTriple) {
+            throw new InvalidThrowException('Throw cannot be both double and triple at the same time.');
+        }
+
+        if ($isTriple && ($baseValue < 0 || $baseValue > 20)) {
+            throw new InvalidThrowException('Triple throws require a base value between 0 and 20.');
+        }
+
+        if ($isDouble && ($baseValue < 0 || $baseValue > 20) && 25 !== $baseValue) {
+            throw new InvalidThrowException('Double throws require a base value between 0 and 20, or 25 for bull.');
+        }
     }
 }

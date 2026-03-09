@@ -15,6 +15,7 @@ use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Exception\Game\GameJoinNotAllowedException;
 use App\Exception\Game\GameNotFoundException;
+use App\Exception\Game\GameRoomFullException;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\InvitationRepositoryInterface;
@@ -29,6 +30,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Uid\Uuid;
+use Throwable;
 
 /**
  * Service to handle invitation creation and related data.
@@ -37,6 +39,8 @@ use Symfony\Component\Uid\Uuid;
  */
 final readonly class InvitationService implements InvitationServiceInterface
 {
+    private const int MAX_GAME_PLAYERS = 10;
+
     /**
      * @param InvitationRepositoryInterface    $invitationRepository
      * @param GamePlayersRepositoryInterface   $gamePlayersRepository
@@ -46,6 +50,7 @@ final readonly class InvitationService implements InvitationServiceInterface
      * @param EntityManagerInterface           $entityManager
      * @param RouterInterface                  $router
      * @param GameAccessServiceInterface       $gameAccessService
+     * @param string                           $frontendUrl
      */
     public function __construct(
         private InvitationRepositoryInterface $invitationRepository,
@@ -56,6 +61,7 @@ final readonly class InvitationService implements InvitationServiceInterface
         private EntityManagerInterface $entityManager,
         private RouterInterface $router,
         private GameAccessServiceInterface $gameAccessService,
+        private string $frontendUrl,
     ) {
     }
 
@@ -107,7 +113,12 @@ final readonly class InvitationService implements InvitationServiceInterface
         }
 
         $invitation = $this->createOrGetInvitation($game);
-        $users = $this->getUsersForGame($game);
+        try {
+            $users = $this->getUsersForGame($game);
+        } catch (Throwable) {
+            // Keep invitation creation available even if participant projection fails due to schema drift.
+            $users = [];
+        }
         $invitationLink = $this->router->generate('join_invitation', ['uuid' => $invitation->getUuid()]);
 
         return [
@@ -135,6 +146,11 @@ final readonly class InvitationService implements InvitationServiceInterface
         if (GameStatus::Lobby !== $status) {
             throw new GameJoinNotAllowedException($status);
         }
+
+        $playersCount = $this->gamePlayersRepository->count(['game' => $gameId]);
+        if ($playersCount >= self::MAX_GAME_PLAYERS) {
+            throw new GameRoomFullException(self::MAX_GAME_PLAYERS);
+        }
     }
 
     /**
@@ -152,24 +168,28 @@ final readonly class InvitationService implements InvitationServiceInterface
         }
 
         $players = $this->gamePlayersRepository->findByGameId($gameId);
-        $playerIds = array_values(array_filter(array_map(
-            static fn($player) => $player->getPlayer()?->getId(),
-            $players
-        )));
+        $users = [];
+        foreach ($players as $player) {
+            $user = $player->getPlayer();
+            if (!$user instanceof User) {
+                continue;
+            }
 
-        if ([] === $playerIds) {
-            return [];
+            $baseName = $player->getDisplayNameSnapshot();
+            if (null === $baseName || '' === trim($baseName)) {
+                $baseName = $user->getDisplayNameRaw() ?? $user->getUsername();
+            }
+            if (null === $baseName || '' === trim($baseName)) {
+                continue;
+            }
+
+            $users[] = [
+                'id' => $user->getId(),
+                'username' => $baseName,
+            ];
         }
 
-        /** @var User[] $users */
-        $users = $this->userRepository->findBy(['id' => $playerIds]);
-
-        return array_map(static function (User $user): array {
-            return [
-                'id' => $user->getId(),
-                'username' => $user->getDisplayName(),
-            ];
-        }, $users);
+        return $users;
     }
 
     /**
@@ -204,11 +224,9 @@ final readonly class InvitationService implements InvitationServiceInterface
         $session->remove('invitation_uuid');
         $session->remove('game_id');
 
-        $frontendUrl = rtrim($_ENV['FRONTEND_URL'] ?? 'http://localhost:5173', '/');
-
         return new JsonResponse([
             'success' => true,
-            'redirect' => $frontendUrl.'/joined',
+            'redirect' => rtrim($this->frontendUrl, '/').'/joined',
         ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
     }
 }

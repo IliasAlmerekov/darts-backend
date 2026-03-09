@@ -15,6 +15,7 @@ use Symfony\Component\Security\Core\User\UserInterface;
  * This class represents a registered user.
  */
 #[ORM\Entity(repositoryClass: UserRepository::class)]
+#[ORM\Table(name: '`user`')]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_USERNAME', fields: ['username'])]
 
@@ -28,6 +29,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?int $id = null;
     #[ORM\Column(length: 30)]
     private ?string $username = null;
+    #[ORM\Column(length: 30)]
+    private ?string $displayName = null;
     #[ORM\Column(length: 180)]
     private ?string $email = null;
     /**
@@ -67,6 +70,29 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setUsername(string $username): static
     {
         $this->username = $username;
+        if (null === $this->displayName || '' === $this->displayName) {
+            $this->displayName = $username;
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getDisplayNameRaw(): ?string
+    {
+        return $this->displayName;
+    }
+
+    /**
+     * @param string $displayName
+     *
+     * @return static
+     */
+    public function setDisplayName(string $displayName): static
+    {
+        $this->displayName = $displayName;
 
         return $this;
     }
@@ -186,19 +212,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     /**
      * @return string|null
+     *
+     * @psalm-suppress PossiblyUnusedMethod
      */
     public function getDisplayName(): ?string
     {
-        $username = $this->username;
-        if (null === $username) {
-            return null;
-        }
-
-        if ($this->isGuest) {
-            return $username.' (Guest)';
-        }
-
-        return $username;
+        return $this->displayName ?? $this->username;
     }
 
     /**

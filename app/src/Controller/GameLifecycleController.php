@@ -18,10 +18,13 @@ use App\Exception\ApiExceptionInterface;
 use App\Http\Attribute\ApiResponse;
 use App\Service\Game\GameAbortServiceInterface;
 use App\Service\Game\GameFinishServiceInterface;
+use App\Service\Game\GameReopenServiceInterface;
 use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Game\GameServiceInterface;
 use App\Service\Game\GameSettingsServiceInterface;
 use App\Service\Game\GameStartServiceInterface;
+use App\Service\Security\GameAccessServiceInterface;
+use Doctrine\ORM\EntityManagerInterface;
 use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity as AttributeMapEntity;
@@ -71,6 +74,7 @@ final class GameLifecycleController extends AbstractController
      * @param GameRoomServiceInterface     $gameRoomService
      * @param GameSettingsServiceInterface $gameSettingsService
      * @param GameServiceInterface         $gameService
+     * @param EntityManagerInterface       $entityManager
      * @param GameSettingsRequest          $dto
      *
      * @return mixed
@@ -83,15 +87,17 @@ final class GameLifecycleController extends AbstractController
     )]
     #[ApiResponse(status: Response::HTTP_CREATED)]
     #[Route('/api/game/settings', name: 'app_game_settings_create', methods: ['POST'], format: 'json')]
-    public function createSettings(GameRoomServiceInterface $gameRoomService, GameSettingsServiceInterface $gameSettingsService, GameServiceInterface $gameService, #[MapRequestPayload] GameSettingsRequest $dto): mixed
+    public function createSettings(GameRoomServiceInterface $gameRoomService, GameSettingsServiceInterface $gameSettingsService, GameServiceInterface $gameService, EntityManagerInterface $entityManager, #[MapRequestPayload] GameSettingsRequest $dto): mixed
     {
-        $game = $gameRoomService->createGame();
+        return $entityManager->wrapInTransaction(function () use ($gameRoomService, $gameSettingsService, $gameService, $dto): mixed {
+            $game = $gameRoomService->createGame();
 
-        $gameSettingsService->updateSettings($game, $dto);
+            $gameSettingsService->updateSettings($game, $dto);
 
-        $gameDto = $gameService->createGameDto($game);
+            $gameDto = $gameService->createGameDto($game);
 
-        return $gameDto;
+            return $gameDto;
+        });
     }
 
     /**
@@ -158,6 +164,30 @@ final class GameLifecycleController extends AbstractController
     }
 
     /**
+     * Reopens a finished game and returns current state.
+     *
+     * @param Game                       $game
+     * @param GameReopenServiceInterface $gameReopenService
+     * @param GameServiceInterface       $gameService
+     *
+     * @return mixed
+     */
+    #[OA\Parameter(name: 'gameId', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
+    #[OA\Response(
+        response: Response::HTTP_OK,
+        description: 'Spiel wurde wieder geöffnet und befindet sich erneut im started-Status.',
+        content: new OA\JsonContent(ref: new Model(type: GameResponseDto::class))
+    )]
+    #[ApiResponse]
+    #[Route('/api/game/{gameId}/reopen', name: 'app_game_reopen', methods: ['PATCH'], format: 'json')]
+    public function reopen(#[AttributeMapEntity(id: 'gameId')] Game $game, GameReopenServiceInterface $gameReopenService, GameServiceInterface $gameService): mixed
+    {
+        $gameReopenService->reopen($game);
+
+        return $gameService->createGameDto($game);
+    }
+
+    /**
      * Returns final standings without mutating game state.
      *
      * @param Game                       $game
@@ -185,6 +215,7 @@ final class GameLifecycleController extends AbstractController
     )]
     #[ApiResponse]
     #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['GET'], format: 'json')]
+    #[Route('/api/games/{gameId}/finished', name: 'app_games_finished', methods: ['GET'], format: 'json', requirements: ['gameId' => '\d+'])]
     public function finished(#[AttributeMapEntity(id: 'gameId')] Game $game, GameFinishServiceInterface $gameFinishService): mixed
     {
         return $gameFinishService->getFinishedPlayers($game);
@@ -193,10 +224,11 @@ final class GameLifecycleController extends AbstractController
     /**
      * Returns the current game state.
      *
-     * @param Game                 $game
-     * @param GameServiceInterface $gameService
-     * @param Request              $request
-     * @param string|null          $since
+     * @param Game                       $game
+     * @param GameAccessServiceInterface $gameAccessService
+     * @param GameServiceInterface       $gameService
+     * @param Request                    $request
+     * @param string|null                $since
      *
      * @return Response
      */
@@ -216,8 +248,9 @@ final class GameLifecycleController extends AbstractController
     #[OA\Response(response: Response::HTTP_NOT_MODIFIED, description: 'Spielzustand hat sich seit der letzten Version nicht geändert.')]
     #[ApiResponse]
     #[Route('/api/game/{gameId}', name: 'app_game_state', methods: ['GET'], format: 'json')]
-    public function getGameState(#[AttributeMapEntity(id: 'gameId')] Game $game, GameServiceInterface $gameService, Request $request, #[MapQueryParameter] ?string $since = null): Response
+    public function getGameState(#[AttributeMapEntity(id: 'gameId')] Game $game, GameAccessServiceInterface $gameAccessService, GameServiceInterface $gameService, Request $request, #[MapQueryParameter] ?string $since = null): Response
     {
+        $gameAccessService->assertPlayerInGameOrAdmin($game);
         $stateVersion = $gameService->buildStateVersion($game);
         $isNotModified = $this->isMatchingVersion($request->headers->get('If-None-Match'), $stateVersion) || $since === $stateVersion;
         if ($isNotModified) {

@@ -2,9 +2,17 @@
 framework:
     secret: "%env(APP_SECRET)%"
     error_controller: App\Security\ErrorController::show
+    trusted_proxies: "%env(default::SYMFONY_TRUSTED_PROXIES)%"
+    trusted_headers: ['x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto', 'x-forwarded-port', 'x-forwarded-prefix']
 
     # Note that the session will be started ONLY if you read or write from it.
     session: true
 
     #esi: true
     #fragments: true
+
+when@prod:
+    framework:
+        session:
+            cookie_secure: true
+            cookie_samesite: none

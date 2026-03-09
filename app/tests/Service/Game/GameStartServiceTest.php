@@ -10,6 +10,7 @@ use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Exception\Game\GameMustHaveValidPlayerCountException;
+use App\Exception\Game\GameStartNotAllowedException;
 use App\Service\Game\GameSetupService;
 use App\Service\Game\GameStartService;
 use App\Service\Security\GameAccessServiceInterface;
@@ -65,6 +66,40 @@ final class GameStartServiceTest extends TestCase
         $service = new GameStartService($setupService, $em, $this->createAccessService());
 
         $this->expectException(GameMustHaveValidPlayerCountException::class);
+        $service->start($game, new StartGameRequest());
+    }
+
+    public function testStartThrowsWhenGameAlreadyStarted(): void
+    {
+        $game = new Game();
+        $game->setStatus(GameStatus::Started);
+        $game->addGamePlayer(new GamePlayers()->setPlayer(new User()->setUsername('p1')));
+        $game->addGamePlayer(new GamePlayers()->setPlayer(new User()->setUsername('p2')));
+
+        $setupService = new GameSetupService();
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->expects(self::never())->method('flush');
+
+        $service = new GameStartService($setupService, $em, $this->createAccessService());
+
+        $this->expectException(GameStartNotAllowedException::class);
+        $service->start($game, new StartGameRequest());
+    }
+
+    public function testStartThrowsWhenGameFinished(): void
+    {
+        $game = new Game();
+        $game->setStatus(GameStatus::Finished);
+        $game->addGamePlayer(new GamePlayers()->setPlayer(new User()->setUsername('p1')));
+        $game->addGamePlayer(new GamePlayers()->setPlayer(new User()->setUsername('p2')));
+
+        $setupService = new GameSetupService();
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->expects(self::never())->method('flush');
+
+        $service = new GameStartService($setupService, $em, $this->createAccessService());
+
+        $this->expectException(GameStartNotAllowedException::class);
         $service->start($game, new StartGameRequest());
     }
 
