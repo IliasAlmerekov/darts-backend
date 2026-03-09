@@ -1559,7 +1559,6 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     doctrine_migrations?: DoctrineMigrationsConfig,
  *     security?: SecurityConfig,
  *     monolog?: MonologConfig,
- *     twig?: TwigConfig,
  *     nelmio_cors?: NelmioCorsConfig,
  *     nelmio_api_doc?: NelmioApiDocConfig,
  *     "when@dev"?: array{
@@ -1586,7 +1585,6 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         doctrine_migrations?: DoctrineMigrationsConfig,
  *         security?: SecurityConfig,
  *         monolog?: MonologConfig,
- *         twig?: TwigConfig,
  *         nelmio_cors?: NelmioCorsConfig,
  *         nelmio_api_doc?: NelmioApiDocConfig,
  *     },

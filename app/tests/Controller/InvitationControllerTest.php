@@ -12,6 +12,7 @@ use App\Service\Invitation\InvitationServiceInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
@@ -23,12 +24,25 @@ final class InvitationControllerTest extends TestCase
 {
     private InvitationController $controller;
     private ContainerInterface&MockObject $container;
+    private LoggerInterface&MockObject $logger;
 
     protected function setUp(): void
     {
-        $this->controller = new InvitationController();
+        $this->logger = $this->createMock(LoggerInterface::class);
+        $this->controller = new InvitationController('http://example.test/app', $this->logger);
         $this->container = $this->createMock(ContainerInterface::class);
         $this->controller->setContainer($this->container);
+    }
+
+    public function testHealthReturnsReadyPayload(): void
+    {
+        $response = $this->controller->health();
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertSame(
+            ['success' => true, 'status' => 'ok'],
+            json_decode((string) $response->getContent(), true, 512, JSON_THROW_ON_ERROR)
+        );
     }
 
     public function testCreateInvitationReusesExistingInvitation(): void
@@ -49,7 +63,7 @@ final class InvitationControllerTest extends TestCase
             ->willReturn([
                 'success' => true,
                 'gameId' => $gameId,
-                'invitationLink' => '/invite/'.$existingUuid,
+                'invitationLink' => '/api/invite/join/'.$existingUuid,
                 'users' => [],
             ]);
 
@@ -78,7 +92,7 @@ final class InvitationControllerTest extends TestCase
             ->willReturn([
                 'success' => true,
                 'gameId' => $gameId,
-                'invitationLink' => '/invite/some-uuid',
+                'invitationLink' => '/api/invite/join/some-uuid',
                 'users' => [],
             ]);
 
@@ -93,10 +107,17 @@ final class InvitationControllerTest extends TestCase
     {
         $invitation = $this->createMock(Invitation::class);
         $invitation->method('getGameId')->willReturn(null);
+        $invitation->method('getUuid')->willReturn('missing-game-id');
 
         $session = $this->createMock(SessionInterface::class);
         $invitationService = $this->createMock(InvitationServiceInterface::class);
         $invitationService->expects(self::never())->method('assertGameJoinable');
+
+        $this->logger->expects(self::once())
+            ->method('warning')
+            ->with('Invite join request is missing a game id.', [
+                'invitationUuid' => 'missing-game-id',
+            ]);
 
         $this->expectException(GameNotFoundException::class);
 
@@ -129,18 +150,10 @@ final class InvitationControllerTest extends TestCase
             ->method('assertGameJoinable')
             ->with($gameId);
 
-        $previousFrontendUrl = $_ENV['FRONTEND_URL'] ?? null;
-        $_ENV['FRONTEND_URL'] = 'http://example.test/app/';
+        $this->logger->expects(self::exactly(2))
+            ->method('info');
 
-        try {
-            $response = $this->controller->joinInvitation($invitation, $session, $invitationService);
-        } finally {
-            if (null === $previousFrontendUrl) {
-                unset($_ENV['FRONTEND_URL']);
-            } else {
-                $_ENV['FRONTEND_URL'] = $previousFrontendUrl;
-            }
-        }
+        $response = $this->controller->joinInvitation($invitation, $session, $invitationService);
 
         self::assertSame($gameId, $setCalls['game_id']);
         self::assertSame($uuid, $setCalls['invitation_uuid']);
@@ -168,6 +181,9 @@ final class InvitationControllerTest extends TestCase
         $this->container->method('get')
             ->with('security.token_storage')
             ->willReturn($tokenStorage);
+
+        $this->logger->expects(self::exactly(2))
+            ->method('info');
 
         $response = $this->controller->processInvitation($session, $invitationService);
 

@@ -21,6 +21,7 @@ use App\Service\Game\GameThrowService;
 use App\Service\Security\GameAccessServiceInterface;
 use DateTime;
 use DateTimeImmutable;
+use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
@@ -47,17 +48,17 @@ final class GameThrowServiceTest extends TestCase
         $round->setRoundNumber(1);
         $round->setGame($game);
 
-        $user1 = new User()->setUsername('Player 1');
+        $user1 = (new User())->setUsername('Player 1');
         $this->setPrivateProperty($user1, 'id', 1);
-        $player1 = new GamePlayers()
+        $player1 = (new GamePlayers())
             ->setPlayer($user1)
             ->setScore(50)
             ->setPosition(1);
         $game->addGamePlayer($player1);
 
-        $user2 = new User()->setUsername('Player 2');
+        $user2 = (new User())->setUsername('Player 2');
         $this->setPrivateProperty($user2, 'id', 2);
-        $player2 = new GamePlayers()
+        $player2 = (new GamePlayers())
             ->setPlayer($user2)
             ->setScore(40)
             ->setPosition(2);
@@ -128,16 +129,16 @@ final class GameThrowServiceTest extends TestCase
         $round->setRoundNumber(1);
         $round->setGame($game);
 
-        $user1 = new User()->setUsername('Player 1');
+        $user1 = (new User())->setUsername('Player 1');
         $this->setPrivateProperty($user1, 'id', 1);
-        $player1 = new GamePlayers()
+        $player1 = (new GamePlayers())
             ->setPlayer($user1)
             ->setPosition(1);
         $game->addGamePlayer($player1);
 
-        $user2 = new User()->setUsername('Player 2');
+        $user2 = (new User())->setUsername('Player 2');
         $this->setPrivateProperty($user2, 'id', 2);
-        $player2 = new GamePlayers()
+        $player2 = (new GamePlayers())
             ->setPlayer($user2)
             ->setPosition(2);
         $game->addGamePlayer($player2);
@@ -336,17 +337,17 @@ final class GameThrowServiceTest extends TestCase
         $round->setRoundNumber(1);
         $round->setGame($game);
 
-        $user1 = new User()->setUsername('Player 1');
+        $user1 = (new User())->setUsername('Player 1');
         $this->setPrivateProperty($user1, 'id', 1);
-        $player1 = new GamePlayers()
+        $player1 = (new GamePlayers())
             ->setPlayer($user1)
             ->setScore(50)
             ->setPosition(1);
         $game->addGamePlayer($player1);
 
-        $user2 = new User()->setUsername('Player 2');
+        $user2 = (new User())->setUsername('Player 2');
         $this->setPrivateProperty($user2, 'id', 2);
-        $player2 = new GamePlayers()
+        $player2 = (new GamePlayers())
             ->setPlayer($user2)
             ->setScore(40)
             ->setPosition(2);
@@ -403,17 +404,17 @@ final class GameThrowServiceTest extends TestCase
         $round->setRoundNumber(1);
         $round->setGame($game);
 
-        $user1 = new User()->setUsername('Player 1');
+        $user1 = (new User())->setUsername('Player 1');
         $this->setPrivateProperty($user1, 'id', 1);
-        $player1 = new GamePlayers()
+        $player1 = (new GamePlayers())
             ->setPlayer($user1)
             ->setScore(50)
             ->setPosition(1);
         $game->addGamePlayer($player1);
 
-        $user2 = new User()->setUsername('Player 2');
+        $user2 = (new User())->setUsername('Player 2');
         $this->setPrivateProperty($user2, 'id', 2);
-        $player2 = new GamePlayers()
+        $player2 = (new GamePlayers())
             ->setPlayer($user2)
             ->setScore(50)
             ->setPosition(2);
@@ -552,6 +553,17 @@ final class GameThrowServiceTest extends TestCase
             ->willReturn($queryBuilder);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::once())
+            ->method('wrapInTransaction')
+            ->with(self::isInstanceOf(\Closure::class))
+            ->willReturnCallback(static fn (callable $callback): mixed => $callback());
+        $entityManager->expects(self::once())
+            ->method('contains')
+            ->with($game)
+            ->willReturn(true);
+        $entityManager->expects(self::once())
+            ->method('lock')
+            ->with($game, LockMode::PESSIMISTIC_WRITE);
         $entityManager->expects(self::once())->method('remove')->with($lastThrow);
         $entityManager->expects(self::exactly(2))->method('flush');
 
