@@ -113,6 +113,35 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
 
     /**
      * @param int $gameId
+     * @param int $throwId
+     *
+     * @return RoundThrows|null
+     */
+    public function findLatestForGameBeforeThrow(int $gameId, int $throwId): ?RoundThrows
+    {
+        return $this->createLatestBeforeThrowQueryBuilder($gameId, $throwId)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
+     * @param int $gameId
+     * @param int $playerId
+     * @param int $throwId
+     *
+     * @return RoundThrows|null
+     */
+    public function findLatestForGameAndPlayerBeforeThrow(int $gameId, int $playerId, int $throwId): ?RoundThrows
+    {
+        return $this->createLatestBeforeThrowQueryBuilder($gameId, $throwId)
+            ->andWhere('rt.player = :playerId')
+            ->setParameter('playerId', $playerId)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
+     * @param int $gameId
      *
      * @return list<RoundThrows>
      */
@@ -385,6 +414,23 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
                 'rt.isBust AS isBust'
             )
             ->innerJoin('rt.round', 'r');
+    }
+
+    /**
+     * @param int $gameId
+     * @param int $throwId
+     *
+     * @return QueryBuilder
+     */
+    private function createLatestBeforeThrowQueryBuilder(int $gameId, int $throwId): QueryBuilder
+    {
+        return $this->createQueryBuilder('rt')
+            ->andWhere('rt.game = :gameId')
+            ->andWhere('rt.throwId < :throwId')
+            ->setParameter('gameId', $gameId)
+            ->setParameter('throwId', $throwId)
+            ->orderBy('rt.throwId', 'DESC')
+            ->setMaxResults(1);
     }
 
     /**
