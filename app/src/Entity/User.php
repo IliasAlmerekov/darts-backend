@@ -16,6 +16,7 @@ use Symfony\Component\Security\Core\User\UserInterface;
  */
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: '`user`')]
+#[ORM\Index(name: 'idx_user_is_guest_id', columns: ['is_guest', 'id'])]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_USERNAME', fields: ['username'])]
 
