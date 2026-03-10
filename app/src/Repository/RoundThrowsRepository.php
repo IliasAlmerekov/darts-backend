@@ -195,8 +195,12 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
      */
     public function findCurrentRoundStateSnapshot(int $gameId, int $roundNumber): array
     {
-        $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
-            <<<'SQL'
+        $connection = $this->getEntityManager()->getConnection();
+        $roundTable = $connection->getDatabasePlatform()->quoteIdentifier('round');
+
+        $rows = $connection->fetchAllAssociative(
+            sprintf(
+                <<<'SQL'
 SELECT
     round_state.playerId AS playerId,
     round_state.throwsCount AS throwsCount,
@@ -209,7 +213,7 @@ FROM (
         COUNT(rt.throw_id) AS throwsCount,
         MAX(rt.throw_id) AS lastThrowId
     FROM round_throws rt
-    INNER JOIN round r ON r.round_id = rt.round_id
+    INNER JOIN %s r ON r.round_id = rt.round_id
     WHERE rt.game_id = :gameId
       AND r.round_number = :roundNumber
     GROUP BY rt.player_id
@@ -217,6 +221,8 @@ FROM (
 INNER JOIN round_throws latest ON latest.throw_id = round_state.lastThrowId
 ORDER BY round_state.playerId ASC
 SQL,
+                $roundTable,
+            ),
             [
                 'gameId' => $gameId,
                 'roundNumber' => $roundNumber,
@@ -397,6 +403,9 @@ SQL,
     {
         $orderColumn = 'gamesPlayed' === $sortField ? 'gamesPlayed' : 'scoreAverage';
         $direction = 'ASC' === strtoupper($direction) ? 'ASC' : 'DESC';
+        $connection = $this->getEntityManager()->getConnection();
+        $roundTable = $connection->getDatabasePlatform()->quoteIdentifier('round');
+        $userTable = $connection->getDatabasePlatform()->quoteIdentifier('user');
         $sql = sprintf(
             <<<'SQL'
 SELECT
@@ -418,8 +427,8 @@ FROM (
         SUM(CASE WHEN rt.is_bust = 1 THEN 0 ELSE rt.value END) AS roundTotal
     FROM round_throws rt
     INNER JOIN game g ON g.game_id = rt.game_id
-    INNER JOIN round r ON r.round_id = rt.round_id
-    INNER JOIN user u ON u.id = rt.player_id
+    INNER JOIN %s r ON r.round_id = rt.round_id
+    INNER JOIN %s u ON u.id = rt.player_id
     WHERE g.status = :status
       AND u.is_guest = 0
       AND r.finished_at IS NOT NULL
@@ -429,11 +438,13 @@ GROUP BY player_rounds.playerId, player_rounds.username
 ORDER BY %s %s
 LIMIT :limit OFFSET :offset
 SQL,
+            $roundTable,
+            $userTable,
             $orderColumn,
             $direction,
         );
 
-        return $this->getEntityManager()->getConnection()->fetchAllAssociative(
+        return $connection->fetchAllAssociative(
             $sql,
             [
                 'status' => GameStatus::Finished->value,
