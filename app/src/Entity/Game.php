@@ -121,6 +121,7 @@ class Game
     /**
      * @return DateTime|null
      */
+    /** @psalm-suppress PossiblyUnusedMethod */
     public function getDate(): ?DateTime
     {
         return $this->date;

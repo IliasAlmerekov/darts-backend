@@ -74,5 +74,6 @@ interface GameRepositoryInterface
      *
      * @return Game[]
      */
+    /** @psalm-suppress PossiblyUnusedMethod */
     public function findFinished(int $limit, int $offset): array;
 }
