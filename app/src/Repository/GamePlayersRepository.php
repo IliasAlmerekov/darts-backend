@@ -116,11 +116,15 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
             return false;
         }
 
-        $result = $this->getEntityManager()->getConnection()->fetchOne(
-            <<<'SQL'
+        $connection = $this->getEntityManager()->getConnection();
+        $userTable = $connection->getDatabasePlatform()->quoteIdentifier('user');
+
+        $result = $connection->fetchOne(
+            sprintf(
+                <<<'SQL'
 SELECT 1
 FROM game_players gp
-INNER JOIN `user` u ON u.id = gp.player_id
+INNER JOIN %s u ON u.id = gp.player_id
 WHERE gp.game_id = :gameId
     AND LOWER(
         TRIM(
@@ -133,6 +137,8 @@ WHERE gp.game_id = :gameId
     ) = :name
 LIMIT 1
 SQL,
+                $userTable,
+            ),
             [
                 'gameId' => $gameId,
                 'name' => $normalizedName,
