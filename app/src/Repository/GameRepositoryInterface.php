@@ -14,6 +14,22 @@ use Doctrine\ORM\QueryBuilder;
 interface GameRepositoryInterface
 {
     /**
+        * @param int $limit
+        * @param int $offset
+        *
+     * @return list<array{
+     *     id:int,
+     *     date:string|null,
+     *     finishedAt:string|null,
+     *     playersCount:int,
+     *     winnerName:string|null,
+     *     winnerId:int|null,
+     *     winnerRounds:int
+     * }>
+     */
+    public function findFinishedOverview(int $limit, int $offset): array;
+
+    /**
      * @param mixed             $id
      * @param LockMode|int|null $lockMode
      * @param int|null          $lockVersion

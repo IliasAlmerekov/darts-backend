@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\Controller\GameStatsController;
+use App\Dto\GameOverviewResponseDto;
 use App\Dto\GameSummaryFinishedPlayerDto;
 use App\Dto\GameSummaryResponseDto;
 use App\Dto\GameSummaryWinnerDto;
@@ -15,7 +16,6 @@ use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Game\GameFinishServiceInterface;
 use App\Service\Game\GameStatisticsServiceInterface;
 use App\Dto\PlayerStatsDto;
-use App\Dto\GameOverviewResponseDto;
 use App\Dto\PlayerStatsResponseDto;
 use DateTimeImmutable;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -39,17 +39,31 @@ final class GameStatsControllerTest extends TestCase
 
     public function testGamesOverviewReturnsList(): void
     {
-        $game = $this->createMock(Game::class);
         $gameRepo = $this->createMock(GameRepositoryInterface::class);
-        $gameRepo->method('findFinished')->willReturn([$game]);
+        $gameRepo->expects($this->once())
+            ->method('findFinishedOverview')
+            ->with(10, 0)
+            ->willReturn([
+                [
+                    'id' => 1,
+                    'date' => '2026-03-10T00:00:00+00:00',
+                    'finishedAt' => '2026-03-10T12:34:56+00:00',
+                    'playersCount' => 2,
+                    'winnerName' => 'winner',
+                    'winnerId' => 7,
+                    'winnerRounds' => 3,
+                ],
+            ]);
+        $gameRepo->expects($this->never())->method('findFinished');
         $gameRepo->method('countFinishedGames')->willReturn(1);
 
-        $finishService = $this->createMock(GameFinishServiceInterface::class);
-        $finishService->method('getGameStats')->willReturn($this->createGameSummaryDto(gameId: 1, winnerRoundsPlayed: 3));
-
-        $response = $this->controller->gamesOverview($gameRepo, $finishService, 10, 0);
+        $response = $this->controller->gamesOverview($gameRepo, 10, 0);
 
         $this->assertInstanceOf(GameOverviewResponseDto::class, $response);
+        $this->assertCount(1, $response->items);
+        $this->assertSame(1, $response->items[0]->id);
+        $this->assertSame('winner', $response->items[0]->winnerName);
+        $this->assertSame(3, $response->items[0]->winnerRounds);
     }
 
     public function testGameDetailsReturnsStats(): void
