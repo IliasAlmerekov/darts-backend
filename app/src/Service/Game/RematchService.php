@@ -13,7 +13,6 @@ use App\Entity\Invitation;
 use App\Enum\GameStatus;
 use App\Repository\InvitationRepositoryInterface;
 use App\Service\Game\GameRoomServiceInterface;
-use App\Service\Game\GameFinishServiceInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -33,7 +32,6 @@ final readonly class RematchService implements RematchServiceInterface
     /**
      * @param GameRoomServiceInterface         $gameRoomService
      * @param PlayerManagementServiceInterface $playerManagementService
-     * @param GameFinishServiceInterface       $gameFinishService
      * @param InvitationRepositoryInterface    $invitationRepository
      * @param EntityManagerInterface           $entityManager
      * @param UrlGeneratorInterface            $urlGenerator
@@ -41,7 +39,7 @@ final readonly class RematchService implements RematchServiceInterface
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
-    public function __construct(private GameRoomServiceInterface $gameRoomService, private PlayerManagementServiceInterface $playerManagementService, private GameFinishServiceInterface $gameFinishService, private InvitationRepositoryInterface $invitationRepository, private EntityManagerInterface $entityManager, private UrlGeneratorInterface $urlGenerator, private GameAccessServiceInterface $gameAccessService)
+    public function __construct(private GameRoomServiceInterface $gameRoomService, private PlayerManagementServiceInterface $playerManagementService, private InvitationRepositoryInterface $invitationRepository, private EntityManagerInterface $entityManager, private UrlGeneratorInterface $urlGenerator, private GameAccessServiceInterface $gameAccessService)
     {
     }
 
@@ -50,7 +48,7 @@ final readonly class RematchService implements RematchServiceInterface
      *
      * @throws ORMException
      *
-     * @return array<string, mixed>
+      * @return array{success: bool, gameId?: int, invitationLink?: string, message?: string}
      */
     #[Override]
     public function createRematch(int $oldGameId): array
@@ -77,13 +75,11 @@ final readonly class RematchService implements RematchServiceInterface
 
         $this->playerManagementService->copyPlayers($oldGameId, $newGameId);
         $invitationLink = $this->createInvitation($newGameId);
-        $finishedPlayers = $this->gameFinishService->buildFinishedPlayersList($oldGameId);
 
         return [
             'success' => true,
             'gameId' => $newGameId,
             'invitationLink' => $invitationLink,
-            'finishedPlayers' => $finishedPlayers,
         ];
     }
 

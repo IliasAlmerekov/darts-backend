@@ -9,6 +9,9 @@ declare(strict_types=1);
 
 namespace App\Service\Game;
 
+use App\Dto\GameSummaryFinishedPlayerDto;
+use App\Dto\GameSummaryResponseDto;
+use App\Dto\GameSummaryWinnerDto;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Enum\GameStatus;
@@ -41,10 +44,10 @@ final readonly class GameFinishService implements GameFinishServiceInterface
      * @param Game                   $game
      * @param DateTimeInterface|null $finishedAt
      *
-     * @return array
+     * @return GameSummaryResponseDto
      */
     #[\Override]
-    public function finishGame(Game $game, ?DateTimeInterface $finishedAt = null): array
+    public function finishGame(Game $game, ?DateTimeInterface $finishedAt = null): GameSummaryResponseDto
     {
         $this->gameAccessService->assertPlayerInGameOrAdmin($game);
         $game->setStatus(GameStatus::Finished);
@@ -54,89 +57,32 @@ final readonly class GameFinishService implements GameFinishServiceInterface
         $game->setFinishedAt($timestamp);
         $this->recalculatePositions($game);
         $this->entityManager->flush();
-        $finishedRounds = $this->roundRepository->countFinishedRounds((int) $game->getGameId());
 
-        return $this->buildFinishedPlayersList((int) $game->getGameId(), $finishedRounds);
+        return $this->buildGameSummary($game);
     }
 
     /**
      * @param Game $game
      *
-     * @return array<string, mixed>
+     * @return GameSummaryResponseDto
      */
     #[\Override]
-    public function getGameStats(Game $game): array
+    public function getGameStats(Game $game): GameSummaryResponseDto
     {
-        $gameId = (int) $game->getGameId();
-        $finishedRounds = $this->roundRepository->countFinishedRounds($gameId);
-        $roundsPlayedMap = $this->roundThrowsRepository->getRoundsPlayedForGame($gameId);
-        $totalScoresMap = $this->roundThrowsRepository->getTotalScoreForGame($gameId);
-        $winner = $game->getWinner();
-        if (null === $winner) {
-            $players = $this->gamePlayersRepository->findByGameId($gameId);
-            foreach ($players as $player) {
-                if (true === $player->isWinner()) {
-                    $winner = $player->getPlayer();
-                    break;
-                }
-            }
-        }
-        $winnerId = $winner?->getId();
-        $finishedPlayers = $this->buildFinishedPlayersList(
-            $gameId,
-            $finishedRounds,
-            $roundsPlayedMap,
-            $totalScoresMap
-        );
-        $winnerRounds = 0;
-        $winnerName = null;
-        if (null !== $winnerId) {
-            foreach ($finishedPlayers as $fp) {
-                if ($fp['playerId'] === $winnerId) {
-                    $winnerRounds = $fp['roundsPlayed'];
-                    $winnerName = $fp['username'];
-                    break;
-                }
-            }
-        }
-        $winnerTotal = null !== $winnerId ? ($totalScoresMap[$winnerId] ?? 0.0) : 0.0;
-        $winnerAverage = $winnerRounds > 0 ? (float) $winnerTotal / (float) $winnerRounds : 0.0;
-
-        return [
-            'gameId' => $gameId,
-            'date' => $game->getDate(),
-            'finishedAt' => $game->getFinishedAt(),
-            'winner' => $winner
-                ? [
-                    'id' => $winner->getId(),
-                    'username' => $winnerName,
-                ]
-                : null,
-            'winnerRoundsPlayed' => $winnerRounds,
-            'winnerRoundAverage' => $winnerAverage,
-            'finishedPlayers' => $finishedPlayers,
-        ];
+        return $this->buildGameSummary($game);
     }
 
     /**
      * @param Game $game
      *
-     * @return list<array{
-     *     playerId:int|null,
-     *     username:string|null,
-     *     position:int|null,
-     *     roundsPlayed:int|null,
-     *     roundAverage:float
-     * }>
+     * @return GameSummaryResponseDto
      */
     #[\Override]
-    public function getFinishedPlayers(Game $game): array
+    public function getGameSummary(Game $game): GameSummaryResponseDto
     {
         $this->gameAccessService->assertPlayerInGameOrAdmin($game);
-        $gameId = (int) $game->getGameId();
-        $finishedRounds = $this->roundRepository->countFinishedRounds($gameId);
 
-        return $this->buildFinishedPlayersList($gameId, $finishedRounds);
+        return $this->buildGameSummary($game);
     }
 
     /**
@@ -262,5 +208,105 @@ final readonly class GameFinishService implements GameFinishServiceInterface
         }
 
         return $baseName;
+    }
+
+    /**
+     * @param Game $game
+     *
+     * @return GameSummaryResponseDto
+     */
+    private function buildGameSummary(Game $game): GameSummaryResponseDto
+    {
+        $gameId = (int) $game->getGameId();
+        $finishedRounds = $this->roundRepository->countFinishedRounds($gameId);
+        $roundsPlayedMap = $this->roundThrowsRepository->getRoundsPlayedForGame($gameId);
+        $totalScoresMap = $this->roundThrowsRepository->getTotalScoreForGame($gameId);
+
+        return $this->createGameSummaryResponseDto($game, $finishedRounds, $roundsPlayedMap, $totalScoresMap);
+    }
+
+    /**
+        * @param Game              $game
+        * @param int|null          $finishedRounds
+        * @param array<int, int>   $roundsPlayedMap
+        * @param array<int, float> $totalScoresMap
+     *
+     * @return GameSummaryResponseDto
+     */
+    private function createGameSummaryResponseDto(Game $game, ?int $finishedRounds, array $roundsPlayedMap, array $totalScoresMap): GameSummaryResponseDto
+    {
+        $gameId = (int) $game->getGameId();
+        $finishedPlayers = $this->buildFinishedPlayersList($gameId, $finishedRounds, $roundsPlayedMap, $totalScoresMap);
+        $winner = $this->resolveWinner($game, $gameId);
+        $winnerId = $winner?->getId();
+        $winnerRounds = 0;
+        $winnerName = null;
+
+        if (null !== $winnerId) {
+            foreach ($finishedPlayers as $finishedPlayer) {
+                if ($finishedPlayer['playerId'] === $winnerId) {
+                    $winnerRounds = $finishedPlayer['roundsPlayed'] ?? 0;
+                    $winnerName = $finishedPlayer['username'];
+
+                    break;
+                }
+            }
+        }
+
+        $winnerTotal = null !== $winnerId ? ($totalScoresMap[$winnerId] ?? 0.0) : 0.0;
+        $winnerAverage = $winnerRounds > 0 ? (float) $winnerTotal / (float) $winnerRounds : 0.0;
+
+        return new GameSummaryResponseDto(
+            gameId: $gameId,
+            finishedAt: $game->getFinishedAt()?->format(DateTimeInterface::ATOM),
+            winner: null !== $winnerId ? new GameSummaryWinnerDto($winnerId, $winnerName) : null,
+            winnerRoundsPlayed: $winnerRounds,
+            winnerRoundAverage: $winnerAverage,
+            finishedPlayers: $this->createFinishedPlayerDtos($finishedPlayers),
+        );
+    }
+
+    /**
+     * @param Game $game
+     * @param int  $gameId
+     *
+     * @return \App\Entity\User|null
+     */
+    private function resolveWinner(Game $game, int $gameId): ?\App\Entity\User
+    {
+        $winner = $game->getWinner();
+        if (null !== $winner) {
+            return $winner;
+        }
+
+        $players = $this->gamePlayersRepository->findByGameId($gameId);
+        foreach ($players as $player) {
+            if (true === $player->isWinner()) {
+                return $player->getPlayer();
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array $finishedPlayers
+     *
+     * @return list<GameSummaryFinishedPlayerDto>
+     */
+    private function createFinishedPlayerDtos(array $finishedPlayers): array
+    {
+        $result = [];
+        foreach ($finishedPlayers as $finishedPlayer) {
+            $result[] = new GameSummaryFinishedPlayerDto(
+                playerId: $finishedPlayer['playerId'],
+                username: $finishedPlayer['username'],
+                position: $finishedPlayer['position'],
+                roundsPlayed: $finishedPlayer['roundsPlayed'],
+                roundAverage: $finishedPlayer['roundAverage'],
+            );
+        }
+
+        return $result;
     }
 }

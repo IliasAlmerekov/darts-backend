@@ -71,13 +71,7 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     #[Override]
     public function addPlayer(int $gameId, int $playerId, ?int $position = null): GamePlayers
     {
-        $player = $this->entityManager->getReference(User::class, $playerId);
-        $gamePlayer = new GamePlayers();
-        $gamePlayer->setGame($this->entityManager->getReference(Game::class, $gameId));
-        $gamePlayer->setPlayer($player);
-        $gamePlayer->setDisplayNameSnapshot($this->resolveDisplayNameSnapshot($player, $playerId));
-        $gamePlayer->setPosition($this->resolvePosition($position, $gameId));
-        $this->entityManager->persist($gamePlayer);
+        $gamePlayer = $this->createGamePlayer($gameId, $playerId, $position);
         $this->entityManager->flush();
 
         return $gamePlayer;
@@ -100,6 +94,7 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
         $oldGamePlayers = $this->gamePlayersRepository->findByGameId($fromGameId);
         $filter = $playerIds;
         $orderIndex = 0;
+        $hasCopiedPlayers = false;
         foreach ($oldGamePlayers as $oldGamePlayer) {
             $player = $oldGamePlayer->getPlayer();
             $playerId = $player?->getId();
@@ -112,8 +107,13 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
                     $orderIndex = max($orderIndex, $position);
                 }
 
-                $this->addPlayer($toGameId, $playerId, $position);
+                $this->createGamePlayer($toGameId, $playerId, $position);
+                $hasCopiedPlayers = true;
             }
+        }
+
+        if (true === $hasCopiedPlayers) {
+            $this->entityManager->flush();
         }
     }
 
@@ -275,5 +275,27 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
         return null !== $displayName && '' !== $displayName
             ? $displayName
             : sprintf('player_%d', $playerId);
+    }
+
+    /**
+     * @param int      $gameId
+     * @param int      $playerId
+     * @param int|null $position
+     *
+     * @throws ORMException
+     *
+     * @return GamePlayers
+     */
+    private function createGamePlayer(int $gameId, int $playerId, ?int $position = null): GamePlayers
+    {
+        $player = $this->entityManager->getReference(User::class, $playerId);
+        $gamePlayer = new GamePlayers();
+        $gamePlayer->setGame($this->entityManager->getReference(Game::class, $gameId));
+        $gamePlayer->setPlayer($player);
+        $gamePlayer->setDisplayNameSnapshot($this->resolveDisplayNameSnapshot($player, $playerId));
+        $gamePlayer->setPosition($this->resolvePosition($position, $gameId));
+        $this->entityManager->persist($gamePlayer);
+
+        return $gamePlayer;
     }
 }

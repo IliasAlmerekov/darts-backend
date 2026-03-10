@@ -321,20 +321,6 @@ final class GameRoomController extends AbstractController
                 new OA\Property(property: 'success', type: 'boolean', example: true),
                 new OA\Property(property: 'gameId', type: 'integer', example: 456, nullable: true),
                 new OA\Property(property: 'invitationLink', type: 'string', example: '/api/invite/join/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', nullable: true),
-                new OA\Property(
-                    property: 'finishedPlayers',
-                    type: 'array',
-                    items: new OA\Items(
-                        properties: [
-                            new OA\Property(property: 'playerId', type: 'integer', example: 1, nullable: true),
-                            new OA\Property(property: 'username', type: 'string', example: 'alice', nullable: true),
-                            new OA\Property(property: 'position', type: 'integer', example: 1, nullable: true),
-                            new OA\Property(property: 'roundsPlayed', type: 'integer', example: 10, nullable: true),
-                            new OA\Property(property: 'roundAverage', type: 'number', format: 'float', example: 54.2),
-                        ],
-                        type: 'object'
-                    )
-                ),
                 new OA\Property(property: 'message', type: 'string', example: 'Vorheriges Spiel nicht gefunden', nullable: true),
                 new OA\Property(property: 'status', type: 'integer', example: 404, nullable: true),
             ],

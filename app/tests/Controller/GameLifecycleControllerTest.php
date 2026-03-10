@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\Controller\GameLifecycleController;
+use App\Dto\GameSummaryFinishedPlayerDto;
+use App\Dto\GameSummaryResponseDto;
+use App\Dto\GameSummaryWinnerDto;
 use App\Dto\GameSettingsResponseDto;
 use App\Dto\GameSettingsRequest;
 use App\Dto\StartGameRequest;
@@ -22,6 +25,7 @@ use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Game\GameServiceInterface;
 use App\Service\Game\GameSettingsServiceInterface;
 use App\Service\Game\GameStartServiceInterface;
+use App\Service\Game\RematchStartServiceInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use OpenApi\Attributes as OA;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -66,6 +70,22 @@ final class GameLifecycleControllerTest extends TestCase
 
         $this->expectException(GameMustHaveValidPlayerCountException::class);
         $this->controller->start($game, $startService, $dto);
+    }
+
+    public function testCreateAndStartRematchReturnsStartedGame(): void
+    {
+        $gameId = 42;
+        $game = $this->createMock(Game::class);
+        $dto = new StartGameRequest();
+        $rematchStartService = $this->createMock(RematchStartServiceInterface::class);
+        $rematchStartService->expects($this->once())
+            ->method('createAndStart')
+            ->with($gameId, $dto)
+            ->willReturn($game);
+
+        $response = $this->controller->createAndStartRematch($gameId, $rematchStartService, $dto);
+
+        $this->assertSame($game, $response);
     }
 
     public function testCreateSettingsCreatesGame(): void
@@ -217,23 +237,30 @@ final class GameLifecycleControllerTest extends TestCase
         $this->controller->getSettings($game, $gameAccessService);
     }
 
-    public function testFinishedReturnsResult(): void
+    public function testFinishReturnsUnifiedSummaryPayload(): void
     {
         $game = $this->createMock(Game::class);
+        $summary = $this->createGameSummaryDto();
         $finishService = $this->createMock(GameFinishServiceInterface::class);
-        $finishService->method('getFinishedPlayers')->willReturn([
-            [
-                'playerId' => 1,
-                'username' => 'player',
-                'position' => 1,
-                'roundsPlayed' => 5,
-                'roundAverage' => 60.0,
-            ],
-        ]);
+        $finishService->method('finishGame')->with($game)->willReturn($summary);
+
+        $response = $this->controller->finish($game, $finishService);
+
+        $this->assertSame($summary, $response);
+        $this->assertInstanceOf(GameSummaryResponseDto::class, $response);
+    }
+
+    public function testFinishedReturnsUnifiedSummaryPayload(): void
+    {
+        $game = $this->createMock(Game::class);
+        $summary = $this->createGameSummaryDto();
+        $finishService = $this->createMock(GameFinishServiceInterface::class);
+        $finishService->method('getGameSummary')->with($game)->willReturn($summary);
 
         $response = $this->controller->finished($game, $finishService);
 
-        $this->assertIsArray($response);
+        $this->assertSame($summary, $response);
+        $this->assertInstanceOf(GameSummaryResponseDto::class, $response);
     }
 
     public function testReopenReturnsGameState(): void
@@ -499,6 +526,26 @@ final class GameLifecycleControllerTest extends TestCase
                 'startScore' => 301,
                 'doubleOut' => true,
                 'tripleOut' => false,
+            ],
+        );
+    }
+
+    private function createGameSummaryDto(): GameSummaryResponseDto
+    {
+        return new GameSummaryResponseDto(
+            gameId: 55,
+            finishedAt: '2026-03-10T12:00:00+00:00',
+            winner: new GameSummaryWinnerDto(1, 'player'),
+            winnerRoundsPlayed: 5,
+            winnerRoundAverage: 60.0,
+            finishedPlayers: [
+                new GameSummaryFinishedPlayerDto(
+                    playerId: 1,
+                    username: 'player',
+                    position: 1,
+                    roundsPlayed: 5,
+                    roundAverage: 60.0,
+                ),
             ],
         );
     }
