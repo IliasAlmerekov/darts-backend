@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Game;
 
+use App\Dto\ThrowRecordingResultDto;
 use App\Dto\ThrowDeltaDto;
 use App\Dto\ThrowRequest;
 use App\Entity\Game;
@@ -24,9 +25,9 @@ interface GameThrowServiceInterface
      *
      * @throws ApiExceptionInterface If the throw is invalid for current turn/state
      *
-     * @return void
+    * @return ThrowRecordingResultDto Post-throw context for compact delta acknowledgements
      */
-    public function recordThrow(Game $game, ThrowRequest $dto): void;
+    public function recordThrow(Game $game, ThrowRequest $dto): ThrowRecordingResultDto;
 
     /**
      * Undo the last throw in the game.
