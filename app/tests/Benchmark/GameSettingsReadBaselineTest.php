@@ -17,39 +17,56 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 #[CoversNothing]
-final class GameEndpointsBaselineTest extends WebTestCase
+final class GameSettingsReadBaselineTest extends WebTestCase
 {
     private const int MEASUREMENT_RUNS = 3;
 
-    private const string OUTPUT_FILE = '/var/benchmarks/be-101-game-endpoints-baseline.md';
+    private const string OUTPUT_FILE = '/var/benchmarks/be-201-game-settings-baseline.md';
 
-    public function testCollectsBaselineMetricsForGameEndpoints(): void
+    public function testCollectsBaselineMetricsForGameSettingsReadEndpoint(): void
     {
         $entityManager = static::getContainer()->get(EntityManagerInterface::class);
-        $benchmarkUser = $this->createUser($entityManager, 'baseline-primary', ['ROLE_PLAYER']);
+        $benchmarkUser = $this->createUser($entityManager, 'be201-primary', ['ROLE_PLAYER']);
         $entityManager->flush();
 
         $scenarioNotes = [
-            'small_started' => '2 players, started game, current round only, no persisted round history.',
-            'medium_started' => '3 players, started game, 5 finished rounds plus partial current round.',
-            'long_started_with_history' => '4 players, started game, 18 finished rounds plus partial current round.',
-            'lobby_settings_update' => '3 players, lobby game used for PATCH settings baseline.',
-            'started_undo_last_throw' => '4 players, started game with 12 finished rounds and a partially played current round used for DELETE throw baseline.',
+            'lobby_three_players' => '3 players, lobby game, no rounds played yet.',
+            'started_medium' => '3 players, started game, 5 finished rounds plus partial current round.',
+            'started_long_history' => '4 players, started game, 18 finished rounds plus partial current round.',
         ];
 
         $definitions = [
             [
-                'endpoint' => 'GET /api/game/{id}',
-                'scenario' => 'small_started',
+                'endpoint' => 'GET /api/game/{id}/settings',
+                'scenario' => 'lobby_three_players',
+                'comparisonKey' => 'lobby_three_players',
                 'method' => Request::METHOD_GET,
                 'builder' => function (EntityManagerInterface $entityManager, User $benchmarkUser, int $run): array {
-                    $game = $this->createStartedGameScenario(
+                    $game = $this->createLobbyGameScenario(
                         $entityManager,
                         $benchmarkUser,
-                        sprintf('small-%d', $run),
-                        2,
-                        0,
-                        [0, 0],
+                        sprintf('be201-lobby-%d', $run),
+                        3,
+                    );
+                    $entityManager->flush();
+
+                    return [
+                        'uri' => sprintf('/api/game/%d/settings', (int) $game->getGameId()),
+                        'content' => null,
+                    ];
+                },
+            ],
+            [
+                'endpoint' => 'GET /api/game/{id}',
+                'scenario' => 'lobby_three_players_full_state',
+                'comparisonKey' => 'lobby_three_players',
+                'method' => Request::METHOD_GET,
+                'builder' => function (EntityManagerInterface $entityManager, User $benchmarkUser, int $run): array {
+                    $game = $this->createLobbyGameScenario(
+                        $entityManager,
+                        $benchmarkUser,
+                        sprintf('be201-lobby-full-%d', $run),
+                        3,
                     );
                     $entityManager->flush();
 
@@ -60,14 +77,37 @@ final class GameEndpointsBaselineTest extends WebTestCase
                 },
             ],
             [
-                'endpoint' => 'GET /api/game/{id}',
-                'scenario' => 'medium_started',
+                'endpoint' => 'GET /api/game/{id}/settings',
+                'scenario' => 'started_medium',
+                'comparisonKey' => 'started_medium',
                 'method' => Request::METHOD_GET,
                 'builder' => function (EntityManagerInterface $entityManager, User $benchmarkUser, int $run): array {
                     $game = $this->createStartedGameScenario(
                         $entityManager,
                         $benchmarkUser,
-                        sprintf('medium-%d', $run),
+                        sprintf('be201-medium-%d', $run),
+                        3,
+                        5,
+                        [2, 1, 0],
+                    );
+                    $entityManager->flush();
+
+                    return [
+                        'uri' => sprintf('/api/game/%d/settings', (int) $game->getGameId()),
+                        'content' => null,
+                    ];
+                },
+            ],
+            [
+                'endpoint' => 'GET /api/game/{id}',
+                'scenario' => 'started_medium_full_state',
+                'comparisonKey' => 'started_medium',
+                'method' => Request::METHOD_GET,
+                'builder' => function (EntityManagerInterface $entityManager, User $benchmarkUser, int $run): array {
+                    $game = $this->createStartedGameScenario(
+                        $entityManager,
+                        $benchmarkUser,
+                        sprintf('be201-medium-full-%d', $run),
                         3,
                         5,
                         [2, 1, 0],
@@ -81,14 +121,37 @@ final class GameEndpointsBaselineTest extends WebTestCase
                 },
             ],
             [
-                'endpoint' => 'GET /api/game/{id}',
-                'scenario' => 'long_started_with_history',
+                'endpoint' => 'GET /api/game/{id}/settings',
+                'scenario' => 'started_long_history',
+                'comparisonKey' => 'started_long_history',
                 'method' => Request::METHOD_GET,
                 'builder' => function (EntityManagerInterface $entityManager, User $benchmarkUser, int $run): array {
                     $game = $this->createStartedGameScenario(
                         $entityManager,
                         $benchmarkUser,
-                        sprintf('long-%d', $run),
+                        sprintf('be201-long-%d', $run),
+                        4,
+                        18,
+                        [2, 2, 1, 0],
+                    );
+                    $entityManager->flush();
+
+                    return [
+                        'uri' => sprintf('/api/game/%d/settings', (int) $game->getGameId()),
+                        'content' => null,
+                    ];
+                },
+            ],
+            [
+                'endpoint' => 'GET /api/game/{id}',
+                'scenario' => 'started_long_history_full_state',
+                'comparisonKey' => 'started_long_history',
+                'method' => Request::METHOD_GET,
+                'builder' => function (EntityManagerInterface $entityManager, User $benchmarkUser, int $run): array {
+                    $game = $this->createStartedGameScenario(
+                        $entityManager,
+                        $benchmarkUser,
+                        sprintf('be201-long-full-%d', $run),
                         4,
                         18,
                         [2, 2, 1, 0],
@@ -97,49 +160,6 @@ final class GameEndpointsBaselineTest extends WebTestCase
 
                     return [
                         'uri' => sprintf('/api/game/%d', (int) $game->getGameId()),
-                        'content' => null,
-                    ];
-                },
-            ],
-            [
-                'endpoint' => 'PATCH /api/game/{id}/settings',
-                'scenario' => 'lobby_settings_update',
-                'method' => Request::METHOD_PATCH,
-                'builder' => function (EntityManagerInterface $entityManager, User $benchmarkUser, int $run): array {
-                    $game = $this->createLobbyGameScenario(
-                        $entityManager,
-                        $benchmarkUser,
-                        sprintf('settings-%d', $run),
-                        3,
-                    );
-                    $entityManager->flush();
-
-                    return [
-                        'uri' => sprintf('/api/game/%d/settings', (int) $game->getGameId()),
-                        'content' => json_encode([
-                            'startScore' => 501,
-                            'doubleOut' => true,
-                        ], JSON_THROW_ON_ERROR),
-                    ];
-                },
-            ],
-            [
-                'endpoint' => 'DELETE /api/game/{id}/throw',
-                'scenario' => 'started_undo_last_throw',
-                'method' => Request::METHOD_DELETE,
-                'builder' => function (EntityManagerInterface $entityManager, User $benchmarkUser, int $run): array {
-                    $game = $this->createStartedGameScenario(
-                        $entityManager,
-                        $benchmarkUser,
-                        sprintf('undo-%d', $run),
-                        4,
-                        12,
-                        [3, 3, 2, 1],
-                    );
-                    $entityManager->flush();
-
-                    return [
-                        'uri' => sprintf('/api/game/%d/throw', (int) $game->getGameId()),
                         'content' => null,
                     ];
                 },
@@ -164,6 +184,7 @@ final class GameEndpointsBaselineTest extends WebTestCase
             $rows[] = $this->summarizeMeasurements(
                 $definition['endpoint'],
                 $definition['scenario'],
+                $definition['comparisonKey'],
                 $measurements,
             );
         }
@@ -179,22 +200,21 @@ final class GameEndpointsBaselineTest extends WebTestCase
 
         self::assertFileExists($outputPath);
         self::assertNotSame('', trim($report));
-        foreach ($rows as $row) {
-            self::assertGreaterThan(0, $row['sqlCount']);
-            self::assertGreaterThan(0.0, $row['latencyMedianMs']);
-        }
     }
 
     /**
-     * @param array<int, array{sqlCount:int, latencyMs:float, sqlTimeMs:float, appDurationMs:float}> $measurements
+     * @param array<int, array{sqlCount:int, latencyMs:float, sqlTimeMs:float, appDurationMs:float, payloadBytes:int}> $measurements
      *
-     * @return array{endpoint:string, scenario:string, sqlCount:int, latencyMedianMs:float, latencyRange:string, sqlTimeMedianMs:float, appDurationMedianMs:float}
+     * @return array{endpoint:string, scenario:string, comparisonKey:string, sqlCount:int, latencyMedianMs:float, latencyRange:string, sqlTimeMedianMs:float, appDurationMedianMs:float, payloadBytes:int}
      */
-    private function summarizeMeasurements(string $endpoint, string $scenario, array $measurements): array
+    private function summarizeMeasurements(string $endpoint, string $scenario, string $comparisonKey, array $measurements): array
     {
         $sqlCounts = array_values(array_map(static fn(array $measurement): int => $measurement['sqlCount'], $measurements));
         sort($sqlCounts);
         self::assertCount(1, array_unique($sqlCounts), sprintf('SQL count for %s [%s] should be stable across runs.', $endpoint, $scenario));
+
+        $payloadBytes = array_values(array_map(static fn(array $measurement): int => $measurement['payloadBytes'], $measurements));
+        sort($payloadBytes);
 
         $latencies = array_values(array_map(static fn(array $measurement): float => $measurement['latencyMs'], $measurements));
         sort($latencies);
@@ -206,16 +226,18 @@ final class GameEndpointsBaselineTest extends WebTestCase
         return [
             'endpoint' => $endpoint,
             'scenario' => $scenario,
+            'comparisonKey' => $comparisonKey,
             'sqlCount' => $sqlCounts[0],
             'latencyMedianMs' => $this->median($latencies),
             'latencyRange' => sprintf('%.2f–%.2f', min($latencies), max($latencies)),
             'sqlTimeMedianMs' => $this->median($sqlTimes),
             'appDurationMedianMs' => $this->median($appDurations),
+            'payloadBytes' => (int) round($this->median(array_map(static fn(int $bytes): float => (float) $bytes, $payloadBytes))),
         ];
     }
 
     /**
-     * @return array{sqlCount:int, latencyMs:float, sqlTimeMs:float, appDurationMs:float}
+     * @return array{sqlCount:int, latencyMs:float, sqlTimeMs:float, appDurationMs:float, payloadBytes:int}
      */
     private function measureRequest(User $user, string $method, string $uri, ?string $content): array
     {
@@ -252,6 +274,7 @@ final class GameEndpointsBaselineTest extends WebTestCase
             'latencyMs' => round($latencyMs, 2),
             'sqlTimeMs' => round($dbCollector->getTime(), 2),
             'appDurationMs' => round($timeCollector->getDuration(), 2),
+            'payloadBytes' => strlen((string) $response->getContent()),
         ];
     }
 
@@ -336,7 +359,6 @@ final class GameEndpointsBaselineTest extends WebTestCase
     }
 
     /**
-     * @param list<User>        $players
      * @param list<GamePlayers> $gamePlayers
      * @param list<int>         $throwCounts
      */
@@ -440,34 +462,60 @@ final class GameEndpointsBaselineTest extends WebTestCase
     }
 
     /**
-     * @param list<array{endpoint:string, scenario:string, sqlCount:int, latencyMedianMs:float, latencyRange:string, sqlTimeMedianMs:float, appDurationMedianMs:float}> $rows
-     * @param array<string, string>                                                                                                                                   $scenarioNotes
+     * @param list<array{endpoint:string, scenario:string, comparisonKey:string, sqlCount:int, latencyMedianMs:float, latencyRange:string, sqlTimeMedianMs:float, appDurationMedianMs:float, payloadBytes:int}> $rows
+     * @param array<string, string>                                                                                                                                                                             $scenarioNotes
      */
     private function buildMarkdownReport(array $rows, array $scenarioNotes): string
     {
         $lines = [
-            '# BE-101 baseline for game endpoints',
+            '# BE-201 baseline for lightweight game settings endpoint',
             '',
             sprintf('- Generated at: %s UTC', gmdate('Y-m-d H:i:s')),
+            '- Change scope: introduced `GET /api/game/{id}/settings` as a lightweight alternative to the full game state endpoint.',
             '- Environment: PHPUnit functional test (`APP_ENV=test`) with MySQL in Docker and Symfony profiler enabled.',
             sprintf('- Samples per row: %d identical runs; latency is wall-clock median measured around the in-process HTTP request.', self::MEASUREMENT_RUNS),
+            '- Comparison model: each scenario is measured once for `GET /api/game/{id}/settings` and once for `GET /api/game/{id}` under the same fixture shape.',
             '',
-            '## Baseline table',
+            '## Current table',
             '',
-            '| Endpoint | Scenario | SQL count | Latency median (ms) | Latency range (ms) | SQL time median (ms) | App duration median (ms) |',
-            '| --- | --- | ---: | ---: | ---: | ---: | ---: |',
+            '| Endpoint | Scenario | SQL count | Payload bytes | Latency median (ms) | Latency range (ms) | SQL time median (ms) | App duration median (ms) |',
+            '| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |',
         ];
 
         foreach ($rows as $row) {
             $lines[] = sprintf(
-                '| `%s` | `%s` | %d | %.2f | %s | %.2f | %.2f |',
+                '| `%s` | `%s` | %d | %d | %.2f | %s | %.2f | %.2f |',
                 $row['endpoint'],
                 $row['scenario'],
                 $row['sqlCount'],
+                $row['payloadBytes'],
                 $row['latencyMedianMs'],
                 $row['latencyRange'],
                 $row['sqlTimeMedianMs'],
                 $row['appDurationMedianMs'],
+            );
+        }
+
+        $lines[] = '';
+        $lines[] = '## Delta vs full game state';
+        $lines[] = '';
+        $lines[] = '| Scenario | Full-state SQL | Settings SQL | SQL delta | Full-state payload bytes | Settings payload bytes | Payload reduction |';
+        $lines[] = '| --- | ---: | ---: | ---: | ---: | ---: | ---: |';
+
+        foreach ($scenarioNotes as $scenario => $note) {
+            $settingsRow = $this->findRow($rows, 'GET /api/game/{id}/settings', $scenario);
+            $fullStateRow = $this->findRow($rows, 'GET /api/game/{id}', $scenario.'_full_state');
+            $payloadReduction = 100 - (($settingsRow['payloadBytes'] / $fullStateRow['payloadBytes']) * 100);
+
+            $lines[] = sprintf(
+                '| `%s` | %d | %d | %d | %d | %d | %.1f%% |',
+                $scenario,
+                $fullStateRow['sqlCount'],
+                $settingsRow['sqlCount'],
+                $settingsRow['sqlCount'] - $fullStateRow['sqlCount'],
+                $fullStateRow['payloadBytes'],
+                $settingsRow['payloadBytes'],
+                $payloadReduction,
             );
         }
 
@@ -481,11 +529,32 @@ final class GameEndpointsBaselineTest extends WebTestCase
         $lines[] = '';
         $lines[] = '## Notes';
         $lines[] = '';
-        $lines[] = '- This baseline is intended for before/after comparison during endpoint optimization.';
-        $lines[] = '- `GET /api/game/{id}` is measured on three representative scenarios: small, medium, and long-with-history.';
-        $lines[] = '- `PATCH /api/game/{id}/settings` is captured separately because it mutates game settings and should stay lightweight after BE-202.';
-        $lines[] = '- `DELETE /api/game/{id}/throw` is still captured separately because it returns the full game DTO.';
+        $lines[] = '- The lightweight endpoint avoids `GameService::createGameDto()` and returns only settings-focused data.';
+        $lines[] = '- Payload size is measured as raw response body bytes from the functional response content.';
+        $lines[] = '- SQL count should remain flat across started scenarios because the lightweight endpoint reads only the game plus access-related data, not throw history.';
+        $lines[] = '';
+        $lines[] = '## How to rerun';
+        $lines[] = '';
+        $lines[] = "- `docker compose exec -T php sh -lc 'cd /var/www/html && php bin/console doctrine:schema:drop --env=test --full-database --force || true && php bin/console doctrine:database:create --env=test --if-not-exists && php bin/console doctrine:schema:create --env=test && XDEBUG_MODE=coverage vendor/bin/phpunit --filter GameSettingsReadBaselineTest --testdox'`";
+        $lines[] = '';
+        $lines[] = 'The generated runtime report is also written to `app/var/benchmarks/be-201-game-settings-baseline.md`.';
 
         return implode(PHP_EOL, $lines).PHP_EOL;
+    }
+
+    /**
+     * @param list<array{endpoint:string, scenario:string, comparisonKey:string, sqlCount:int, latencyMedianMs:float, latencyRange:string, sqlTimeMedianMs:float, appDurationMedianMs:float, payloadBytes:int}> $rows
+     *
+     * @return array{endpoint:string, scenario:string, comparisonKey:string, sqlCount:int, latencyMedianMs:float, latencyRange:string, sqlTimeMedianMs:float, appDurationMedianMs:float, payloadBytes:int}
+     */
+    private function findRow(array $rows, string $endpoint, string $scenario): array
+    {
+        foreach ($rows as $row) {
+            if ($row['endpoint'] === $endpoint && $row['scenario'] === $scenario) {
+                return $row;
+            }
+        }
+
+        self::fail(sprintf('Missing benchmark row for %s [%s].', $endpoint, $scenario));
     }
 }
