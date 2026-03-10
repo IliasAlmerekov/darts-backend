@@ -9,12 +9,14 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Dto\GameSettingsResponseDto;
 use App\Dto\GameSettingsRequest;
 use App\Dto\GameResponseDto;
 use App\Dto\SuccessMessageDto;
 use App\Dto\StartGameRequest;
 use App\Entity\Game;
 use App\Exception\ApiExceptionInterface;
+use App\Exception\Game\GameIdMissingException;
 use App\Http\Attribute\ApiResponse;
 use App\Service\Game\GameAbortServiceInterface;
 use App\Service\Game\GameFinishServiceInterface;
@@ -70,6 +72,8 @@ final class GameLifecycleController extends AbstractController
 
     /**
      * Creates a game and applies settings.
+      *
+      * @deprecated Use POST /api/room/create followed by PATCH/GET /api/game/{gameId}/settings for the compact settings flow.
      *
      * @param GameRoomServiceInterface     $gameRoomService
      * @param GameSettingsServiceInterface $gameSettingsService
@@ -79,10 +83,15 @@ final class GameLifecycleController extends AbstractController
      *
      * @return mixed
      */
+    #[OA\Post(
+        summary: 'Legacy-Endpoint für Spielanlage mit vollständigem Spielzustand',
+        description: 'Deprecated. Verwenden Sie stattdessen `POST /api/room/create`, danach `PATCH /api/game/{gameId}/settings` und `GET /api/game/{gameId}/settings` für den kompakten Settings-Flow.',
+        deprecated: true
+    )]
     #[OA\RequestBody(required: true, content: new OA\JsonContent(ref: new Model(type: GameSettingsRequest::class)))]
     #[OA\Response(
         response: Response::HTTP_CREATED,
-        description: 'Spiel wurde mit Einstellungen erstellt.',
+        description: 'Deprecated: erstellt ein Spiel und liefert weiterhin den vollständigen Spielzustand zurück.',
         content: new OA\JsonContent(ref: new Model(type: GameResponseDto::class))
     )]
     #[ApiResponse(status: Response::HTTP_CREATED)]
@@ -105,27 +114,55 @@ final class GameLifecycleController extends AbstractController
      *
      * @param Game                         $game
      * @param GameSettingsServiceInterface $gameSettingsService
-     * @param GameServiceInterface         $gameService
      * @param GameSettingsRequest          $dto
      *
-     * @return mixed
+     * @return GameSettingsResponseDto
      */
+    #[OA\Patch(
+        summary: 'Kompakte Spieleinstellungen aktualisieren',
+        description: 'Bevorzugter Settings-Flow nach der Raumerstellung. Aktualisiert nur Einstellungen und gibt `GameSettingsResponseDto` statt des vollständigen Spielzustands zurück.'
+    )]
     #[OA\Parameter(name: 'gameId', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
     #[OA\RequestBody(required: true, content: new OA\JsonContent(ref: new Model(type: GameSettingsRequest::class)))]
     #[OA\Response(
         response: Response::HTTP_OK,
         description: 'Spieleinstellungen wurden aktualisiert.',
-        content: new OA\JsonContent(ref: new Model(type: GameResponseDto::class))
+        content: new OA\JsonContent(ref: new Model(type: GameSettingsResponseDto::class))
     )]
     #[ApiResponse]
     #[Route('/api/game/{gameId}/settings', name: 'app_game_settings', methods: ['PATCH'], format: 'json')]
-    public function updateSettings(#[AttributeMapEntity(id: 'gameId')] Game $game, GameSettingsServiceInterface $gameSettingsService, GameServiceInterface $gameService, #[MapRequestPayload] GameSettingsRequest $dto): mixed
+    public function updateSettings(#[AttributeMapEntity(id: 'gameId')] Game $game, GameSettingsServiceInterface $gameSettingsService, #[MapRequestPayload] GameSettingsRequest $dto): GameSettingsResponseDto
     {
         $gameSettingsService->updateSettings($game, $dto);
 
-        $gameDto = $gameService->createGameDto($game);
+        return $this->createGameSettingsResponseDto($game);
+    }
 
-        return $gameDto;
+    /**
+     * Returns lightweight game settings payload.
+     *
+     * @param Game                       $game
+     * @param GameAccessServiceInterface $gameAccessService
+     *
+     * @return GameSettingsResponseDto
+     */
+    #[OA\Get(
+        summary: 'Kompakte Spieleinstellungen lesen',
+        description: 'Bevorzugter Read-Flow für Spieleinstellungen. Liefert nur settings-bezogene Daten und vermeidet den vollständigen Spielzustand.'
+    )]
+    #[OA\Parameter(name: 'gameId', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
+    #[OA\Response(
+        response: Response::HTTP_OK,
+        description: 'Leichtgewichtige Spieleinstellungen.',
+        content: new OA\JsonContent(ref: new Model(type: GameSettingsResponseDto::class))
+    )]
+    #[ApiResponse]
+    #[Route('/api/game/{gameId}/settings', name: 'app_game_settings_read', methods: ['GET'], format: 'json')]
+    public function getSettings(#[AttributeMapEntity(id: 'gameId')] Game $game, GameAccessServiceInterface $gameAccessService): GameSettingsResponseDto
+    {
+        $gameAccessService->assertPlayerInGameOrAdmin($game);
+
+        return $this->createGameSettingsResponseDto($game);
     }
 
     /**
@@ -291,6 +328,29 @@ final class GameLifecycleController extends AbstractController
         $gameAbortService->abortGame($game);
 
         return new SuccessMessageDto('Game aborted successfully');
+    }
+
+    /**
+     * Builds the compact settings payload for settings-related endpoints.
+     *
+     * @param Game $game
+     *
+     * @return GameSettingsResponseDto
+     */
+    private function createGameSettingsResponseDto(Game $game): GameSettingsResponseDto
+    {
+        $gameId = $game->getGameId();
+        if (null === $gameId) {
+            throw new GameIdMissingException();
+        }
+
+        return new GameSettingsResponseDto(
+            gameId: $gameId,
+            startScore: $game->getStartScore(),
+            doubleOut: $game->isDoubleOut(),
+            tripleOut: $game->isTripleOut(),
+            status: $game->getStatus()->value,
+        );
     }
 
     /**
