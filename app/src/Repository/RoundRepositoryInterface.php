@@ -20,6 +20,8 @@ interface RoundRepositoryInterface
     public function findOneBy(array $criteria, ?array $orderBy = null): ?object;
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param array<string, mixed>       $criteria
      * @param array<string, string>|null $orderBy
      * @param int|null                   $limit

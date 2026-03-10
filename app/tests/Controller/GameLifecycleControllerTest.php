@@ -8,6 +8,8 @@ use App\Controller\GameLifecycleController;
 use App\Dto\GameSettingsRequest;
 use App\Dto\StartGameRequest;
 use App\Dto\GameResponseDto;
+use App\Dto\PlayerResponseDto;
+use App\Dto\ThrowResponseDto;
 use App\Entity\Game;
 use App\Exception\Game\GameMustHaveValidPlayerCountException;
 use App\Exception\Game\NoSettingsProvidedException;
@@ -156,6 +158,101 @@ final class GameLifecycleControllerTest extends TestCase
         $this->assertSame('"state-v1"', $response->headers->get('ETag'));
     }
 
+    public function testGetGameStateSerializesFullGameStateContract(): void
+    {
+        $game = $this->createMock(Game::class);
+        $gameAccessService = $this->createMock(GameAccessServiceInterface::class);
+        $gameAccessService->expects($this->once())
+            ->method('assertPlayerInGameOrAdmin')
+            ->with($game);
+
+        $gameService = $this->createMock(GameServiceInterface::class);
+        $gameService->expects($this->once())
+            ->method('buildStateVersion')
+            ->with($game)
+            ->willReturn('state-contract');
+        $gameService->expects($this->once())
+            ->method('createGameDto')
+            ->with($game)
+            ->willReturn($this->complexGameDto());
+
+        $response = $this->controller->getGameState($game, $gameAccessService, $gameService, new Request());
+
+        $payload = json_decode((string) $response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+
+        $this->assertSame(Response::HTTP_OK, $response->getStatusCode());
+        $this->assertSame('state-contract', $response->headers->get('X-Game-State-Version'));
+        $this->assertSame([
+            'id' => 55,
+            'status' => 'started',
+            'currentRound' => 9,
+            'activePlayerId' => 7,
+            'currentThrowCount' => 1,
+            'players' => [
+                [
+                    'id' => 7,
+                    'name' => 'Alpha',
+                    'score' => 81,
+                    'isActive' => true,
+                    'isBust' => false,
+                    'position' => 1,
+                    'throwsInCurrentRound' => 1,
+                    'currentRoundThrows' => [
+                        [
+                            'value' => 60,
+                            'isDouble' => false,
+                            'isTriple' => true,
+                            'isBust' => false,
+                        ],
+                    ],
+                    'roundHistory' => [
+                        [
+                            'round' => 8,
+                            'throws' => [
+                                [
+                                    'value' => 45,
+                                    'isDouble' => false,
+                                    'isTriple' => false,
+                                    'isBust' => false,
+                                ],
+                            ],
+                        ],
+                        [
+                            'round' => 9,
+                            'throws' => [
+                                [
+                                    'value' => 60,
+                                    'isDouble' => false,
+                                    'isTriple' => true,
+                                    'isBust' => false,
+                                ],
+                            ],
+                        ],
+                    ],
+                    'isGuest' => false,
+                ],
+                [
+                    'id' => 8,
+                    'name' => 'Beta',
+                    'score' => 0,
+                    'isActive' => false,
+                    'isBust' => false,
+                    'position' => 2,
+                    'throwsInCurrentRound' => 0,
+                    'currentRoundThrows' => [],
+                    'roundHistory' => [],
+                    'isGuest' => true,
+                ],
+            ],
+            'winnerId' => 8,
+            'settings' => [
+                'startScore' => 301,
+                'doubleOut' => true,
+                'tripleOut' => false,
+            ],
+        ], $payload);
+    }
+
     public function testGetGameStateReturnsNotModifiedWhenSinceMatches(): void
     {
         $game = $this->createMock(Game::class);
@@ -212,6 +309,79 @@ final class GameLifecycleControllerTest extends TestCase
             players: [],
             winnerId: null,
             settings: []
+        );
+    }
+
+    private function complexGameDto(): GameResponseDto
+    {
+        return new GameResponseDto(
+            id: 55,
+            status: 'started',
+            currentRound: 9,
+            activePlayerId: 7,
+            currentThrowCount: 1,
+            players: [
+                new PlayerResponseDto(
+                    id: 7,
+                    name: 'Alpha',
+                    score: 81,
+                    isActive: true,
+                    isBust: false,
+                    position: 1,
+                    throwsInCurrentRound: 1,
+                    currentRoundThrows: [
+                        new ThrowResponseDto(
+                            value: 60,
+                            isDouble: false,
+                            isTriple: true,
+                            isBust: false,
+                        ),
+                    ],
+                    roundHistory: [
+                        [
+                            'round' => 8,
+                            'throws' => [
+                                new ThrowResponseDto(
+                                    value: 45,
+                                    isDouble: false,
+                                    isTriple: false,
+                                    isBust: false,
+                                ),
+                            ],
+                        ],
+                        [
+                            'round' => 9,
+                            'throws' => [
+                                new ThrowResponseDto(
+                                    value: 60,
+                                    isDouble: false,
+                                    isTriple: true,
+                                    isBust: false,
+                                ),
+                            ],
+                        ],
+                    ],
+                    isGuest: false,
+                ),
+                new PlayerResponseDto(
+                    id: 8,
+                    name: 'Beta',
+                    score: 0,
+                    isActive: false,
+                    isBust: false,
+                    position: 2,
+                    throwsInCurrentRound: 0,
+                    currentRoundThrows: [],
+                    roundHistory: [],
+                    isGuest: true,
+                ),
+            ],
+            winnerId: 8,
+            settings: [
+                'startScore' => 301,
+                'doubleOut' => true,
+                'tripleOut' => false,
+            ],
         );
     }
 }

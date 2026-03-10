@@ -58,6 +58,37 @@ interface RoundThrowsRepositoryInterface
     public function findLatestForGameAndPlayer(int $gameId, int $playerId): ?RoundThrows;
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
+     * @param int $gameId
+     *
+     * @return list<RoundThrows>
+     */
+    public function findByGameIdOrdered(int $gameId): array;
+
+    /**
+     * @param int $gameId
+     * @param int $roundNumber
+     *
+     * @return array<int, array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>
+     */
+    public function findCurrentRoundThrowsForGamePlayers(int $gameId, int $roundNumber): array;
+
+    /**
+     * @param int $gameId
+     *
+     * @return array<int, array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>
+     */
+    public function findLatestThrowsForGamePlayers(int $gameId): array;
+
+    /**
+     * @param int $gameId
+     *
+     * @return array<int, array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>
+     */
+    public function findRoundHistoryForGame(int $gameId): array;
+
+    /**
      * @param int $gameId
      *
      * @return array<int, int>
