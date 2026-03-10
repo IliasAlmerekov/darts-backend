@@ -79,7 +79,7 @@ class GameRoomControllerTest extends TestCase
         $expectedResult = [
             'success' => true,
             'gameId' => 99,
-            'message' => 'Rematch created'
+            'invitationLink' => '/join/uuid',
         ];
 
         $this->rematchService->expects($this->once())
@@ -92,5 +92,9 @@ class GameRoomControllerTest extends TestCase
         $this->assertIsArray($response);
         $this->assertTrue($response['success']);
         $this->assertEquals(99, $response['gameId']);
+        $this->assertSame('/join/uuid', $response['invitationLink']);
+        $this->assertArrayNotHasKey('finishedPlayers', $response);
+        $this->assertArrayNotHasKey('winner', $response);
+        $this->assertArrayNotHasKey('winnerRoundsPlayed', $response);
     }
 }

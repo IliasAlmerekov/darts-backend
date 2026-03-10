@@ -25,6 +25,7 @@ use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Game\GameServiceInterface;
 use App\Service\Game\GameSettingsServiceInterface;
 use App\Service\Game\GameStartServiceInterface;
+use App\Service\Game\RematchStartServiceInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use OpenApi\Attributes as OA;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -69,6 +70,22 @@ final class GameLifecycleControllerTest extends TestCase
 
         $this->expectException(GameMustHaveValidPlayerCountException::class);
         $this->controller->start($game, $startService, $dto);
+    }
+
+    public function testCreateAndStartRematchReturnsStartedGame(): void
+    {
+        $gameId = 42;
+        $game = $this->createMock(Game::class);
+        $dto = new StartGameRequest();
+        $rematchStartService = $this->createMock(RematchStartServiceInterface::class);
+        $rematchStartService->expects($this->once())
+            ->method('createAndStart')
+            ->with($gameId, $dto)
+            ->willReturn($game);
+
+        $response = $this->controller->createAndStartRematch($gameId, $rematchStartService, $dto);
+
+        $this->assertSame($game, $response);
     }
 
     public function testCreateSettingsCreatesGame(): void

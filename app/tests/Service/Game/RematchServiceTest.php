@@ -9,12 +9,9 @@ use App\Entity\User;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\InvitationRepositoryInterface;
-use App\Repository\RoundRepositoryInterface;
-use App\Repository\RoundThrowsRepositoryInterface;
-use App\Service\Game\GameFinishService;
 use App\Service\Game\GameRoomService;
-use App\Service\Player\PlayerManagementService;
 use App\Service\Game\RematchService;
+use App\Service\Player\PlayerManagementService;
 use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -33,20 +30,14 @@ final class RematchServiceTest extends TestCase
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $playerManagementService = new PlayerManagementService($gamePlayersRepository, $entityManager);
         $access = $this->createMock(GameAccessServiceInterface::class);
-        $access->method('requireAuthenticatedUser')->willReturn(new User());
         $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
         $gameRoomService = new GameRoomService($gameRepository, $gamePlayersRepository, $entityManager, $playerManagementService, $access);
-
-        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
-        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
-        $gameFinishService = new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $roundRepository, $access);
         $invitationRepository = $this->createMock(InvitationRepositoryInterface::class);
         $urlGenerator = $this->createMock(UrlGeneratorInterface::class);
 
         $service = new RematchService(
             $gameRoomService,
             $playerManagementService,
-            $gameFinishService,
             $invitationRepository,
             $entityManager,
             $urlGenerator,
@@ -68,7 +59,10 @@ final class RematchServiceTest extends TestCase
         $gameRepository->method('find')->with(42)->willReturn($oldGame);
 
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
-        $gamePlayersRepository->method('findByGameId')->willReturn([]);
+        $gamePlayersRepository->expects(self::once())
+            ->method('findByGameId')
+            ->with(42)
+            ->willReturn([]);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->method('persist')->willReturnCallback(function (object $entity): void {
@@ -84,21 +78,6 @@ final class RematchServiceTest extends TestCase
         $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
         $gameRoomService = new GameRoomService($gameRepository, $gamePlayersRepository, $entityManager, $playerManagementService, $access);
 
-        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
-        $roundRepository->method('countFinishedRounds')->willReturn(0);
-
-        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
-        $roundThrowsRepository->method('getRoundsPlayedForGame')->willReturn([]);
-        $roundThrowsRepository->method('getTotalScoreForGame')->willReturn([]);
-
-        $gameFinishService = new GameFinishService(
-            $entityManager,
-            $gamePlayersRepository,
-            $roundThrowsRepository,
-            $roundRepository,
-            $access
-        );
-
         $invitationRepository = $this->createMock(InvitationRepositoryInterface::class);
         $invitationRepository->method('findOneBy')->willReturn(null);
 
@@ -108,7 +87,6 @@ final class RematchServiceTest extends TestCase
         $service = new RematchService(
             $gameRoomService,
             $playerManagementService,
-            $gameFinishService,
             $invitationRepository,
             $entityManager,
             $urlGenerator,
@@ -120,7 +98,9 @@ final class RematchServiceTest extends TestCase
         self::assertTrue($result['success']);
         self::assertSame(100, $result['gameId']);
         self::assertSame('/join/uuid', $result['invitationLink']);
-        self::assertIsArray($result['finishedPlayers']);
+        self::assertArrayNotHasKey('finishedPlayers', $result);
+        self::assertArrayNotHasKey('winner', $result);
+        self::assertArrayNotHasKey('winnerRoundsPlayed', $result);
     }
 
     /**

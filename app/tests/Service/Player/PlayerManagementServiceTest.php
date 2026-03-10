@@ -199,9 +199,9 @@ final class PlayerManagementServiceTest extends TestCase
 
     public function testCopyPlayersCopiesOnlyFilteredPlayers(): void
     {
-        $sourcePlayer1 = (new GamePlayers())->setPlayer($this->userWithId(1))->setPosition(2);
-        $sourcePlayer2 = (new GamePlayers())->setPlayer($this->userWithId(2));
-        $sourcePlayer3 = (new GamePlayers())->setPlayer($this->userWithId(3))->setPosition(5);
+        $sourcePlayer1 = (new GamePlayers())->setPlayer($this->userWithId(1, 'alpha', 'Alpha'))->setPosition(2);
+        $sourcePlayer2 = (new GamePlayers())->setPlayer($this->userWithId(2, 'beta'));
+        $sourcePlayer3 = (new GamePlayers())->setPlayer($this->userWithId(3, 'gamma'))->setPosition(5);
 
         $this->gamePlayersRepository
             ->expects(self::once())
@@ -213,7 +213,7 @@ final class PlayerManagementServiceTest extends TestCase
             ->method('findBy')
             ->willReturn([]);
 
-        $persistedPositions = [];
+        $persistedGamePlayers = [];
         $this->entityManager
             ->expects(self::exactly(4))
             ->method('getReference')
@@ -222,7 +222,11 @@ final class PlayerManagementServiceTest extends TestCase
                     return (new Game())->setGameId($id);
                 }
                 if ($class === User::class) {
-                    return $this->userWithId($id);
+                    return match ($id) {
+                        1 => $this->userWithId(1, 'alpha', 'Alpha'),
+                        3 => $this->userWithId(3, 'gamma'),
+                        default => throw new \LogicException('Unexpected user id'),
+                    };
                 }
                 throw new \LogicException('Unexpected getReference call');
             });
@@ -230,16 +234,18 @@ final class PlayerManagementServiceTest extends TestCase
         $this->entityManager
             ->expects(self::exactly(2))
             ->method('persist')
-            ->with(self::callback(function (GamePlayers $gp) use (&$persistedPositions): bool {
-                $persistedPositions[] = $gp->getPosition();
+            ->with(self::callback(function (GamePlayers $gp) use (&$persistedGamePlayers): bool {
+                $persistedGamePlayers[] = $gp;
 
                 return true;
             }));
-        $this->entityManager->expects(self::exactly(2))->method('flush');
+        $this->entityManager->expects(self::once())->method('flush');
 
         $this->service->copyPlayers(fromGameId: 10, toGameId: 20, playerIds: [1, 3]);
 
-        self::assertSame([2, 5], $persistedPositions);
+        self::assertCount(2, $persistedGamePlayers);
+        self::assertSame([2, 5], array_map(static fn (GamePlayers $gamePlayer): ?int => $gamePlayer->getPosition(), $persistedGamePlayers));
+        self::assertSame(['Alpha', 'gamma'], array_map(static fn (GamePlayers $gamePlayer): ?string => $gamePlayer->getDisplayNameSnapshot(), $persistedGamePlayers));
     }
 
     public function testUpdatePlayerPositionsUpdatesExistingPlayers(): void
@@ -374,11 +380,18 @@ final class PlayerManagementServiceTest extends TestCase
         ]);
     }
 
-    private function userWithId(int $id): User
+    private function userWithId(int $id, ?string $username = null, ?string $displayName = null): User
     {
         $user = new User();
         $ref = new \ReflectionProperty(User::class, 'id');
         $ref->setValue($user, $id);
+        if (null !== $username) {
+            $user->setUsername($username);
+        }
+
+        if (null !== $displayName) {
+            $user->setDisplayName($displayName);
+        }
 
         return $user;
     }

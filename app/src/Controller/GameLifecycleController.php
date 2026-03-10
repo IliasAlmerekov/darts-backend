@@ -26,6 +26,7 @@ use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Game\GameServiceInterface;
 use App\Service\Game\GameSettingsServiceInterface;
 use App\Service\Game\GameStartServiceInterface;
+use App\Service\Game\RematchStartServiceInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Nelmio\ApiDocBundle\Attribute\Model;
@@ -69,6 +70,31 @@ final class GameLifecycleController extends AbstractController
         $gameStartService->start($game, $dto);
 
         return $game;
+    }
+
+    /**
+     * Creates a rematch from a finished game and starts it immediately.
+     *
+        * @param int                          $gameId
+     * @param RematchStartServiceInterface $rematchStartService
+        * @param StartGameRequest             $dto
+     *
+     * @return Game
+     *
+     * @throws ApiExceptionInterface
+     */
+    #[OA\Parameter(name: 'gameId', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
+    #[OA\RequestBody(required: true, content: new OA\JsonContent(ref: new Model(type: StartGameRequest::class)))]
+    #[OA\Response(
+        response: Response::HTTP_CREATED,
+        description: 'Rematch-Spiel wurde erstellt, mit Spielern befüllt und direkt gestartet.',
+        content: new OA\JsonContent(ref: new Model(type: Game::class, groups: ['game:read']))
+    )]
+    #[ApiResponse(status: Response::HTTP_CREATED, groups: ['game:read'])]
+    #[Route('/api/game/{gameId}/rematch/start', name: 'app_game_rematch_start', methods: ['POST'], format: 'json')]
+    public function createAndStartRematch(int $gameId, RematchStartServiceInterface $rematchStartService, #[MapRequestPayload] StartGameRequest $dto): Game
+    {
+        return $rematchStartService->createAndStart($gameId, $dto);
     }
 
     /**
