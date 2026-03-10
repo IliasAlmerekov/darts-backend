@@ -28,6 +28,8 @@ interface RoundThrowsRepositoryInterface
     public function findBy(array $criteria, ?array $orderBy = null, ?int $limit = null, ?int $offset = null): array;
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param array<string, mixed>       $criteria
      * @param array<string, string>|null $orderBy
      *
@@ -36,6 +38,8 @@ interface RoundThrowsRepositoryInterface
     public function findOneBy(array $criteria, ?array $orderBy = null): ?object;
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param array<string, mixed> $criteria
      *
      * @return int

@@ -69,11 +69,12 @@ interface GameRepositoryInterface
     public function countFinishedGames(): int;
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param int $limit
      * @param int $offset
      *
      * @return Game[]
      */
-    /** @psalm-suppress PossiblyUnusedMethod */
     public function findFinished(int $limit, int $offset): array;
 }

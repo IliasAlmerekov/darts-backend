@@ -119,9 +119,10 @@ class Game
     }
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @return DateTime|null
      */
-    /** @psalm-suppress PossiblyUnusedMethod */
     public function getDate(): ?DateTime
     {
         return $this->date;
