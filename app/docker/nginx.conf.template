@@ -1,0 +1,29 @@
+server {
+    listen __PORT__;
+    server_name _;
+    root /app/public;
+    index index.php index.html;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ ^/index\.php(/|$) {
+        fastcgi_pass unix:/var/run/php-fpm.sock;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT $realpath_root;
+        internal;
+    }
+
+    location ~ \.php$ {
+        return 404;
+    }
+
+    location ~* \.(?:css|js|gif|ico|jpe?g|png|svg|webp|woff2?)$ {
+        expires 1h;
+        access_log off;
+        add_header Cache-Control "public";
+        try_files $uri /index.php?$query_string;
+    }
+}

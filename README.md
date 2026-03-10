@@ -26,6 +26,8 @@ The root `docker-compose.yaml` provides PHP, Nginx, and MySQL for local developm
 
 ## Deployment
 
+The production container is expected to run behind a real HTTP server (`nginx + php-fpm`), not PHP's built-in development server.
+
 For production prerequisites and rollout steps see `DEPLOYMENT_DE.md`.
 Before pushing to a public repository run:
 
