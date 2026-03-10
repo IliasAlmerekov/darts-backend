@@ -367,7 +367,7 @@ SQL,
         $rows = $this->createQueryBuilder('rt')
             ->select(
                 'IDENTITY(rt.player) AS playerId',
-                "SUM(CASE WHEN rt.isBust = true THEN 0 ELSE rt.value END) AS totalValue"
+                "SUM(CASE WHEN rt.isBust = TRUE THEN 0 ELSE rt.value END) AS totalValue"
             )
             ->andWhere('IDENTITY(rt.game) = :gameId')
             ->setParameter('gameId', $gameId)
@@ -424,13 +424,13 @@ FROM (
         u.display_name AS username,
         rt.game_id AS gameId,
         rt.round_id AS roundId,
-        SUM(CASE WHEN rt.is_bust = 1 THEN 0 ELSE rt.value END) AS roundTotal
+        SUM(CASE WHEN rt.is_bust = TRUE THEN 0 ELSE rt.value END) AS roundTotal
     FROM round_throws rt
     INNER JOIN game g ON g.game_id = rt.game_id
     INNER JOIN %s r ON r.round_id = rt.round_id
     INNER JOIN %s u ON u.id = rt.player_id
     WHERE g.status = :status
-      AND u.is_guest = 0
+      AND u.is_guest = FALSE
       AND r.finished_at IS NOT NULL
     GROUP BY rt.player_id, u.display_name, rt.game_id, rt.round_id
 ) player_rounds
