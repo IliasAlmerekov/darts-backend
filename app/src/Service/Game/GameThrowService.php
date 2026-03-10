@@ -10,6 +10,7 @@ declare(strict_types=1);
 
 namespace App\Service\Game;
 
+use App\Dto\ThrowDeltaDto;
 use App\Dto\ThrowRequest;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
@@ -27,6 +28,7 @@ use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use DateTime;
 use DateTimeImmutable;
+use DateTimeInterface;
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Override;
@@ -208,63 +210,69 @@ final readonly class GameThrowService implements GameThrowServiceInterface
     /**
      * @param Game $game
      *
-     * @return void
+     * @return ThrowDeltaDto|null
      */
     #[Override]
-    public function undoLastThrow(Game $game): void
+    public function undoLastThrow(Game $game): ?ThrowDeltaDto
     {
         $this->gameAccessService->assertPlayerInGameOrAdmin($game);
 
-        $this->entityManager->wrapInTransaction(function () use ($game): void {
+        $undoneThrow = $this->entityManager->wrapInTransaction(function () use ($game): ?ThrowDeltaDto {
             if ($this->entityManager->contains($game)) {
                 $this->entityManager->lock($game, LockMode::PESSIMISTIC_WRITE);
             }
 
-            $this->undoLastThrowUnlocked($game);
+            return $this->undoLastThrowUnlocked($game);
         });
+
+        return $undoneThrow;
     }
 
     /**
      * @param Game $game
      *
-     * @return void
+     * @return ThrowDeltaDto|null
      */
-    private function undoLastThrowUnlocked(Game $game): void
+    private function undoLastThrowUnlocked(Game $game): ?ThrowDeltaDto
     {
         $gameId = $game->getGameId();
         if (null === $gameId) {
-            return;
+            return null;
         }
 
         $lastThrow = $this->roundThrowsRepository->findEntityLatestForGame($gameId);
         if (!$lastThrow) {
-            return;
+            return null;
         }
+
+        $undoneThrow = $this->createThrowDeltaFromEntity($lastThrow);
 
         $player = $lastThrow->getPlayer();
+        $playerId = $player?->getId();
         $lastThrowRoundNumber = $lastThrow->getRound()?->getRoundNumber() ?? $game->getRound();
-        $this->entityManager->remove($lastThrow);
-        $this->entityManager->flush();
-        if ($player) {
-            $playerId = $player->getId();
+        $lastThrowId = $lastThrow->getThrowId();
+        $previousGameThrow = null;
+        $previousPlayerThrow = null;
+        if (null !== $lastThrowId) {
+            $previousGameThrow = $this->roundThrowsRepository->findLatestForGameBeforeThrow($gameId, $lastThrowId);
             if (null !== $playerId) {
-                $previousThrow = $this->roundThrowsRepository->findLatestForGameAndPlayer($gameId, $playerId);
-                $playerScore = $previousThrow?->getScore() ?? $game->getStartScore();
-                $gamePlayer = $this->gamePlayersRepository->findOneBy(['game' => $gameId, 'player' => $playerId]);
-                $gamePlayer?->setScore($playerScore);
-                if ($game->getWinner()?->getId() === $playerId) {
-                    $game->setWinner(null);
-                }
+                $previousPlayerThrow = $this->roundThrowsRepository->findLatestForGameAndPlayerBeforeThrow($gameId, $playerId, $lastThrowId);
+            }
+        } elseif (null !== $playerId) {
+            $previousPlayerThrow = $this->roundThrowsRepository->findLatestForGameAndPlayer($gameId, $playerId);
+        }
+
+        $gamePlayersByPlayerId = [];
+        foreach ($game->getGamePlayers() as $gamePlayer) {
+            $gamePlayerId = $gamePlayer->getPlayer()?->getId();
+            if (null !== $gamePlayerId) {
+                $gamePlayersByPlayerId[$gamePlayerId] = $gamePlayer;
             }
         }
 
-        // Alle Spieler-Positionen neu berechnen basierend auf aktuellen Scores
-        foreach ($game->getGamePlayers() as $gamePlayer) {
-            $currentPlayerScore = $gamePlayer->getScore() ?? $game->getStartScore();
-            // Wenn Score > 0, dann ist der Spieler nicht fertig → Position zurücksetzen
-            if ($currentPlayerScore > 0 && null !== $gamePlayer->getPosition()) {
-                $gamePlayer->setPosition(0);
-            }
+        if (null !== $playerId && isset($gamePlayersByPlayerId[$playerId])) {
+            $restoredScore = $previousPlayerThrow?->getScore() ?? $game->getStartScore();
+            $gamePlayersByPlayerId[$playerId]->setScore($restoredScore);
         }
 
         // Wenn der letzte Wurf in einem finished Game rückgängig gemacht wird,
@@ -275,31 +283,21 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         }
 
         foreach ($game->getGamePlayers() as $gamePlayer) {
-            if ($gamePlayer->isWinner()) {
-                $gamePlayer->setIsWinner(null);
+            $currentPlayerScore = $gamePlayer->getScore() ?? $game->getStartScore();
+            if ($currentPlayerScore > 0 && null !== $gamePlayer->getPosition()) {
+                $gamePlayer->setPosition(0);
             }
-        }
 
-        $latestRoundNumber = $this->roundThrowsRepository->createQueryBuilder('rt')
-            ->select('MAX(r.roundNumber)')
-            ->innerJoin('rt.round', 'r')
-            ->andWhere('rt.game = :gameId')
-            ->setParameter('gameId', $game->getGameId())
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        $game->setRound(
-            $latestRoundNumber !== null && '' !== $latestRoundNumber
-                ? (int) $latestRoundNumber
-                : $lastThrowRoundNumber
-        );
-
-        foreach ($game->getGamePlayers() as $gamePlayer) {
             $gamePlayer->setIsWinner(false);
         }
-        $game->setWinner(null);
 
+        $game->setWinner(null);
+        $game->setRound($previousGameThrow?->getRound()?->getRoundNumber() ?? $lastThrowRoundNumber);
+
+        $this->entityManager->remove($lastThrow);
         $this->entityManager->flush();
+
+        return $undoneThrow;
     }
 
     /**
@@ -534,5 +532,31 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         if ($isDouble && ($baseValue < 0 || $baseValue > 20) && 25 !== $baseValue) {
             throw new InvalidThrowException('Double throws require a base value between 0 and 20, or 25 for bull.');
         }
+    }
+
+    /**
+     * @param RoundThrows $throw
+     *
+     * @return ThrowDeltaDto
+     */
+    private function createThrowDeltaFromEntity(RoundThrows $throw): ThrowDeltaDto
+    {
+        $player = $throw->getPlayer();
+        $playerId = $player?->getId() ?? 0;
+        $playerName = $player?->getDisplayNameRaw() ?? $player?->getUsername() ?? '';
+        $timestamp = $throw->getTimestamp();
+
+        return new ThrowDeltaDto(
+            id: $throw->getThrowId() ?? 0,
+            playerId: $playerId,
+            playerName: $playerName,
+            value: $throw->getValue() ?? 0,
+            isDouble: $throw->isDouble(),
+            isTriple: $throw->isTriple(),
+            isBust: $throw->isBust(),
+            score: $throw->getScore() ?? 0,
+            roundNumber: $throw->getRound()?->getRoundNumber() ?? 0,
+            timestamp: $timestamp instanceof DateTimeInterface ? $timestamp->format(DateTimeInterface::ATOM) : (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
+        );
     }
 }

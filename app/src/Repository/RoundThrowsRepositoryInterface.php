@@ -58,6 +58,23 @@ interface RoundThrowsRepositoryInterface
     public function findLatestForGameAndPlayer(int $gameId, int $playerId): ?RoundThrows;
 
     /**
+     * @param int $gameId
+     * @param int $throwId
+     *
+     * @return RoundThrows|null
+     */
+    public function findLatestForGameBeforeThrow(int $gameId, int $throwId): ?RoundThrows;
+
+    /**
+     * @param int $gameId
+     * @param int $playerId
+     * @param int $throwId
+     *
+     * @return RoundThrows|null
+     */
+    public function findLatestForGameAndPlayerBeforeThrow(int $gameId, int $playerId, int $throwId): ?RoundThrows;
+
+    /**
      * @psalm-suppress PossiblyUnusedMethod
      *
      * @param int $gameId
