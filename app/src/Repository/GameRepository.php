@@ -47,8 +47,10 @@ final class GameRepository extends ServiceEntityRepository implements GameReposi
     public function findFinishedOverview(int $limit, int $offset): array
     {
         $connection = $this->getEntityManager()->getConnection();
+        $userTable = $connection->getDatabasePlatform()->quoteIdentifier('user');
         $rows = $connection->fetchAllAssociative(
-            <<<'SQL'
+            sprintf(
+                <<<'SQL'
 SELECT
     g.game_id AS id,
     g.date AS date,
@@ -62,13 +64,15 @@ SELECT
     END AS winnerName
 FROM game g
 LEFT JOIN game_players gp ON gp.game_id = g.game_id
-LEFT JOIN user winner ON winner.id = g.winner_id
+LEFT JOIN %s winner ON winner.id = g.winner_id
 LEFT JOIN game_players winner_gp ON winner_gp.game_id = g.game_id AND winner_gp.player_id = g.winner_id
 WHERE g.status = :status
 GROUP BY g.game_id, g.date, g.finished_at, winner.id, winner.display_name, winner.username, winner_gp.display_name_snapshot
 ORDER BY g.game_id DESC
 LIMIT :limit OFFSET :offset
 SQL,
+                $userTable,
+            ),
             [
                 'status' => GameStatus::Finished->value,
                 'limit' => $limit,
@@ -192,17 +196,23 @@ SQL,
             return [];
         }
 
-        $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
-            <<<'SQL'
+        $connection = $this->getEntityManager()->getConnection();
+        $roundTable = $connection->getDatabasePlatform()->quoteIdentifier('round');
+
+        $rows = $connection->fetchAllAssociative(
+            sprintf(
+                <<<'SQL'
 SELECT
     rt.game_id AS gameId,
     COUNT(DISTINCT r.round_number) AS winnerRounds
 FROM round_throws rt
-INNER JOIN round r ON r.round_id = rt.round_id
+INNER JOIN %s r ON r.round_id = rt.round_id
 INNER JOIN game g ON g.game_id = rt.game_id AND g.winner_id = rt.player_id
 WHERE rt.game_id IN (:gameIds)
 GROUP BY rt.game_id
 SQL,
+                $roundTable,
+            ),
             ['gameIds' => $uniqueGameIds],
             ['gameIds' => ArrayParameterType::INTEGER]
         );
