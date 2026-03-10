@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\Controller\GameStatsController;
+use App\Dto\GameSummaryFinishedPlayerDto;
+use App\Dto\GameSummaryResponseDto;
+use App\Dto\GameSummaryWinnerDto;
 use App\Entity\Game;
 use App\Exception\Game\GameNotFoundException;
 use App\Repository\GameRepositoryInterface;
@@ -42,14 +45,7 @@ final class GameStatsControllerTest extends TestCase
         $gameRepo->method('countFinishedGames')->willReturn(1);
 
         $finishService = $this->createMock(GameFinishServiceInterface::class);
-        $finishService->method('getGameStats')->willReturn([
-            'gameId' => 1,
-            'date' => new DateTimeImmutable(),
-            'finishedAt' => new DateTimeImmutable(),
-            'finishedPlayers' => [],
-            'winner' => ['username' => 'u', 'id' => 1],
-            'winnerRoundsPlayed' => 3,
-        ]);
+        $finishService->method('getGameStats')->willReturn($this->createGameSummaryDto(gameId: 1, winnerRoundsPlayed: 3));
 
         $response = $this->controller->gamesOverview($gameRepo, $finishService, 10, 0);
 
@@ -63,20 +59,14 @@ final class GameStatsControllerTest extends TestCase
         $gameRepo->method('find')->with(42)->willReturn($game);
 
         $finishService = $this->createMock(GameFinishServiceInterface::class);
-        $finishService->method('getGameStats')->with($game)->willReturn([
-            'gameId' => 42,
-            'date' => new DateTimeImmutable(),
-            'finishedAt' => new DateTimeImmutable(),
-            'winner' => ['username' => 'winner', 'id' => 10],
-            'winnerRoundsPlayed' => 8,
-            'winnerRoundAverage' => 45.2,
-            'finishedPlayers' => [],
-        ]);
+        $finishService->method('getGameStats')->with($game)->willReturn(
+            $this->createGameSummaryDto(gameId: 42, winnerId: 10, winnerName: 'winner', winnerRoundsPlayed: 8, winnerRoundAverage: 45.2)
+        );
 
         $response = $this->controller->gameDetails(42, $gameRepo, $finishService);
 
-        $this->assertIsArray($response);
-        $this->assertSame(42, $response['gameId']);
+        $this->assertInstanceOf(GameSummaryResponseDto::class, $response);
+        $this->assertSame(42, $response->gameId);
     }
 
     public function testGameDetailsThrowsWhenGameMissing(): void
@@ -102,5 +92,30 @@ final class GameStatsControllerTest extends TestCase
         $response = $this->controller->playerStats($statsService, $throwsRepo, 20, 0, 'average:desc');
 
         $this->assertInstanceOf(PlayerStatsResponseDto::class, $response);
+    }
+
+    private function createGameSummaryDto(
+        int $gameId,
+        int $winnerId = 1,
+        ?string $winnerName = 'u',
+        int $winnerRoundsPlayed = 3,
+        float $winnerRoundAverage = 60.0,
+    ): GameSummaryResponseDto {
+        return new GameSummaryResponseDto(
+            gameId: $gameId,
+            finishedAt: (new DateTimeImmutable())->format(DATE_ATOM),
+            winner: new GameSummaryWinnerDto($winnerId, $winnerName),
+            winnerRoundsPlayed: $winnerRoundsPlayed,
+            winnerRoundAverage: $winnerRoundAverage,
+            finishedPlayers: [
+                new GameSummaryFinishedPlayerDto(
+                    playerId: $winnerId,
+                    username: $winnerName,
+                    position: 1,
+                    roundsPlayed: $winnerRoundsPlayed,
+                    roundAverage: $winnerRoundAverage,
+                ),
+            ],
+        );
     }
 }

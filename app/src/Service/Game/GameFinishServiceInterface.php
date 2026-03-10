@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Service\Game;
 
+use App\Dto\GameSummaryResponseDto;
 use App\Entity\Game;
 use DateTimeInterface;
 
@@ -18,38 +19,32 @@ use DateTimeInterface;
 interface GameFinishServiceInterface
 {
     /**
-     * Finish a game and return the list of finished players.
+    * Finish a game and return the normalized summary.
      *
      * @param Game                   $game
      * @param DateTimeInterface|null $finishedAt
      *
-     * @return array
+        * @return GameSummaryResponseDto
      */
-    public function finishGame(Game $game, ?DateTimeInterface $finishedAt = null): array;
+    public function finishGame(Game $game, ?DateTimeInterface $finishedAt = null): GameSummaryResponseDto;
 
     /**
      * Get statistics for a finished game.
      *
      * @param Game $game
      *
-     * @return array<string, mixed>
+        * @return GameSummaryResponseDto
      */
-    public function getGameStats(Game $game): array;
+    public function getGameStats(Game $game): GameSummaryResponseDto;
 
     /**
-     * Get the list of finished players for a game without mutating state.
+     * Get the finished game summary without mutating state.
      *
      * @param Game $game
      *
-     * @return list<array{
-     *     playerId:int|null,
-     *     username:string|null,
-     *     position:int|null,
-     *     roundsPlayed:int|null,
-     *     roundAverage:float
-     * }>
+        * @return GameSummaryResponseDto
      */
-    public function getFinishedPlayers(Game $game): array;
+    public function getGameSummary(Game $game): GameSummaryResponseDto;
 
     /**
      * Build the list of finished players for a game.

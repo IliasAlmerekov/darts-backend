@@ -11,6 +11,7 @@ namespace App\Controller;
 
 use App\Dto\GameOverviewItemDto;
 use App\Dto\GameOverviewResponseDto;
+use App\Dto\GameSummaryResponseDto;
 use App\Dto\PlayerStatsResponseDto;
 use App\Entity\Game;
 use App\Exception\Game\GameNotFoundException;
@@ -69,15 +70,15 @@ final class GameStatsController extends AbstractController
 
         $items = [];
         foreach ($games as $game) {
-            $stats = $gameFinishService->getGameStats($game);
+            $summary = $gameFinishService->getGameStats($game);
             $items[] = new GameOverviewItemDto(
-                id: $stats['gameId'],
-                date: $stats['date']?->format(DateTimeInterface::ATOM),
-                finishedAt: $stats['finishedAt']?->format(DateTimeInterface::ATOM),
-                playersCount: count($stats['finishedPlayers']),
-                winnerName: $stats['winner']['username'] ?? null,
-                winnerId: $stats['winner']['id'] ?? null,
-                winnerRounds: $stats['winnerRoundsPlayed'],
+                id: $summary->gameId,
+                date: $game->getDate()?->format(DateTimeInterface::ATOM),
+                finishedAt: $summary->finishedAt,
+                playersCount: count($summary->finishedPlayers),
+                winnerName: $summary->winner?->username,
+                winnerId: $summary->winner?->id,
+                winnerRounds: $summary->winnerRoundsPlayed,
             );
         }
 
@@ -96,7 +97,7 @@ final class GameStatsController extends AbstractController
      * @param GameRepositoryInterface    $gameRepository
      * @param GameFinishServiceInterface $gameFinishService
      *
-     * @return array<string, mixed>
+        * @return GameSummaryResponseDto
      */
     #[OA\Parameter(
         name: 'gameId',
@@ -107,20 +108,12 @@ final class GameStatsController extends AbstractController
     #[OA\Response(
         response: 200,
         description: 'Details eines einzelnen Spiels.',
-        content: new OA\JsonContent(
-            type: 'object',
-            properties: [
-                new OA\Property(property: 'gameId', type: 'integer', example: 123),
-                new OA\Property(property: 'winnerRoundsPlayed', type: 'integer', example: 8),
-                new OA\Property(property: 'winnerRoundAverage', type: 'number', format: 'float', example: 45.2),
-                new OA\Property(property: 'finishedPlayers', type: 'array', items: new OA\Items(type: 'object')),
-            ]
-        )
+        content: new OA\JsonContent(ref: new Model(type: GameSummaryResponseDto::class))
     )]
     #[OA\Response(response: 404, description: 'Spiel nicht gefunden.')]
     #[ApiResponse]
     #[Route('/api/games/{gameId}', name: 'app_games_details', methods: ['GET'], format: 'json', requirements: ['gameId' => '\d+'])]
-    public function gameDetails(int $gameId, GameRepositoryInterface $gameRepository, GameFinishServiceInterface $gameFinishService): array
+    public function gameDetails(int $gameId, GameRepositoryInterface $gameRepository, GameFinishServiceInterface $gameFinishService): GameSummaryResponseDto
     {
         $game = $gameRepository->find($gameId);
         if (!$game instanceof Game) {
