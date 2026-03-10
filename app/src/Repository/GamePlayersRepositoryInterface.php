@@ -68,6 +68,13 @@ interface GamePlayersRepositoryInterface
 
     /**
      * @param int $gameId
+     *
+     * @return array<int, array{playerId:int,name:string,position:int|null,score:int|null,isGuest:bool}>
+     */
+    public function findGameStatePlayersByGameId(int $gameId): array;
+
+    /**
+     * @param int $gameId
      * @param int $playerId
      *
      * @return bool
