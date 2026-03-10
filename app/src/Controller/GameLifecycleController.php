@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Dto\GameSummaryResponseDto;
 use App\Dto\GameSettingsResponseDto;
 use App\Dto\GameSettingsRequest;
 use App\Dto\GameResponseDto;
@@ -166,34 +167,22 @@ final class GameLifecycleController extends AbstractController
     }
 
     /**
-     * Finishes a game and returns final standings.
+     * Finishes a game and returns a normalized summary.
      *
      * @param Game                       $game
      * @param GameFinishServiceInterface $gameFinishService
      *
-     * @return mixed
+     * @return GameSummaryResponseDto
      */
     #[OA\Parameter(name: 'gameId', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
     #[OA\Response(
         response: Response::HTTP_OK,
-        description: 'Spiel beenden und Endplatzierungen zurückgeben.',
-        content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(
-                type: 'object',
-                properties: [
-                    new OA\Property(property: 'playerId', type: 'integer', nullable: true, example: 1),
-                    new OA\Property(property: 'username', type: 'string', nullable: true, example: 'alice'),
-                    new OA\Property(property: 'position', type: 'integer', nullable: true, example: 1),
-                    new OA\Property(property: 'roundsPlayed', type: 'integer', nullable: true, example: 10),
-                    new OA\Property(property: 'roundAverage', type: 'number', format: 'float', example: 54.2),
-                ]
-            )
-        )
+        description: 'Spiel beenden und normalisierte Summary zurückgeben.',
+        content: new OA\JsonContent(ref: new Model(type: GameSummaryResponseDto::class))
     )]
     #[ApiResponse]
     #[Route('/api/game/{gameId}/finish', name: 'app_game_finish', methods: ['POST'], format: 'json')]
-    public function finish(#[AttributeMapEntity(id: 'gameId')] Game $game, GameFinishServiceInterface $gameFinishService): mixed
+    public function finish(#[AttributeMapEntity(id: 'gameId')] Game $game, GameFinishServiceInterface $gameFinishService): GameSummaryResponseDto
     {
         $result = $gameFinishService->finishGame($game);
 
@@ -225,37 +214,25 @@ final class GameLifecycleController extends AbstractController
     }
 
     /**
-     * Returns final standings without mutating game state.
+     * Returns finished game summary without mutating game state.
      *
      * @param Game                       $game
      * @param GameFinishServiceInterface $gameFinishService
      *
-     * @return mixed
+     * @return GameSummaryResponseDto
      */
     #[OA\Parameter(name: 'gameId', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
     #[OA\Response(
         response: Response::HTTP_OK,
-        description: 'Endplatzierungen des Spiels (read-only).',
-        content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(
-                type: 'object',
-                properties: [
-                    new OA\Property(property: 'playerId', type: 'integer', nullable: true, example: 1),
-                    new OA\Property(property: 'username', type: 'string', nullable: true, example: 'alice'),
-                    new OA\Property(property: 'position', type: 'integer', nullable: true, example: 1),
-                    new OA\Property(property: 'roundsPlayed', type: 'integer', nullable: true, example: 10),
-                    new OA\Property(property: 'roundAverage', type: 'number', format: 'float', example: 54.2),
-                ]
-            )
-        )
+        description: 'Normalisierte Summary des Spiels (read-only).',
+        content: new OA\JsonContent(ref: new Model(type: GameSummaryResponseDto::class))
     )]
     #[ApiResponse]
     #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['GET'], format: 'json')]
     #[Route('/api/games/{gameId}/finished', name: 'app_games_finished', methods: ['GET'], format: 'json', requirements: ['gameId' => '\d+'])]
-    public function finished(#[AttributeMapEntity(id: 'gameId')] Game $game, GameFinishServiceInterface $gameFinishService): mixed
+    public function finished(#[AttributeMapEntity(id: 'gameId')] Game $game, GameFinishServiceInterface $gameFinishService): GameSummaryResponseDto
     {
-        return $gameFinishService->getFinishedPlayers($game);
+        return $gameFinishService->getGameSummary($game);
     }
 
     /**
