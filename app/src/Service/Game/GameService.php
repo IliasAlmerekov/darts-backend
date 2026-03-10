@@ -13,9 +13,8 @@ use App\Dto\GameResponseDto;
 use App\Dto\PlayerResponseDto;
 use App\Dto\ThrowResponseDto;
 use App\Entity\Game;
-use App\Entity\GamePlayers;
 use App\Exception\Game\GameIdMissingException;
-use App\Repository\RoundRepositoryInterface;
+use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
 use Override;
 
@@ -27,7 +26,7 @@ use Override;
 final readonly class GameService implements GameServiceInterface
 {
     /**
-     * @param RoundRepositoryInterface         $roundRepository
+     * @param GamePlayersRepositoryInterface   $gamePlayersRepository
      * @param RoundThrowsRepositoryInterface   $roundThrowsRepository
      * @param ActivePlayerResolverInterface    $activePlayerResolver
      * @param GameStateVersionServiceInterface $gameStateVersionService
@@ -35,7 +34,7 @@ final readonly class GameService implements GameServiceInterface
      * @psalm-suppress PossiblyUnusedMethod
      */
     public function __construct(
-        private RoundRepositoryInterface $roundRepository,
+        private GamePlayersRepositoryInterface $gamePlayersRepository,
         private RoundThrowsRepositoryInterface $roundThrowsRepository,
         private ActivePlayerResolverInterface $activePlayerResolver,
         private GameStateVersionServiceInterface $gameStateVersionService,
@@ -72,66 +71,49 @@ final readonly class GameService implements GameServiceInterface
     #[Override]
     public function createGameDto(Game $game): GameResponseDto
     {
-        // 1. Aktive Runde und Würfe ermitteln
+        $gameId = $game->getGameId();
+        if (null === $gameId) {
+            throw new GameIdMissingException();
+        }
+
         $currentRoundNumber = $game->getRound() ?? 1;
-        $roundEntity = $this->roundRepository->findOneBy([
-            'game' => $game,
-            'roundNumber' => $currentRoundNumber,
-        ]);
-        // Sortiere Spieler nach Position (Reihenfolge im Spiel)
-        $gamePlayers = $this->sortedGamePlayers($game);
-        $calculatedActivePlayerId = $this->calculateActivePlayer($game);
-        // DTOs für Spieler erstellen
+        $gamePlayers = $this->gamePlayersRepository->findGameStatePlayersByGameId($gameId);
+        $batchedThrowData = $this->loadBatchedThrowData($gameId, $currentRoundNumber);
+        $calculatedActivePlayerId = $this->resolveActivePlayerFromData($game, $gamePlayers, $batchedThrowData['currentRoundByPlayer']);
+
         $playerDtos = [];
         $currentThrowCountForActivePlayer = 0;
         foreach ($gamePlayers as $gamePlayer) {
-            $user = $gamePlayer->getPlayer();
-            if (null === $user) {
-                continue;
+            $userId = $gamePlayer['playerId'];
+            $displayName = $gamePlayer['name'];
+
+            $currentRoundThrowEntities = [];
+            if (array_key_exists($userId, $batchedThrowData['currentRoundByPlayer'])) {
+                $currentRoundThrowEntities = $batchedThrowData['currentRoundByPlayer'][$userId];
             }
 
-            $userId = $user->getId();
-            $displayName = $this->resolveGamePlayerDisplayName($gamePlayer);
-            if (null === $userId || null === $displayName) {
-                continue;
-            }
-
-            $throwsThisRound = 0;
             $isBust = false;
             $currentRoundThrows = [];
             /** @var list<array{round: int, throws: list<ThrowResponseDto>}> $roundHistory */
             $roundHistory = [];
 
             // Nur aktive Spieler (Score > 0) bekommen currentRoundThrows angezeigt
-            $playerScore = $gamePlayer->getScore() ?? $game->getStartScore();
+            $playerScore = $gamePlayer['score'] ?? $game->getStartScore();
             $isPlayerActive = ($playerScore > 0);
+            $throwsThisRound = $isPlayerActive ? count($currentRoundThrowEntities) : 0;
 
-            if ($roundEntity && $isPlayerActive) {
-                $throws = $this->roundThrowsRepository->findBy([
-                    'round' => $roundEntity,
-                    'player' => $user,
-                ], ['throwNumber' => 'ASC']);
-                $throwsThisRound = count($throws);
-                // Baue Array mit den einzelnen Würfen
-                foreach ($throws as $throw) {
-                    $throwValue = $throw->getValue();
-                    if (null === $throwValue) {
-                        continue;
+            if ($isPlayerActive) {
+                foreach ($currentRoundThrowEntities as $throw) {
+                    $throwDto = $this->createThrowDto($throw);
+                    if (null !== $throwDto) {
+                        $currentRoundThrows[] = $throwDto;
                     }
-
-                    $currentRoundThrows[] = new ThrowResponseDto(
-                        value: $throwValue,
-                        isDouble: $throw->isDouble(),
-                        isTriple: $throw->isTriple(),
-                        isBust: $throw->isBust(),
-                    );
                 }
 
-                // Check, ob der letzte Wurf ein Bust war
                 if ($throwsThisRound > 0) {
-                    $lastThrow = end($throws);
+                    $lastThrow = end($currentRoundThrowEntities);
                     if (false !== $lastThrow) {
-                        $isBust = $lastThrow->isBust();
+                        $isBust = $lastThrow['isBust'];
                     }
                 }
             }
@@ -140,43 +122,26 @@ final readonly class GameService implements GameServiceInterface
             // nehmen wir den letzten Wurf des Spielers insgesamt. Das hilft dem Client, den letzten Bust-Status
             // direkt nach einem Bust bzw. beim Round-Wechsel korrekt anzuzeigen.
             if (0 === $throwsThisRound && $isPlayerActive) {
-                $gameId = $game->getGameId();
-                if (null !== $gameId) {
-                    $latestThrowForPlayer = $this->roundThrowsRepository->findLatestForGameAndPlayer($gameId, $userId);
-                    if ($latestThrowForPlayer instanceof \App\Entity\RoundThrows) {
-                        $isBust = $latestThrowForPlayer->isBust();
-                    }
+                $latestThrowForPlayer = $batchedThrowData['latestByPlayer'][$userId] ?? null;
+                if (null !== $latestThrowForPlayer) {
+                    $isBust = $latestThrowForPlayer['isBust'];
                 }
             }
 
-            // Baue roundHistory: alle Runden mit Würfen für diesen Spieler
-            $allRounds = $this->roundRepository->findBy(['game' => $game], ['roundNumber' => 'ASC']);
-            foreach ($allRounds as $round) {
-                $roundThrows = $this->roundThrowsRepository->findBy([
-                    'round' => $round,
-                    'player' => $user,
-                ], ['throwNumber' => 'ASC']);
-                if (count($roundThrows) > 0) {
-                    $throws = [];
-                    foreach ($roundThrows as $throw) {
-                        $throwValue = $throw->getValue();
-                        if (null !== $throwValue) {
-                            $throws[] = new ThrowResponseDto(
-                                value: $throwValue,
-                                isDouble: $throw->isDouble(),
-                                isTriple: $throw->isTriple(),
-                                isBust: $throw->isBust(),
-                            );
-                        }
+            foreach ($batchedThrowData['historyByPlayerAndRound'][$userId] ?? [] as $roundNumber => $roundThrowEntities) {
+                $throwsForRound = [];
+                foreach ($roundThrowEntities as $throw) {
+                    $throwDto = $this->createThrowDto($throw);
+                    if (null !== $throwDto) {
+                        $throwsForRound[] = $throwDto;
                     }
+                }
 
-                    $roundNumber = $round->getRoundNumber();
-                    if (null !== $roundNumber && count($throws) > 0) {
-                        $roundHistory[] = [
-                            'round' => $roundNumber,
-                            'throws' => $throws,
-                        ];
-                    }
+                if (count($throwsForRound) > 0) {
+                    $roundHistory[] = [
+                        'round' => $roundNumber,
+                        'throws' => $throwsForRound,
+                    ];
                 }
             }
 
@@ -187,20 +152,15 @@ final readonly class GameService implements GameServiceInterface
             $playerDtos[] = new PlayerResponseDto(
                 id: $userId,
                 name: $displayName,
-                score: $gamePlayer->getScore() ?? $game->getStartScore(),
+                score: $gamePlayer['score'] ?? $game->getStartScore(),
                 isActive: $isActive,
                 isBust: $isBust,
-                position: $gamePlayer->getPosition(),
+                position: $gamePlayer['position'],
                 throwsInCurrentRound: $throwsThisRound,
                 currentRoundThrows: $currentRoundThrows,
                 roundHistory: $roundHistory,
-                isGuest: $user->isGuest(),
+                isGuest: $gamePlayer['isGuest'],
             );
-        }
-
-        $gameId = $game->getGameId();
-        if (null === $gameId) {
-            throw new GameIdMissingException();
         }
 
         return new GameResponseDto(
@@ -231,50 +191,90 @@ final readonly class GameService implements GameServiceInterface
     }
 
     /**
-     * @param Game $game
+     * @param int $gameId
+     * @param int $currentRoundNumber
      *
-     * @return list<GamePlayers>
+     * @return array{
+     *     currentRoundByPlayer: array<int, list<array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>>,
+     *     historyByPlayerAndRound: array<int, array<int, list<array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>>>,
+     *     latestByPlayer: array<int, array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>
+     * }
      */
-    private function sortedGamePlayers(Game $game): array
+    private function loadBatchedThrowData(int $gameId, int $currentRoundNumber): array
     {
-        /** @var list<GamePlayers> $gamePlayers */
-        $gamePlayers = $game->getGamePlayers()->toArray();
-        usort($gamePlayers, static function (GamePlayers $left, GamePlayers $right): int {
-            $leftPosition = $left->getPosition() ?? PHP_INT_MAX;
-            $rightPosition = $right->getPosition() ?? PHP_INT_MAX;
-            if ($leftPosition !== $rightPosition) {
-                return $leftPosition <=> $rightPosition;
-            }
+        $currentRoundByPlayer = [];
+        $historyByPlayerAndRound = [];
+        $latestByPlayer = [];
 
-            $leftId = $left->getGamePlayerId() ?? PHP_INT_MAX;
-            $rightId = $right->getGamePlayerId() ?? PHP_INT_MAX;
+        foreach ($this->roundThrowsRepository->findCurrentRoundThrowsForGamePlayers($gameId, $currentRoundNumber) as $throwRow) {
+            $currentRoundByPlayer[$throwRow['playerId']][] = $throwRow;
+        }
 
-            return $leftId <=> $rightId;
-        });
+        foreach ($this->roundThrowsRepository->findLatestThrowsForGamePlayers($gameId) as $throwRow) {
+            $latestByPlayer[$throwRow['playerId']] = $throwRow;
+        }
 
-        return $gamePlayers;
+        foreach ($this->roundThrowsRepository->findRoundHistoryForGame($gameId) as $throwRow) {
+            $historyByPlayerAndRound[$throwRow['playerId']][$throwRow['roundNumber']][] = $throwRow;
+        }
+
+        return [
+            'currentRoundByPlayer' => $currentRoundByPlayer,
+            'historyByPlayerAndRound' => $historyByPlayerAndRound,
+            'latestByPlayer' => $latestByPlayer,
+        ];
     }
 
     /**
-     * @param GamePlayers $gamePlayer
+        * @param Game                                                                                                                    $game
+     * @param array<int, array{playerId:int,name:string,position:int|null,score:int|null,isGuest:bool}>                               $gamePlayers
+     * @param array<int, list<array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>> $currentRoundThrowsByPlayer
      *
-     * @return string|null
+     * @return int|null
      */
-    private function resolveGamePlayerDisplayName(GamePlayers $gamePlayer): ?string
+    private function resolveActivePlayerFromData(Game $game, array $gamePlayers, array $currentRoundThrowsByPlayer): ?int
     {
-        $user = $gamePlayer->getPlayer();
-        if (null === $user) {
+        foreach ($gamePlayers as $gamePlayer) {
+            $playerScore = $gamePlayer['score'] ?? $game->getStartScore();
+            if (0 === $playerScore) {
+                continue;
+            }
+
+            $playerId = $gamePlayer['playerId'];
+
+            $throwsInCurrentRound = $currentRoundThrowsByPlayer[$playerId] ?? [];
+            $throwsCount = count($throwsInCurrentRound);
+            $hasBusted = false;
+            if ($throwsCount > 0) {
+                $lastThrow = end($throwsInCurrentRound);
+                $hasBusted = false !== $lastThrow && true === $lastThrow['isBust'];
+            }
+
+            if ($throwsCount < 3 && false === $hasBusted) {
+                return $playerId;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool} $throw
+     *
+     * @return ThrowResponseDto|null
+     */
+    private function createThrowDto(array $throw): ?ThrowResponseDto
+    {
+        $throwValue = $throw['value'];
+        if (null === $throwValue) {
             return null;
         }
 
-        $baseName = $gamePlayer->getDisplayNameSnapshot();
-        if (null === $baseName || '' === trim($baseName)) {
-            $baseName = $user->getDisplayNameRaw() ?? $user->getUsername();
-        }
-        if (null === $baseName || '' === trim($baseName)) {
-            return null;
-        }
-
-        return $baseName;
+        return new ThrowResponseDto(
+            value: $throwValue,
+            isDouble: $throw['isDouble'],
+            isTriple: $throw['isTriple'],
+            isBust: $throw['isBust'],
+        );
     }
 }

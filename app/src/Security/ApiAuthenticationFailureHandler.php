@@ -14,6 +14,8 @@ use Symfony\Component\Security\Http\Authentication\AuthenticationFailureHandlerI
 
 /**
  * Returns JSON for API authentication failures instead of browser-style redirects.
+ *
+ * @psalm-suppress UnusedClass Wired via Symfony security configuration
  */
 final readonly class ApiAuthenticationFailureHandler implements AuthenticationFailureHandlerInterface
 {

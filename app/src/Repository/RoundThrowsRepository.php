@@ -5,6 +5,8 @@
  * @license Proprietary
  */
 
+declare(strict_types=1);
+
 namespace App\Repository;
 
 use App\Enum\GameStatus;
@@ -12,6 +14,7 @@ use App\Entity\Round;
 use App\Entity\GamePlayers;
 use App\Entity\RoundThrows;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -106,6 +109,95 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
+    }
+
+    /**
+     * @param int $gameId
+     *
+     * @return list<RoundThrows>
+     */
+    public function findByGameIdOrdered(int $gameId): array
+    {
+        /** @var list<RoundThrows> $throws */
+        $throws = $this->createQueryBuilder('rt')
+            ->addSelect('r', 'u')
+            ->innerJoin('rt.round', 'r')
+            ->innerJoin('rt.player', 'u')
+            ->andWhere('rt.game = :gameId')
+            ->setParameter('gameId', $gameId)
+            ->orderBy('r.roundNumber', 'ASC')
+            ->addOrderBy('u.id', 'ASC')
+            ->addOrderBy('rt.throwNumber', 'ASC')
+            ->addOrderBy('rt.throwId', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $throws;
+    }
+
+    /**
+     * @param int $gameId
+     * @param int $roundNumber
+     *
+     * @return array<int, array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>
+     */
+    public function findCurrentRoundThrowsForGamePlayers(int $gameId, int $roundNumber): array
+    {
+        $rows = $this->createGameStateThrowQueryBuilder()
+            ->andWhere('rt.game = :gameId')
+            ->andWhere('r.roundNumber = :roundNumber')
+            ->setParameter('gameId', $gameId)
+            ->setParameter('roundNumber', $roundNumber)
+            ->orderBy('rt.player', 'ASC')
+            ->addOrderBy('rt.throwNumber', 'ASC')
+            ->addOrderBy('rt.throwId', 'ASC')
+            ->getQuery()
+            ->getArrayResult();
+
+        return $this->normalizeGameStateThrowRows($rows);
+    }
+
+    /**
+     * @param int $gameId
+     *
+     * @return array<int, array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>
+     */
+    public function findLatestThrowsForGamePlayers(int $gameId): array
+    {
+        $rows = $this->createGameStateThrowQueryBuilder()
+            ->andWhere('rt.game = :gameId')
+            ->andWhere('rt.throwId IN (
+                SELECT MAX(rtLatest.throwId)
+                FROM App\\Entity\\RoundThrows rtLatest
+                WHERE rtLatest.game = :gameId
+                GROUP BY rtLatest.player
+            )')
+            ->setParameter('gameId', $gameId)
+            ->orderBy('rt.player', 'ASC')
+            ->getQuery()
+            ->getArrayResult();
+
+        return $this->normalizeGameStateThrowRows($rows);
+    }
+
+    /**
+     * @param int $gameId
+     *
+     * @return array<int, array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>
+     */
+    public function findRoundHistoryForGame(int $gameId): array
+    {
+        $rows = $this->createGameStateThrowQueryBuilder()
+            ->andWhere('rt.game = :gameId')
+            ->setParameter('gameId', $gameId)
+            ->orderBy('r.roundNumber', 'ASC')
+            ->addOrderBy('rt.player', 'ASC')
+            ->addOrderBy('rt.throwNumber', 'ASC')
+            ->addOrderBy('rt.throwId', 'ASC')
+            ->getQuery()
+            ->getArrayResult();
+
+        return $this->normalizeGameStateThrowRows($rows);
     }
 
     /**
@@ -275,5 +367,43 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
             ->setParameter('status', GameStatus::Finished)
             ->getQuery()
             ->getSingleScalarResult();
+    }
+
+    /**
+     * @return QueryBuilder
+     */
+    private function createGameStateThrowQueryBuilder(): QueryBuilder
+    {
+        return $this->createQueryBuilder('rt')
+            ->select(
+                'IDENTITY(rt.player) AS playerId',
+                'r.roundNumber AS roundNumber',
+                'rt.throwNumber AS throwNumber',
+                'rt.value AS value',
+                'rt.isDouble AS isDouble',
+                'rt.isTriple AS isTriple',
+                'rt.isBust AS isBust'
+            )
+            ->innerJoin('rt.round', 'r');
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $rows
+     *
+     * @return array<int, array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>
+     */
+    private function normalizeGameStateThrowRows(array $rows): array
+    {
+        return array_map(static function (array $row): array {
+            return [
+                'playerId' => (int) $row['playerId'],
+                'roundNumber' => (int) $row['roundNumber'],
+                'throwNumber' => (int) $row['throwNumber'],
+                'value' => (int) $row['value'],
+                'isDouble' => isset($row['isDouble']) ? (bool) $row['isDouble'] : false,
+                'isTriple' => isset($row['isTriple']) ? (bool) $row['isTriple'] : false,
+                'isBust' => isset($row['isBust']) ? (bool) $row['isBust'] : false,
+            ];
+        }, $rows);
     }
 }

@@ -107,6 +107,37 @@ final class GamePlayersRepositoryTest extends KernelTestCase
         self::assertContains($gamePlayerTwo->getGamePlayerId(), $ids);
     }
 
+    public function testFindGameStatePlayersByGameIdReturnsScalarShapeForDtoAssembly(): void
+    {
+        $game = $this->createGame();
+        $alpha = $this->createUser('alpha');
+        $beta = $this->createUser('beta', isGuest: true)->setDisplayName('Beta Guest');
+
+        $this->persistGamePlayer($game, $alpha, score: 140, position: 2);
+        $this->persistGamePlayer($game, $beta, score: 32, position: 1)
+            ->setDisplayNameSnapshot('Snapshot Beta');
+        $this->entityManager->flush();
+
+        $result = $this->repository->findGameStatePlayersByGameId($game->getGameId());
+
+        self::assertSame([
+            [
+                'playerId' => $beta->getId(),
+                'name' => 'Snapshot Beta',
+                'position' => 1,
+                'score' => 32,
+                'isGuest' => true,
+            ],
+            [
+                'playerId' => $alpha->getId(),
+                'name' => 'alpha',
+                'position' => 2,
+                'score' => 140,
+                'isGuest' => false,
+            ],
+        ], $result);
+    }
+
     public function testCountFinishedPlayers(): void
     {
         $game = $this->createGame();

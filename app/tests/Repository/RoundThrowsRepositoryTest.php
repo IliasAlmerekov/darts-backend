@@ -72,6 +72,175 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
         self::assertSame($latestA->getThrowId(), $foundForPlayer?->getThrowId());
     }
 
+    public function testFindByGameIdOrderedReturnsThrowsAcrossWholeGameInStableOrder(): void
+    {
+        $game = $this->createGame(GameStatus::Started);
+        $round1 = $this->createRound($game, 1, finished: true);
+        $round2 = $this->createRound($game, 2);
+
+        $playerA = $this->createUser('orderedA');
+        $playerB = $this->createUser('orderedB');
+
+        $throwA1 = $this->createThrow($game, $round1, $playerA, 1, 10, 10);
+        $throwB1 = $this->createThrow($game, $round1, $playerB, 1, 20, 20);
+        $throwA2 = $this->createThrow($game, $round2, $playerA, 1, 30, 40);
+        $throwB2 = $this->createThrow($game, $round2, $playerB, 2, 40, 60);
+        $this->em->flush();
+
+        $orderedThrows = $this->repo->findByGameIdOrdered($game->getGameId());
+
+        self::assertSame([
+            $throwA1->getThrowId(),
+            $throwB1->getThrowId(),
+            $throwA2->getThrowId(),
+            $throwB2->getThrowId(),
+        ], array_map(static fn(RoundThrows $throw): ?int => $throw->getThrowId(), $orderedThrows));
+    }
+
+    public function testFindCurrentRoundThrowsForGamePlayersReturnsScalarRows(): void
+    {
+        $game = $this->createGame(GameStatus::Started);
+        $round1 = $this->createRound($game, 1, finished: true);
+        $round2 = $this->createRound($game, 2);
+
+        $playerA = $this->createUser('current-a');
+        $playerB = $this->createUser('current-b');
+
+        $this->createThrow($game, $round1, $playerA, 1, 10, 10);
+        $this->createThrow($game, $round2, $playerA, 1, 20, 30);
+        $this->createThrow($game, $round2, $playerA, 2, 40, 70, isBust: true);
+        $this->createThrow($game, $round2, $playerB, 1, 50, 50);
+        $this->em->flush();
+
+        $rows = $this->repo->findCurrentRoundThrowsForGamePlayers($game->getGameId(), 2);
+
+        self::assertSame([
+            [
+                'playerId' => $playerA->getId(),
+                'roundNumber' => 2,
+                'throwNumber' => 1,
+                'value' => 20,
+                'isDouble' => false,
+                'isTriple' => false,
+                'isBust' => false,
+            ],
+            [
+                'playerId' => $playerA->getId(),
+                'roundNumber' => 2,
+                'throwNumber' => 2,
+                'value' => 40,
+                'isDouble' => false,
+                'isTriple' => false,
+                'isBust' => true,
+            ],
+            [
+                'playerId' => $playerB->getId(),
+                'roundNumber' => 2,
+                'throwNumber' => 1,
+                'value' => 50,
+                'isDouble' => false,
+                'isTriple' => false,
+                'isBust' => false,
+            ],
+        ], $rows);
+    }
+
+    public function testFindLatestThrowsForGamePlayersReturnsOneRowPerPlayer(): void
+    {
+        $game = $this->createGame(GameStatus::Started);
+        $round1 = $this->createRound($game, 1, finished: true);
+        $round2 = $this->createRound($game, 2);
+
+        $playerA = $this->createUser('latest-a');
+        $playerB = $this->createUser('latest-b');
+
+        $this->createThrow($game, $round1, $playerA, 1, 10, 10);
+        $this->createThrow($game, $round2, $playerA, 1, 20, 30, isBust: true);
+        $this->createThrow($game, $round1, $playerB, 1, 15, 15);
+        $this->createThrow($game, $round2, $playerB, 2, 25, 40);
+        $this->em->flush();
+
+        $rows = $this->repo->findLatestThrowsForGamePlayers($game->getGameId());
+
+        self::assertSame([
+            [
+                'playerId' => $playerA->getId(),
+                'roundNumber' => 2,
+                'throwNumber' => 1,
+                'value' => 20,
+                'isDouble' => false,
+                'isTriple' => false,
+                'isBust' => true,
+            ],
+            [
+                'playerId' => $playerB->getId(),
+                'roundNumber' => 2,
+                'throwNumber' => 2,
+                'value' => 25,
+                'isDouble' => false,
+                'isTriple' => false,
+                'isBust' => false,
+            ],
+        ], $rows);
+    }
+
+    public function testFindRoundHistoryForGameReturnsAllThrowsInGroupingOrder(): void
+    {
+        $game = $this->createGame(GameStatus::Started);
+        $round1 = $this->createRound($game, 1, finished: true);
+        $round2 = $this->createRound($game, 2);
+
+        $playerA = $this->createUser('history-a');
+        $playerB = $this->createUser('history-b');
+
+        $this->createThrow($game, $round1, $playerA, 1, 10, 10);
+        $this->createThrow($game, $round1, $playerB, 1, 20, 20);
+        $this->createThrow($game, $round2, $playerA, 1, 30, 40);
+        $this->createThrow($game, $round2, $playerB, 2, 40, 60);
+        $this->em->flush();
+
+        $rows = $this->repo->findRoundHistoryForGame($game->getGameId());
+
+        self::assertSame([
+            [
+                'playerId' => $playerA->getId(),
+                'roundNumber' => 1,
+                'throwNumber' => 1,
+                'value' => 10,
+                'isDouble' => false,
+                'isTriple' => false,
+                'isBust' => false,
+            ],
+            [
+                'playerId' => $playerB->getId(),
+                'roundNumber' => 1,
+                'throwNumber' => 1,
+                'value' => 20,
+                'isDouble' => false,
+                'isTriple' => false,
+                'isBust' => false,
+            ],
+            [
+                'playerId' => $playerA->getId(),
+                'roundNumber' => 2,
+                'throwNumber' => 1,
+                'value' => 30,
+                'isDouble' => false,
+                'isTriple' => false,
+                'isBust' => false,
+            ],
+            [
+                'playerId' => $playerB->getId(),
+                'roundNumber' => 2,
+                'throwNumber' => 2,
+                'value' => 40,
+                'isDouble' => false,
+                'isTriple' => false,
+                'isBust' => false,
+            ],
+        ], $rows);
+    }
+
     public function testAggregateHelpers(): void
     {
         $game = $this->createGame(GameStatus::Started);

@@ -88,12 +88,52 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
     public function findByGameId(int $gameId): array
     {
         return $this->createQueryBuilder('gp')
+            ->addSelect('player')
+            ->innerJoin('gp.player', 'player')
             ->andWhere('gp.game = :gameId')
             ->setParameter('gameId', $gameId)
             ->orderBy('gp.position', 'ASC')
             ->addOrderBy('gp.gamePlayerId', 'ASC')
             ->getQuery()
             ->getResult();
+    }
+
+    /**
+     * @param int $gameId
+     *
+     * @return array<int, array{playerId:int,name:string,position:int|null,score:int|null,isGuest:bool}>
+     */
+    public function findGameStatePlayersByGameId(int $gameId): array
+    {
+        $rows = $this->createQueryBuilder('gp')
+            ->select(
+                'player.id AS playerId',
+                "CASE
+                    WHEN gp.displayNameSnapshot IS NOT NULL AND gp.displayNameSnapshot <> '' THEN gp.displayNameSnapshot
+                    WHEN player.displayName IS NOT NULL AND player.displayName <> '' THEN player.displayName
+                    ELSE player.username
+                END AS name",
+                'gp.position AS position',
+                'gp.score AS score',
+                'player.isGuest AS isGuest'
+            )
+            ->innerJoin('gp.player', 'player')
+            ->andWhere('gp.game = :gameId')
+            ->setParameter('gameId', $gameId)
+            ->orderBy('gp.position', 'ASC')
+            ->addOrderBy('gp.gamePlayerId', 'ASC')
+            ->getQuery()
+            ->getArrayResult();
+
+        return array_map(static function (array $row): array {
+            return [
+                'playerId' => (int) $row['playerId'],
+                'name' => (string) $row['name'],
+                'position' => isset($row['position']) ? (int) $row['position'] : null,
+                'score' => isset($row['score']) ? (int) $row['score'] : null,
+                'isGuest' => isset($row['isGuest']) ? (bool) $row['isGuest'] : false,
+            ];
+        }, $rows);
     }
 
     /**
