@@ -23,6 +23,8 @@ security:
                 check_path: app_login
                 enable_csrf: false
                 default_target_path: login_success
+                success_handler: App\Security\ApiAuthenticationSuccessHandler
+                failure_handler: App\Security\ApiAuthenticationFailureHandler
             logout:
                 path: app_logout
                 # where to redirect after logout
