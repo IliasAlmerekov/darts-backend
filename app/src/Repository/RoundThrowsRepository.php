@@ -14,6 +14,7 @@ use App\Entity\Round;
 use App\Entity\GamePlayers;
 use App\Entity\RoundThrows;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -188,6 +189,49 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
 
     /**
      * @param int $gameId
+     * @param int $roundNumber
+     *
+     * @return array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}>
+     */
+    public function findCurrentRoundStateSnapshot(int $gameId, int $roundNumber): array
+    {
+        $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
+            <<<'SQL'
+SELECT
+    round_state.playerId AS playerId,
+    round_state.throwsCount AS throwsCount,
+    latest.throw_number AS lastThrowNumber,
+    latest.value AS lastThrowValue,
+    latest.is_bust AS lastThrowBust
+FROM (
+    SELECT
+        rt.player_id AS playerId,
+        COUNT(rt.throw_id) AS throwsCount,
+        MAX(rt.throw_id) AS lastThrowId
+    FROM round_throws rt
+    INNER JOIN round r ON r.round_id = rt.round_id
+    WHERE rt.game_id = :gameId
+      AND r.round_number = :roundNumber
+    GROUP BY rt.player_id
+) round_state
+INNER JOIN round_throws latest ON latest.throw_id = round_state.lastThrowId
+ORDER BY round_state.playerId ASC
+SQL,
+            [
+                'gameId' => $gameId,
+                'roundNumber' => $roundNumber,
+            ],
+            [
+                'gameId' => ParameterType::INTEGER,
+                'roundNumber' => ParameterType::INTEGER,
+            ],
+        );
+
+        return $this->normalizeRoundStateSnapshotRows($rows);
+    }
+
+    /**
+     * @param int $gameId
      *
      * @return array<int, array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>
      */
@@ -353,29 +397,55 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
     {
         $orderColumn = 'gamesPlayed' === $sortField ? 'gamesPlayed' : 'scoreAverage';
         $direction = 'ASC' === strtoupper($direction) ? 'ASC' : 'DESC';
+        $sql = sprintf(
+            <<<'SQL'
+SELECT
+    player_rounds.playerId AS playerId,
+    player_rounds.username AS username,
+    COUNT(DISTINCT player_rounds.gameId) AS gamesPlayed,
+    SUM(player_rounds.roundTotal) AS totalValue,
+    COUNT(*) AS roundsFinished,
+    (
+        SUM(player_rounds.roundTotal) /
+        NULLIF(COUNT(*), 0)
+    ) AS scoreAverage
+FROM (
+    SELECT
+        rt.player_id AS playerId,
+        u.display_name AS username,
+        rt.game_id AS gameId,
+        rt.round_id AS roundId,
+        SUM(CASE WHEN rt.is_bust = 1 THEN 0 ELSE rt.value END) AS roundTotal
+    FROM round_throws rt
+    INNER JOIN game g ON g.game_id = rt.game_id
+    INNER JOIN round r ON r.round_id = rt.round_id
+    INNER JOIN user u ON u.id = rt.player_id
+    WHERE g.status = :status
+      AND u.is_guest = 0
+      AND r.finished_at IS NOT NULL
+    GROUP BY rt.player_id, u.display_name, rt.game_id, rt.round_id
+) player_rounds
+GROUP BY player_rounds.playerId, player_rounds.username
+ORDER BY %s %s
+LIMIT :limit OFFSET :offset
+SQL,
+            $orderColumn,
+            $direction,
+        );
 
-        return $this->createQueryBuilder('rt')
-            ->select(
-                'u.id AS playerId',
-                'u.displayName AS username',
-                'COUNT(DISTINCT g.gameId) AS gamesPlayed',
-                "SUM(CASE WHEN rt.isBust = true THEN 0 ELSE rt.value END) AS totalValue",
-                'COUNT(DISTINCT r.roundId) AS roundsFinished',
-                "(SUM(CASE WHEN rt.isBust = true THEN 0 ELSE rt.value END) / "."NULLIF(COUNT(DISTINCT r.roundId), 0)) AS scoreAverage"
-            )
-            ->innerJoin('rt.player', 'u')
-            ->innerJoin('rt.game', 'g')
-            ->innerJoin('rt.round', 'r')
-            ->andWhere('g.status = :status')
-            ->andWhere('u.isGuest = false')
-            ->andWhere('r.finishedAt IS NOT NULL')
-            ->setParameter('status', GameStatus::Finished)
-            ->groupBy('u.id', 'u.displayName')
-            ->orderBy($orderColumn, $direction)
-            ->setFirstResult($offset)
-            ->setMaxResults($limit)
-            ->getQuery()
-            ->getArrayResult();
+        return $this->getEntityManager()->getConnection()->fetchAllAssociative(
+            $sql,
+            [
+                'status' => GameStatus::Finished->value,
+                'limit' => $limit,
+                'offset' => $offset,
+            ],
+            [
+                'status' => ParameterType::STRING,
+                'limit' => ParameterType::INTEGER,
+                'offset' => ParameterType::INTEGER,
+            ],
+        );
     }
 
     /**
@@ -451,5 +521,27 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
                 'isBust' => isset($row['isBust']) ? (bool) $row['isBust'] : false,
             ];
         }, $rows);
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $rows
+     *
+     * @return array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}>
+     */
+    private function normalizeRoundStateSnapshotRows(array $rows): array
+    {
+        $snapshot = [];
+
+        foreach ($rows as $row) {
+            $playerId = (int) $row['playerId'];
+            $snapshot[$playerId] = [
+                'throwsCount' => (int) $row['throwsCount'],
+                'lastThrowNumber' => isset($row['lastThrowNumber']) ? (int) $row['lastThrowNumber'] : null,
+                'lastThrowValue' => isset($row['lastThrowValue']) ? (int) $row['lastThrowValue'] : null,
+                'lastThrowBust' => isset($row['lastThrowBust']) ? (bool) $row['lastThrowBust'] : false,
+            ];
+        }
+
+        return $snapshot;
     }
 }

@@ -8,6 +8,7 @@ use App\Controller\GameThrowController;
 use App\Dto\GameResponseDto;
 use App\Dto\ScoreboardDeltaDto;
 use App\Dto\ThrowAckDto;
+use App\Dto\ThrowRecordingResultDto;
 use App\Dto\ThrowDeltaDto;
 use App\Dto\ThrowRequest;
 use App\Dto\UndoAckDto;
@@ -42,7 +43,10 @@ final class GameThrowControllerTest extends TestCase
         $dto = new ThrowRequest();
 
         $throwService = $this->createMock(GameThrowServiceInterface::class);
-        $throwService->expects($this->once())->method('recordThrow')->with($game, $dto);
+        $throwService->expects($this->once())
+            ->method('recordThrow')
+            ->with($game, $dto)
+            ->willReturn($this->dummyThrowRecordingResultDto());
 
         $gameService = $this->createMock(GameServiceInterface::class);
         $gameService->method('createGameDto')->willReturn($this->dummyGameDto());
@@ -124,13 +128,17 @@ final class GameThrowControllerTest extends TestCase
     {
         $game = (new Game())->setGameId(777);
         $dto = new ThrowRequest();
+        $throwRecordingResult = $this->dummyThrowRecordingResultDto();
         $throwService = $this->createMock(GameThrowServiceInterface::class);
-        $throwService->expects(self::once())->method('recordThrow')->with($game, $dto);
+        $throwService->expects(self::once())
+            ->method('recordThrow')
+            ->with($game, $dto)
+            ->willReturn($throwRecordingResult);
 
         $deltaService = $this->createMock(GameDeltaServiceInterface::class);
         $deltaService->expects(self::once())
             ->method('buildThrowAck')
-            ->with($game)
+            ->with($game, $throwRecordingResult->latestThrow, $throwRecordingResult->currentRoundStateSnapshot)
             ->willReturn($this->dummyThrowAckDto());
 
         $response = $this->controller->throwDelta($game, $throwService, $deltaService, $dto);
@@ -184,6 +192,33 @@ final class GameThrowControllerTest extends TestCase
                 currentRound: 2,
             ),
             serverTs: '2026-02-13T00:00:00+00:00',
+        );
+    }
+
+    private function dummyThrowRecordingResultDto(): ThrowRecordingResultDto
+    {
+        return new ThrowRecordingResultDto(
+            latestThrow: [
+                'id' => 501,
+                'playerId' => 10,
+                'playerName' => 'Alex',
+                'value' => 25,
+                'isDouble' => false,
+                'isTriple' => false,
+                'isBust' => true,
+                'score' => 26,
+                'roundNumber' => 2,
+                'throwNumber' => 1,
+                'timestamp' => '2026-02-13T09:00:00+00:00',
+            ],
+            currentRoundStateSnapshot: [
+                10 => [
+                    'throwsCount' => 1,
+                    'lastThrowNumber' => 1,
+                    'lastThrowValue' => 25,
+                    'lastThrowBust' => true,
+                ],
+            ],
         );
     }
 }

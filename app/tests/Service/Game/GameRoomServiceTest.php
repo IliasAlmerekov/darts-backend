@@ -39,7 +39,23 @@ final class GameRoomServiceTest extends TestCase
         $this->gameRepository = $this->createMock(GameRepositoryInterface::class);
         $this->gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $this->gamePlayersRepository->method('findBy')->willReturn([]);
+        $this->gamePlayersRepository->method('findNextPositionForGame')->willReturn(1);
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
+        $this->entityManager->method('getReference')
+            ->willReturnCallback(function (string $class, int $id): object {
+                if (Game::class === $class) {
+                    return (new Game())->setGameId($id);
+                }
+
+                if (User::class === $class) {
+                    $user = new User();
+                    $this->setPrivateProperty($user, 'id', $id);
+
+                    return $user;
+                }
+
+                throw new \LogicException('Unexpected getReference call');
+            });
         $this->playerManagementService = new PlayerManagementService(
             $this->gamePlayersRepository,
             $this->entityManager

@@ -107,6 +107,69 @@ final class GamePlayersRepositoryTest extends KernelTestCase
         self::assertContains($gamePlayerTwo->getGamePlayerId(), $ids);
     }
 
+    public function testExistsNameInGameUsesSnapshotCaseInsensitively(): void
+    {
+        $game = $this->createGame();
+        $guest = $this->createUser('guest-user', isGuest: true)->setDisplayName('Ignored Name');
+
+        $this->persistGamePlayer($game, $guest, position: 1)
+            ->setDisplayNameSnapshot('  Alex Guest  ');
+        $this->entityManager->flush();
+
+        self::assertTrue($this->repository->existsNameInGame($game->getGameId(), 'alex guest'));
+        self::assertTrue($this->repository->existsNameInGame($game->getGameId(), '  ALEX GUEST  '));
+        self::assertFalse($this->repository->existsNameInGame($game->getGameId(), 'someone else'));
+    }
+
+    public function testExistsNameInGameFallsBackToUserDisplayNameAndUsername(): void
+    {
+        $game = $this->createGame();
+        $withDisplayName = $this->createUser('login-name');
+        $withDisplayName->setDisplayName('Display Alias');
+        $withUsernameFallback = $this->createUser('username-only');
+        $withUsernameFallback->setDisplayName('');
+
+        $this->persistGamePlayer($game, $withDisplayName, position: 1)
+            ->setDisplayNameSnapshot('');
+        $this->persistGamePlayer($game, $withUsernameFallback, position: 2)
+            ->setDisplayNameSnapshot('');
+        $this->entityManager->flush();
+
+        self::assertTrue($this->repository->existsNameInGame($game->getGameId(), 'display alias'));
+        self::assertTrue($this->repository->existsNameInGame($game->getGameId(), 'USERNAME-ONLY'));
+    }
+
+    public function testFindNextPositionForGameStartsAtOneWhenGameHasNoPlayers(): void
+    {
+        $game = $this->createGame();
+        $this->entityManager->flush();
+
+        self::assertSame(1, $this->repository->findNextPositionForGame($game->getGameId()));
+    }
+
+    public function testFindNextPositionForGameUsesPlayerCountWhenExistingPositionsAreNull(): void
+    {
+        $game = $this->createGame();
+        $first = $this->persistGamePlayer($game, $this->createUser('one'), position: 1);
+        $second = $this->persistGamePlayer($game, $this->createUser('two'), position: 1);
+        (new \ReflectionProperty(GamePlayers::class, 'position'))->setValue($first, null);
+        (new \ReflectionProperty(GamePlayers::class, 'position'))->setValue($second, null);
+        $this->entityManager->flush();
+
+        self::assertSame(3, $this->repository->findNextPositionForGame($game->getGameId()));
+    }
+
+    public function testFindNextPositionForGameUsesHighestExistingPosition(): void
+    {
+        $game = $this->createGame();
+        $this->persistGamePlayer($game, $this->createUser('one'), position: 2);
+        $this->persistGamePlayer($game, $this->createUser('two'), position: 10);
+        $this->persistGamePlayer($game, $this->createUser('three'), position: 5);
+        $this->entityManager->flush();
+
+        self::assertSame(11, $this->repository->findNextPositionForGame($game->getGameId()));
+    }
+
     public function testFindGameStatePlayersByGameIdReturnsScalarShapeForDtoAssembly(): void
     {
         $game = $this->createGame();

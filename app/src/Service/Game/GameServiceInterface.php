@@ -9,6 +9,8 @@ use App\Entity\Game;
 
 /**
  * Interface for game service operations.
+ *
+ * @phpstan-type RoundStateSnapshot array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}>
  */
 interface GameServiceInterface
 {
@@ -22,11 +24,12 @@ interface GameServiceInterface
      *   * They have thrown less than 3 times in the current round
      *   * They are not bust in the current round
      *
-     * @param Game $game The game entity
+    * @param Game                    $game               The game entity
+    * @param RoundStateSnapshot|null $roundStateSnapshot Optional preloaded current-round snapshot
      *
      * @return int|null The id of the active player or null if no active player found
      */
-    public function calculateActivePlayer(Game $game): ?int;
+    public function calculateActivePlayer(Game $game, ?array $roundStateSnapshot = null): ?int;
 
     /**
      * Create a complete game response DTO from a game entity.

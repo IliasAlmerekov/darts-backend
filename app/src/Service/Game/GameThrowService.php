@@ -10,6 +10,7 @@ declare(strict_types=1);
 
 namespace App\Service\Game;
 
+use App\Dto\ThrowRecordingResultDto;
 use App\Dto\ThrowDeltaDto;
 use App\Dto\ThrowRequest;
 use App\Entity\Game;
@@ -47,6 +48,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
      * @param EntityManagerInterface         $entityManager
      * @param GameAccessServiceInterface     $gameAccessService
+    * @param ActivePlayerResolverInterface  $activePlayerResolver
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
@@ -56,6 +58,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         private RoundThrowsRepositoryInterface $roundThrowsRepository,
         private EntityManagerInterface $entityManager,
         private GameAccessServiceInterface $gameAccessService,
+        private ?ActivePlayerResolverInterface $activePlayerResolver = null,
     ) {
     }
 
@@ -63,10 +66,10 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      * @param Game         $game
      * @param ThrowRequest $dto
      *
-     * @return void
+        * @return ThrowRecordingResultDto
      */
     #[Override]
-    public function recordThrow(Game $game, ThrowRequest $dto): void
+    public function recordThrow(Game $game, ThrowRequest $dto): ThrowRecordingResultDto
     {
         $user = $this->gameAccessService->assertPlayerInGameOrAdmin($game);
 
@@ -92,12 +95,10 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         if (null === $requestedPlayerId) {
             throw new PlayerNotFoundInGameException();
         }
-        $this->assertActivePlayer($game, $round, $requestedPlayerId);
+        $roundStateSnapshot = $this->loadCurrentRoundStateSnapshot($game, $round);
+        $this->assertActivePlayer($game, $requestedPlayerId, $roundStateSnapshot);
 
-        $playerThrowsThisRound = $this->roundThrowsRepository->count([
-            'round' => $round,
-            'player' => $player->getPlayer(),
-        ]);
+        $playerThrowsThisRound = $this->resolvePlayerRoundState($roundStateSnapshot, $requestedPlayerId)['throwsCount'];
         if ($playerThrowsThisRound >= 3) {
             throw new PlayerAlreadyThrewThreeTimesException();
         }
@@ -204,7 +205,20 @@ final readonly class GameThrowService implements GameThrowServiceInterface
 
         $this->entityManager->persist($roundThrow);
         $this->entityManager->flush();
-        $this->maybeAdvanceRound($game, $round);
+        $updatedRoundStateSnapshot = $roundStateSnapshot;
+        $updatedRoundStateSnapshot[$requestedPlayerId] = [
+            'throwsCount' => $playerThrowsThisRound + 1,
+            'lastThrowNumber' => $throwNumber,
+            'lastThrowValue' => $finalValue,
+            'lastThrowBust' => $isBust,
+        ];
+
+        $hasAdvancedRound = $this->maybeAdvanceRound($game, $round, $updatedRoundStateSnapshot);
+
+        return new ThrowRecordingResultDto(
+            latestThrow: $this->createLatestThrowSnapshot($roundThrow),
+            currentRoundStateSnapshot: $hasAdvancedRound ? [] : $updatedRoundStateSnapshot,
+        );
     }
 
     /**
@@ -325,16 +339,17 @@ final readonly class GameThrowService implements GameThrowServiceInterface
     }
 
     /**
-     * @param Game  $game
-     * @param Round $currentRound
+     * @param Game             $game
+     * @param Round            $currentRound
+     * @param array<int,mixed> $roundStateSnapshot
      *
-     * @return void
+     * @return bool
      */
-    private function maybeAdvanceRound(Game $game, Round $currentRound): void
+    private function maybeAdvanceRound(Game $game, Round $currentRound, array $roundStateSnapshot): bool
     {
         $playersCount = $game->getGamePlayers()->count();
         if (0 === $playersCount) {
-            return;
+            return false;
         }
 
         // Wir prüfen, ob alle AKTIVEN Spieler (Score > 0) 3 Würfe gemacht haben
@@ -344,25 +359,21 @@ final readonly class GameThrowService implements GameThrowServiceInterface
                 continue;
             }
 
+            $playerId = $player->getId();
+            if (null === $playerId) {
+                continue;
+            }
+
             // Skip Spieler, die bereits gewonnen haben (Score = 0)
             $playerScore = $gp->getScore() ?? $game->getStartScore();
             if (0 === $playerScore) {
                 continue;
             }
 
-            $countForPlayer = $this->roundThrowsRepository->count([
-                'round' => $currentRound,
-                'player' => $player,
-            ]);
-            if ($countForPlayer < 3) {
-                $latestThrow = $this->roundThrowsRepository->findOneBy(
-                    ['round' => $currentRound, 'player' => $player],
-                    ['throwNumber' => 'DESC']
-                );
-                if (null === $latestThrow || !$latestThrow->isBust()) {
-                    return;
-                    // Noch nicht alle AKTIVEN Spieler haben 3 Würfe gemacht
-                }
+            $playerRoundState = $this->resolvePlayerRoundState($roundStateSnapshot, $playerId);
+            if ($playerRoundState['throwsCount'] < 3 && false === $playerRoundState['lastThrowBust']) {
+                return false;
+                // Noch nicht alle AKTIVEN Spieler haben 3 Würfe gemacht
             }
         }
 
@@ -378,78 +389,26 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         $game->addRound($nextRound);
         $this->entityManager->persist($nextRound);
         $this->entityManager->flush();
+
+        return true;
     }
 
     /**
-     * @param Game  $game
-     * @param Round $round
-     * @param int   $requestedPlayerId
+     * @param Game             $game
+     * @param int              $requestedPlayerId
+     * @param array<int,mixed> $roundStateSnapshot
      *
      * @return void
      */
-    private function assertActivePlayer(Game $game, Round $round, int $requestedPlayerId): void
+    private function assertActivePlayer(Game $game, int $requestedPlayerId, array $roundStateSnapshot): void
     {
-        $activePlayerId = $this->resolveActivePlayerId($game, $round);
+        $activePlayerId = ($this->activePlayerResolver ?? new ActivePlayerResolver($this->roundThrowsRepository))
+            ->resolveActivePlayer($game, $roundStateSnapshot);
         if (null !== $activePlayerId && $activePlayerId === $requestedPlayerId) {
             return;
         }
 
         throw new GamePlayerNotActiveException($requestedPlayerId, $activePlayerId);
-    }
-
-    /**
-     * @param Game  $game
-     * @param Round $round
-     *
-     * @return int|null
-     */
-    private function resolveActivePlayerId(Game $game, Round $round): ?int
-    {
-        $gamePlayers = $game->getGamePlayers()->toArray();
-        usort($gamePlayers, static function (GamePlayers $left, GamePlayers $right): int {
-            $leftPosition = $left->getPosition() ?? PHP_INT_MAX;
-            $rightPosition = $right->getPosition() ?? PHP_INT_MAX;
-            if ($leftPosition !== $rightPosition) {
-                return $leftPosition <=> $rightPosition;
-            }
-
-            $leftId = $left->getGamePlayerId() ?? PHP_INT_MAX;
-            $rightId = $right->getGamePlayerId() ?? PHP_INT_MAX;
-
-            return $leftId <=> $rightId;
-        });
-
-        foreach ($gamePlayers as $gamePlayer) {
-            $player = $gamePlayer->getPlayer();
-            if (null === $player) {
-                continue;
-            }
-
-            $playerScore = $gamePlayer->getScore() ?? $game->getStartScore();
-            if (0 === $playerScore) {
-                continue;
-            }
-
-            $throwsCount = $this->roundThrowsRepository->count([
-                'round' => $round,
-                'player' => $player,
-            ]);
-            if ($throwsCount >= 3) {
-                continue;
-            }
-
-            $latestThrow = $this->roundThrowsRepository->findOneBy(
-                ['round' => $round, 'player' => $player],
-                ['throwNumber' => 'DESC']
-            );
-            if ($latestThrow instanceof RoundThrows && $latestThrow->isBust()) {
-                continue;
-            }
-
-            return $player->getId();
-        }
-
-        return null;
     }
 
     /**
@@ -558,5 +517,85 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             roundNumber: $throw->getRound()?->getRoundNumber() ?? 0,
             timestamp: $timestamp instanceof DateTimeInterface ? $timestamp->format(DateTimeInterface::ATOM) : (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
         );
+    }
+
+    /**
+     * @param RoundThrows $throw
+     *
+     * @return array{id:int,playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool,score:int,playerName:string,timestamp:string}|null
+     */
+    private function createLatestThrowSnapshot(RoundThrows $throw): ?array
+    {
+        $throwId = $throw->getThrowId();
+        $player = $throw->getPlayer();
+        $playerId = $player?->getId();
+        $roundNumber = $throw->getRound()?->getRoundNumber();
+        $throwNumber = $throw->getThrowNumber();
+        $value = $throw->getValue();
+        $score = $throw->getScore();
+
+        if (null === $throwId || null === $playerId || null === $roundNumber || null === $throwNumber || null === $value || null === $score) {
+            return null;
+        }
+
+        $playerName = $player?->getDisplayNameRaw() ?? $player?->getUsername() ?? '';
+        $timestamp = $throw->getTimestamp();
+
+        return [
+            'id' => $throwId,
+            'playerId' => $playerId,
+            'roundNumber' => $roundNumber,
+            'throwNumber' => $throwNumber,
+            'value' => $value,
+            'isDouble' => $throw->isDouble(),
+            'isTriple' => $throw->isTriple(),
+            'isBust' => $throw->isBust(),
+            'score' => $score,
+            'playerName' => $playerName,
+            'timestamp' => $timestamp instanceof DateTimeInterface ? $timestamp->format(DateTimeInterface::ATOM) : (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
+        ];
+    }
+
+    /**
+     * @param Game  $game
+     * @param Round $round
+     *
+     * @return array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}>
+     */
+    private function loadCurrentRoundStateSnapshot(Game $game, Round $round): array
+    {
+        $gameId = $game->getGameId();
+        $roundNumber = $round->getRoundNumber();
+        if (null === $gameId || null === $roundNumber) {
+            return [];
+        }
+
+        return $this->roundThrowsRepository->findCurrentRoundStateSnapshot($gameId, $roundNumber);
+    }
+
+    /**
+     * @param array<int, array<string, int|bool|null>> $roundStateSnapshot
+     * @param int                                      $playerId
+     *
+     * @return array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}
+     */
+    private function resolvePlayerRoundState(array $roundStateSnapshot, int $playerId): array
+    {
+        $playerRoundState = $roundStateSnapshot[$playerId] ?? null;
+        if (!is_array($playerRoundState)) {
+            return [
+                'throwsCount' => 0,
+                'lastThrowNumber' => null,
+                'lastThrowValue' => null,
+                'lastThrowBust' => false,
+            ];
+        }
+
+        return [
+            'throwsCount' => (int) ($playerRoundState['throwsCount'] ?? 0),
+            'lastThrowNumber' => isset($playerRoundState['lastThrowNumber']) ? (int) $playerRoundState['lastThrowNumber'] : null,
+            'lastThrowValue' => isset($playerRoundState['lastThrowValue']) ? (int) $playerRoundState['lastThrowValue'] : null,
+            'lastThrowBust' => true === ($playerRoundState['lastThrowBust'] ?? false),
+        ];
     }
 }

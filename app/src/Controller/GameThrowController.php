@@ -95,9 +95,9 @@ final class GameThrowController extends AbstractController
     #[Route('/api/game/{gameId}/throw/delta', name: 'app_game_throw_delta', methods: ['POST'], format: 'json')]
     public function throwDelta(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameDeltaServiceInterface $gameDeltaService, #[MapRequestPayload] ThrowRequest $dto): ThrowAckDto
     {
-        $gameThrowService->recordThrow($game, $dto);
+        $throwRecordingResult = $gameThrowService->recordThrow($game, $dto);
 
-        return $gameDeltaService->buildThrowAck($game);
+        return $gameDeltaService->buildThrowAck($game, $throwRecordingResult->latestThrow, $throwRecordingResult->currentRoundStateSnapshot);
     }
 
     /**

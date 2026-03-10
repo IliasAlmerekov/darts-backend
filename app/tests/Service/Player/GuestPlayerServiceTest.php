@@ -12,6 +12,7 @@ namespace App\Tests\Service\Player;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\User;
+use App\Exception\Game\GameIdMissingException;
 use App\Exception\Request\UsernameAlreadyTakenException;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Service\Player\GuestPlayerService;
@@ -38,9 +39,23 @@ final class GuestPlayerServiceTest extends TestCase
 
         $gamePlayersRepository
             ->expects(self::once())
-            ->method('findByGameId')
-            ->with(10)
-            ->willReturn([]);
+            ->method('existsNameInGame')
+            ->with(10, 'Alex')
+            ->willReturn(false);
+
+        $gamePlayersRepository
+            ->expects(self::never())
+            ->method('findByGameId');
+
+        $playerManagementService
+            ->expects(self::once())
+            ->method('addPlayerEntity')
+            ->with(10, self::isInstanceOf(User::class), null, false)
+            ->willReturn((new GamePlayers())->setPosition(2));
+
+        $playerManagementService
+            ->expects(self::never())
+            ->method('addPlayer');
 
         $passwordHasher
             ->expects(self::once())
@@ -64,13 +79,6 @@ final class GuestPlayerServiceTest extends TestCase
             ->expects(self::once())
             ->method('flush');
 
-        $gamePlayer = (new GamePlayers())->setPosition(2);
-        $playerManagementService
-            ->expects(self::once())
-            ->method('addPlayer')
-            ->with(10, 55)
-            ->willReturn($gamePlayer);
-
         $result = $service->createGuestPlayer($game, 'Alex');
 
         self::assertSame(55, $result['playerId']);
@@ -83,20 +91,41 @@ final class GuestPlayerServiceTest extends TestCase
     {
         $game = (new Game())->setGameId(10);
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
+        $passwordHasher = $this->createMock(UserPasswordHasherInterface::class);
+        $entityManager = $this->createMock(EntityManagerInterface::class);
         $service = new GuestPlayerService(
             $gamePlayersRepository,
-            $this->createStub(PlayerManagementServiceInterface::class),
-            $this->createStub(UserPasswordHasherInterface::class),
-            $this->createStub(EntityManagerInterface::class),
+            $playerManagementService,
+            $passwordHasher,
+            $entityManager,
         );
 
-        $existingPlayer = new GamePlayers();
-        $existingPlayer->setDisplayNameSnapshot('Alex');
         $gamePlayersRepository
             ->expects(self::once())
-            ->method('findByGameId')
-            ->with(10)
-            ->willReturn([$existingPlayer]);
+            ->method('existsNameInGame')
+            ->with(10, 'Alex')
+            ->willReturn(true);
+
+        $gamePlayersRepository
+            ->expects(self::never())
+            ->method('findByGameId');
+
+        $playerManagementService
+            ->expects(self::never())
+            ->method('addPlayerEntity');
+
+        $passwordHasher
+            ->expects(self::never())
+            ->method('hashPassword');
+
+        $entityManager
+            ->expects(self::never())
+            ->method('persist');
+
+        $entityManager
+            ->expects(self::never())
+            ->method('flush');
 
         try {
             $service->createGuestPlayer($game, 'Alex');
@@ -104,6 +133,96 @@ final class GuestPlayerServiceTest extends TestCase
         } catch (UsernameAlreadyTakenException $exception) {
             self::assertSame('Alex', $exception->getUsername());
             self::assertSame([], $exception->getSuggestions());
+        }
+    }
+
+    public function testCreateGuestPlayerTreatsExistingNameCaseInsensitively(): void
+    {
+        $game = (new Game())->setGameId(10);
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
+        $passwordHasher = $this->createMock(UserPasswordHasherInterface::class);
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $service = new GuestPlayerService(
+            $gamePlayersRepository,
+            $playerManagementService,
+            $passwordHasher,
+            $entityManager,
+        );
+
+        $gamePlayersRepository
+            ->expects(self::once())
+            ->method('existsNameInGame')
+            ->with(10, 'Alex')
+            ->willReturn(true);
+
+        $gamePlayersRepository
+            ->expects(self::never())
+            ->method('findByGameId');
+
+        $playerManagementService
+            ->expects(self::never())
+            ->method('addPlayerEntity');
+
+        $passwordHasher
+            ->expects(self::never())
+            ->method('hashPassword');
+
+        $entityManager
+            ->expects(self::never())
+            ->method('persist');
+
+        $entityManager
+            ->expects(self::never())
+            ->method('flush');
+
+        try {
+            $service->createGuestPlayer($game, ' Alex ');
+            self::fail('Expected exception was not thrown.');
+        } catch (UsernameAlreadyTakenException $exception) {
+            self::assertSame('Alex', $exception->getUsername());
+        }
+    }
+
+    public function testCreateGuestPlayerThrowsBeforeWritesWhenGameIdMissing(): void
+    {
+        $game = new Game();
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
+        $passwordHasher = $this->createMock(UserPasswordHasherInterface::class);
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $service = new GuestPlayerService(
+            $gamePlayersRepository,
+            $playerManagementService,
+            $passwordHasher,
+            $entityManager,
+        );
+
+        $gamePlayersRepository
+            ->expects(self::never())
+            ->method('existsNameInGame');
+
+        $playerManagementService
+            ->expects(self::never())
+            ->method('addPlayerEntity');
+
+        $passwordHasher
+            ->expects(self::never())
+            ->method('hashPassword');
+
+        $entityManager
+            ->expects(self::never())
+            ->method('persist');
+
+        $entityManager
+            ->expects(self::never())
+            ->method('flush');
+
+        try {
+            $service->createGuestPlayer($game, 'Alex');
+            self::fail('Expected exception was not thrown.');
+        } catch (GameIdMissingException) {
+            self::assertTrue(true);
         }
     }
 }

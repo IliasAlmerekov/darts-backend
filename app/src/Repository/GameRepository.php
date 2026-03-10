@@ -6,6 +6,10 @@ namespace App\Repository;
 
 use App\Entity\Game;
 use App\Enum\GameStatus;
+use DateTimeImmutable;
+use DateTimeInterface;
+use Doctrine\DBAL\ArrayParameterType;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -24,6 +28,83 @@ final class GameRepository extends ServiceEntityRepository implements GameReposi
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Game::class);
+    }
+
+    /**
+     * @param int $limit
+     * @param int $offset
+     *
+     * @return list<array{
+     *     id:int,
+     *     date:string|null,
+     *     finishedAt:string|null,
+     *     playersCount:int,
+     *     winnerName:string|null,
+     *     winnerId:int|null,
+     *     winnerRounds:int
+     * }>
+     */
+    public function findFinishedOverview(int $limit, int $offset): array
+    {
+        $connection = $this->getEntityManager()->getConnection();
+        $rows = $connection->fetchAllAssociative(
+            <<<'SQL'
+SELECT
+    g.game_id AS id,
+    g.date AS date,
+    g.finished_at AS finishedAt,
+    COUNT(DISTINCT gp.game_player_id) AS playersCount,
+    winner.id AS winnerId,
+    CASE
+        WHEN winner_gp.display_name_snapshot IS NOT NULL AND winner_gp.display_name_snapshot <> '' THEN winner_gp.display_name_snapshot
+        WHEN winner.display_name IS NOT NULL AND winner.display_name <> '' THEN winner.display_name
+        ELSE winner.username
+    END AS winnerName
+FROM game g
+LEFT JOIN game_players gp ON gp.game_id = g.game_id
+LEFT JOIN user winner ON winner.id = g.winner_id
+LEFT JOIN game_players winner_gp ON winner_gp.game_id = g.game_id AND winner_gp.player_id = g.winner_id
+WHERE g.status = :status
+GROUP BY g.game_id, g.date, g.finished_at, winner.id, winner.display_name, winner.username, winner_gp.display_name_snapshot
+ORDER BY g.game_id DESC
+LIMIT :limit OFFSET :offset
+SQL,
+            [
+                'status' => GameStatus::Finished->value,
+                'limit' => $limit,
+                'offset' => $offset,
+            ],
+            [
+                'status' => ParameterType::STRING,
+                'limit' => ParameterType::INTEGER,
+                'offset' => ParameterType::INTEGER,
+            ]
+        );
+
+        if ([] === $rows) {
+            return [];
+        }
+
+        $winnerRoundsByGameId = $this->findWinnerRoundsByGameIds(array_map(
+            static fn(array $row): int => (int) $row['id'],
+            $rows
+        ));
+
+        return array_map(function (array $row) use ($winnerRoundsByGameId): array {
+            $gameId = (int) $row['id'];
+            $winnerId = $row['winnerId'];
+            $winnerName = $row['winnerName'];
+
+            return [
+                'id' => $gameId,
+                'date' => $this->formatDateTimeValue($row['date'] ?? null),
+                'finishedAt' => $this->formatDateTimeValue($row['finishedAt'] ?? null),
+                'playersCount' => (int) $row['playersCount'],
+                'winnerName' => null !== $winnerName ? (string) $winnerName : null,
+                'winnerId' => null !== $winnerId ? (int) $winnerId : null,
+                'winnerRounds' => $winnerRoundsByGameId[$gameId] ?? 0,
+            ];
+        }, $rows);
     }
 
     //    /**
@@ -97,5 +178,62 @@ final class GameRepository extends ServiceEntityRepository implements GameReposi
             ->setMaxResults($limit)
             ->getQuery()
             ->getResult();
+    }
+
+    /**
+     * @param list<int> $gameIds
+     *
+     * @return array<int, int>
+     */
+    private function findWinnerRoundsByGameIds(array $gameIds): array
+    {
+        $uniqueGameIds = array_values(array_unique($gameIds));
+        if ([] === $uniqueGameIds) {
+            return [];
+        }
+
+        $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
+            <<<'SQL'
+SELECT
+    rt.game_id AS gameId,
+    COUNT(DISTINCT r.round_number) AS winnerRounds
+FROM round_throws rt
+INNER JOIN round r ON r.round_id = rt.round_id
+INNER JOIN game g ON g.game_id = rt.game_id AND g.winner_id = rt.player_id
+WHERE rt.game_id IN (:gameIds)
+GROUP BY rt.game_id
+SQL,
+            ['gameIds' => $uniqueGameIds],
+            ['gameIds' => ArrayParameterType::INTEGER]
+        );
+
+        $winnerRoundsByGameId = [];
+        foreach ($rows as $row) {
+            $winnerRoundsByGameId[(int) $row['gameId']] = (int) $row['winnerRounds'];
+        }
+
+        return $winnerRoundsByGameId;
+    }
+
+    /**
+     * @param mixed $value
+     *
+     * @return string|null
+     */
+    private function formatDateTimeValue(mixed $value): ?string
+    {
+        if ($value instanceof DateTimeInterface) {
+            return $value->format(DateTimeInterface::ATOM);
+        }
+
+        if (null === $value || '' === $value) {
+            return null;
+        }
+
+        try {
+            return (new DateTimeImmutable((string) $value))->format(DateTimeInterface::ATOM);
+        } catch (\Exception) {
+            return null;
+        }
     }
 }

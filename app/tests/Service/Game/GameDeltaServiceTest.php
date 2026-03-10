@@ -77,6 +77,92 @@ final class GameDeltaServiceTest extends TestCase
     /**
      * @throws ReflectionException
      */
+    public function testBuildThrowAckReusesProvidedRoundSnapshot(): void
+    {
+        $game = (new Game())
+            ->setGameId(66)
+            ->setStatus(GameStatus::Started)
+            ->setRound(3)
+            ->setStartScore(301);
+
+        $activePlayer = (new User())
+            ->setUsername('Alex')
+            ->setDisplayName('Alex');
+        $this->setPrivateProperty($activePlayer, 'id', 10);
+
+        $otherPlayer = (new User())
+            ->setUsername('Sam')
+            ->setDisplayName('Sam');
+        $this->setPrivateProperty($otherPlayer, 'id', 11);
+
+        $game->addGamePlayer(
+            (new GamePlayers())
+                ->setPlayer($activePlayer)
+                ->setPosition(1)
+                ->setScore(121)
+        );
+        $game->addGamePlayer(
+            (new GamePlayers())
+                ->setPlayer($otherPlayer)
+                ->setPosition(2)
+                ->setScore(140)
+        );
+
+        $roundStateSnapshot = [
+            10 => [
+                'throwsCount' => 1,
+                'lastThrowNumber' => 1,
+                'lastThrowValue' => 60,
+                'lastThrowBust' => true,
+            ],
+            11 => [
+                'throwsCount' => 0,
+                'lastThrowNumber' => null,
+                'lastThrowValue' => null,
+                'lastThrowBust' => false,
+            ],
+        ];
+
+        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository->expects(self::never())
+            ->method('findCurrentRoundThrowsForGamePlayers');
+
+        $gameService = $this->createMock(GameServiceInterface::class);
+        $gameService->expects(self::once())
+            ->method('buildStateVersion')
+            ->with($game)
+            ->willReturn('state-v4');
+        $gameService->expects(self::once())
+            ->method('calculateActivePlayer')
+            ->with($game, $roundStateSnapshot)
+            ->willReturn(11);
+
+        $service = new GameDeltaService($roundThrowsRepository, $gameService);
+        $ack = $service->buildThrowAck(
+            $game,
+            [
+                'id' => 701,
+                'playerId' => 10,
+                'playerName' => 'Alex',
+                'value' => 60,
+                'isDouble' => false,
+                'isTriple' => true,
+                'isBust' => true,
+                'score' => 121,
+                'roundNumber' => 3,
+                'timestamp' => '2026-03-10T10:00:00+00:00',
+            ],
+            $roundStateSnapshot,
+        );
+
+        self::assertSame(11, $ack->scoreboardDelta->changedPlayers[1]->playerId);
+        self::assertTrue($ack->scoreboardDelta->changedPlayers[0]->isBust ?? false);
+        self::assertTrue($ack->scoreboardDelta->changedPlayers[1]->isActive);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
     public function testBuildUndoAckUsesCompactUndoPayload(): void
     {
         $game = (new Game())
