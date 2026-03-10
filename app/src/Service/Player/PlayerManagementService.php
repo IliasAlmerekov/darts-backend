@@ -71,8 +71,29 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     #[Override]
     public function addPlayer(int $gameId, int $playerId, ?int $position = null): GamePlayers
     {
-        $gamePlayer = $this->createGamePlayer($gameId, $playerId, $position);
-        $this->entityManager->flush();
+        /** @var User $player */
+        $player = $this->entityManager->getReference(User::class, $playerId);
+
+        return $this->addPlayerEntity($gameId, $player, $position);
+    }
+
+    /**
+     * @param int      $gameId
+     * @param User     $player
+     * @param int|null $position
+     * @param bool     $flush
+     *
+     * @throws ORMException
+     *
+     * @return GamePlayers
+     */
+    #[Override]
+    public function addPlayerEntity(int $gameId, User $player, ?int $position = null, bool $flush = true): GamePlayers
+    {
+        $gamePlayer = $this->createGamePlayer($gameId, $player, $position);
+        if (true === $flush) {
+            $this->entityManager->flush();
+        }
 
         return $gamePlayer;
     }
@@ -97,7 +118,11 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
         $hasCopiedPlayers = false;
         foreach ($oldGamePlayers as $oldGamePlayer) {
             $player = $oldGamePlayer->getPlayer();
-            $playerId = $player?->getId();
+            if (null === $player) {
+                continue;
+            }
+
+            $playerId = $player->getId();
             if (null !== $playerId && (null === $filter || in_array($playerId, $filter, true))) {
                 $position = $oldGamePlayer->getPosition();
                 if (!is_int($position)) {
@@ -107,7 +132,7 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
                     $orderIndex = max($orderIndex, $position);
                 }
 
-                $this->createGamePlayer($toGameId, $playerId, $position);
+                $this->createGamePlayer($toGameId, $player, $position);
                 $hasCopiedPlayers = true;
             }
         }
@@ -240,56 +265,41 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
             return $position;
         }
 
-        $gamePlayers = $this->gamePlayersRepository->findBy(['game' => $gameId]);
-        $maxPosition = null;
-        foreach ($gamePlayers as $existingPlayer) {
-            $existingPosition = $existingPlayer->getPosition();
-            if (null !== $existingPosition && $existingPosition >= 0) {
-                $maxPosition = null === $maxPosition
-                    ? $existingPosition
-                    : max($maxPosition, $existingPosition);
-            }
-        }
-
-        if (null === $maxPosition) {
-            return count($gamePlayers) + 1;
-        }
-
-        return $maxPosition + 1;
+        return $this->gamePlayersRepository->findNextPositionForGame($gameId);
     }
 
     /**
      * @param User|null $player
-     * @param int       $playerId
+     * @param int|null  $playerId
      *
      * @return string
      */
-    private function resolveDisplayNameSnapshot(?User $player, int $playerId): string
+    private function resolveDisplayNameSnapshot(?User $player, ?int $playerId = null): string
     {
         if (null === $player) {
-            return sprintf('player_%d', $playerId);
+            return null !== $playerId ? sprintf('player_%d', $playerId) : 'player';
         }
 
         $displayName = $player->getDisplayNameRaw() ?? $player->getUsername();
 
         return null !== $displayName && '' !== $displayName
             ? $displayName
-            : sprintf('player_%d', $playerId);
+            : (null !== $playerId ? sprintf('player_%d', $playerId) : 'player');
     }
 
     /**
      * @param int      $gameId
-     * @param int      $playerId
+     * @param User     $player
      * @param int|null $position
      *
      * @throws ORMException
      *
      * @return GamePlayers
      */
-    private function createGamePlayer(int $gameId, int $playerId, ?int $position = null): GamePlayers
+    private function createGamePlayer(int $gameId, User $player, ?int $position = null): GamePlayers
     {
-        $player = $this->entityManager->getReference(User::class, $playerId);
         $gamePlayer = new GamePlayers();
+        $playerId = $player->getId();
         $gamePlayer->setGame($this->entityManager->getReference(Game::class, $gameId));
         $gamePlayer->setPlayer($player);
         $gamePlayer->setDisplayNameSnapshot($this->resolveDisplayNameSnapshot($player, $playerId));

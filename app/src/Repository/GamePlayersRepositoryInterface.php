@@ -53,6 +53,21 @@ interface GamePlayersRepositoryInterface
     public function countFinishedPlayers(int $gameId): int;
 
     /**
+     * @param int    $gameId
+     * @param string $name
+     *
+     * @return bool
+     */
+    public function existsNameInGame(int $gameId, string $name): bool;
+
+    /**
+     * @param int $gameId
+     *
+     * @return int
+     */
+    public function findNextPositionForGame(int $gameId): int;
+
+    /**
      * @param int $gameId
      *
      * @return array<int, array{id:int|null,name:string|null,position:int|null,isGuest:bool}>

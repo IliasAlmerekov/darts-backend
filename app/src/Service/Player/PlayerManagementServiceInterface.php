@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace App\Service\Player;
 
 use App\Entity\GamePlayers;
+use App\Entity\User;
 use Doctrine\ORM\Exception\ORMException;
 
 /**
@@ -41,6 +42,22 @@ interface PlayerManagementServiceInterface
      * @psalm-suppress PossiblyUnusedReturnValue
      */
     public function addPlayer(int $gameId, int $playerId, ?int $position = null): GamePlayers;
+
+    /**
+     * Add a user entity to a game.
+     *
+     * @param int      $gameId   The game ID
+     * @param User     $player   The player entity to add
+     * @param int|null $position Optional explicit position
+     * @param bool     $flush    Whether to flush immediately
+     *
+     * @return GamePlayers The created GamePlayers entity
+     *
+     * @throws ORMException
+     *
+     * @psalm-suppress PossiblyUnusedReturnValue
+     */
+    public function addPlayerEntity(int $gameId, User $player, ?int $position = null, bool $flush = true): GamePlayers;
 
     /**
      * Copy players from one game to another.
