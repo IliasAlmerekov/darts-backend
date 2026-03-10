@@ -16,6 +16,8 @@ use Symfony\Component\Security\Http\Authentication\AuthenticationSuccessHandlerI
 
 /**
  * Returns JSON for API authentication success instead of browser-style redirects.
+ *
+ * @psalm-suppress UnusedClass Wired via Symfony security configuration
  */
 final readonly class ApiAuthenticationSuccessHandler implements AuthenticationSuccessHandlerInterface
 {
