@@ -64,9 +64,9 @@ final class PlayerManagementServiceTest extends TestCase
     {
         $this->gamePlayersRepository
             ->expects(self::once())
-            ->method('findBy')
-            ->with(['game' => 100])
-            ->willReturn([]);
+            ->method('findNextPositionForGame')
+            ->with(100)
+            ->willReturn(1);
         $this->entityManager
             ->expects(self::exactly(2))
             ->method('getReference')
@@ -98,7 +98,7 @@ final class PlayerManagementServiceTest extends TestCase
     {
         $this->gamePlayersRepository
             ->expects(self::never())
-            ->method('findBy');
+            ->method('findNextPositionForGame');
         $this->entityManager
             ->expects(self::exactly(2))
             ->method('getReference')
@@ -126,14 +126,11 @@ final class PlayerManagementServiceTest extends TestCase
 
     public function testAddPlayerAssignsSequentialPositionWhenExistingPlayersHaveNullPositions(): void
     {
-        $existingPlayerOne = new GamePlayers();
-        $existingPlayerTwo = new GamePlayers();
-
         $this->gamePlayersRepository
             ->expects(self::once())
-            ->method('findBy')
-            ->with(['game' => 300])
-            ->willReturn([$existingPlayerOne, $existingPlayerTwo]);
+            ->method('findNextPositionForGame')
+            ->with(300)
+            ->willReturn(3);
 
         $this->entityManager
             ->expects(self::exactly(2))
@@ -162,15 +159,11 @@ final class PlayerManagementServiceTest extends TestCase
 
     public function testAddPlayerUsesHighestExistingPositionWhenRepositoryOrderIsUnsorted(): void
     {
-        $existingLow = (new GamePlayers())->setPosition(2);
-        $existingHigh = (new GamePlayers())->setPosition(10);
-        $existingMiddle = (new GamePlayers())->setPosition(5);
-
         $this->gamePlayersRepository
             ->expects(self::once())
-            ->method('findBy')
-            ->with(['game' => 301])
-            ->willReturn([$existingHigh, $existingLow, $existingMiddle]);
+            ->method('findNextPositionForGame')
+            ->with(301)
+            ->willReturn(11);
 
         $this->entityManager
             ->expects(self::exactly(2))
@@ -197,6 +190,32 @@ final class PlayerManagementServiceTest extends TestCase
         self::assertSame(11, $result->getPosition());
     }
 
+    public function testAddPlayerEntityCanDeferFlush(): void
+    {
+        $player = $this->userWithId(402, 'guest_402', 'Guest 402');
+
+        $this->gamePlayersRepository
+            ->expects(self::once())
+            ->method('findNextPositionForGame')
+            ->with(302)
+            ->willReturn(4);
+
+        $this->entityManager
+            ->expects(self::once())
+            ->method('getReference')
+            ->with(Game::class, 302)
+            ->willReturn((new Game())->setGameId(302));
+
+        $this->entityManager->expects(self::once())->method('persist')->with(self::isInstanceOf(GamePlayers::class));
+        $this->entityManager->expects(self::never())->method('flush');
+
+        $result = $this->service->addPlayerEntity(302, $player, flush: false);
+
+        self::assertSame(4, $result->getPosition());
+        self::assertSame('Guest 402', $result->getDisplayNameSnapshot());
+        self::assertSame(402, $result->getPlayer()?->getId());
+    }
+
     public function testCopyPlayersCopiesOnlyFilteredPlayers(): void
     {
         $sourcePlayer1 = (new GamePlayers())->setPlayer($this->userWithId(1, 'alpha', 'Alpha'))->setPosition(2);
@@ -209,24 +228,13 @@ final class PlayerManagementServiceTest extends TestCase
             ->with(10)
             ->willReturn([$sourcePlayer1, $sourcePlayer2, $sourcePlayer3]);
 
-        $this->gamePlayersRepository
-            ->method('findBy')
-            ->willReturn([]);
-
         $persistedGamePlayers = [];
         $this->entityManager
-            ->expects(self::exactly(4))
+            ->expects(self::exactly(2))
             ->method('getReference')
             ->willReturnCallback(function (string $class, int $id) {
                 if ($class === Game::class) {
                     return (new Game())->setGameId($id);
-                }
-                if ($class === User::class) {
-                    return match ($id) {
-                        1 => $this->userWithId(1, 'alpha', 'Alpha'),
-                        3 => $this->userWithId(3, 'gamma'),
-                        default => throw new \LogicException('Unexpected user id'),
-                    };
                 }
                 throw new \LogicException('Unexpected getReference call');
             });

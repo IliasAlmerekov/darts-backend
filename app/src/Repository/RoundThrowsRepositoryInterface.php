@@ -28,6 +28,8 @@ interface RoundThrowsRepositoryInterface
     public function findBy(array $criteria, ?array $orderBy = null, ?int $limit = null, ?int $offset = null): array;
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param array<string, mixed>       $criteria
      * @param array<string, string>|null $orderBy
      *
@@ -36,6 +38,8 @@ interface RoundThrowsRepositoryInterface
     public function findOneBy(array $criteria, ?array $orderBy = null): ?object;
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param array<string, mixed> $criteria
      *
      * @return int
@@ -58,6 +62,23 @@ interface RoundThrowsRepositoryInterface
     public function findLatestForGameAndPlayer(int $gameId, int $playerId): ?RoundThrows;
 
     /**
+     * @param int $gameId
+     * @param int $throwId
+     *
+     * @return RoundThrows|null
+     */
+    public function findLatestForGameBeforeThrow(int $gameId, int $throwId): ?RoundThrows;
+
+    /**
+     * @param int $gameId
+     * @param int $playerId
+     * @param int $throwId
+     *
+     * @return RoundThrows|null
+     */
+    public function findLatestForGameAndPlayerBeforeThrow(int $gameId, int $playerId, int $throwId): ?RoundThrows;
+
+    /**
      * @psalm-suppress PossiblyUnusedMethod
      *
      * @param int $gameId
@@ -73,6 +94,14 @@ interface RoundThrowsRepositoryInterface
      * @return array<int, array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>
      */
     public function findCurrentRoundThrowsForGamePlayers(int $gameId, int $roundNumber): array;
+
+    /**
+     * @param int $gameId
+     * @param int $roundNumber
+     *
+     * @return array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}>
+     */
+    public function findCurrentRoundStateSnapshot(int $gameId, int $roundNumber): array;
 
     /**
      * @param int $gameId
@@ -150,6 +179,8 @@ interface RoundThrowsRepositoryInterface
     public function findLatestForGame(int $gameId): ?array;
 
     /**
+        * @psalm-suppress PossiblyUnusedMethod
+        *
      * @param string      $alias
      * @param string|null $indexBy
      *

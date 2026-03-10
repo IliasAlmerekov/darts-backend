@@ -104,8 +104,6 @@
   <file src="src/Entity/RoundThrows.php">
     <PossiblyUnusedMethod>
       <code><![CDATA[getGame]]></code>
-      <code><![CDATA[getThrowNumber]]></code>
-      <code><![CDATA[getTimestamp]]></code>
       <code><![CDATA[setThrowId]]></code>
     </PossiblyUnusedMethod>
   </file>

@@ -145,6 +145,39 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
         ], $rows);
     }
 
+    public function testFindCurrentRoundStateSnapshotReturnsAggregatedPerPlayerState(): void
+    {
+        $game = $this->createGame(GameStatus::Started);
+        $round1 = $this->createRound($game, 1, finished: true);
+        $round2 = $this->createRound($game, 2);
+
+        $playerA = $this->createUser('snapshot-a');
+        $playerB = $this->createUser('snapshot-b');
+
+        $this->createThrow($game, $round1, $playerA, 1, 10, 10);
+        $this->createThrow($game, $round2, $playerA, 1, 20, 30);
+        $this->createThrow($game, $round2, $playerA, 2, 40, 70, isBust: true);
+        $this->createThrow($game, $round2, $playerB, 1, 50, 50);
+        $this->em->flush();
+
+        $snapshot = $this->repo->findCurrentRoundStateSnapshot($game->getGameId(), 2);
+
+        self::assertSame([
+            $playerA->getId() => [
+                'throwsCount' => 2,
+                'lastThrowNumber' => 2,
+                'lastThrowValue' => 40,
+                'lastThrowBust' => true,
+            ],
+            $playerB->getId() => [
+                'throwsCount' => 1,
+                'lastThrowNumber' => 1,
+                'lastThrowValue' => 50,
+                'lastThrowBust' => false,
+            ],
+        ], $snapshot);
+    }
+
     public function testFindLatestThrowsForGamePlayersReturnsOneRowPerPlayer(): void
     {
         $game = $this->createGame(GameStatus::Started);
@@ -302,6 +335,99 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
             $player1->getId() => 35.0,
             $player2->getId() => 70.0,
         ], $totals);
+    }
+
+    public function testGetPlayerStatisticsAggregatesFinishedRoundsPerPlayer(): void
+    {
+        $finishedGameA = $this->createGame(GameStatus::Finished);
+        $finishedGameB = $this->createGame(GameStatus::Finished);
+        $startedGame = $this->createGame(GameStatus::Started);
+
+        $finishedRoundA1 = $this->createRound($finishedGameA, 1, finished: true);
+        $finishedRoundA2 = $this->createRound($finishedGameA, 2, finished: true);
+        $unfinishedRoundA3 = $this->createRound($finishedGameA, 3, finished: false);
+        $finishedRoundB1 = $this->createRound($finishedGameB, 1, finished: true);
+        $startedRound = $this->createRound($startedGame, 1, finished: true);
+
+        $alice = $this->createUser('stats-alice');
+        $alice->setDisplayName('Alice');
+        $bob = $this->createUser('stats-bob');
+        $bob->setDisplayName('Bob');
+        $guest = $this->createUser('stats-guest');
+        $guest->setDisplayName('Guest');
+        $guest->setIsGuest(true);
+
+        $this->createThrow($finishedGameA, $finishedRoundA1, $alice, 1, 10, 10);
+        $this->createThrow($finishedGameA, $finishedRoundA1, $alice, 2, 20, 30);
+        $this->createThrow($finishedGameA, $finishedRoundA2, $alice, 1, 50, 30, isBust: true);
+        $this->createThrow($finishedGameA, $finishedRoundA2, $alice, 2, 5, 35);
+        $this->createThrow($finishedGameB, $finishedRoundB1, $alice, 1, 30, 30);
+        $this->createThrow($finishedGameA, $unfinishedRoundA3, $alice, 1, 60, 95);
+        $this->createThrow($startedGame, $startedRound, $alice, 1, 40, 40);
+
+        $this->createThrow($finishedGameA, $finishedRoundA1, $bob, 1, 15, 15);
+        $this->createThrow($finishedGameA, $finishedRoundA1, $bob, 2, 15, 30);
+
+        $this->createThrow($finishedGameA, $finishedRoundA1, $guest, 1, 25, 25);
+        $this->em->flush();
+
+        $rows = $this->repo->getPlayerStatistics(10, 0, 'average', 'DESC');
+        $normalizedRows = array_map(static function (array $row): array {
+            return [
+                'playerId' => (int) $row['playerId'],
+                'username' => (string) $row['username'],
+                'gamesPlayed' => (int) $row['gamesPlayed'],
+                'totalValue' => round((float) $row['totalValue'], 4),
+                'roundsFinished' => (int) $row['roundsFinished'],
+                'scoreAverage' => null !== $row['scoreAverage'] ? round((float) $row['scoreAverage'], 4) : null,
+            ];
+        }, $rows);
+
+        self::assertSame([
+            [
+                'playerId' => $bob->getId(),
+                'username' => 'Bob',
+                'gamesPlayed' => 1,
+                'totalValue' => 30.0,
+                'roundsFinished' => 1,
+                'scoreAverage' => 30.0,
+            ],
+            [
+                'playerId' => $alice->getId(),
+                'username' => 'Alice',
+                'gamesPlayed' => 2,
+                'totalValue' => 65.0,
+                'roundsFinished' => 3,
+                'scoreAverage' => 21.6667,
+            ],
+        ], $normalizedRows);
+    }
+
+    public function testGetPlayerStatisticsSupportsGamesPlayedSortingAndPagination(): void
+    {
+        $finishedGameA = $this->createGame(GameStatus::Finished);
+        $finishedGameB = $this->createGame(GameStatus::Finished);
+        $finishedGameC = $this->createGame(GameStatus::Finished);
+
+        $roundA = $this->createRound($finishedGameA, 1, finished: true);
+        $roundB = $this->createRound($finishedGameB, 1, finished: true);
+        $roundC = $this->createRound($finishedGameC, 1, finished: true);
+
+        $alice = $this->createUser('stats-sort-alice');
+        $alice->setDisplayName('Alice sort');
+        $bob = $this->createUser('stats-sort-bob');
+        $bob->setDisplayName('Bob sort');
+
+        $this->createThrow($finishedGameA, $roundA, $alice, 1, 20, 20);
+        $this->createThrow($finishedGameB, $roundB, $alice, 1, 20, 20);
+        $this->createThrow($finishedGameC, $roundC, $bob, 1, 25, 25);
+        $this->em->flush();
+
+        $rows = $this->repo->getPlayerStatistics(1, 0, 'gamesPlayed', 'DESC');
+
+        self::assertCount(1, $rows);
+        self::assertSame($alice->getId(), (int) $rows[0]['playerId']);
+        self::assertSame('2', (string) $rows[0]['gamesPlayed']);
     }
 
     private function createGame(GameStatus $status): Game

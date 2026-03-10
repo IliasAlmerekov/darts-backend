@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace App\Service\Player;
 
 use App\Entity\Game;
-use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Exception\Game\GameIdMissingException;
 use App\Exception\Request\UsernameAlreadyTakenException;
@@ -55,7 +54,12 @@ final readonly class GuestPlayerService implements GuestPlayerServiceInterface
             throw new \InvalidArgumentException('Username cannot be empty');
         }
 
-        if ($this->isNameTakenInGame($game, $normalized)) {
+        $gameId = $game->getGameId();
+        if (null === $gameId) {
+            throw new GameIdMissingException();
+        }
+
+        if ($this->isNameTakenInGame($gameId, $normalized)) {
             throw new UsernameAlreadyTakenException($normalized, []);
         }
 
@@ -69,18 +73,14 @@ final readonly class GuestPlayerService implements GuestPlayerServiceInterface
             ->setIsGuest(true);
 
         $this->entityManager->persist($guest);
+
+        $gamePlayer = $this->playerManagementService->addPlayerEntity($gameId, $guest, flush: false);
         $this->entityManager->flush();
 
         $guestId = $guest->getId();
-        $gameId = $game->getGameId();
-        if (null === $gameId) {
-            throw new GameIdMissingException();
-        }
         if (null === $guestId) {
             throw new \RuntimeException('Failed to create guest player');
         }
-
-        $gamePlayer = $this->playerManagementService->addPlayer($gameId, $guestId);
 
         return [
             'playerId' => $guestId,
@@ -91,27 +91,14 @@ final readonly class GuestPlayerService implements GuestPlayerServiceInterface
     }
 
     /**
-     * @param Game   $game
+     * @param int    $gameId
      * @param string $name
      *
      * @return bool
      */
-    private function isNameTakenInGame(Game $game, string $name): bool
+    private function isNameTakenInGame(int $gameId, string $name): bool
     {
-        $gameId = $game->getGameId();
-        if (null === $gameId) {
-            return false;
-        }
-
-        $normalizedTarget = $this->normalizeName($name);
-        foreach ($this->gamePlayersRepository->findByGameId($gameId) as $gamePlayer) {
-            $existingName = $this->resolveNameFromGamePlayer($gamePlayer);
-            if ($this->normalizeName($existingName) === $normalizedTarget) {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->gamePlayersRepository->existsNameInGame($gameId, $name);
     }
 
     /**
@@ -120,38 +107,6 @@ final readonly class GuestPlayerService implements GuestPlayerServiceInterface
     private function generateGuestUsername(): string
     {
         return sprintf('guest_%s', Uuid::v4()->toBase58());
-    }
-
-    /**
-     * @param GamePlayers $gamePlayer
-     *
-     * @return string
-     */
-    private function resolveNameFromGamePlayer(GamePlayers $gamePlayer): string
-    {
-        $snapshot = $gamePlayer->getDisplayNameSnapshot();
-        if (null !== $snapshot && '' !== trim($snapshot)) {
-            return trim($snapshot);
-        }
-
-        $user = $gamePlayer->getPlayer();
-        $name = $user?->getDisplayNameRaw() ?? $user?->getUsername();
-
-        return null !== $name ? trim($name) : '';
-    }
-
-    /**
-     * @param string $value
-     *
-     * @return string
-     */
-    private function normalizeName(string $value): string
-    {
-        $value = trim($value);
-
-        return function_exists('mb_strtolower')
-            ? mb_strtolower($value)
-            : strtolower($value);
     }
 
     /**

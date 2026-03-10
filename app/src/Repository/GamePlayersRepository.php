@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\GamePlayers;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -96,6 +97,80 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
             ->addOrderBy('gp.gamePlayerId', 'ASC')
             ->getQuery()
             ->getResult();
+    }
+
+    /**
+     * @param int    $gameId
+     * @param string $name
+     *
+     * @return bool
+     */
+    public function existsNameInGame(int $gameId, string $name): bool
+    {
+        $normalizedName = trim($name);
+        $normalizedName = function_exists('mb_strtolower')
+            ? mb_strtolower($normalizedName)
+            : strtolower($normalizedName);
+
+        if ('' === $normalizedName) {
+            return false;
+        }
+
+        $result = $this->getEntityManager()->getConnection()->fetchOne(
+            <<<'SQL'
+SELECT 1
+FROM game_players gp
+INNER JOIN `user` u ON u.id = gp.player_id
+WHERE gp.game_id = :gameId
+    AND LOWER(
+        TRIM(
+            COALESCE(
+                NULLIF(TRIM(gp.display_name_snapshot), ''),
+                NULLIF(TRIM(u.display_name), ''),
+                TRIM(u.username)
+            )
+        )
+    ) = :name
+LIMIT 1
+SQL,
+            [
+                'gameId' => $gameId,
+                'name' => $normalizedName,
+            ],
+            [
+                'gameId' => ParameterType::INTEGER,
+                'name' => ParameterType::STRING,
+            ]
+        );
+
+        return false !== $result;
+    }
+
+    /**
+     * @param int $gameId
+     *
+     * @return int
+     */
+    public function findNextPositionForGame(int $gameId): int
+    {
+        $row = $this->getEntityManager()->getConnection()->fetchAssociative(
+            <<<'SQL'
+SELECT
+    MAX(gp.position) AS maxPosition,
+    COUNT(gp.game_player_id) AS playersCount
+FROM game_players gp
+WHERE gp.game_id = :gameId
+SQL,
+            ['gameId' => $gameId],
+            ['gameId' => ParameterType::INTEGER]
+        );
+
+        $maxPosition = $row['maxPosition'] ?? null;
+        if (null !== $maxPosition) {
+            return (int) $maxPosition + 1;
+        }
+
+        return (int) ($row['playersCount'] ?? 0) + 1;
     }
 
     /**

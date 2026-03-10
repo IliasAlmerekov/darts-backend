@@ -13,6 +13,7 @@ use App\Dto\ScoreboardDeltaDto;
 use App\Dto\ScoreboardPlayerDeltaDto;
 use App\Dto\ThrowAckDto;
 use App\Dto\ThrowDeltaDto;
+use App\Dto\UndoAckDto;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Exception\Game\GameIdMissingException;
@@ -23,6 +24,8 @@ use Override;
 
 /**
  * Builds compact throw acknowledgements for low-latency clients.
+ *
+ * @phpstan-type RoundStateSnapshot array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}>
  *
  * @psalm-suppress UnusedClass Reason: service is auto-wired by the container and used through DI.
  */
@@ -41,11 +44,12 @@ final readonly class GameDeltaService implements GameDeltaServiceInterface
     /**
      * @param Game                      $game
      * @param array<string, mixed>|null $latestThrow
+     * @param RoundStateSnapshot|null   $currentRoundStateSnapshot
      *
      * @return ThrowAckDto
      */
     #[Override]
-    public function buildThrowAck(Game $game, ?array $latestThrow = null): ThrowAckDto
+    public function buildThrowAck(Game $game, ?array $latestThrow = null, ?array $currentRoundStateSnapshot = null): ThrowAckDto
     {
         $gameId = $game->getGameId();
         if (null === $gameId) {
@@ -63,20 +67,49 @@ final readonly class GameDeltaService implements GameDeltaServiceInterface
             $throwIsBust = $throwDto->isBust;
         }
 
-        $activePlayerId = $this->gameService->calculateActivePlayer($game);
-        $changedPlayers = $this->buildScoreboardPlayers($game, $activePlayerId, $throwPlayerId, $throwIsBust);
-        $scoreboardDelta = new ScoreboardDeltaDto(
-            changedPlayers: $changedPlayers,
-            winnerId: $game->getWinner()?->getId(),
-            status: $game->getStatus()->value,
-            currentRound: $game->getRound() ?? 1,
-        );
+        $activePlayerId = null === $currentRoundStateSnapshot
+            ? $this->gameService->calculateActivePlayer($game)
+            : $this->gameService->calculateActivePlayer($game, $currentRoundStateSnapshot);
+        $scoreboardDelta = $this->buildScoreboardDelta($game, $activePlayerId, $throwPlayerId, $throwIsBust, $currentRoundStateSnapshot);
 
         return new ThrowAckDto(
             success: true,
             gameId: $gameId,
             stateVersion: $stateVersion,
             throw: $throwDto,
+            scoreboardDelta: $scoreboardDelta,
+            serverTs: (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
+        );
+    }
+
+    /**
+     * @param Game               $game
+     * @param ThrowDeltaDto|null $undoneThrow
+     *
+     * @return UndoAckDto
+     */
+    #[Override]
+    public function buildUndoAck(Game $game, ?ThrowDeltaDto $undoneThrow = null): UndoAckDto
+    {
+        $gameId = $game->getGameId();
+        if (null === $gameId) {
+            throw new GameIdMissingException();
+        }
+
+        $stateVersion = $this->gameService->buildStateVersion($game);
+        $activePlayerId = $this->gameService->calculateActivePlayer($game);
+        $scoreboardDelta = $this->buildScoreboardDelta(
+            $game,
+            $activePlayerId,
+            $undoneThrow?->playerId,
+            $this->resolveCurrentBustState($gameId, $undoneThrow?->playerId)
+        );
+
+        return new UndoAckDto(
+            success: true,
+            gameId: $gameId,
+            stateVersion: $stateVersion,
+            undoneThrow: $undoneThrow,
             scoreboardDelta: $scoreboardDelta,
             serverTs: (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
         );
@@ -113,15 +146,43 @@ final readonly class GameDeltaService implements GameDeltaServiceInterface
     }
 
     /**
-     * @param Game      $game
-     * @param int|null  $activePlayerId
-     * @param int|null  $throwPlayerId
-     * @param bool|null $throwIsBust
+    * @param Game                    $game
+    * @param int|null                $activePlayerId
+    * @param int|null                $highlightedPlayerId
+    * @param bool|null               $highlightedPlayerBustState
+    * @param RoundStateSnapshot|null $currentRoundStateSnapshot
+     *
+     * @return ScoreboardDeltaDto
+     */
+    private function buildScoreboardDelta(Game $game, ?int $activePlayerId, ?int $highlightedPlayerId, ?bool $highlightedPlayerBustState, ?array $currentRoundStateSnapshot = null): ScoreboardDeltaDto
+    {
+        return new ScoreboardDeltaDto(
+            changedPlayers: $this->buildScoreboardPlayers($game, $activePlayerId, $highlightedPlayerId, $highlightedPlayerBustState, $currentRoundStateSnapshot),
+            winnerId: $game->getWinner()?->getId(),
+            status: $game->getStatus()->value,
+            currentRound: $game->getRound() ?? 1,
+        );
+    }
+
+    /**
+    * @param Game                    $game
+    * @param int|null                $activePlayerId
+    * @param int|null                $highlightedPlayerId
+    * @param bool|null               $highlightedPlayerBustState
+    * @param RoundStateSnapshot|null $currentRoundStateSnapshot
      *
      * @return list<ScoreboardPlayerDeltaDto>
      */
-    private function buildScoreboardPlayers(Game $game, ?int $activePlayerId, ?int $throwPlayerId, ?bool $throwIsBust): array
+    private function buildScoreboardPlayers(Game $game, ?int $activePlayerId, ?int $highlightedPlayerId, ?bool $highlightedPlayerBustState, ?array $currentRoundStateSnapshot = null): array
     {
+        $gameId = $game->getGameId();
+        $currentBustStates = null;
+        if (is_array($currentRoundStateSnapshot)) {
+            $currentBustStates = $this->normalizeBustStatesFromRoundSnapshot($currentRoundStateSnapshot);
+        } elseif (null !== $gameId) {
+            $currentBustStates = $this->loadCurrentRoundBustStates($gameId, $game->getRound() ?? 1);
+        }
+
         /** @var list<GamePlayers> $gamePlayers */
         $gamePlayers = $game->getGamePlayers()->toArray();
         usort($gamePlayers, static function (GamePlayers $left, GamePlayers $right): int {
@@ -150,7 +211,11 @@ final readonly class GameDeltaService implements GameDeltaServiceInterface
                 continue;
             }
 
-            $isBust = $playerId === $throwPlayerId ? $throwIsBust : null;
+            $isBust = $currentBustStates[$playerId] ?? null;
+            if ($playerId === $highlightedPlayerId && null !== $highlightedPlayerBustState) {
+                $isBust = $highlightedPlayerBustState;
+            }
+
             $rows[] = new ScoreboardPlayerDeltaDto(
                 playerId: $playerId,
                 name: $name,
@@ -163,5 +228,61 @@ final readonly class GameDeltaService implements GameDeltaServiceInterface
         }
 
         return $rows;
+    }
+
+    /**
+     * @param int $gameId
+     * @param int $currentRound
+     *
+     * @return array<int, bool>
+     */
+    private function loadCurrentRoundBustStates(int $gameId, int $currentRound): array
+    {
+        $states = [];
+        foreach ($this->roundThrowsRepository->findCurrentRoundThrowsForGamePlayers($gameId, $currentRound) as $throwRow) {
+            $states[$throwRow['playerId']] = (bool) $throwRow['isBust'];
+        }
+
+        return $states;
+    }
+
+    /**
+    * @param RoundStateSnapshot $roundStateSnapshot
+     *
+     * @return array<int, bool>
+     */
+    private function normalizeBustStatesFromRoundSnapshot(array $roundStateSnapshot): array
+    {
+        $states = [];
+
+        foreach ($roundStateSnapshot as $playerId => $playerState) {
+            $states[(int) $playerId] = true === ($playerState['lastThrowBust'] ?? false);
+        }
+
+        return $states;
+    }
+
+    /**
+     * @param int      $gameId
+     * @param int|null $playerId
+     *
+     * @return bool|null
+     */
+    private function resolveCurrentBustState(int $gameId, ?int $playerId): ?bool
+    {
+        if (null === $playerId) {
+            return null;
+        }
+
+        $latestThrow = $this->roundThrowsRepository->findLatestForGame($gameId);
+        if (!is_array($latestThrow)) {
+            return null;
+        }
+
+        if ((int) ($latestThrow['playerId'] ?? 0) !== $playerId) {
+            return null;
+        }
+
+        return (bool) ($latestThrow['isBust'] ?? false);
     }
 }

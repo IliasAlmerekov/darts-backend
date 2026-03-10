@@ -11,7 +11,6 @@ use App\Entity\RoundThrows;
 use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Repository\GamePlayersRepositoryInterface;
-use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Game\ActivePlayerResolver;
 use App\Service\Game\GameService;
@@ -107,15 +106,13 @@ final class GameServiceTest extends TestCase
             ],
         ]);
 
-        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
-
         $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
         $this->stubBatchedThrowQueries($roundThrowsRepository, 10, 2, [$historyThrow, $throw1, $throw2]);
 
         $service = new GameService(
             $gamePlayersRepository,
             $roundThrowsRepository,
-            new ActivePlayerResolver($roundRepository, $roundThrowsRepository),
+            new ActivePlayerResolver($roundThrowsRepository),
             new GameStateVersionService($roundThrowsRepository),
         );
         $dto = $service->createGameDto($game);
@@ -179,12 +176,10 @@ final class GameServiceTest extends TestCase
             ->setIsDouble(false)
             ->setIsTriple(true);
 
-        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
-
         $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
         $this->stubBatchedThrowQueries($roundThrowsRepository, 10, 2, [$bustThrow]);
 
-        $service = $this->createGameService($gamePlayersRepository, $roundThrowsRepository, $roundRepository);
+        $service = $this->createGameService($gamePlayersRepository, $roundThrowsRepository);
         $dto = $service->createGameDto($game);
 
         self::assertSame(2, $dto->currentRound);
@@ -249,11 +244,10 @@ final class GameServiceTest extends TestCase
 
         $bustThrow = $this->createThrow($round, $firstUser, 1, 180, true, true, false);
 
-        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
         $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
         $this->stubBatchedThrowQueries($roundThrowsRepository, 11, 4, [$bustThrow]);
 
-        $service = $this->createGameService($gamePlayersRepository, $roundThrowsRepository, $roundRepository);
+        $service = $this->createGameService($gamePlayersRepository, $roundThrowsRepository);
         $dto = $service->createGameDto($game);
 
         self::assertSame(22, $dto->activePlayerId);
@@ -324,11 +318,10 @@ final class GameServiceTest extends TestCase
         $middleThrow = $this->createThrow($round, $middleUser, 1, 60);
         $lastThrow = $this->createThrow($round, $lastUser, 1, 45, false, false, true);
 
-        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
         $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
         $this->stubBatchedThrowQueries($roundThrowsRepository, 12, 3, [$middleThrow, $lastThrow]);
 
-        $service = $this->createGameService($gamePlayersRepository, $roundThrowsRepository, $roundRepository);
+        $service = $this->createGameService($gamePlayersRepository, $roundThrowsRepository);
         $dto = $service->createGameDto($game);
 
         self::assertSame([31, 32, 33], array_map(static fn($player) => $player->id, $dto->players));
@@ -389,11 +382,10 @@ final class GameServiceTest extends TestCase
             $throws[] = $this->createThrow($round, $player, 2, $roundNumber + 20, 0 === $roundNumber % 3, 0 === $roundNumber % 2, false);
         }
 
-        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
         $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
         $this->stubBatchedThrowQueries($roundThrowsRepository, 13, 13, $throws);
 
-        $service = $this->createGameService($gamePlayersRepository, $roundThrowsRepository, $roundRepository);
+        $service = $this->createGameService($gamePlayersRepository, $roundThrowsRepository);
         $dto = $service->createGameDto($game);
 
         self::assertSame(41, $dto->activePlayerId);
@@ -426,7 +418,6 @@ final class GameServiceTest extends TestCase
             ->setScore(301);
         $game->addGamePlayer($gamePlayer);
 
-        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
         $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
         $roundThrowsRepository->method('findEntityLatestForGame')->willReturn(null);
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
@@ -434,7 +425,7 @@ final class GameServiceTest extends TestCase
         $service = new GameService(
             $gamePlayersRepository,
             $roundThrowsRepository,
-            new ActivePlayerResolver($roundRepository, $roundThrowsRepository),
+            new ActivePlayerResolver($roundThrowsRepository),
             new GameStateVersionService($roundThrowsRepository),
         );
 
@@ -463,7 +454,6 @@ final class GameServiceTest extends TestCase
             ->setScore(401);
         $game->addGamePlayer($gamePlayer);
 
-        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
         $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
 
@@ -476,7 +466,7 @@ final class GameServiceTest extends TestCase
         $service = new GameService(
             $gamePlayersRepository,
             $roundThrowsRepository,
-            new ActivePlayerResolver($roundRepository, $roundThrowsRepository),
+            new ActivePlayerResolver($roundThrowsRepository),
             new GameStateVersionService($roundThrowsRepository),
         );
 
@@ -520,21 +510,77 @@ final class GameServiceTest extends TestCase
         $game->addGamePlayer($playerOne);
         $game->addGamePlayer($playerTwo);
 
-        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
-        $roundRepository->method('findOneBy')->willReturn($round);
-
         $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
-        $roundThrowsRepository->method('count')->willReturn(0);
-        $roundThrowsRepository->method('findOneBy')->willReturn(null);
+        $roundThrowsRepository->method('findCurrentRoundStateSnapshot')
+            ->with(90, 1)
+            ->willReturn([]);
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
 
         $service = new GameService(
             $gamePlayersRepository,
             $roundThrowsRepository,
-            new ActivePlayerResolver($roundRepository, $roundThrowsRepository),
+            new ActivePlayerResolver($roundThrowsRepository),
             new GameStateVersionService($roundThrowsRepository),
         );
         $activePlayerId = $service->calculateActivePlayer($game);
+
+        self::assertSame(2, $activePlayerId);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    public function testCalculateActivePlayerReusesProvidedRoundStateSnapshot(): void
+    {
+        $game = new Game();
+        $this->setPrivateProperty($game, 'gameId', 91);
+        $game->setStatus(GameStatus::Started);
+        $game->setRound(2);
+        $game->setStartScore(301);
+
+        $userOne = (new User())->setUsername('One');
+        $this->setPrivateProperty($userOne, 'id', 1);
+        $playerOne = (new GamePlayers())
+            ->setPlayer($userOne)
+            ->setPosition(1)
+            ->setScore(301);
+
+        $userTwo = (new User())->setUsername('Two');
+        $this->setPrivateProperty($userTwo, 'id', 2);
+        $playerTwo = (new GamePlayers())
+            ->setPlayer($userTwo)
+            ->setPosition(2)
+            ->setScore(301);
+
+        $game->addGamePlayer($playerOne);
+        $game->addGamePlayer($playerTwo);
+
+        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository->expects(self::never())
+            ->method('findCurrentRoundStateSnapshot');
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+
+        $service = new GameService(
+            $gamePlayersRepository,
+            $roundThrowsRepository,
+            new ActivePlayerResolver($roundThrowsRepository),
+            new GameStateVersionService($roundThrowsRepository),
+        );
+
+        $activePlayerId = $service->calculateActivePlayer($game, [
+            1 => [
+                'throwsCount' => 3,
+                'lastThrowNumber' => 3,
+                'lastThrowValue' => 60,
+                'lastThrowBust' => false,
+            ],
+            2 => [
+                'throwsCount' => 1,
+                'lastThrowNumber' => 1,
+                'lastThrowValue' => 20,
+                'lastThrowBust' => false,
+            ],
+        ]);
 
         self::assertSame(2, $activePlayerId);
     }
@@ -551,16 +597,15 @@ final class GameServiceTest extends TestCase
     /**
      * @param MockObject&GamePlayersRepositoryInterface $gamePlayersRepository
      * @param MockObject&RoundThrowsRepositoryInterface $roundThrowsRepository
-     * @param MockObject&RoundRepositoryInterface       $roundRepository
      *
      * @return GameService
      */
-    private function createGameService(MockObject $gamePlayersRepository, MockObject $roundThrowsRepository, MockObject $roundRepository): GameService
+    private function createGameService(MockObject $gamePlayersRepository, MockObject $roundThrowsRepository): GameService
     {
         return new GameService(
             $gamePlayersRepository,
             $roundThrowsRepository,
-            new ActivePlayerResolver($roundRepository, $roundThrowsRepository),
+            new ActivePlayerResolver($roundThrowsRepository),
             new GameStateVersionService($roundThrowsRepository),
         );
     }
@@ -599,6 +644,7 @@ final class GameServiceTest extends TestCase
         $currentRoundRows = [];
         $historyRows = [];
         $latestByPlayer = [];
+        $roundStateSnapshot = [];
 
         foreach ($throws as $throw) {
             $playerId = $throw->getPlayer()?->getId();
@@ -622,12 +668,21 @@ final class GameServiceTest extends TestCase
 
             if ($roundNumber === $currentRoundNumber) {
                 $currentRoundRows[] = $row;
+                $roundStateSnapshot[$playerId] = [
+                    'throwsCount' => ($roundStateSnapshot[$playerId]['throwsCount'] ?? 0) + 1,
+                    'lastThrowNumber' => $row['throwNumber'],
+                    'lastThrowValue' => $row['value'],
+                    'lastThrowBust' => $row['isBust'],
+                ];
             }
         }
 
         $repository->method('findCurrentRoundThrowsForGamePlayers')
             ->with($gameId, $currentRoundNumber)
             ->willReturn($currentRoundRows);
+        $repository->method('findCurrentRoundStateSnapshot')
+            ->with($gameId, $currentRoundNumber)
+            ->willReturn($roundStateSnapshot);
         $repository->method('findLatestThrowsForGamePlayers')
             ->with($gameId)
             ->willReturn(array_values($latestByPlayer));

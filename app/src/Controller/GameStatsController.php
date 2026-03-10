@@ -37,10 +37,9 @@ final class GameStatsController extends AbstractController
     /**
      * Returns overview of finished games.
      *
-     * @param GameRepositoryInterface    $gameRepository
-     * @param GameFinishServiceInterface $gameFinishService
-     * @param int                        $limit
-     * @param int                        $offset
+        * @param GameRepositoryInterface $gameRepository
+        * @param int                     $limit
+        * @param int                     $offset
      *
      * @return GameOverviewResponseDto
      */
@@ -63,24 +62,23 @@ final class GameStatsController extends AbstractController
     )]
     #[ApiResponse]
     #[Route('/api/games/overview', name: 'app_games_overview', methods: ['GET'], format: 'json')]
-    public function gamesOverview(GameRepositoryInterface $gameRepository, GameFinishServiceInterface $gameFinishService, #[MapQueryParameter] int $limit = 100, #[MapQueryParameter] int $offset = 0): GameOverviewResponseDto
+    public function gamesOverview(GameRepositoryInterface $gameRepository, #[MapQueryParameter] int $limit = 100, #[MapQueryParameter] int $offset = 0): GameOverviewResponseDto
     {
         $pagination = Pagination::from($limit, $offset, defaultLimit: 100, maxLimit: 100);
-        $games = $gameRepository->findFinished($pagination->limit, $pagination->offset);
+        $overviewRows = $gameRepository->findFinishedOverview($pagination->limit, $pagination->offset);
 
-        $items = [];
-        foreach ($games as $game) {
-            $summary = $gameFinishService->getGameStats($game);
-            $items[] = new GameOverviewItemDto(
-                id: $summary->gameId,
-                date: $game->getDate()?->format(DateTimeInterface::ATOM),
-                finishedAt: $summary->finishedAt,
-                playersCount: count($summary->finishedPlayers),
-                winnerName: $summary->winner?->username,
-                winnerId: $summary->winner?->id,
-                winnerRounds: $summary->winnerRoundsPlayed,
-            );
-        }
+        $items = array_map(
+            static fn(array $overviewRow): GameOverviewItemDto => new GameOverviewItemDto(
+                id: $overviewRow['id'],
+                date: $overviewRow['date'],
+                finishedAt: $overviewRow['finishedAt'],
+                playersCount: $overviewRow['playersCount'],
+                winnerName: $overviewRow['winnerName'],
+                winnerId: $overviewRow['winnerId'],
+                winnerRounds: $overviewRow['winnerRounds'],
+            ),
+            $overviewRows
+        );
 
         return new GameOverviewResponseDto(
             limit: $pagination->limit,

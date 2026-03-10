@@ -21,6 +21,8 @@ use Override;
 /**
  * This class is responsible for creating GameResponseDto objects from Game entities.
  *
+ * @phpstan-type RoundStateSnapshot array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}>
+ *
  * @psalm-suppress UnusedClass Reason: service is auto-wired by the container and used through DI.
  */
 final readonly class GameService implements GameServiceInterface
@@ -52,14 +54,15 @@ final readonly class GameService implements GameServiceInterface
      * - He has thrown less than 3 times in the current round
      * - He is not bust in the current round
      *
-     * @param Game $game The game entity
+     * @param Game                    $game               The game entity
+     * @param RoundStateSnapshot|null $roundStateSnapshot Optional preloaded current-round snapshot
      *
      * @return int|null The id of the active player or null if no active player found
      */
     #[Override]
-    public function calculateActivePlayer(Game $game): ?int
+    public function calculateActivePlayer(Game $game, ?array $roundStateSnapshot = null): ?int
     {
-        return $this->activePlayerResolver->resolveActivePlayer($game);
+        return $this->activePlayerResolver->resolveActivePlayer($game, $roundStateSnapshot);
     }
 
 
