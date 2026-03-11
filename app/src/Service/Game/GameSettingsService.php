@@ -47,6 +47,18 @@ final readonly class GameSettingsService implements GameSettingsServiceInterface
     public function updateSettings(Game $game, GameSettingsRequest $dto): void
     {
         $this->gameAccessService->assertPlayerInGameOrAdmin($game);
+        $this->applySettings($game, $dto);
+    }
+
+    /**
+     * @param Game                $game
+     * @param GameSettingsRequest $dto
+     *
+     * @return void
+     */
+    #[Override]
+    public function applySettings(Game $game, GameSettingsRequest $dto): void
+    {
         $status = $game->getStatus();
         $isLobby = GameStatus::Lobby === $status;
         $isStarted = GameStatus::Started === $status;

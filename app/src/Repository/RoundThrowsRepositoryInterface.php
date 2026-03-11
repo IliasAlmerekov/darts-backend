@@ -62,6 +62,8 @@ interface RoundThrowsRepositoryInterface
     public function findLatestForGameAndPlayer(int $gameId, int $playerId): ?RoundThrows;
 
     /**
+     * @psalm-suppress PossiblyUnusedReturnValue
+     *
      * @param int $gameId
      * @param int $throwId
      *
