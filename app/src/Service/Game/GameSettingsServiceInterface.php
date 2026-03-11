@@ -13,6 +13,18 @@ use App\Entity\Game;
 interface GameSettingsServiceInterface
 {
     /**
+     * Apply validated settings without performing access checks.
+     *
+     * Intended for flows that already established authorization, such as room creation.
+     *
+     * @param Game                $game
+     * @param GameSettingsRequest $dto
+     *
+     * @return void
+     */
+    public function applySettings(Game $game, GameSettingsRequest $dto): void;
+
+    /**
      * @param Game                $game
      * @param GameSettingsRequest $dto
      *

@@ -26,6 +26,9 @@ final class RoomCreateRequestValidationTest extends TestCase
             previousGameId: 12,
             playerIds: [1, 2, 3],
             excludePlayerIds: [2],
+            startScore: 501,
+            doubleOut: true,
+            tripleOut: false,
         );
 
         $violations = $this->validator->validate($dto);
@@ -56,6 +59,20 @@ final class RoomCreateRequestValidationTest extends TestCase
         self::assertGreaterThan(0, $violations->count());
         self::assertTrue($this->hasPropertyPath($violations, 'playerIds'));
         self::assertTrue($this->hasPropertyPath($violations, 'excludePlayerIds'));
+    }
+
+    public function testRejectsInvalidSettingsFields(): void
+    {
+        $dto = new RoomCreateRequest(
+            startScore: 999,
+            doubleOut: true,
+            tripleOut: false,
+        );
+
+        $violations = $this->validator->validate($dto);
+
+        self::assertGreaterThan(0, $violations->count());
+        self::assertTrue($this->hasPropertyPath($violations, 'startScore'));
     }
 
     /**
