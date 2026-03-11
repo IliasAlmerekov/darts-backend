@@ -306,7 +306,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         }
 
         $game->setWinner(null);
-        $game->setRound($previousGameThrow?->getRound()?->getRoundNumber() ?? $lastThrowRoundNumber);
+        $game->setRound($lastThrowRoundNumber);
 
         $this->entityManager->remove($lastThrow);
         $this->entityManager->flush();
