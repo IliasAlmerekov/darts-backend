@@ -977,6 +977,106 @@ final class GameThrowServiceTest extends TestCase
     /**
      * @throws ReflectionException
      */
+    public function testUndoFirstThrowOfNewRoundKeepsCurrentRoundNumber(): void
+    {
+        // Scenario: 2 players, round 1 complete, player 1 throws first in round 2.
+        // Undoing that throw must leave game.round = 2, not regress to round 1.
+        $game = new Game();
+        $this->setPrivateProperty($game, 'gameId', 40);
+        $game->setStartScore(301);
+        $game->setRound(2);
+        $game->setStatus(GameStatus::Started);
+
+        $playerUser = (new User())->setUsername('Player1');
+        $this->setPrivateProperty($playerUser, 'id', 1);
+        $otherUser = (new User())->setUsername('Player2');
+        $this->setPrivateProperty($otherUser, 'id', 2);
+
+        $playerGamePlayer = (new GamePlayers())
+            ->setPlayer($playerUser)
+            ->setScore(241)
+            ->setIsWinner(false);
+        $otherGamePlayer = (new GamePlayers())
+            ->setPlayer($otherUser)
+            ->setScore(241)
+            ->setIsWinner(false);
+        $game->addGamePlayer($playerGamePlayer);
+        $game->addGamePlayer($otherGamePlayer);
+
+        $round2 = (new Round())->setGame($game)->setRoundNumber(2);
+        $round1 = (new Round())->setGame($game)->setRoundNumber(1);
+
+        // Last throw: player 1's first throw in round 2
+        $lastThrow = (new RoundThrows())
+            ->setGame($game)
+            ->setRound($round2)
+            ->setPlayer($playerUser)
+            ->setThrowId(201)
+            ->setThrowNumber(1)
+            ->setValue(60)
+            ->setScore(241)
+            ->setTimestamp(new DateTime());
+
+        // Previous game throw: player 2's last throw in round 1 (different round!)
+        $previousGameThrow = (new RoundThrows())
+            ->setGame($game)
+            ->setRound($round1)
+            ->setPlayer($otherUser)
+            ->setThrowId(200)
+            ->setThrowNumber(3)
+            ->setValue(60)
+            ->setScore(241)
+            ->setTimestamp(new DateTime());
+
+        // Previous player throw: player 1 has no previous throw in round 2
+        $previousPlayerThrow = null;
+
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
+        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository->method('findEntityLatestForGame')
+            ->with(40)
+            ->willReturn($lastThrow);
+        $roundThrowsRepository->method('findLatestForGameBeforeThrow')
+            ->with(40, 201)
+            ->willReturn($previousGameThrow);
+        $roundThrowsRepository->method('findLatestForGameAndPlayerBeforeThrow')
+            ->with(40, 1, 201)
+            ->willReturn($previousPlayerThrow);
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::once())
+            ->method('wrapInTransaction')
+            ->willReturnCallback(static fn (callable $callback): mixed => $callback());
+        $entityManager->expects(self::once())
+            ->method('contains')
+            ->with($game)
+            ->willReturn(true);
+        $entityManager->expects(self::once())
+            ->method('lock')
+            ->with($game, LockMode::PESSIMISTIC_WRITE);
+        $entityManager->expects(self::once())->method('remove')->with($lastThrow);
+        $entityManager->expects(self::once())->method('flush');
+
+        $service = new GameThrowService(
+            $gamePlayersRepository,
+            $roundRepository,
+            $roundThrowsRepository,
+            $entityManager,
+            $this->createAccessService()
+        );
+
+        $service->undoLastThrow($game);
+
+        // Round must stay at 2 — player 1 needs to re-throw in round 2,
+        // not regress to round 1 where all throws are already completed.
+        self::assertSame(2, $game->getRound());
+        self::assertSame(301, $playerGamePlayer->getScore());
+    }
+
+    /**
+     * @throws ReflectionException
+     */
     public function testRecordThrowFinishesGameAndNormalizesFinalPositions(): void
     {
         $game = new Game();
