@@ -544,15 +544,47 @@ SQL,
         $snapshot = [];
 
         foreach ($rows as $row) {
-            $playerId = (int) $row['playerId'];
+            $playerId = (int) ($this->resolveSnapshotRowValue($row, 'playerId') ?? 0);
+            if ($playerId <= 0) {
+                continue;
+            }
+
+            $lastThrowNumber = $this->resolveSnapshotRowValue($row, 'lastThrowNumber');
+            $lastThrowValue = $this->resolveSnapshotRowValue($row, 'lastThrowValue');
+
             $snapshot[$playerId] = [
-                'throwsCount' => (int) $row['throwsCount'],
-                'lastThrowNumber' => isset($row['lastThrowNumber']) ? (int) $row['lastThrowNumber'] : null,
-                'lastThrowValue' => isset($row['lastThrowValue']) ? (int) $row['lastThrowValue'] : null,
-                'lastThrowBust' => isset($row['lastThrowBust']) ? (bool) $row['lastThrowBust'] : false,
+                'throwsCount' => (int) ($this->resolveSnapshotRowValue($row, 'throwsCount') ?? 0),
+                'lastThrowNumber' => null !== $lastThrowNumber ? (int) $lastThrowNumber : null,
+                'lastThrowValue' => null !== $lastThrowValue ? (int) $lastThrowValue : null,
+                'lastThrowBust' => (bool) ($this->resolveSnapshotRowValue($row, 'lastThrowBust') ?? false),
             ];
         }
 
         return $snapshot;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @param string               $key
+     *
+     * @return mixed
+     */
+    private function resolveSnapshotRowValue(array $row, string $key): mixed
+    {
+        $snakeCaseKey = strtolower((string) preg_replace('/(?<!^)[A-Z]/', '_$0', $key));
+        $candidates = [
+            $key,
+            strtolower($key),
+            $snakeCaseKey,
+            str_replace('_', '', $snakeCaseKey),
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (array_key_exists($candidate, $row)) {
+                return $row[$candidate];
+            }
+        }
+
+        return null;
     }
 }

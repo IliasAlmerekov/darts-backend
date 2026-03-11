@@ -178,6 +178,45 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
         ], $snapshot);
     }
 
+    public function testNormalizeRoundStateSnapshotRowsAcceptsLowercaseAndSnakeCaseKeys(): void
+    {
+        $method = new \ReflectionMethod($this->repo, 'normalizeRoundStateSnapshotRows');
+        $method->setAccessible(true);
+
+        /** @var array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}> $snapshot */
+        $snapshot = $method->invoke($this->repo, [
+            [
+                'playerid' => '31',
+                'throwscount' => '3',
+                'lastthrownumber' => '3',
+                'lastthrowvalue' => '25',
+                'lastthrowbust' => false,
+            ],
+            [
+                'player_id' => '32',
+                'throws_count' => '0',
+                'last_throw_number' => null,
+                'last_throw_value' => null,
+                'last_throw_bust' => false,
+            ],
+        ]);
+
+        self::assertSame([
+            31 => [
+                'throwsCount' => 3,
+                'lastThrowNumber' => 3,
+                'lastThrowValue' => 25,
+                'lastThrowBust' => false,
+            ],
+            32 => [
+                'throwsCount' => 0,
+                'lastThrowNumber' => null,
+                'lastThrowValue' => null,
+                'lastThrowBust' => false,
+            ],
+        ], $snapshot);
+    }
+
     public function testFindLatestThrowsForGamePlayersReturnsOneRowPerPlayer(): void
     {
         $game = $this->createGame(GameStatus::Started);
