@@ -117,6 +117,28 @@ final class GameSettingsServiceTest extends TestCase
         $service->updateSettings($game, $dto);
     }
 
+    public function testApplySettingsSkipsAccessChecksForNewRoomFlow(): void
+    {
+        $game = new Game();
+        $dto = new GameSettingsRequest();
+        $dto->startScore = 401;
+        $dto->doubleOut = true;
+        $dto->tripleOut = false;
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::once())->method('flush');
+
+        $access = $this->createMock(GameAccessServiceInterface::class);
+        $access->expects(self::never())->method('assertPlayerInGameOrAdmin');
+
+        $service = new GameSettingsService($entityManager, $access);
+        $service->applySettings($game, $dto);
+
+        self::assertSame(401, $game->getStartScore());
+        self::assertTrue($game->isDoubleOut());
+        self::assertFalse($game->isTripleOut());
+    }
+
     private function createService(EntityManagerInterface $entityManager): GameSettingsService
     {
         $access = $this->createStub(GameAccessServiceInterface::class);

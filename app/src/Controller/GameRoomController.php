@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Dto\GuestPlayerRequest;
+use App\Dto\GameSettingsRequest;
 use App\Dto\PlayerIdPayload;
 use App\Dto\RoomCreateRequest;
 use App\Dto\SuccessMessageDto;
@@ -21,10 +22,12 @@ use App\Exception\Request\UsernameAlreadyTakenException;
 use App\Exception\Request\PlayerIdRequiredException;
 use App\Http\Attribute\ApiResponse;
 use App\Service\Game\GameRoomServiceInterface;
+use App\Service\Game\GameSettingsServiceInterface;
 use App\Service\Game\RematchServiceInterface;
 use App\Service\Player\GuestPlayerServiceInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
 use App\Service\Sse\SseStreamServiceInterface;
+use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
 use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
@@ -47,18 +50,22 @@ final class GameRoomController extends AbstractController
     /**
      * @param GameRoomServiceInterface         $gameRoomService
      * @param PlayerManagementServiceInterface $playerManagementService
+     * @param GameSettingsServiceInterface     $gameSettingsService
      * @param RematchServiceInterface          $rematchService
      * @param GuestPlayerServiceInterface      $guestPlayerService
      * @param SseStreamServiceInterface        $sseStreamService
+     * @param EntityManagerInterface           $entityManager
      *
      * @return void
      */
     public function __construct(
         private readonly GameRoomServiceInterface $gameRoomService,
         private readonly PlayerManagementServiceInterface $playerManagementService,
+        private readonly GameSettingsServiceInterface $gameSettingsService,
         private readonly RematchServiceInterface $rematchService,
         private readonly GuestPlayerServiceInterface $guestPlayerService,
         private readonly SseStreamServiceInterface $sseStreamService,
+        private readonly EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -91,20 +98,27 @@ final class GameRoomController extends AbstractController
     #[Route(path: '/api/room/create', name: 'room_create', methods: ['POST'], format: 'json')]
     public function roomCreateApi(#[MapRequestPayload] RoomCreateRequest $dto): array
     {
-        $includePlayerIds = null !== $dto->playerIds && [] !== $dto->playerIds
-            ? $dto->playerIds
-            : null;
-        $excludePlayerIds = null !== $dto->excludePlayerIds && [] !== $dto->excludePlayerIds
-            ? $dto->excludePlayerIds
-            : null;
+        return $this->entityManager->wrapInTransaction(function () use ($dto): array {
+            $includePlayerIds = null !== $dto->playerIds && [] !== $dto->playerIds
+                ? $dto->playerIds
+                : null;
+            $excludePlayerIds = null !== $dto->excludePlayerIds && [] !== $dto->excludePlayerIds
+                ? $dto->excludePlayerIds
+                : null;
 
-        $game = $this->gameRoomService->createGameWithPreviousPlayers(
-            $dto->previousGameId,
-            $includePlayerIds,
-            $excludePlayerIds,
-        );
+            $game = $this->gameRoomService->createGameWithPreviousPlayers(
+                $dto->previousGameId,
+                $includePlayerIds,
+                $excludePlayerIds,
+            );
 
-        return ['success' => true, 'gameId' => $game->getGameId()];
+            $settingsRequest = $this->createGameSettingsRequest($dto);
+            if (null !== $settingsRequest) {
+                $this->gameSettingsService->applySettings($game, $settingsRequest);
+            }
+
+            return ['success' => true, 'gameId' => $game->getGameId()];
+        });
     }
 
     /**
@@ -338,5 +352,25 @@ final class GameRoomController extends AbstractController
         }
 
         return $result;
+    }
+
+    /**
+     * Builds a game settings DTO only when room-create includes settings fields.
+     *
+     * @param RoomCreateRequest $dto
+     *
+     * @return GameSettingsRequest|null
+     */
+    private function createGameSettingsRequest(RoomCreateRequest $dto): ?GameSettingsRequest
+    {
+        if (null === $dto->startScore && null === $dto->doubleOut && null === $dto->tripleOut) {
+            return null;
+        }
+
+        return new GameSettingsRequest(
+            startScore: $dto->startScore,
+            doubleOut: $dto->doubleOut,
+            tripleOut: $dto->tripleOut,
+        );
     }
 }
