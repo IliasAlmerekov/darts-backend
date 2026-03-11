@@ -265,10 +265,9 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         $playerId = $player?->getId();
         $lastThrowRoundNumber = $lastThrow->getRound()?->getRoundNumber() ?? $game->getRound();
         $lastThrowId = $lastThrow->getThrowId();
-        $previousGameThrow = null;
         $previousPlayerThrow = null;
         if (null !== $lastThrowId) {
-            $previousGameThrow = $this->roundThrowsRepository->findLatestForGameBeforeThrow($gameId, $lastThrowId);
+            $this->roundThrowsRepository->findLatestForGameBeforeThrow($gameId, $lastThrowId);
             if (null !== $playerId) {
                 $previousPlayerThrow = $this->roundThrowsRepository->findLatestForGameAndPlayerBeforeThrow($gameId, $playerId, $lastThrowId);
             }
