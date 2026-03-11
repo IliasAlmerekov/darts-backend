@@ -63,4 +63,41 @@ final class GameStatisticsServiceTest extends TestCase
         self::assertSame(3, $second->gamesPlayed);
         self::assertSame(0.0, $second->scoreAverage);
     }
+
+    public function testGetPlayerStatsMapsLegacyNumericRowsWithoutWarnings(): void
+    {
+        $this->roundThrowsRepository
+            ->expects(self::once())
+            ->method('getPlayerStatistics')
+            ->with(10, 0, 'average', 'DESC')
+            ->willReturn([
+                [
+                    0 => '7',
+                    'username' => 'legacy-player',
+                    2 => '4',
+                    3 => '88.0',
+                    4 => '8',
+                ],
+                [
+                    0 => '8',
+                    1 => 'precomputed-player',
+                    2 => '6',
+                    5 => '22.5',
+                ],
+            ]);
+
+        $result = $this->service->getPlayerStats(10, 0, 'average', 'DESC');
+
+        self::assertCount(2, $result);
+
+        self::assertSame(7, $result[0]->playerId);
+        self::assertSame('legacy-player', $result[0]->name);
+        self::assertSame(4, $result[0]->gamesPlayed);
+        self::assertSame(11.0, $result[0]->scoreAverage);
+
+        self::assertSame(8, $result[1]->playerId);
+        self::assertSame('precomputed-player', $result[1]->name);
+        self::assertSame(6, $result[1]->gamesPlayed);
+        self::assertSame(22.5, $result[1]->scoreAverage);
+    }
 }
