@@ -100,4 +100,40 @@ final class GameStatisticsServiceTest extends TestCase
         self::assertSame(6, $result[1]->gamesPlayed);
         self::assertSame(22.5, $result[1]->scoreAverage);
     }
+
+    public function testGetPlayerStatsMapsLowercaseAndSnakeCaseAliases(): void
+    {
+        $this->roundThrowsRepository
+            ->expects(self::once())
+            ->method('getPlayerStatistics')
+            ->with(10, 0, 'average', 'DESC')
+            ->willReturn([
+                [
+                    'playerid' => '11',
+                    'username' => 'postgres-lower',
+                    'gamesplayed' => '7',
+                    'totalvalue' => '140.0',
+                    'roundsfinished' => '4',
+                ],
+                [
+                    'player_id' => '12',
+                    'username' => 'postgres-snake',
+                    'games_played' => '8',
+                    'score_average' => '37.5',
+                ],
+            ]);
+
+        $result = $this->service->getPlayerStats(10, 0, 'average', 'DESC');
+
+        self::assertCount(2, $result);
+        self::assertSame(11, $result[0]->playerId);
+        self::assertSame('postgres-lower', $result[0]->name);
+        self::assertSame(7, $result[0]->gamesPlayed);
+        self::assertSame(35.0, $result[0]->scoreAverage);
+
+        self::assertSame(12, $result[1]->playerId);
+        self::assertSame('postgres-snake', $result[1]->name);
+        self::assertSame(8, $result[1]->gamesPlayed);
+        self::assertSame(37.5, $result[1]->scoreAverage);
+    }
 }
