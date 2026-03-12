@@ -6,6 +6,7 @@ namespace App\Service\Game;
 
 use App\Dto\PlayerStatsDto;
 use App\Repository\RoundThrowsRepositoryInterface;
+use App\Util\SqlResultValueAccessor;
 use Override;
 
 /**
@@ -57,13 +58,11 @@ final readonly class GameStatisticsService implements GameStatisticsServiceInter
      */
     private static function resolveIntValue(array $row, array $keys): int
     {
-        foreach ($keys as $key) {
-            if (array_key_exists($key, $row)) {
-                return (int) $row[$key];
-            }
+        if (false === SqlResultValueAccessor::has($row, $keys)) {
+            return 0;
         }
 
-        return 0;
+        return (int) SqlResultValueAccessor::find($row, $keys);
     }
 
     /**
@@ -74,13 +73,11 @@ final readonly class GameStatisticsService implements GameStatisticsServiceInter
      */
     private static function resolveStringValue(array $row, array $keys): string
     {
-        foreach ($keys as $key) {
-            if (array_key_exists($key, $row)) {
-                return (string) $row[$key];
-            }
+        if (false === SqlResultValueAccessor::has($row, $keys)) {
+            return '';
         }
 
-        return '';
+        return (string) SqlResultValueAccessor::find($row, $keys);
     }
 
     /**
@@ -91,8 +88,8 @@ final readonly class GameStatisticsService implements GameStatisticsServiceInter
      */
     private static function resolveAverage(array $row, int $rounds): float
     {
-        if (array_key_exists('scoreAverage', $row) || array_key_exists(5, $row)) {
-            $value = $row['scoreAverage'] ?? $row[5];
+        if (true === SqlResultValueAccessor::has($row, ['scoreAverage', 5])) {
+            $value = SqlResultValueAccessor::find($row, ['scoreAverage', 5]);
 
             return null !== $value ? (float) $value : 0.0;
         }
@@ -110,12 +107,10 @@ final readonly class GameStatisticsService implements GameStatisticsServiceInter
      */
     private static function resolveFloatValue(array $row, array $keys): float
     {
-        foreach ($keys as $key) {
-            if (array_key_exists($key, $row)) {
-                return (float) $row[$key];
-            }
+        if (false === SqlResultValueAccessor::has($row, $keys)) {
+            return 0.0;
         }
 
-        return 0.0;
+        return (float) SqlResultValueAccessor::find($row, $keys);
     }
 }

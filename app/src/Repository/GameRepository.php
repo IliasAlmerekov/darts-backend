@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Entity\Game;
 use App\Enum\GameStatus;
+use App\Util\SqlResultValueAccessor;
 use DateTimeImmutable;
 use DateTimeInterface;
 use Doctrine\DBAL\ArrayParameterType;
@@ -95,15 +96,15 @@ SQL,
         ));
 
         return array_map(function (array $row) use ($winnerRoundsByGameId): array {
-            $gameId = (int) $row['id'];
-            $winnerId = $row['winnerId'];
-            $winnerName = $row['winnerName'];
+            $gameId = (int) (SqlResultValueAccessor::find($row, ['id']) ?? 0);
+            $winnerId = SqlResultValueAccessor::find($row, ['winnerId']);
+            $winnerName = SqlResultValueAccessor::find($row, ['winnerName']);
 
             return [
                 'id' => $gameId,
-                'date' => $this->formatDateTimeValue($row['date'] ?? null),
-                'finishedAt' => $this->formatDateTimeValue($row['finishedAt'] ?? null),
-                'playersCount' => (int) $row['playersCount'],
+                'date' => $this->formatDateTimeValue(SqlResultValueAccessor::find($row, ['date'])),
+                'finishedAt' => $this->formatDateTimeValue(SqlResultValueAccessor::find($row, ['finishedAt'])),
+                'playersCount' => (int) (SqlResultValueAccessor::find($row, ['playersCount']) ?? 0),
                 'winnerName' => null !== $winnerName ? (string) $winnerName : null,
                 'winnerId' => null !== $winnerId ? (int) $winnerId : null,
                 'winnerRounds' => $winnerRoundsByGameId[$gameId] ?? 0,
@@ -219,7 +220,12 @@ SQL,
 
         $winnerRoundsByGameId = [];
         foreach ($rows as $row) {
-            $winnerRoundsByGameId[(int) $row['gameId']] = (int) $row['winnerRounds'];
+            $gameId = (int) (SqlResultValueAccessor::find($row, ['gameId']) ?? 0);
+            if ($gameId <= 0) {
+                continue;
+            }
+
+            $winnerRoundsByGameId[$gameId] = (int) (SqlResultValueAccessor::find($row, ['winnerRounds']) ?? 0);
         }
 
         return $winnerRoundsByGameId;
