@@ -14,6 +14,7 @@ use Doctrine\ORM\Mapping as ORM;
  * This class represents a round throw.
  */
 #[ORM\Entity(repositoryClass: RoundThrowsRepository::class)]
+#[ORM\UniqueConstraint(name: 'uq_round_player_throw', columns: ['round_id', 'player_id', 'throw_number'])]
 class RoundThrows
 {
     #[ORM\Id]

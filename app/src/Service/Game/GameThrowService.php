@@ -71,6 +71,23 @@ final readonly class GameThrowService implements GameThrowServiceInterface
     #[Override]
     public function recordThrow(Game $game, ThrowRequest $dto): ThrowRecordingResultDto
     {
+        return $this->entityManager->wrapInTransaction(function () use ($game, $dto): ThrowRecordingResultDto {
+            if ($this->entityManager->contains($game)) {
+                $this->entityManager->lock($game, LockMode::PESSIMISTIC_WRITE);
+            }
+
+            return $this->recordThrowUnlocked($game, $dto);
+        });
+    }
+
+    /**
+     * @param Game         $game
+     * @param ThrowRequest $dto
+     *
+     * @return ThrowRecordingResultDto
+     */
+    private function recordThrowUnlocked(Game $game, ThrowRequest $dto): ThrowRecordingResultDto
+    {
         $user = $this->gameAccessService->assertPlayerInGameOrAdmin($game);
 
         $status = $game->getStatus();
