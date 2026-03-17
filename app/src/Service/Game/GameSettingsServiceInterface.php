@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 

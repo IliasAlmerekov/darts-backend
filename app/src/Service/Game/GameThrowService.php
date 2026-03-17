@@ -48,7 +48,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
      * @param EntityManagerInterface         $entityManager
      * @param GameAccessServiceInterface     $gameAccessService
-    * @param ActivePlayerResolverInterface  $activePlayerResolver
+     * @param ActivePlayerResolverInterface  $activePlayerResolver
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
@@ -66,7 +66,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      * @param Game         $game
      * @param ThrowRequest $dto
      *
-        * @return ThrowRecordingResultDto
+     * @return ThrowRecordingResultDto
      */
     #[Override]
     public function recordThrow(Game $game, ThrowRequest $dto): ThrowRecordingResultDto
