@@ -6,4 +6,4 @@ watchPatterns = ["app/**"]
 startCommand = "/usr/local/bin/start-container"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
-preDeployCommand = "php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration"
+preDeployCommand = "echo DATABASE_URL=$DATABASE_URL && php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration"
