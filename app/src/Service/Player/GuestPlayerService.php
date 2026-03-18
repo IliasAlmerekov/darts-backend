@@ -16,7 +16,6 @@ use App\Exception\Request\UsernameAlreadyTakenException;
 use App\Repository\GamePlayersRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Override;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Uid\Uuid;
 
 /**
@@ -29,13 +28,11 @@ final readonly class GuestPlayerService implements GuestPlayerServiceInterface
     /**
      * @param GamePlayersRepositoryInterface   $gamePlayersRepository
      * @param PlayerManagementServiceInterface $playerManagementService
-     * @param UserPasswordHasherInterface      $passwordHasher
      * @param EntityManagerInterface           $entityManager
      */
     public function __construct(
         private GamePlayersRepositoryInterface $gamePlayersRepository,
         private PlayerManagementServiceInterface $playerManagementService,
-        private UserPasswordHasherInterface $passwordHasher,
         private EntityManagerInterface $entityManager,
     ) {
     }
@@ -68,7 +65,7 @@ final readonly class GuestPlayerService implements GuestPlayerServiceInterface
             ->setUsername($this->generateGuestUsername())
             ->setDisplayName($normalized)
             ->setEmail($this->generateGuestEmail())
-            ->setPassword($this->passwordHasher->hashPassword($guest, $this->generateRandomPassword()))
+            ->setPassword('guest_no_auth_'.bin2hex(random_bytes(8)))
             ->setRoles(['ROLE_GUEST'])
             ->setIsGuest(true);
 
@@ -115,13 +112,5 @@ final readonly class GuestPlayerService implements GuestPlayerServiceInterface
     private function generateGuestEmail(): string
     {
         return sprintf('guest+%s@guest.local', Uuid::v4()->toRfc4122());
-    }
-
-    /**
-     * @return string
-     */
-    private function generateRandomPassword(): string
-    {
-        return bin2hex(random_bytes(16));
     }
 }

@@ -24,6 +24,11 @@ final class SqlResultValueAccessorTest extends TestCase
         self::assertSame('Alice', SqlResultValueAccessor::find($row, ['winnerName']));
     }
 
+    public function testFindReturnsNullWhenKeyNotFound(): void
+    {
+        self::assertNull(SqlResultValueAccessor::find(['foo' => 'bar'], ['missingKey']));
+    }
+
     public function testHasSupportsNumericAndAliasedKeys(): void
     {
         $row = [

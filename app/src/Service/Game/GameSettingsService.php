@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -22,7 +27,6 @@ use Override;
  * @psalm-suppress UnusedClass Reason: service is auto-wired by the container and used through DI.
  * @psalm-suppress PossiblyUnusedMethod Reason: constructor is used by Symfony autowiring.
  */
-
 final readonly class GameSettingsService implements GameSettingsServiceInterface
 {
     private const ALLOWED_START_SCORES = [101, 201, 301, 401, 501];

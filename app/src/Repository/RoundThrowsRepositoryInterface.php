@@ -181,8 +181,8 @@ interface RoundThrowsRepositoryInterface
     public function findLatestForGame(int $gameId): ?array;
 
     /**
-        * @psalm-suppress PossiblyUnusedMethod
-        *
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param string      $alias
      * @param string|null $indexBy
      *

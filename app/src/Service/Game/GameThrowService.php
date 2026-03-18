@@ -48,7 +48,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
      * @param EntityManagerInterface         $entityManager
      * @param GameAccessServiceInterface     $gameAccessService
-    * @param ActivePlayerResolverInterface  $activePlayerResolver
+     * @param ActivePlayerResolverInterface  $activePlayerResolver
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
@@ -66,10 +66,48 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      * @param Game         $game
      * @param ThrowRequest $dto
      *
-        * @return ThrowRecordingResultDto
+     * @return ThrowRecordingResultDto
      */
     #[Override]
     public function recordThrow(Game $game, ThrowRequest $dto): ThrowRecordingResultDto
+    {
+        return $this->entityManager->wrapInTransaction(function () use ($game, $dto): ThrowRecordingResultDto {
+            if ($this->entityManager->contains($game)) {
+                $this->entityManager->lock($game, LockMode::PESSIMISTIC_WRITE);
+            }
+
+            return $this->recordThrowUnlocked($game, $dto);
+        });
+    }
+
+    /**
+     * @param Game $game
+     *
+     * @return ThrowDeltaDto|null
+     */
+    #[Override]
+    public function undoLastThrow(Game $game): ?ThrowDeltaDto
+    {
+        $this->gameAccessService->assertPlayerInGameOrAdmin($game);
+
+        $undoneThrow = $this->entityManager->wrapInTransaction(function () use ($game): ?ThrowDeltaDto {
+            if ($this->entityManager->contains($game)) {
+                $this->entityManager->lock($game, LockMode::PESSIMISTIC_WRITE);
+            }
+
+            return $this->undoLastThrowUnlocked($game);
+        });
+
+        return $undoneThrow;
+    }
+
+    /**
+     * @param Game         $game
+     * @param ThrowRequest $dto
+     *
+     * @return ThrowRecordingResultDto
+     */
+    private function recordThrowUnlocked(Game $game, ThrowRequest $dto): ThrowRecordingResultDto
     {
         $user = $this->gameAccessService->assertPlayerInGameOrAdmin($game);
 
@@ -219,27 +257,6 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             latestThrow: $this->createLatestThrowSnapshot($roundThrow),
             currentRoundStateSnapshot: $hasAdvancedRound ? [] : $updatedRoundStateSnapshot,
         );
-    }
-
-    /**
-     * @param Game $game
-     *
-     * @return ThrowDeltaDto|null
-     */
-    #[Override]
-    public function undoLastThrow(Game $game): ?ThrowDeltaDto
-    {
-        $this->gameAccessService->assertPlayerInGameOrAdmin($game);
-
-        $undoneThrow = $this->entityManager->wrapInTransaction(function () use ($game): ?ThrowDeltaDto {
-            if ($this->entityManager->contains($game)) {
-                $this->entityManager->lock($game, LockMode::PESSIMISTIC_WRITE);
-            }
-
-            return $this->undoLastThrowUnlocked($game);
-        });
-
-        return $undoneThrow;
     }
 
     /**

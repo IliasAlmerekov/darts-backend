@@ -88,6 +88,8 @@ final class GameThrowServiceTest extends TestCase
 
         $persistedThrow = null;
         $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')
+            ->willReturnCallback(static fn (\Closure $fn) => $fn());
         $entityManager->expects(self::once())
             ->method('persist')
             ->with(self::callback(function (object $entity) use (&$persistedThrow): bool {
@@ -154,6 +156,8 @@ final class GameThrowServiceTest extends TestCase
         $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')
+            ->willReturnCallback(static fn (\Closure $fn) => $fn());
         $entityManager->expects(self::never())->method('persist');
         $entityManager->expects(self::never())->method('flush');
 
@@ -189,6 +193,8 @@ final class GameThrowServiceTest extends TestCase
         $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')
+            ->willReturnCallback(static fn (\Closure $fn) => $fn());
         $entityManager->expects(self::never())->method('flush');
         $entityManager->expects(self::never())->method('persist');
 
@@ -249,6 +255,8 @@ final class GameThrowServiceTest extends TestCase
             ->willReturn([]);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')
+            ->willReturnCallback(static fn (\Closure $fn) => $fn());
         $entityManager->expects(self::never())->method('persist');
         $entityManager->expects(self::never())->method('flush');
 
@@ -309,6 +317,8 @@ final class GameThrowServiceTest extends TestCase
             ->willReturn([]);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')
+            ->willReturnCallback(static fn (\Closure $fn) => $fn());
         $entityManager->expects(self::never())->method('persist');
         $entityManager->expects(self::never())->method('flush');
 
@@ -375,6 +385,8 @@ final class GameThrowServiceTest extends TestCase
             ->willReturn([]);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')
+            ->willReturnCallback(static fn (\Closure $fn) => $fn());
         $entityManager->expects(self::never())->method('persist');
         $entityManager->expects(self::never())->method('flush');
 
@@ -458,6 +470,8 @@ final class GameThrowServiceTest extends TestCase
             ]);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')
+            ->willReturnCallback(static fn (\Closure $fn) => $fn());
         $entityManager->expects(self::never())->method('persist');
         $entityManager->expects(self::never())->method('flush');
 
@@ -540,6 +554,8 @@ final class GameThrowServiceTest extends TestCase
             ->willReturn(1);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')
+            ->willReturnCallback(static fn (\Closure $fn) => $fn());
         $entityManager->expects(self::once())->method('persist');
         $entityManager->expects(self::once())->method('flush');
 
@@ -610,6 +626,8 @@ final class GameThrowServiceTest extends TestCase
 
         $persistedEntities = [];
         $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')
+            ->willReturnCallback(static fn (\Closure $fn) => $fn());
         $entityManager->expects(self::exactly(2))
             ->method('persist')
             ->with(self::callback(function (object $entity) use (&$persistedEntities): bool {
@@ -1151,6 +1169,8 @@ final class GameThrowServiceTest extends TestCase
             ->willReturn([]);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')
+            ->willReturnCallback(static fn (\Closure $fn) => $fn());
         $entityManager->expects(self::once())->method('persist');
         $entityManager->expects(self::once())->method('flush');
 
