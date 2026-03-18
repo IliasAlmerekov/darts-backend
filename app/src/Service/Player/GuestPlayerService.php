@@ -65,7 +65,7 @@ final readonly class GuestPlayerService implements GuestPlayerServiceInterface
             ->setUsername($this->generateGuestUsername())
             ->setDisplayName($normalized)
             ->setEmail($this->generateGuestEmail())
-            ->setPassword('guest_no_auth_' . bin2hex(random_bytes(8)))
+            ->setPassword('guest_no_auth_'.bin2hex(random_bytes(8)))
             ->setRoles(['ROLE_GUEST'])
             ->setIsGuest(true);
 
@@ -113,5 +113,4 @@ final readonly class GuestPlayerService implements GuestPlayerServiceInterface
     {
         return sprintf('guest+%s@guest.local', Uuid::v4()->toRfc4122());
     }
-
 }

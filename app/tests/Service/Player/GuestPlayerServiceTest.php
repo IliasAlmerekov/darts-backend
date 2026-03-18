@@ -19,7 +19,6 @@ use App\Service\Player\GuestPlayerService;
 use App\Service\Player\PlayerManagementServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class GuestPlayerServiceTest extends TestCase
 {
@@ -28,12 +27,10 @@ final class GuestPlayerServiceTest extends TestCase
         $game = (new Game())->setGameId(10);
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
-        $passwordHasher = $this->createMock(UserPasswordHasherInterface::class);
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $service = new GuestPlayerService(
             $gamePlayersRepository,
             $playerManagementService,
-            $passwordHasher,
             $entityManager,
         );
 
@@ -56,12 +53,6 @@ final class GuestPlayerServiceTest extends TestCase
         $playerManagementService
             ->expects(self::never())
             ->method('addPlayer');
-
-        $passwordHasher
-            ->expects(self::once())
-            ->method('hashPassword')
-            ->with(self::isInstanceOf(User::class), self::isString())
-            ->willReturn('hashed');
 
         $entityManager
             ->expects(self::once())
@@ -92,12 +83,10 @@ final class GuestPlayerServiceTest extends TestCase
         $game = (new Game())->setGameId(10);
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
-        $passwordHasher = $this->createMock(UserPasswordHasherInterface::class);
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $service = new GuestPlayerService(
             $gamePlayersRepository,
             $playerManagementService,
-            $passwordHasher,
             $entityManager,
         );
 
@@ -114,10 +103,6 @@ final class GuestPlayerServiceTest extends TestCase
         $playerManagementService
             ->expects(self::never())
             ->method('addPlayerEntity');
-
-        $passwordHasher
-            ->expects(self::never())
-            ->method('hashPassword');
 
         $entityManager
             ->expects(self::never())
@@ -141,12 +126,10 @@ final class GuestPlayerServiceTest extends TestCase
         $game = (new Game())->setGameId(10);
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
-        $passwordHasher = $this->createMock(UserPasswordHasherInterface::class);
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $service = new GuestPlayerService(
             $gamePlayersRepository,
             $playerManagementService,
-            $passwordHasher,
             $entityManager,
         );
 
@@ -163,10 +146,6 @@ final class GuestPlayerServiceTest extends TestCase
         $playerManagementService
             ->expects(self::never())
             ->method('addPlayerEntity');
-
-        $passwordHasher
-            ->expects(self::never())
-            ->method('hashPassword');
 
         $entityManager
             ->expects(self::never())
@@ -189,12 +168,10 @@ final class GuestPlayerServiceTest extends TestCase
         $game = new Game();
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
-        $passwordHasher = $this->createMock(UserPasswordHasherInterface::class);
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $service = new GuestPlayerService(
             $gamePlayersRepository,
             $playerManagementService,
-            $passwordHasher,
             $entityManager,
         );
 
@@ -205,10 +182,6 @@ final class GuestPlayerServiceTest extends TestCase
         $playerManagementService
             ->expects(self::never())
             ->method('addPlayerEntity');
-
-        $passwordHasher
-            ->expects(self::never())
-            ->method('hashPassword');
 
         $entityManager
             ->expects(self::never())
