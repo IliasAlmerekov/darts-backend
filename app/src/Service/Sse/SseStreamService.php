@@ -24,6 +24,11 @@ use Override;
  */
 final readonly class SseStreamService implements SseStreamServiceInterface
 {
+    private const THROW_POLL_INTERVAL_SECONDS = 0.1;
+    private const PLAYERS_POLL_INTERVAL_SECONDS = 1.0;
+    private const HEARTBEAT_INTERVAL_SECONDS = 15.0;
+    private const LOOP_IDLE_MICROSECONDS = 50_000;
+
     /**
      * @param GameRoomServiceInterface       $gameRoomService
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
@@ -51,59 +56,74 @@ final readonly class SseStreamService implements SseStreamServiceInterface
             $eventId = 0;
             $lastPayload = null;
             $lastThrowId = null;
+            $nextPlayersPollAt = 0.0;
+            $nextThrowPollAt = 0.0;
+            $nextHeartbeatAt = 0.0;
+            $game = $this->gameRoomService->findGameById($gameId);
             echo ": init\n\n";
             @ob_flush();
             @flush();
             while (!connection_aborted()) {
-                $players = $this->gameRoomService->getPlayersWithUserInfo($gameId);
-                $payload = json_encode([
-                    'players' => $players,
-                    'count' => count($players),
-                ]);
-                if (false !== $payload && $payload !== $lastPayload) {
-                    $lastPayload = $payload;
-                    $eventId++;
-                    echo 'id: '.$eventId."\n";
-                    echo "event: players\n";
-                    echo 'data: '.$payload."\n\n";
-                    @ob_flush();
-                    @flush();
+                $now = microtime(true);
+
+                if ($now >= $nextPlayersPollAt) {
+                    $players = $this->gameRoomService->getPlayersWithUserInfo($gameId);
+                    $payload = json_encode([
+                        'players' => $players,
+                        'count' => count($players),
+                    ]);
+                    if (false !== $payload && $payload !== $lastPayload) {
+                        $lastPayload = $payload;
+                        $eventId++;
+                        echo 'id: '.$eventId."\n";
+                        echo "event: players\n";
+                        echo 'data: '.$payload."\n\n";
+                        @ob_flush();
+                        @flush();
+                    }
+                    $nextPlayersPollAt = $now + self::PLAYERS_POLL_INTERVAL_SECONDS;
                 }
 
-                $latestThrow = $this->roundThrowsRepository->findLatestForGame($gameId);
-                if (is_array($latestThrow) && isset($latestThrow['id']) && $latestThrow['id'] !== $lastThrowId) {
-                    $lastThrowId = $latestThrow['id'];
-                    $eventId++;
-                    $game = $this->gameRoomService->findGameById($gameId);
-                    $deltaPayload = $latestThrow;
-                    if (null !== $game) {
-                        $ack = $this->gameDeltaService->buildThrowAck($game, $latestThrow);
-                        $deltaPayload = [
-                            'gameId' => $ack->gameId,
-                            'stateVersion' => $ack->stateVersion,
-                            'throw' => $ack->throw,
-                            'scoreboardDelta' => $ack->scoreboardDelta,
-                            'serverTs' => $ack->serverTs,
-                        ];
-                    } elseif ($latestThrow['timestamp'] instanceof DateTimeInterface) {
-                        $latestThrow['timestamp'] = $latestThrow['timestamp']->format(DateTimeInterface::ATOM);
+                if ($now >= $nextThrowPollAt) {
+                    $latestThrow = $this->roundThrowsRepository->findLatestForGame($gameId);
+                    if (is_array($latestThrow) && isset($latestThrow['id']) && $latestThrow['id'] !== $lastThrowId) {
+                        $lastThrowId = $latestThrow['id'];
+                        $eventId++;
                         $deltaPayload = $latestThrow;
-                    }
+                        if (null !== $game) {
+                            $ack = $this->gameDeltaService->buildThrowAck($game, $latestThrow);
+                            $deltaPayload = [
+                                'gameId' => $ack->gameId,
+                                'stateVersion' => $ack->stateVersion,
+                                'throw' => $ack->throw,
+                                'scoreboardDelta' => $ack->scoreboardDelta,
+                                'serverTs' => $ack->serverTs,
+                            ];
+                        } elseif ($latestThrow['timestamp'] instanceof DateTimeInterface) {
+                            $latestThrow['timestamp'] = $latestThrow['timestamp']->format(DateTimeInterface::ATOM);
+                            $deltaPayload = $latestThrow;
+                        }
 
-                    echo 'id: '.$eventId."\n";
-                    echo "event: throw\n";
-                    $jsonEncoded = json_encode($deltaPayload);
-                    if (false !== $jsonEncoded) {
-                        echo 'data: '.$jsonEncoded."\n\n";
+                        echo 'id: '.$eventId."\n";
+                        echo "event: throw\n";
+                        $jsonEncoded = json_encode($deltaPayload);
+                        if (false !== $jsonEncoded) {
+                            echo 'data: '.$jsonEncoded."\n\n";
+                        }
+                        @ob_flush();
+                        @flush();
                     }
-                    @ob_flush();
-                    @flush();
+                    $nextThrowPollAt = $now + self::THROW_POLL_INTERVAL_SECONDS;
                 }
 
-                echo ": heartbeat\n\n";
-                @ob_flush();
-                @flush();
-                sleep(1);
+                if ($now >= $nextHeartbeatAt) {
+                    echo ": heartbeat\n\n";
+                    @ob_flush();
+                    @flush();
+                    $nextHeartbeatAt = $now + self::HEARTBEAT_INTERVAL_SECONDS;
+                }
+
+                usleep(self::LOOP_IDLE_MICROSECONDS);
             }
         });
         $response->headers->set('Content-Type', 'text/event-stream');
