@@ -34,6 +34,15 @@ interface UserRepositoryInterface extends PasswordUpgraderInterface
     /**
      * @psalm-suppress PossiblyUnusedMethod
      *
+     * @param string $email
+     *
+     * @return User|null
+     */
+    public function findOneByEmail(string $email): ?User;
+
+    /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param string $username
      *
      * @return User|null

@@ -7,7 +7,6 @@ namespace App\Service\Invitation;
 use App\Entity\Game;
 use App\Entity\Invitation;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 /**
  * Contract for invitation related operations.
@@ -42,14 +41,14 @@ interface InvitationServiceInterface
     public function assertGameJoinable(int $gameId): void;
 
     /**
-     * Processes an invitation join flow for the current user from session.
+     * Processes an invitation join flow for the current user.
      *
-     * @param SessionInterface $session
-     * @param object|null      $user
+     * @param string|null $invitationUuid
+     * @param mixed       $user
      *
      * @return Response
      */
-    public function processInvitation(SessionInterface $session, mixed $user): Response;
+    public function processInvitation(?string $invitationUuid, mixed $user): Response;
 
     /**
      * Returns users participating in the given game.
