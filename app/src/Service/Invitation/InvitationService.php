@@ -142,15 +142,7 @@ final readonly class InvitationService implements InvitationServiceInterface
             throw new GameNotFoundException();
         }
 
-        $status = $game->getStatus();
-        if (GameStatus::Lobby !== $status) {
-            throw new GameJoinNotAllowedException($status);
-        }
-
-        $playersCount = $this->gamePlayersRepository->count(['game' => $gameId]);
-        if ($playersCount >= self::MAX_GAME_PLAYERS) {
-            throw new GameRoomFullException(self::MAX_GAME_PLAYERS);
-        }
+        $this->assertGameJoinableForGame($game);
     }
 
     /**
@@ -210,23 +202,56 @@ final readonly class InvitationService implements InvitationServiceInterface
             return new JsonResponse(['success' => false, 'redirect' => '/start'], Response::HTTP_BAD_REQUEST);
         }
         $gameId = (int) $gameId;
-        $this->assertGameJoinable($gameId);
-
         $userId = $user->getId();
         if (null === $userId) {
             return new JsonResponse(['success' => false, 'redirect' => '/login'], Response::HTTP_UNAUTHORIZED);
         }
 
-        if (!$this->gamePlayersRepository->isPlayerInGame($gameId, $userId)) {
-            $this->playerManagementService->addPlayer($gameId, $userId);
+        return $this->entityManager->wrapInTransaction(function () use ($gameId, $userId, $session): Response {
+            $game = $this->gameRepository->find($gameId);
+            if (!$game instanceof Game) {
+                throw new GameNotFoundException();
+            }
+
+            if ($this->entityManager->contains($game)) {
+                $this->entityManager->lock($game, LockMode::PESSIMISTIC_WRITE);
+            }
+
+            if (false === $this->gamePlayersRepository->isPlayerInGame($gameId, $userId)) {
+                $this->assertGameJoinableForGame($game);
+                $this->playerManagementService->addPlayer($gameId, $userId);
+            }
+
+            $session->remove('invitation_uuid');
+            $session->remove('game_id');
+
+            return new JsonResponse([
+                'success' => true,
+                'redirect' => rtrim($this->frontendUrl, '/').'/joined',
+            ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
+        });
+    }
+
+    /**
+     * @param Game $game
+     *
+     * @return void
+     */
+    private function assertGameJoinableForGame(Game $game): void
+    {
+        $gameId = $game->getGameId();
+        if (null === $gameId) {
+            throw new GameNotFoundException();
         }
 
-        $session->remove('invitation_uuid');
-        $session->remove('game_id');
+        $status = $game->getStatus();
+        if (GameStatus::Lobby !== $status) {
+            throw new GameJoinNotAllowedException($status);
+        }
 
-        return new JsonResponse([
-            'success' => true,
-            'redirect' => rtrim($this->frontendUrl, '/').'/joined',
-        ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
+        $playersCount = $this->gamePlayersRepository->count(['game' => $gameId]);
+        if ($playersCount >= self::MAX_GAME_PLAYERS) {
+            throw new GameRoomFullException(self::MAX_GAME_PLAYERS);
+        }
     }
 }

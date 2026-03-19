@@ -337,8 +337,10 @@ final class InvitationServiceTest extends TestCase
             ->with(['game' => 61])
             ->willReturn(10);
         $this->gamePlayersRepository
-            ->expects(self::never())
-            ->method('isPlayerInGame');
+            ->expects(self::once())
+            ->method('isPlayerInGame')
+            ->with(61, 9)
+            ->willReturn(false);
         $this->playerManagementService
             ->expects(self::never())
             ->method('addPlayer');
@@ -346,6 +348,7 @@ final class InvitationServiceTest extends TestCase
         $user = $this->createUserWithId(9, 'player3', 'p3@test');
 
         $this->expectException(GameRoomFullException::class);
+        $this->expectExceptionMessage('The room is already full (10 players). Please wait for an available spot.');
 
         $this->service->processInvitation($session, $user);
     }

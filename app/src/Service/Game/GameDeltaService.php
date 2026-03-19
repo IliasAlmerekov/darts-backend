@@ -131,18 +131,41 @@ final readonly class GameDeltaService implements GameDeltaServiceInterface
             $timestamp = $timestamp->format(DateTimeInterface::ATOM);
         }
 
+        $storedValue = (int) ($latestThrow['value'] ?? 0);
+        $isDouble = (bool) ($latestThrow['isDouble'] ?? false);
+        $isTriple = (bool) ($latestThrow['isTriple'] ?? false);
+
         return new ThrowDeltaDto(
             id: (int) ($latestThrow['id'] ?? 0),
             playerId: (int) ($latestThrow['playerId'] ?? 0),
             playerName: (string) ($latestThrow['playerName'] ?? ''),
-            value: (int) ($latestThrow['value'] ?? 0),
-            isDouble: (bool) ($latestThrow['isDouble'] ?? false),
-            isTriple: (bool) ($latestThrow['isTriple'] ?? false),
+            value: $this->normalizeThrowValueForResponse($storedValue, $isDouble, $isTriple),
+            isDouble: $isDouble,
+            isTriple: $isTriple,
             isBust: (bool) ($latestThrow['isBust'] ?? false),
             score: (int) ($latestThrow['score'] ?? 0),
             roundNumber: (int) ($latestThrow['roundNumber'] ?? 0),
             timestamp: is_string($timestamp) ? $timestamp : (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
         );
+    }
+
+    private function normalizeThrowValueForResponse(int $storedValue, bool $isDouble, bool $isTriple): int
+    {
+        if ($isTriple && 0 === $storedValue % 3) {
+            $baseValue = intdiv($storedValue, 3);
+            if ($baseValue >= 0 && $baseValue <= 20) {
+                return $baseValue;
+            }
+        }
+
+        if ($isDouble && 0 === $storedValue % 2) {
+            $baseValue = intdiv($storedValue, 2);
+            if (($baseValue >= 0 && $baseValue <= 20) || 25 === $baseValue) {
+                return $baseValue;
+            }
+        }
+
+        return $storedValue;
     }
 
     /**

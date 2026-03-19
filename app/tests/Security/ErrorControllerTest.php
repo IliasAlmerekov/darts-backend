@@ -54,6 +54,10 @@ final class ErrorControllerTest extends TestCase
 
         $data = json_decode((string) $response->getContent(), true);
         self::assertSame('GAME_ROOM_FULL', $data['error'] ?? null);
+        self::assertSame(
+            'The room is already full (10 players). Please wait for an available spot.',
+            $data['message'] ?? null
+        );
     }
 
     public function testRendersGamePlayerNotActiveExceptionAsJson(): void

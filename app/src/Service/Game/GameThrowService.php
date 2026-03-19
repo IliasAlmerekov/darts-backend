@@ -520,12 +520,13 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         $playerId = $player?->getId() ?? 0;
         $playerName = $player?->getDisplayNameRaw() ?? $player?->getUsername() ?? '';
         $timestamp = $throw->getTimestamp();
+        $storedValue = $throw->getValue() ?? 0;
 
         return new ThrowDeltaDto(
             id: $throw->getThrowId() ?? 0,
             playerId: $playerId,
             playerName: $playerName,
-            value: $throw->getValue() ?? 0,
+            value: $this->normalizeThrowValueForResponse($storedValue, $throw->isDouble(), $throw->isTriple()),
             isDouble: $throw->isDouble(),
             isTriple: $throw->isTriple(),
             isBust: $throw->isBust(),
@@ -533,6 +534,25 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             roundNumber: $throw->getRound()?->getRoundNumber() ?? 0,
             timestamp: $timestamp instanceof DateTimeInterface ? $timestamp->format(DateTimeInterface::ATOM) : (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
         );
+    }
+
+    private function normalizeThrowValueForResponse(int $storedValue, bool $isDouble, bool $isTriple): int
+    {
+        if ($isTriple && 0 === $storedValue % 3) {
+            $baseValue = intdiv($storedValue, 3);
+            if ($baseValue >= 0 && $baseValue <= 20) {
+                return $baseValue;
+            }
+        }
+
+        if ($isDouble && 0 === $storedValue % 2) {
+            $baseValue = intdiv($storedValue, 2);
+            if (($baseValue >= 0 && $baseValue <= 20) || 25 === $baseValue) {
+                return $baseValue;
+            }
+        }
+
+        return $storedValue;
     }
 
     /**

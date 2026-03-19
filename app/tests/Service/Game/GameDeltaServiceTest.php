@@ -155,6 +155,8 @@ final class GameDeltaServiceTest extends TestCase
             $roundStateSnapshot,
         );
 
+        self::assertNotNull($ack->throw);
+        self::assertSame(20, $ack->throw->value);
         self::assertSame(11, $ack->scoreboardDelta->changedPlayers[1]->playerId);
         self::assertTrue($ack->scoreboardDelta->changedPlayers[0]->isBust ?? false);
         self::assertTrue($ack->scoreboardDelta->changedPlayers[1]->isActive);

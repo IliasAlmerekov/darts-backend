@@ -9,9 +9,11 @@ declare(strict_types=1);
 
 namespace App\Service\Sse;
 
+use App\Entity\Game;
 use App\Service\Game\GameDeltaServiceInterface;
 use App\Service\Game\GameRoomServiceInterface;
 use DateTimeInterface;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use App\Repository\RoundThrowsRepositoryInterface;
 use Override;
@@ -33,6 +35,7 @@ final readonly class SseStreamService implements SseStreamServiceInterface
      * @param GameRoomServiceInterface       $gameRoomService
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
      * @param GameDeltaServiceInterface      $gameDeltaService
+     * @param EntityManagerInterface         $entityManager
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
@@ -40,6 +43,7 @@ final readonly class SseStreamService implements SseStreamServiceInterface
         private GameRoomServiceInterface $gameRoomService,
         private RoundThrowsRepositoryInterface $roundThrowsRepository,
         private GameDeltaServiceInterface $gameDeltaService,
+        private EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -59,7 +63,6 @@ final readonly class SseStreamService implements SseStreamServiceInterface
             $nextPlayersPollAt = 0.0;
             $nextThrowPollAt = 0.0;
             $nextHeartbeatAt = 0.0;
-            $game = $this->gameRoomService->findGameById($gameId);
             echo ": init\n\n";
             @ob_flush();
             @flush();
@@ -90,6 +93,7 @@ final readonly class SseStreamService implements SseStreamServiceInterface
                         $lastThrowId = $latestThrow['id'];
                         $eventId++;
                         $deltaPayload = $latestThrow;
+                        $game = $this->loadFreshGameForDelta($gameId);
                         if (null !== $game) {
                             $ack = $this->gameDeltaService->buildThrowAck($game, $latestThrow);
                             $deltaPayload = [
@@ -132,5 +136,19 @@ final readonly class SseStreamService implements SseStreamServiceInterface
         $response->headers->set('X-Accel-Buffering', 'no');
 
         return $response;
+    }
+
+    /**
+     * @param int $gameId
+     *
+     * @return Game|null
+     */
+    private function loadFreshGameForDelta(int $gameId): ?Game
+    {
+        // Long-lived SSE requests keep Doctrine's identity map alive.
+        // Clearing guarantees fresh game/player scores for each throw delta.
+        $this->entityManager->clear();
+
+        return $this->gameRoomService->findGameById($gameId);
     }
 }

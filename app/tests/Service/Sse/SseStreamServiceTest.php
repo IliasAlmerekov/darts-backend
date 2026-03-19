@@ -59,6 +59,7 @@ use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Game\GameDeltaServiceInterface;
 use App\Service\Sse\SseStreamService;
 use App\Repository\RoundThrowsRepositoryInterface;
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -68,6 +69,7 @@ final class SseStreamServiceTest extends TestCase
     private GameRoomServiceInterface&MockObject $gameRoomService;
     private RoundThrowsRepositoryInterface&MockObject $roundThrowsRepository;
     private GameDeltaServiceInterface&MockObject $gameDeltaService;
+    private EntityManagerInterface&MockObject $entityManager;
     private SseStreamService $service;
 
     protected function setUp(): void
@@ -82,7 +84,13 @@ final class SseStreamServiceTest extends TestCase
         $this->gameRoomService = $this->createMock(GameRoomServiceInterface::class);
         $this->roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
         $this->gameDeltaService = $this->createMock(GameDeltaServiceInterface::class);
-        $this->service = new SseStreamService($this->gameRoomService, $this->roundThrowsRepository, $this->gameDeltaService);
+        $this->entityManager = $this->createMock(EntityManagerInterface::class);
+        $this->service = new SseStreamService(
+            $this->gameRoomService,
+            $this->roundThrowsRepository,
+            $this->gameDeltaService,
+            $this->entityManager,
+        );
     }
 
     public function testCreatePlayerStreamProducesEventsAndHeaders(): void
@@ -121,6 +129,9 @@ final class SseStreamServiceTest extends TestCase
             ->method('findGameById')
             ->with(42)
             ->willReturn($game);
+        $this->entityManager
+            ->expects(self::once())
+            ->method('clear');
 
         $this->gameDeltaService
             ->expects(self::once())
@@ -214,6 +225,9 @@ final class SseStreamServiceTest extends TestCase
             ->method('findGameById')
             ->with(99)
             ->willReturn($game);
+        $this->entityManager
+            ->expects(self::once())
+            ->method('clear');
 
         $this->gameDeltaService
             ->expects(self::once())

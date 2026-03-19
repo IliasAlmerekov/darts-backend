@@ -74,7 +74,7 @@ final class GameServiceTest extends TestCase
             ->setRound($round)
             ->setPlayer($user1)
             ->setThrowNumber(2)
-            ->setValue(40)
+            ->setValue(60)
             ->setIsBust(false)
             ->setIsDouble(false)
             ->setIsTriple(true);
@@ -83,7 +83,7 @@ final class GameServiceTest extends TestCase
             ->setRound($round1)
             ->setPlayer($user1)
             ->setThrowNumber(1)
-            ->setValue(60)
+            ->setValue(50)
             ->setIsBust(false)
             ->setIsDouble(true)
             ->setIsTriple(false);
@@ -129,7 +129,11 @@ final class GameServiceTest extends TestCase
         self::assertCount(2, $firstPlayer->currentRoundThrows);
         self::assertFalse($firstPlayer->isBust);
         self::assertCount(2, $firstPlayer->roundHistory);
+        self::assertSame(20, $firstPlayer->currentRoundThrows[1]->value);
+        self::assertTrue($firstPlayer->currentRoundThrows[1]->isTriple);
         self::assertSame(1, $firstPlayer->roundHistory[0]['round']);
+        self::assertSame(25, $firstPlayer->roundHistory[0]['throws'][0]->value);
+        self::assertTrue($firstPlayer->roundHistory[0]['throws'][0]->isDouble);
         self::assertSame(2, $firstPlayer->roundHistory[1]['round']);
     }
 

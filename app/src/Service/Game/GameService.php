@@ -274,10 +274,29 @@ final readonly class GameService implements GameServiceInterface
         }
 
         return new ThrowResponseDto(
-            value: $throwValue,
+            value: $this->normalizeThrowValueForResponse((int) $throwValue, $throw['isDouble'], $throw['isTriple']),
             isDouble: $throw['isDouble'],
             isTriple: $throw['isTriple'],
             isBust: $throw['isBust'],
         );
+    }
+
+    private function normalizeThrowValueForResponse(int $storedValue, bool $isDouble, bool $isTriple): int
+    {
+        if ($isTriple && 0 === $storedValue % 3) {
+            $baseValue = intdiv($storedValue, 3);
+            if ($baseValue >= 0 && $baseValue <= 20) {
+                return $baseValue;
+            }
+        }
+
+        if ($isDouble && 0 === $storedValue % 2) {
+            $baseValue = intdiv($storedValue, 2);
+            if (($baseValue >= 0 && $baseValue <= 20) || 25 === $baseValue) {
+                return $baseValue;
+            }
+        }
+
+        return $storedValue;
     }
 }
