@@ -68,23 +68,6 @@ final class UserRepository extends ServiceEntityRepository implements UserReposi
     }
 
     /**
-     * @param string $email
-     *
-     * @return User|null
-     */
-    public function findOneByEmail(string $email): ?User
-    {
-        $result = $this->createQueryBuilder('u')
-            ->andWhere('u.email = :email')
-            ->setParameter('email', $email)
-            ->setMaxResults(1)
-            ->getQuery()
-            ->getOneOrNullResult();
-
-        return $result instanceof User ? $result : null;
-    }
-
-    /**
      * @param string $username
      *
      * @return User|null

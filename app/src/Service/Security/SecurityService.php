@@ -14,6 +14,7 @@ use App\Service\Invitation\InvitationServiceInterface;
 use Override;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 /**
  * Builds API responses for security flows.
@@ -31,38 +32,21 @@ final readonly class SecurityService implements SecurityServiceInterface
     }
 
     /**
-     * Builds login success response with JWT token and redirect.
+     * Builds login success response with proper redirect for role or invitation flow.
      *
-     * @param User        $user
-     * @param string      $token
-     * @param string|null $invitationUuid
+     * @param User             $user
+     * @param SessionInterface $session
      *
      * @return Response
      */
     #[Override]
-    public function buildLoginSuccessResponse(User $user, string $token, ?string $invitationUuid = null): Response
+    public function buildLoginSuccessResponse(User $user, SessionInterface $session): Response
     {
         $payload = $this->buildUserPayload($user);
-
-        if (null !== $invitationUuid) {
-            $invitationResponse = $this->invitationService->processInvitation($invitationUuid, $user);
-            $invitationData = json_decode((string) $invitationResponse->getContent(), true);
-
-            return new JsonResponse([
-                'success' => true,
-                'token' => $token,
-                'roles' => $payload['roles'],
-                'id' => $payload['id'],
-                'email' => $payload['email'],
-                'username' => $payload['username'],
-                'redirect' => $invitationData['redirect'] ?? rtrim($this->frontendUrl, '/').'/joined',
-            ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
-        }
 
         if (in_array('ROLE_ADMIN', $user->getRoles(), true)) {
             return new JsonResponse([
                 'success' => true,
-                'token' => $token,
                 'roles' => $payload['roles'],
                 'id' => $payload['id'],
                 'email' => $payload['email'],
@@ -71,9 +55,12 @@ final readonly class SecurityService implements SecurityServiceInterface
             ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
         }
 
+        if ($session->has('invitation_uuid')) {
+            return $this->invitationService->processInvitation($session, $user);
+        }
+
         return new JsonResponse([
             'success' => true,
-            'token' => $token,
             'roles' => $payload['roles'],
             'id' => $payload['id'],
             'email' => $payload['email'],

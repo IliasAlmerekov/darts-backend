@@ -27,6 +27,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Override;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Uid\Uuid;
 use Throwable;
@@ -115,6 +116,7 @@ final readonly class InvitationService implements InvitationServiceInterface
         try {
             $users = $this->getUsersForGame($game);
         } catch (Throwable) {
+            // Keep invitation creation available even if participant projection fails due to schema drift.
             $users = [];
         }
         $invitationLink = $this->router->generate('join_invitation', ['uuid' => $invitation->getUuid()]);
@@ -191,32 +193,23 @@ final readonly class InvitationService implements InvitationServiceInterface
     }
 
     /**
-     * @param string|null $invitationUuid
-     * @param mixed       $user
+     * @param SessionInterface $session
+     * @param mixed            $user
      *
      * @return Response
      */
     #[Override]
-    public function processInvitation(?string $invitationUuid, mixed $user): Response
+    public function processInvitation(SessionInterface $session, mixed $user): Response
     {
         if (!$user instanceof User) {
             return new JsonResponse(['success' => false, 'redirect' => '/login'], Response::HTTP_UNAUTHORIZED);
         }
 
-        if (null === $invitationUuid || '' === $invitationUuid) {
+        $gameId = $session->get('game_id');
+        if (!$gameId) {
             return new JsonResponse(['success' => false, 'redirect' => '/start'], Response::HTTP_BAD_REQUEST);
         }
-
-        $invitation = $this->invitationRepository->findOneBy(['uuid' => $invitationUuid]);
-        if (!$invitation instanceof Invitation) {
-            throw new GameNotFoundException();
-        }
-
-        $gameId = $invitation->getGameId();
-        if (null === $gameId) {
-            return new JsonResponse(['success' => false, 'redirect' => '/start'], Response::HTTP_BAD_REQUEST);
-        }
-
+        $gameId = (int) $gameId;
         $this->assertGameJoinable($gameId);
 
         $userId = $user->getId();
@@ -227,6 +220,9 @@ final readonly class InvitationService implements InvitationServiceInterface
         if (!$this->gamePlayersRepository->isPlayerInGame($gameId, $userId)) {
             $this->playerManagementService->addPlayer($gameId, $userId);
         }
+
+        $session->remove('invitation_uuid');
+        $session->remove('game_id');
 
         return new JsonResponse([
             'success' => true,
