@@ -284,6 +284,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         return new ThrowRecordingResultDto(
             latestThrow: $this->createLatestThrowSnapshot($roundThrow),
             currentRoundStateSnapshot: $hasAdvancedRound ? [] : $updatedRoundStateSnapshot,
+            game: $game,
         );
     }
 

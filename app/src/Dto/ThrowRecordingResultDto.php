@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Dto;
 
+use App\Entity\Game;
+
 /**
  * Carries post-throw data that can be reused when building low-latency acknowledgements.
  *
@@ -15,10 +17,12 @@ final readonly class ThrowRecordingResultDto
     /**
      * @param LatestThrowSnapshot|null $latestThrow
      * @param RoundStateSnapshot       $currentRoundStateSnapshot
+     * @param Game|null                $game
      */
     public function __construct(
         public ?array $latestThrow,
         public array $currentRoundStateSnapshot,
+        public ?Game $game = null,
     ) {
     }
 }

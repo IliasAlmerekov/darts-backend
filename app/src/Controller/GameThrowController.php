@@ -16,7 +16,6 @@ use App\Dto\UndoAckDto;
 use App\Entity\Game;
 use App\Exception\Game\GameNotFoundException;
 use App\Http\Attribute\ApiResponse;
-use App\Repository\GameRepositoryInterface;
 use App\Service\Game\GameDeltaServiceInterface;
 use App\Service\Game\GameServiceInterface;
 use App\Service\Game\GameThrowServiceInterface;
@@ -79,7 +78,6 @@ final class GameThrowController extends AbstractController
      * @param int                       $gameId
      * @param GameThrowServiceInterface $gameThrowService
      * @param GameDeltaServiceInterface $gameDeltaService
-     * @param GameRepositoryInterface   $gameRepository
      * @param ThrowRequest              $dto
      *
      * @return ThrowAckDto
@@ -97,7 +95,7 @@ final class GameThrowController extends AbstractController
     )]
     #[ApiResponse]
     #[Route('/api/game/{gameId}/throw/delta', name: 'app_game_throw_delta', methods: ['POST'], format: 'json')]
-    public function throwDelta(int $gameId, GameThrowServiceInterface $gameThrowService, GameDeltaServiceInterface $gameDeltaService, GameRepositoryInterface $gameRepository, #[MapRequestPayload] ThrowRequest $dto): ThrowAckDto
+    public function throwDelta(int $gameId, GameThrowServiceInterface $gameThrowService, GameDeltaServiceInterface $gameDeltaService, #[MapRequestPayload] ThrowRequest $dto): ThrowAckDto
     {
         try {
             $throwRecordingResult = $gameThrowService->recordThrowByGameId($gameId, $dto);
@@ -105,7 +103,7 @@ final class GameThrowController extends AbstractController
             throw new NotFoundHttpException();
         }
 
-        $game = $gameRepository->findOneByGameId($gameId);
+        $game = $throwRecordingResult->game;
         if (null === $game) {
             throw new NotFoundHttpException();
         }
