@@ -212,12 +212,12 @@ final readonly class GameDeltaService implements GameDeltaServiceInterface
     }
 
     /**
-     * @param Game                         $game
-     * @param int|null                     $activePlayerId
-     * @param int|null                     $highlightedPlayerId
-     * @param bool|null                    $highlightedPlayerBustState
+     * @param Game                           $game
+     * @param int|null                       $activePlayerId
+     * @param int|null                       $highlightedPlayerId
+     * @param bool|null                      $highlightedPlayerBustState
      * @param array<int, GameStatePlayerRow> $gameStatePlayers
-     * @param RoundStateSnapshot|null      $currentRoundStateSnapshot
+     * @param RoundStateSnapshot|null        $currentRoundStateSnapshot
      *
      * @return ScoreboardDeltaDto
      */
@@ -227,8 +227,8 @@ final readonly class GameDeltaService implements GameDeltaServiceInterface
         ?int $highlightedPlayerId,
         ?bool $highlightedPlayerBustState,
         array $gameStatePlayers,
-        ?array $currentRoundStateSnapshot = null): ScoreboardDeltaDto
-    {
+        ?array $currentRoundStateSnapshot = null,
+    ): ScoreboardDeltaDto {
         return new ScoreboardDeltaDto(
             changedPlayers: $this->buildScoreboardPlayers(
                 $game,
@@ -245,12 +245,12 @@ final readonly class GameDeltaService implements GameDeltaServiceInterface
     }
 
     /**
-     * @param Game                         $game
-     * @param int|null                     $activePlayerId
-     * @param int|null                     $highlightedPlayerId
-     * @param bool|null                    $highlightedPlayerBustState
+     * @param Game                           $game
+     * @param int|null                       $activePlayerId
+     * @param int|null                       $highlightedPlayerId
+     * @param bool|null                      $highlightedPlayerBustState
      * @param array<int, GameStatePlayerRow> $gameStatePlayers
-     * @param RoundStateSnapshot|null      $currentRoundStateSnapshot
+     * @param RoundStateSnapshot|null        $currentRoundStateSnapshot
      *
      * @return list<ScoreboardPlayerDeltaDto>
      */
@@ -260,8 +260,8 @@ final readonly class GameDeltaService implements GameDeltaServiceInterface
         ?int $highlightedPlayerId,
         ?bool $highlightedPlayerBustState,
         array $gameStatePlayers,
-        ?array $currentRoundStateSnapshot = null): array
-    {
+        ?array $currentRoundStateSnapshot = null,
+    ): array {
         $gameId = $game->getGameId();
         $currentBustStates = null;
         if (is_array($currentRoundStateSnapshot)) {

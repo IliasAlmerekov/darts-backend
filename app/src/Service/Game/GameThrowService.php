@@ -267,7 +267,6 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         $latestThrowPlayerName = $this->resolveLatestThrowPlayerName($player);
 
         $this->entityManager->persist($roundThrow);
-        $this->entityManager->flush();
         $updatedRoundStateSnapshot = $roundStateSnapshot;
         $updatedRoundStateSnapshot[$requestedPlayerId] = [
             'throwsCount' => $playerThrowsThisRound + 1,
@@ -277,6 +276,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         ];
 
         $hasAdvancedRound = $this->maybeAdvanceRound($game, $round, $updatedRoundStateSnapshot);
+        $this->entityManager->flush();
 
         return new ThrowRecordingResultDto(
             latestThrow: $this->createLatestThrowSnapshot($roundThrow, $latestThrowPlayerName),
@@ -430,7 +430,6 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         $nextRound->setStartedAt(new DateTime());
         $game->addRound($nextRound);
         $this->entityManager->persist($nextRound);
-        $this->entityManager->flush();
 
         return true;
     }

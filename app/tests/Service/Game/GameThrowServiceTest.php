@@ -1004,7 +1004,7 @@ final class GameThrowServiceTest extends TestCase
 
                 return true;
             }));
-        $entityManager->expects(self::exactly(2))->method('flush');
+        $entityManager->expects(self::once())->method('flush');
 
         $service = new GameThrowService(
             $gamePlayersRepository,
