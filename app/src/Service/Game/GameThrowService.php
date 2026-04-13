@@ -147,7 +147,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             'game' => $game->getGameId(),
             'player' => $dto->playerId,
         ]);
-        if (null === $player) {
+        if (!$player instanceof GamePlayers) {
             throw new PlayerNotFoundInGameException();
         }
 
@@ -277,7 +277,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         $hasAdvancedRound = $this->maybeAdvanceRound($game, $round, $updatedRoundStateSnapshot);
 
         return new ThrowRecordingResultDto(
-            latestThrow: $this->createLatestThrowSnapshot($roundThrow),
+            latestThrow: $this->createLatestThrowSnapshot($roundThrow, $player),
             currentRoundStateSnapshot: $hasAdvancedRound ? [] : $updatedRoundStateSnapshot,
             game: $game,
         );
@@ -590,13 +590,14 @@ final readonly class GameThrowService implements GameThrowServiceInterface
 
     /**
      * @param RoundThrows $throw
+     * @param GamePlayers $gamePlayer
      *
      * @return array{id:int,playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool,score:int,playerName:string,timestamp:string}|null
      */
-    private function createLatestThrowSnapshot(RoundThrows $throw): ?array
+    private function createLatestThrowSnapshot(RoundThrows $throw, GamePlayers $gamePlayer): ?array
     {
         $throwId = $throw->getThrowId();
-        $player = $throw->getPlayer();
+        $player = $gamePlayer->getPlayer();
         $playerId = $player?->getId();
         $roundNumber = $throw->getRound()?->getRoundNumber();
         $throwNumber = $throw->getThrowNumber();
@@ -607,7 +608,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             return null;
         }
 
-        $playerName = $player?->getDisplayNameRaw() ?? $player?->getUsername() ?? '';
+        $playerName = trim($gamePlayer->getDisplayNameSnapshot() ?? '');
         $timestamp = $throw->getTimestamp();
 
         return [

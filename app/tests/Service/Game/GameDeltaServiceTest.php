@@ -9,6 +9,7 @@ use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Enum\GameStatus;
+use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Game\GameDeltaService;
 use App\Service\Game\GameServiceInterface;
@@ -41,6 +42,19 @@ final class GameDeltaServiceTest extends TestCase
         $game->addGamePlayer($gamePlayer);
 
         $roundThrowsRepository = $this->createStub(RoundThrowsRepositoryInterface::class);
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $gamePlayersRepository->expects(self::once())
+            ->method('findGameStatePlayersByGameId')
+            ->with(44)
+            ->willReturn([
+                [
+                    'playerId' => 10,
+                    'name' => 'Alex',
+                    'position' => 1,
+                    'score' => 26,
+                    'isGuest' => false,
+                ],
+            ]);
 
         $gameService = $this->createMock(GameServiceInterface::class);
         $gameService->expects(self::once())
@@ -52,7 +66,7 @@ final class GameDeltaServiceTest extends TestCase
             ->with($game)
             ->willReturn(10);
 
-        $service = new GameDeltaService($roundThrowsRepository, $gameService);
+        $service = new GameDeltaService($roundThrowsRepository, $gameService, $gamePlayersRepository);
         $ack = $service->buildThrowAck($game, [
             'id' => 501,
             'playerId' => 10,
@@ -137,7 +151,28 @@ final class GameDeltaServiceTest extends TestCase
             ->with($game, $roundStateSnapshot)
             ->willReturn(11);
 
-        $service = new GameDeltaService($roundThrowsRepository, $gameService);
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $gamePlayersRepository->expects(self::once())
+            ->method('findGameStatePlayersByGameId')
+            ->with(66)
+            ->willReturn([
+                [
+                    'playerId' => 10,
+                    'name' => 'Alex',
+                    'position' => 1,
+                    'score' => 121,
+                    'isGuest' => false,
+                ],
+                [
+                    'playerId' => 11,
+                    'name' => 'Sam',
+                    'position' => 2,
+                    'score' => 140,
+                    'isGuest' => true,
+                ],
+            ]);
+
+        $service = new GameDeltaService($roundThrowsRepository, $gameService, $gamePlayersRepository);
         $ack = $service->buildThrowAck(
             $game,
             [
@@ -202,7 +237,21 @@ final class GameDeltaServiceTest extends TestCase
             ->with($game)
             ->willReturn(10);
 
-        $service = new GameDeltaService($roundThrowsRepository, $gameService);
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $gamePlayersRepository->expects(self::once())
+            ->method('findGameStatePlayersByGameId')
+            ->with(55)
+            ->willReturn([
+                [
+                    'playerId' => 10,
+                    'name' => 'Alex',
+                    'position' => 1,
+                    'score' => 51,
+                    'isGuest' => false,
+                ],
+            ]);
+
+        $service = new GameDeltaService($roundThrowsRepository, $gameService, $gamePlayersRepository);
         $undoneThrow = new ThrowDeltaDto(
             id: 901,
             playerId: 10,
@@ -224,6 +273,155 @@ final class GameDeltaServiceTest extends TestCase
         self::assertSame(2, $ack->scoreboardDelta->currentRound);
         self::assertCount(1, $ack->scoreboardDelta->changedPlayers);
         self::assertNull($ack->scoreboardDelta->changedPlayers[0]->isBust);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    public function testBuildThrowAckBackfillsLatestThrowPlayerNameFromPreloadedRowsWhenMissing(): void
+    {
+        $game = (new Game())
+            ->setGameId(77)
+            ->setStatus(GameStatus::Started)
+            ->setRound(4)
+            ->setStartScore(301);
+
+        $player = $this->createMock(User::class);
+        $player->method('getId')
+            ->willReturn(10);
+        $player->expects(self::never())
+            ->method('getDisplayNameRaw');
+        $player->expects(self::never())
+            ->method('getUsername');
+        $player->expects(self::never())
+            ->method('isGuest');
+
+        $gamePlayer = (new GamePlayers())
+            ->setDisplayNameSnapshot('Snapshot Name')
+            ->setPosition(1)
+            ->setScore(180)
+            ->setPlayer($player);
+        $game->addGamePlayer($gamePlayer);
+
+        $roundThrowsRepository = $this->createStub(RoundThrowsRepositoryInterface::class);
+
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $gamePlayersRepository->expects(self::once())
+            ->method('findGameStatePlayersByGameId')
+            ->with(77)
+            ->willReturn([
+                [
+                    'playerId' => 10,
+                    'name' => 'Snapshot Name',
+                    'position' => 1,
+                    'score' => 180,
+                    'isGuest' => false,
+                ],
+            ]);
+
+        $gameService = $this->createMock(GameServiceInterface::class);
+        $gameService->expects(self::once())
+            ->method('buildStateVersion')
+            ->with($game)
+            ->willReturn('state-v5');
+        $gameService->expects(self::once())
+            ->method('calculateActivePlayer')
+            ->with($game)
+            ->willReturn(10);
+
+        $service = new GameDeltaService($roundThrowsRepository, $gameService, $gamePlayersRepository);
+        $ack = $service->buildThrowAck($game, [
+            'id' => 801,
+            'playerId' => 10,
+            'playerName' => '',
+            'value' => 20,
+            'isDouble' => false,
+            'isTriple' => false,
+            'isBust' => false,
+            'score' => 180,
+            'roundNumber' => 4,
+            'timestamp' => '2026-03-10T10:00:00+00:00',
+        ]);
+
+        self::assertNotNull($ack->throw);
+        self::assertSame('Snapshot Name', $ack->throw->playerName);
+        self::assertCount(1, $ack->scoreboardDelta->changedPlayers);
+        self::assertSame('Snapshot Name', $ack->scoreboardDelta->changedPlayers[0]->name);
+    }
+
+    public function testBuildThrowAckUsesPreloadedScoreboardRowsAndKeepsIsGuest(): void
+    {
+        $game = (new Game())
+            ->setGameId(88)
+            ->setStatus(GameStatus::Started)
+            ->setRound(1)
+            ->setStartScore(301);
+
+        $player = $this->createMock(User::class);
+        $player->method('getId')
+            ->willReturn(31);
+        $player->expects(self::never())
+            ->method('getDisplayNameRaw');
+        $player->expects(self::never())
+            ->method('getUsername');
+        $player->expects(self::never())
+            ->method('isGuest');
+
+        $game->addGamePlayer(
+            (new GamePlayers())
+                ->setDisplayNameSnapshot('Guest Player')
+                ->setPosition(1)
+                ->setScore(250)
+                ->setPlayer($player)
+        );
+
+        $roundThrowsRepository = $this->createStub(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository->method('findCurrentRoundThrowsForGamePlayers')
+            ->with(88, 1)
+            ->willReturn([]);
+
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $gamePlayersRepository->expects(self::once())
+            ->method('findGameStatePlayersByGameId')
+            ->with(88)
+            ->willReturn([
+                [
+                    'playerId' => 31,
+                    'name' => 'Guest Player',
+                    'position' => 1,
+                    'score' => 250,
+                    'isGuest' => true,
+                ],
+            ]);
+
+        $gameService = $this->createMock(GameServiceInterface::class);
+        $gameService->expects(self::once())
+            ->method('buildStateVersion')
+            ->with($game)
+            ->willReturn('state-v6');
+        $gameService->expects(self::once())
+            ->method('calculateActivePlayer')
+            ->with($game)
+            ->willReturn(31);
+
+        $service = new GameDeltaService($roundThrowsRepository, $gameService, $gamePlayersRepository);
+        $ack = $service->buildThrowAck($game, [
+            'id' => 901,
+            'playerId' => 31,
+            'playerName' => 'Guest Player',
+            'value' => 51,
+            'isDouble' => false,
+            'isTriple' => false,
+            'isBust' => false,
+            'score' => 250,
+            'roundNumber' => 1,
+            'timestamp' => '2026-03-10T10:00:00+00:00',
+        ]);
+
+        self::assertCount(1, $ack->scoreboardDelta->changedPlayers);
+        self::assertSame(31, $ack->scoreboardDelta->changedPlayers[0]->playerId);
+        self::assertSame('Guest Player', $ack->scoreboardDelta->changedPlayers[0]->name);
+        self::assertTrue($ack->scoreboardDelta->changedPlayers[0]->isGuest);
     }
 
     /**
