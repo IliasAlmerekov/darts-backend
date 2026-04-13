@@ -183,14 +183,15 @@ final readonly class GameService implements GameServiceInterface
     }
 
     /**
-     * @param Game $game
+     * @param Game     $game
+     * @param int|null $latestThrowId
      *
      * @return string
      */
     #[Override]
-    public function buildStateVersion(Game $game): string
+    public function buildStateVersion(Game $game, ?int $latestThrowId = null): string
     {
-        return $this->gameStateVersionService->buildStateVersion($game);
+        return $this->gameStateVersionService->buildStateVersion($game, $latestThrowId);
     }
 
     /**

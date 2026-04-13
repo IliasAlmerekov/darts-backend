@@ -13,6 +13,7 @@ use App\Dto\ThrowDeltaDto;
 use App\Dto\ThrowRequest;
 use App\Dto\UndoAckDto;
 use App\Entity\Game;
+use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\PlayerAlreadyThrewThreeTimesException;
 use App\Service\Game\GameDeltaServiceInterface;
 use App\Service\Game\GameServiceInterface;
@@ -23,6 +24,7 @@ use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 #[AllowMockObjectsWithoutExpectations]
 final class GameThrowControllerTest extends TestCase
@@ -46,7 +48,7 @@ final class GameThrowControllerTest extends TestCase
         $throwService->expects($this->once())
             ->method('recordThrow')
             ->with($game, $dto)
-            ->willReturn($this->dummyThrowRecordingResultDto());
+            ->willReturn($this->dummyThrowRecordingResultDto($game));
 
         $gameService = $this->createMock(GameServiceInterface::class);
         $gameService->method('createGameDto')->willReturn($this->dummyGameDto());
@@ -128,11 +130,11 @@ final class GameThrowControllerTest extends TestCase
     {
         $game = (new Game())->setGameId(777);
         $dto = new ThrowRequest();
-        $throwRecordingResult = $this->dummyThrowRecordingResultDto();
+        $throwRecordingResult = $this->dummyThrowRecordingResultDto($game);
         $throwService = $this->createMock(GameThrowServiceInterface::class);
         $throwService->expects(self::once())
-            ->method('recordThrow')
-            ->with($game, $dto)
+            ->method('recordThrowByGameId')
+            ->with(777, $dto)
             ->willReturn($throwRecordingResult);
 
         $deltaService = $this->createMock(GameDeltaServiceInterface::class);
@@ -141,10 +143,24 @@ final class GameThrowControllerTest extends TestCase
             ->with($game, $throwRecordingResult->latestThrow, $throwRecordingResult->currentRoundStateSnapshot)
             ->willReturn($this->dummyThrowAckDto());
 
-        $response = $this->controller->throwDelta($game, $throwService, $deltaService, $dto);
+        $response = $this->controller->throwDelta(777, $throwService, $deltaService, $dto);
 
         self::assertInstanceOf(ThrowAckDto::class, $response);
         self::assertSame(777, $response->gameId);
+    }
+
+    public function testThrowDeltaKeepsNotFoundBehaviorWhenServiceCannotLoadGame(): void
+    {
+        $dto = new ThrowRequest();
+        $throwService = $this->createMock(GameThrowServiceInterface::class);
+        $throwService->expects(self::once())
+            ->method('recordThrowByGameId')
+            ->with(777, $dto)
+            ->willThrowException(new GameNotFoundException());
+        $deltaService = $this->createMock(GameDeltaServiceInterface::class);
+
+        $this->expectException(NotFoundHttpException::class);
+        $this->controller->throwDelta(777, $throwService, $deltaService, $dto);
     }
 
     private function dummyGameDto(): GameResponseDto
@@ -195,7 +211,7 @@ final class GameThrowControllerTest extends TestCase
         );
     }
 
-    private function dummyThrowRecordingResultDto(): ThrowRecordingResultDto
+    private function dummyThrowRecordingResultDto(Game $game): ThrowRecordingResultDto
     {
         return new ThrowRecordingResultDto(
             latestThrow: [
@@ -219,6 +235,7 @@ final class GameThrowControllerTest extends TestCase
                     'lastThrowBust' => true,
                 ],
             ],
+            game: $game,
         );
     }
 }

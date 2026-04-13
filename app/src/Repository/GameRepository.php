@@ -9,6 +9,7 @@ use App\Enum\GameStatus;
 use App\Util\SqlResultValueAccessor;
 use DateTimeImmutable;
 use DateTimeInterface;
+use Doctrine\DBAL\LockMode;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -140,6 +141,22 @@ SQL,
             ->andWhere('g.gameId = :gameId')
             ->setParameter('gameId', $gameId)
             ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
+     * @param int $gameId
+     *
+     * @return Game|null
+     */
+    #[\Override]
+    public function findOneByGameIdForUpdate(int $gameId): ?Game
+    {
+        return $this->createQueryBuilder('g')
+            ->andWhere('g.gameId = :gameId')
+            ->setParameter('gameId', $gameId)
+            ->getQuery()
+            ->setLockMode(LockMode::PESSIMISTIC_WRITE)
             ->getOneOrNullResult();
     }
 

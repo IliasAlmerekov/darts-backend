@@ -18,11 +18,13 @@ use App\Entity\GamePlayers;
 use App\Entity\Round;
 use App\Entity\RoundThrows;
 use App\Exception\Game\InvalidThrowException;
+use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\GamePlayerNotActiveException;
 use App\Exception\Game\GameThrowNotAllowedException;
 use App\Exception\Game\PlayerAlreadyThrewThreeTimesException;
 use App\Exception\Game\PlayerNotFoundInGameException;
 use App\Enum\GameStatus;
+use App\Repository\GameRepositoryInterface;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
@@ -48,6 +50,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
      * @param EntityManagerInterface         $entityManager
      * @param GameAccessServiceInterface     $gameAccessService
+     * @param GameRepositoryInterface        $gameRepository
      * @param ActivePlayerResolverInterface  $activePlayerResolver
      *
      * @psalm-suppress PossiblyUnusedMethod
@@ -58,6 +61,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         private RoundThrowsRepositoryInterface $roundThrowsRepository,
         private EntityManagerInterface $entityManager,
         private GameAccessServiceInterface $gameAccessService,
+        private GameRepositoryInterface $gameRepository,
         private ?ActivePlayerResolverInterface $activePlayerResolver = null,
     ) {
     }
@@ -74,6 +78,25 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         return $this->entityManager->wrapInTransaction(function () use ($game, $dto): ThrowRecordingResultDto {
             if ($this->entityManager->contains($game)) {
                 $this->entityManager->lock($game, LockMode::PESSIMISTIC_WRITE);
+            }
+
+            return $this->recordThrowUnlocked($game, $dto);
+        });
+    }
+
+    /**
+     * @param int          $gameId
+     * @param ThrowRequest $dto
+     *
+     * @return ThrowRecordingResultDto
+     */
+    #[Override]
+    public function recordThrowByGameId(int $gameId, ThrowRequest $dto): ThrowRecordingResultDto
+    {
+        return $this->entityManager->wrapInTransaction(function () use ($gameId, $dto): ThrowRecordingResultDto {
+            $game = $this->gameRepository->findOneByGameIdForUpdate($gameId);
+            if (null === $game) {
+                throw new GameNotFoundException();
             }
 
             return $this->recordThrowUnlocked($game, $dto);
@@ -124,7 +147,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             'game' => $game->getGameId(),
             'player' => $dto->playerId,
         ]);
-        if (null === $player) {
+        if (!$player instanceof GamePlayers) {
             throw new PlayerNotFoundInGameException();
         }
 
@@ -241,8 +264,9 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             }
         }
 
+        $latestThrowPlayerName = $this->resolveLatestThrowPlayerName($player);
+
         $this->entityManager->persist($roundThrow);
-        $this->entityManager->flush();
         $updatedRoundStateSnapshot = $roundStateSnapshot;
         $updatedRoundStateSnapshot[$requestedPlayerId] = [
             'throwsCount' => $playerThrowsThisRound + 1,
@@ -252,10 +276,12 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         ];
 
         $hasAdvancedRound = $this->maybeAdvanceRound($game, $round, $updatedRoundStateSnapshot);
+        $this->entityManager->flush();
 
         return new ThrowRecordingResultDto(
-            latestThrow: $this->createLatestThrowSnapshot($roundThrow),
+            latestThrow: $this->createLatestThrowSnapshot($roundThrow, $latestThrowPlayerName),
             currentRoundStateSnapshot: $hasAdvancedRound ? [] : $updatedRoundStateSnapshot,
+            game: $game,
         );
     }
 
@@ -404,7 +430,6 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         $nextRound->setStartedAt(new DateTime());
         $game->addRound($nextRound);
         $this->entityManager->persist($nextRound);
-        $this->entityManager->flush();
 
         return true;
     }
@@ -566,14 +591,14 @@ final readonly class GameThrowService implements GameThrowServiceInterface
 
     /**
      * @param RoundThrows $throw
+     * @param string      $playerName
      *
      * @return array{id:int,playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool,score:int,playerName:string,timestamp:string}|null
      */
-    private function createLatestThrowSnapshot(RoundThrows $throw): ?array
+    private function createLatestThrowSnapshot(RoundThrows $throw, string $playerName): ?array
     {
         $throwId = $throw->getThrowId();
-        $player = $throw->getPlayer();
-        $playerId = $player?->getId();
+        $playerId = $throw->getPlayer()?->getId();
         $roundNumber = $throw->getRound()?->getRoundNumber();
         $throwNumber = $throw->getThrowNumber();
         $value = $throw->getValue();
@@ -583,7 +608,6 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             return null;
         }
 
-        $playerName = $player?->getDisplayNameRaw() ?? $player?->getUsername() ?? '';
         $timestamp = $throw->getTimestamp();
 
         return [
@@ -599,6 +623,26 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             'playerName' => $playerName,
             'timestamp' => $timestamp instanceof DateTimeInterface ? $timestamp->format(DateTimeInterface::ATOM) : (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
         ];
+    }
+
+    /**
+     * @param GamePlayers $gamePlayer
+     *
+     * @return string
+     */
+    private function resolveLatestThrowPlayerName(GamePlayers $gamePlayer): string
+    {
+        $playerName = trim($gamePlayer->getDisplayNameSnapshot() ?? '');
+        if ('' !== $playerName) {
+            return $playerName;
+        }
+
+        $playerName = trim($gamePlayer->getPlayer()?->getDisplayNameRaw() ?? '');
+        if ('' !== $playerName) {
+            return $playerName;
+        }
+
+        return trim($gamePlayer->getPlayer()?->getUsername() ?? '');
     }
 
     /**

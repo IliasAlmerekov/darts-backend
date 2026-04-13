@@ -26,12 +26,13 @@ final readonly class GameStateVersionService implements GameStateVersionServiceI
     }
 
     /**
-     * @param Game $game
+     * @param Game     $game
+     * @param int|null $latestThrowId
      *
      * @return string
      */
     #[Override]
-    public function buildStateVersion(Game $game): string
+    public function buildStateVersion(Game $game, ?int $latestThrowId = null): string
     {
         $gameId = $game->getGameId();
         if (null === $gameId) {
@@ -64,9 +65,11 @@ final readonly class GameStateVersionService implements GameStateVersionServiceI
             ]);
         }
 
-        $latestThrowId = $this->roundThrowsRepository
-            ->findEntityLatestForGame($gameId)
-            ?->getThrowId();
+        if (null === $latestThrowId) {
+            $latestThrowId = $this->roundThrowsRepository
+                ->findEntityLatestForGame($gameId)
+                ?->getThrowId();
+        }
 
         $payload = [
             'gameId' => $gameId,
