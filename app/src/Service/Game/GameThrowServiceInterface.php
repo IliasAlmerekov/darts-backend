@@ -23,11 +23,24 @@ interface GameThrowServiceInterface
      * @param Game         $game The game to record the throw in
      * @param ThrowRequest $dto  The throw data (player, value, double/triple flags)
      *
-     * @throws ApiExceptionInterface If the throw is invalid for current turn/state
+    * @throws ApiExceptionInterface If the throw is invalid for current turn/state
      *
     * @return ThrowRecordingResultDto Post-throw context for compact delta acknowledgements
      */
     public function recordThrow(Game $game, ThrowRequest $dto): ThrowRecordingResultDto;
+
+    /**
+     * Record a throw by game id.
+     * Resolves and locks the game inside a transaction before applying throw rules.
+     *
+     * @param int          $gameId The game id to record the throw in
+     * @param ThrowRequest $dto    The throw data (player, value, double/triple flags)
+     *
+     * @throws ApiExceptionInterface If the game is missing or the throw is invalid
+     *
+     * @return ThrowRecordingResultDto Post-throw context for compact delta acknowledgements
+     */
+    public function recordThrowByGameId(int $gameId, ThrowRequest $dto): ThrowRecordingResultDto;
 
     /**
      * Undo the last throw in the game.

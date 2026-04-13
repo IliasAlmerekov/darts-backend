@@ -18,11 +18,13 @@ use App\Entity\GamePlayers;
 use App\Entity\Round;
 use App\Entity\RoundThrows;
 use App\Exception\Game\InvalidThrowException;
+use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\GamePlayerNotActiveException;
 use App\Exception\Game\GameThrowNotAllowedException;
 use App\Exception\Game\PlayerAlreadyThrewThreeTimesException;
 use App\Exception\Game\PlayerNotFoundInGameException;
 use App\Enum\GameStatus;
+use App\Repository\GameRepositoryInterface;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
@@ -49,6 +51,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      * @param EntityManagerInterface         $entityManager
      * @param GameAccessServiceInterface     $gameAccessService
      * @param ActivePlayerResolverInterface  $activePlayerResolver
+     * @param GameRepositoryInterface|null   $gameRepository
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
@@ -59,6 +62,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         private EntityManagerInterface $entityManager,
         private GameAccessServiceInterface $gameAccessService,
         private ?ActivePlayerResolverInterface $activePlayerResolver = null,
+        private ?GameRepositoryInterface $gameRepository = null,
     ) {
     }
 
@@ -74,6 +78,30 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         return $this->entityManager->wrapInTransaction(function () use ($game, $dto): ThrowRecordingResultDto {
             if ($this->entityManager->contains($game)) {
                 $this->entityManager->lock($game, LockMode::PESSIMISTIC_WRITE);
+            }
+
+            return $this->recordThrowUnlocked($game, $dto);
+        });
+    }
+
+    /**
+     * @param int          $gameId
+     * @param ThrowRequest $dto
+     *
+     * @return ThrowRecordingResultDto
+     */
+    #[Override]
+    public function recordThrowByGameId(int $gameId, ThrowRequest $dto): ThrowRecordingResultDto
+    {
+        return $this->entityManager->wrapInTransaction(function () use ($gameId, $dto): ThrowRecordingResultDto {
+            $gameRepository = $this->gameRepository;
+            if (null === $gameRepository) {
+                throw new GameNotFoundException();
+            }
+
+            $game = $gameRepository->findOneByGameIdForUpdate($gameId);
+            if (null === $game) {
+                throw new GameNotFoundException();
             }
 
             return $this->recordThrowUnlocked($game, $dto);
