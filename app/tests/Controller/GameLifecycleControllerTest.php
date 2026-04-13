@@ -366,7 +366,7 @@ final class GameLifecycleControllerTest extends TestCase
                             'round' => 9,
                             'throws' => [
                                 [
-                                    'value' => 60,
+                                    'value' => 20,
                                     'isDouble' => false,
                                     'isTriple' => true,
                                     'isBust' => false,
@@ -498,7 +498,7 @@ final class GameLifecycleControllerTest extends TestCase
                             'round' => 9,
                             'throws' => [
                                 new ThrowResponseDto(
-                                    value: 60,
+                                    value: 20,
                                     isDouble: false,
                                     isTriple: true,
                                     isBust: false,

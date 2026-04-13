@@ -13,21 +13,21 @@ namespace DoctrineMigrations;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
-final class Version20260317120000 extends AbstractMigration
+final class Version20260319113000 extends AbstractMigration
 {
     private const ROUND_THROWS_TABLE = 'round_throws';
-    private const UNIQUE_CONSTRAINT_NAME = 'uq_round_player_throw';
+    private const INDEX_NAME = 'idx_round_throws_game_throw';
 
     public function getDescription(): string
     {
-        return 'Add unique constraint on round_throws(round_id, player_id, throw_number) to prevent duplicate throws';
+        return 'Add composite index on round_throws(game_id, throw_id) to speed up latest throw lookups by game';
     }
 
     public function up(Schema $schema): void
     {
         $this->addSql(sprintf(
-            'CREATE UNIQUE INDEX `%s` ON `%s` (round_id, player_id, throw_number)',
-            self::UNIQUE_CONSTRAINT_NAME,
+            'CREATE INDEX `%s` ON `%s` (game_id, throw_id)',
+            self::INDEX_NAME,
             self::ROUND_THROWS_TABLE,
         ));
     }
@@ -36,7 +36,7 @@ final class Version20260317120000 extends AbstractMigration
     {
         $this->addSql(sprintf(
             'DROP INDEX `%s` ON `%s`',
-            self::UNIQUE_CONSTRAINT_NAME,
+            self::INDEX_NAME,
             self::ROUND_THROWS_TABLE,
         ));
     }

@@ -27,6 +27,7 @@ final class RoundRepository extends ServiceEntityRepository implements RoundRepo
      *
      * @return int
      */
+    #[\Override]
     public function countFinishedRounds(int $gameId): int
     {
         return (int) $this->createQueryBuilder('r')

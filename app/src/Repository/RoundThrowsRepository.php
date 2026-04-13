@@ -41,6 +41,7 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
      *
      * @return array<string, mixed>|null
      */
+    #[\Override]
     public function findLatestForGame(int $gameId): ?array
     {
         return $this->createQueryBuilder('rt')
@@ -82,6 +83,7 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
      *
      * @return RoundThrows|null
      */
+    #[\Override]
     public function findEntityLatestForGame(int $gameId): ?RoundThrows
     {
         return $this->createQueryBuilder('rt')
@@ -99,6 +101,7 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
      *
      * @return RoundThrows|null
      */
+    #[\Override]
     public function findLatestForGameAndPlayer(int $gameId, int $playerId): ?RoundThrows
     {
         return $this->createQueryBuilder('rt')
@@ -118,6 +121,7 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
      *
      * @return RoundThrows|null
      */
+    #[\Override]
     public function findLatestForGameBeforeThrow(int $gameId, int $throwId): ?RoundThrows
     {
         return $this->createLatestBeforeThrowQueryBuilder($gameId, $throwId)
@@ -132,6 +136,7 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
      *
      * @return RoundThrows|null
      */
+    #[\Override]
     public function findLatestForGameAndPlayerBeforeThrow(int $gameId, int $playerId, int $throwId): ?RoundThrows
     {
         return $this->createLatestBeforeThrowQueryBuilder($gameId, $throwId)
@@ -146,6 +151,7 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
      *
      * @return list<RoundThrows>
      */
+    #[\Override]
     public function findByGameIdOrdered(int $gameId): array
     {
         /** @var list<RoundThrows> $throws */
@@ -171,6 +177,7 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
      *
      * @return array<int, array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>
      */
+    #[\Override]
     public function findCurrentRoundThrowsForGamePlayers(int $gameId, int $roundNumber): array
     {
         $rows = $this->createGameStateThrowQueryBuilder()
@@ -193,10 +200,11 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
      *
      * @return array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}>
      */
+    #[\Override]
     public function findCurrentRoundStateSnapshot(int $gameId, int $roundNumber): array
     {
         $connection = $this->getEntityManager()->getConnection();
-        $roundTable = $connection->getDatabasePlatform()->quoteIdentifier('round');
+        $roundTable = $connection->getDatabasePlatform()->quoteSingleIdentifier('round');
 
         $rows = $connection->fetchAllAssociative(
             sprintf(
@@ -241,6 +249,7 @@ SQL,
      *
      * @return array<int, array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>
      */
+    #[\Override]
     public function findLatestThrowsForGamePlayers(int $gameId): array
     {
         $rows = $this->createGameStateThrowQueryBuilder()
@@ -264,6 +273,7 @@ SQL,
      *
      * @return array<int, array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>
      */
+    #[\Override]
     public function findRoundHistoryForGame(int $gameId): array
     {
         $rows = $this->createGameStateThrowQueryBuilder()
@@ -286,6 +296,7 @@ SQL,
      *
      * @return array<int, array<string, mixed>>
      */
+    #[\Override]
     public function getRoundAveragesForGame(int $gameId): array
     {
         return $this->createQueryBuilder('rt')
@@ -310,6 +321,7 @@ SQL,
      *
      * @return array<int, int>
      */
+    #[\Override]
     public function getRoundsPlayedForGame(int $gameId): array
     {
         $rows = $this->createQueryBuilder('rt')
@@ -336,6 +348,7 @@ SQL,
      *
      * @return array<int,int>
      */
+    #[\Override]
     public function getLastRoundNumberForGame(int $gameId): array
     {
         $rows = $this->createQueryBuilder('rt')
@@ -362,6 +375,7 @@ SQL,
      *
      * @return array<int, float>
      */
+    #[\Override]
     public function getTotalScoreForGame(int $gameId): array
     {
         $rows = $this->createQueryBuilder('rt')
@@ -399,13 +413,14 @@ SQL,
      *     scoreAverage:string|null
      * }>
      */
+    #[\Override]
     public function getPlayerStatistics(int $limit, int $offset, string $sortField = 'average', string $direction = 'DESC'): array
     {
         $orderColumn = 'gamesPlayed' === $sortField ? 'gamesPlayed' : 'scoreAverage';
         $direction = 'ASC' === strtoupper($direction) ? 'ASC' : 'DESC';
         $connection = $this->getEntityManager()->getConnection();
-        $roundTable = $connection->getDatabasePlatform()->quoteIdentifier('round');
-        $userTable = $connection->getDatabasePlatform()->quoteIdentifier('user');
+        $roundTable = $connection->getDatabasePlatform()->quoteSingleIdentifier('round');
+        $userTable = $connection->getDatabasePlatform()->quoteSingleIdentifier('user');
         $sql = sprintf(
             <<<'SQL'
 SELECT
@@ -444,7 +459,16 @@ SQL,
             $direction,
         );
 
-        return $connection->fetchAllAssociative(
+        /** @var array<int, array{
+         *     playerId:int,
+         *     username:string,
+         *     gamesPlayed:string,
+         *     totalValue:string,
+         *     roundsFinished:string,
+         *     scoreAverage:string|null
+         * }> $rows
+         */
+        $rows = $connection->fetchAllAssociative(
             $sql,
             [
                 'status' => GameStatus::Finished->value,
@@ -457,6 +481,8 @@ SQL,
                 'offset' => ParameterType::INTEGER,
             ],
         );
+
+        return $rows;
     }
 
     /**
@@ -464,6 +490,7 @@ SQL,
      *
      * @return int
      */
+    #[\Override]
     public function countPlayersWithFinishedRounds(): int
     {
         return (int) $this->createQueryBuilder('rt')

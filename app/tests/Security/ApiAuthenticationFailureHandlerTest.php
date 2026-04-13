@@ -18,7 +18,7 @@ final class ApiAuthenticationFailureHandlerTest extends TestCase
      */
     public function testApiRequestReturnsJsonInsteadOfRedirect(): void
     {
-        $urlGenerator = $this->createMock(UrlGeneratorInterface::class);
+        $urlGenerator = $this->createStub(UrlGeneratorInterface::class);
         $handler = new ApiAuthenticationFailureHandler($urlGenerator);
 
         $request = Request::create('/api/login', 'POST', [

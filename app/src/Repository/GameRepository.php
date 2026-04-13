@@ -45,10 +45,11 @@ final class GameRepository extends ServiceEntityRepository implements GameReposi
      *     winnerRounds:int
      * }>
      */
+    #[\Override]
     public function findFinishedOverview(int $limit, int $offset): array
     {
         $connection = $this->getEntityManager()->getConnection();
-        $userTable = $connection->getDatabasePlatform()->quoteIdentifier('user');
+        $userTable = $connection->getDatabasePlatform()->quoteSingleIdentifier('user');
         $rows = $connection->fetchAllAssociative(
             sprintf(
                 <<<'SQL'
@@ -132,6 +133,7 @@ SQL,
      *
      * @return Game|null
      */
+    #[\Override]
     public function findOneByGameId(int $gameId): ?Game
     {
         return $this->createQueryBuilder('g')
@@ -144,6 +146,7 @@ SQL,
     /**
      * @return int|null
      */
+    #[\Override]
     public function findHighestGameId(): ?int
     {
         $result = $this->createQueryBuilder('g')
@@ -157,6 +160,7 @@ SQL,
     /**
      * @return int
      */
+    #[\Override]
     public function countFinishedGames(): int
     {
         return (int) $this->createQueryBuilder('g')
@@ -173,6 +177,7 @@ SQL,
      *
      * @return Game[]
      */
+    #[\Override]
     public function findFinished(int $limit, int $offset): array
     {
         return $this->createQueryBuilder('g')
@@ -198,7 +203,7 @@ SQL,
         }
 
         $connection = $this->getEntityManager()->getConnection();
-        $roundTable = $connection->getDatabasePlatform()->quoteIdentifier('round');
+        $roundTable = $connection->getDatabasePlatform()->quoteSingleIdentifier('round');
 
         $rows = $connection->fetchAllAssociative(
             sprintf(

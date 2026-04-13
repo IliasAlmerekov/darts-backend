@@ -23,7 +23,7 @@ final class GameRoomFullException extends ApiHttpException
         parent::__construct(
             ErrorCode::GameRoomFull,
             Response::HTTP_CONFLICT,
-            sprintf('Game room is full. Maximum %d players allowed.', $maxPlayers)
+            sprintf('The room is already full (%d players). Please wait for an available spot.', $maxPlayers)
         );
     }
 }

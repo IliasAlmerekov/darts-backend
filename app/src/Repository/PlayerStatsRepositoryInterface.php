@@ -13,6 +13,8 @@ use App\Entity\PlayerStats;
 interface PlayerStatsRepositoryInterface
 {
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param mixed $id
      *
      * @return PlayerStats|object|null

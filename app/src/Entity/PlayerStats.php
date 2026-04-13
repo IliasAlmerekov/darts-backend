@@ -12,6 +12,7 @@ use Doctrine\ORM\Mapping as ORM;
  * This class represents the statistics of a player.
  *
  * @psalm-suppress UnusedClass
+ * @psalm-suppress PossiblyUnusedMethod
  */
 #[ORM\Entity(repositoryClass: PlayerStatsRepository::class)]
 class PlayerStats
@@ -32,6 +33,8 @@ class PlayerStats
     private ?int $gamesPlayed = null;
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @return int|null
      */
     public function getPlayerId(): ?int
@@ -40,6 +43,8 @@ class PlayerStats
     }
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param int $playerId
      *
      * @return static
@@ -52,6 +57,8 @@ class PlayerStats
     }
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @return int|null
      */
     public function getWins(): ?int
@@ -60,6 +67,8 @@ class PlayerStats
     }
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param int|null $wins
      *
      * @return static
@@ -72,6 +81,8 @@ class PlayerStats
     }
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @return int|null
      */
     public function getWinPercentage(): ?int
@@ -80,6 +91,8 @@ class PlayerStats
     }
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param int $winPercentage
      *
      * @return static
@@ -92,6 +105,8 @@ class PlayerStats
     }
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @return int|null
      */
     public function getRoundAverage(): ?int
@@ -100,6 +115,8 @@ class PlayerStats
     }
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param int|null $roundAverage
      *
      * @return static
@@ -112,6 +129,8 @@ class PlayerStats
     }
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @return int|null
      */
     public function getHighestCheckout(): ?int
@@ -120,6 +139,8 @@ class PlayerStats
     }
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param int|null $highestCheckout
      *
      * @return static
@@ -132,6 +153,8 @@ class PlayerStats
     }
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @return int|null
      */
     public function getGamesPlayed(): ?int
@@ -140,6 +163,8 @@ class PlayerStats
     }
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod
+     *
      * @param int|null $gamesPlayed
      *
      * @return static
