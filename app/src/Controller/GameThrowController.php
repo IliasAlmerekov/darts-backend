@@ -27,6 +27,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
@@ -98,10 +99,15 @@ final class GameThrowController extends AbstractController
     #[Route('/api/game/{gameId}/throw/delta', name: 'app_game_throw_delta', methods: ['POST'], format: 'json')]
     public function throwDelta(int $gameId, GameThrowServiceInterface $gameThrowService, GameDeltaServiceInterface $gameDeltaService, GameRepositoryInterface $gameRepository, #[MapRequestPayload] ThrowRequest $dto): ThrowAckDto
     {
-        $throwRecordingResult = $gameThrowService->recordThrowByGameId($gameId, $dto);
+        try {
+            $throwRecordingResult = $gameThrowService->recordThrowByGameId($gameId, $dto);
+        } catch (GameNotFoundException) {
+            throw new NotFoundHttpException();
+        }
+
         $game = $gameRepository->findOneByGameId($gameId);
         if (null === $game) {
-            throw new GameNotFoundException();
+            throw new NotFoundHttpException();
         }
 
         return $gameDeltaService->buildThrowAck($game, $throwRecordingResult->latestThrow, $throwRecordingResult->currentRoundStateSnapshot);
