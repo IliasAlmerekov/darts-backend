@@ -54,6 +54,7 @@ final class UserRepository extends ServiceEntityRepository implements UserReposi
      *
      * @return User[]
      */
+    #[\Override]
     public function findByIds(array $ids): array
     {
         if (empty($ids)) {
@@ -72,6 +73,7 @@ final class UserRepository extends ServiceEntityRepository implements UserReposi
      *
      * @return User|null
      */
+    #[\Override]
     public function findOneByUsername(string $username): ?User
     {
         $result = $this->createQueryBuilder('u')

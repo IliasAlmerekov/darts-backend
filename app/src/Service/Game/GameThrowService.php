@@ -536,6 +536,15 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         );
     }
 
+    /**
+     * Normalizes stored multiplied values back to the base board segment value for throw payloads.
+     *
+     * @param int  $storedValue
+     * @param bool $isDouble
+     * @param bool $isTriple
+     *
+     * @return int
+     */
     private function normalizeThrowValueForResponse(int $storedValue, bool $isDouble, bool $isTriple): int
     {
         if ($isTriple && 0 === $storedValue % 3) {

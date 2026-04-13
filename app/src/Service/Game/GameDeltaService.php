@@ -149,6 +149,15 @@ final readonly class GameDeltaService implements GameDeltaServiceInterface
         );
     }
 
+    /**
+     * Normalizes stored multiplied values back to the base board segment value for delta responses.
+     *
+     * @param int  $storedValue
+     * @param bool $isDouble
+     * @param bool $isTriple
+     *
+     * @return int
+     */
     private function normalizeThrowValueForResponse(int $storedValue, bool $isDouble, bool $isTriple): int
     {
         if ($isTriple && 0 === $storedValue % 3) {
