@@ -48,7 +48,7 @@ final class GameThrowControllerTest extends TestCase
         $throwService->expects($this->once())
             ->method('recordThrow')
             ->with($game, $dto)
-            ->willReturn($this->dummyThrowRecordingResultDto());
+            ->willReturn($this->dummyThrowRecordingResultDto($game));
 
         $gameService = $this->createMock(GameServiceInterface::class);
         $gameService->method('createGameDto')->willReturn($this->dummyGameDto());
@@ -130,11 +130,7 @@ final class GameThrowControllerTest extends TestCase
     {
         $game = (new Game())->setGameId(777);
         $dto = new ThrowRequest();
-        $throwRecordingResult = new ThrowRecordingResultDto(
-            latestThrow: $this->dummyThrowRecordingResultDto()->latestThrow,
-            currentRoundStateSnapshot: $this->dummyThrowRecordingResultDto()->currentRoundStateSnapshot,
-            game: $game,
-        );
+        $throwRecordingResult = $this->dummyThrowRecordingResultDto($game);
         $throwService = $this->createMock(GameThrowServiceInterface::class);
         $throwService->expects(self::once())
             ->method('recordThrowByGameId')
@@ -215,7 +211,7 @@ final class GameThrowControllerTest extends TestCase
         );
     }
 
-    private function dummyThrowRecordingResultDto(): ThrowRecordingResultDto
+    private function dummyThrowRecordingResultDto(Game $game): ThrowRecordingResultDto
     {
         return new ThrowRecordingResultDto(
             latestThrow: [
@@ -239,6 +235,7 @@ final class GameThrowControllerTest extends TestCase
                     'lastThrowBust' => true,
                 ],
             ],
+            game: $game,
         );
     }
 }

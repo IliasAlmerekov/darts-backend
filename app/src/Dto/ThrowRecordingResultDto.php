@@ -17,12 +17,12 @@ final readonly class ThrowRecordingResultDto
     /**
      * @param LatestThrowSnapshot|null $latestThrow
      * @param RoundStateSnapshot       $currentRoundStateSnapshot
-     * @param Game|null                $game
+     * @param Game                     $game
      */
     public function __construct(
         public ?array $latestThrow,
         public array $currentRoundStateSnapshot,
-        public ?Game $game = null,
+        public Game $game,
     ) {
     }
 }

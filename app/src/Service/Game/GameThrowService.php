@@ -50,8 +50,8 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
      * @param EntityManagerInterface         $entityManager
      * @param GameAccessServiceInterface     $gameAccessService
+     * @param GameRepositoryInterface        $gameRepository
      * @param ActivePlayerResolverInterface  $activePlayerResolver
-     * @param GameRepositoryInterface|null   $gameRepository
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
@@ -61,8 +61,8 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         private RoundThrowsRepositoryInterface $roundThrowsRepository,
         private EntityManagerInterface $entityManager,
         private GameAccessServiceInterface $gameAccessService,
+        private GameRepositoryInterface $gameRepository,
         private ?ActivePlayerResolverInterface $activePlayerResolver = null,
-        private ?GameRepositoryInterface $gameRepository = null,
     ) {
     }
 
@@ -94,12 +94,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
     public function recordThrowByGameId(int $gameId, ThrowRequest $dto): ThrowRecordingResultDto
     {
         return $this->entityManager->wrapInTransaction(function () use ($gameId, $dto): ThrowRecordingResultDto {
-            $gameRepository = $this->gameRepository;
-            if (null === $gameRepository) {
-                throw new GameNotFoundException();
-            }
-
-            $game = $gameRepository->findOneByGameIdForUpdate($gameId);
+            $game = $this->gameRepository->findOneByGameIdForUpdate($gameId);
             if (null === $game) {
                 throw new GameNotFoundException();
             }

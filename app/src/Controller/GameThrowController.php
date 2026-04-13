@@ -103,12 +103,7 @@ final class GameThrowController extends AbstractController
             throw new NotFoundHttpException();
         }
 
-        $game = $throwRecordingResult->game;
-        if (null === $game) {
-            throw new NotFoundHttpException();
-        }
-
-        return $gameDeltaService->buildThrowAck($game, $throwRecordingResult->latestThrow, $throwRecordingResult->currentRoundStateSnapshot);
+        return $gameDeltaService->buildThrowAck($throwRecordingResult->game, $throwRecordingResult->latestThrow, $throwRecordingResult->currentRoundStateSnapshot);
     }
 
     /**
