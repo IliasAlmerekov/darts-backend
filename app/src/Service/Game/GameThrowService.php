@@ -609,6 +609,12 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         }
 
         $playerName = trim($gamePlayer->getDisplayNameSnapshot() ?? '');
+        if ('' === $playerName) {
+            $playerName = trim($player?->getDisplayNameRaw() ?? '');
+        }
+        if ('' === $playerName) {
+            $playerName = trim($player?->getUsername() ?? '');
+        }
         $timestamp = $throw->getTimestamp();
 
         return [
