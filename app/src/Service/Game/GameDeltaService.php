@@ -62,7 +62,8 @@ final readonly class GameDeltaService implements GameDeltaServiceInterface
         $latestThrow ??= $this->roundThrowsRepository->findLatestForGame($gameId);
         $gameStatePlayers = $this->gamePlayersRepository->findGameStatePlayersByGameId($gameId);
         $throwDto = $this->toThrowDelta($latestThrow, $this->indexGameStatePlayersByPlayerId($gameStatePlayers));
-        $stateVersion = $this->gameService->buildStateVersion($game);
+        $knownLatestThrowId = $this->extractLatestThrowId($latestThrow);
+        $stateVersion = $this->gameService->buildStateVersion($game, $knownLatestThrowId);
 
         $throwPlayerId = null;
         $throwIsBust = null;
@@ -166,6 +167,20 @@ final readonly class GameDeltaService implements GameDeltaServiceInterface
             roundNumber: (int) ($latestThrow['roundNumber'] ?? 0),
             timestamp: is_string($timestamp) ? $timestamp : (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
         );
+    }
+
+    /**
+     * @param array<string, mixed>|null $latestThrow
+     *
+     * @return int|null
+     */
+    private function extractLatestThrowId(?array $latestThrow): ?int
+    {
+        if (!is_array($latestThrow) || !isset($latestThrow['id']) || !is_numeric($latestThrow['id'])) {
+            return null;
+        }
+
+        return (int) $latestThrow['id'];
     }
 
     /**

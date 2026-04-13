@@ -59,7 +59,7 @@ final class GameDeltaServiceTest extends TestCase
         $gameService = $this->createMock(GameServiceInterface::class);
         $gameService->expects(self::once())
             ->method('buildStateVersion')
-            ->with($game)
+            ->with($game, 501)
             ->willReturn('state-v2');
         $gameService->expects(self::once())
             ->method('calculateActivePlayer')
@@ -144,7 +144,7 @@ final class GameDeltaServiceTest extends TestCase
         $gameService = $this->createMock(GameServiceInterface::class);
         $gameService->expects(self::once())
             ->method('buildStateVersion')
-            ->with($game)
+            ->with($game, 701)
             ->willReturn('state-v4');
         $gameService->expects(self::once())
             ->method('calculateActivePlayer')
@@ -322,7 +322,7 @@ final class GameDeltaServiceTest extends TestCase
         $gameService = $this->createMock(GameServiceInterface::class);
         $gameService->expects(self::once())
             ->method('buildStateVersion')
-            ->with($game)
+            ->with($game, 801)
             ->willReturn('state-v5');
         $gameService->expects(self::once())
             ->method('calculateActivePlayer')
@@ -397,7 +397,7 @@ final class GameDeltaServiceTest extends TestCase
         $gameService = $this->createMock(GameServiceInterface::class);
         $gameService->expects(self::once())
             ->method('buildStateVersion')
-            ->with($game)
+            ->with($game, 901)
             ->willReturn('state-v6');
         $gameService->expects(self::once())
             ->method('calculateActivePlayer')
