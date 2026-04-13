@@ -24,14 +24,14 @@ final class ApiAuthenticationSuccessHandlerTest extends TestCase
     public function testApiRequestReturnsJsonResponseFromSecurityService(): void
     {
         $securityService = $this->createMock(SecurityServiceInterface::class);
-        $urlGenerator = $this->createMock(UrlGeneratorInterface::class);
+        $urlGenerator = $this->createStub(UrlGeneratorInterface::class);
         $handler = new ApiAuthenticationSuccessHandler($securityService, $urlGenerator);
 
         $request = Request::create('/api/login', 'POST');
         $request->setSession(new Session(new MockArraySessionStorage()));
 
-        $user = $this->createMock(User::class);
-        $token = $this->createMock(TokenInterface::class);
+        $user = $this->createStub(User::class);
+        $token = $this->createStub(TokenInterface::class);
         $token->method('getUser')->willReturn($user);
 
         $expectedResponse = new JsonResponse(['success' => true, 'redirect' => '/joined']);
@@ -50,12 +50,12 @@ final class ApiAuthenticationSuccessHandlerTest extends TestCase
      */
     public function testNonApiRequestRedirectsToLoginSuccess(): void
     {
-        $securityService = $this->createMock(SecurityServiceInterface::class);
+        $securityService = $this->createStub(SecurityServiceInterface::class);
         $urlGenerator = $this->createMock(UrlGeneratorInterface::class);
         $handler = new ApiAuthenticationSuccessHandler($securityService, $urlGenerator);
 
         $request = Request::create('/login', 'POST');
-        $token = $this->createMock(TokenInterface::class);
+        $token = $this->createStub(TokenInterface::class);
 
         $urlGenerator
             ->expects($this->once())

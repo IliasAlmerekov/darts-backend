@@ -136,7 +136,7 @@ final class SseStreamServiceTest extends TestCase
         $this->gameDeltaService
             ->expects(self::once())
             ->method('buildThrowAck')
-            ->with($game, self::isType('array'))
+            ->with($game, self::isArray())
             ->willReturn(new ThrowAckDto(
                 success: true,
                 gameId: 42,
@@ -232,7 +232,7 @@ final class SseStreamServiceTest extends TestCase
         $this->gameDeltaService
             ->expects(self::once())
             ->method('buildThrowAck')
-            ->with($game, self::isType('array'))
+            ->with($game, self::isArray())
             ->willReturn(new ThrowAckDto(
                 success: true,
                 gameId: 99,
