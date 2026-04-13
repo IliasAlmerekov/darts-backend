@@ -401,16 +401,25 @@ final class GameThrowServiceTest extends TestCase
         $round->setRoundNumber(1);
         $round->setGame($game);
 
-        $user = (new User())
-            ->setUsername('persisted-user')
-            ->setDisplayName('Fallback Name');
-        $this->setPrivateProperty($user, 'id', 8);
+        $didFlush = false;
+        $user = $this->createMock(User::class);
+        $user->method('getId')
+            ->willReturn(8);
+        $user->expects(self::once())
+            ->method('getDisplayNameRaw')
+            ->willReturnCallback(function () use (&$didFlush): string {
+                self::assertFalse($didFlush, 'Display name fallback must be resolved before flush.');
+
+                return 'Fallback Name';
+            });
+        $user->expects(self::never())
+            ->method('getUsername');
 
         $player = (new GamePlayers())
-            ->setPlayer($user)
-            ->setDisplayNameSnapshot('')
+            ->setDisplayNameSnapshot('   ')
             ->setScore(301)
-            ->setPosition(1);
+            ->setPosition(1)
+            ->setPlayer($user);
         $game->addGamePlayer($player);
 
         $dto = new ThrowRequest();
@@ -449,7 +458,8 @@ final class GameThrowServiceTest extends TestCase
             }));
         $entityManager->expects(self::once())
             ->method('flush')
-            ->willReturnCallback(function () use (&$persistedThrow): void {
+            ->willReturnCallback(function () use (&$persistedThrow, &$didFlush): void {
+                $didFlush = true;
                 self::assertInstanceOf(RoundThrows::class, $persistedThrow);
                 $this->setPrivateProperty($persistedThrow, 'throwId', 1000);
             });

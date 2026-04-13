@@ -264,6 +264,8 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             }
         }
 
+        $latestThrowPlayerName = $this->resolveLatestThrowPlayerName($player);
+
         $this->entityManager->persist($roundThrow);
         $this->entityManager->flush();
         $updatedRoundStateSnapshot = $roundStateSnapshot;
@@ -277,7 +279,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         $hasAdvancedRound = $this->maybeAdvanceRound($game, $round, $updatedRoundStateSnapshot);
 
         return new ThrowRecordingResultDto(
-            latestThrow: $this->createLatestThrowSnapshot($roundThrow, $player),
+            latestThrow: $this->createLatestThrowSnapshot($roundThrow, $latestThrowPlayerName),
             currentRoundStateSnapshot: $hasAdvancedRound ? [] : $updatedRoundStateSnapshot,
             game: $game,
         );
@@ -590,15 +592,14 @@ final readonly class GameThrowService implements GameThrowServiceInterface
 
     /**
      * @param RoundThrows $throw
-     * @param GamePlayers $gamePlayer
+     * @param string      $playerName
      *
      * @return array{id:int,playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool,score:int,playerName:string,timestamp:string}|null
      */
-    private function createLatestThrowSnapshot(RoundThrows $throw, GamePlayers $gamePlayer): ?array
+    private function createLatestThrowSnapshot(RoundThrows $throw, string $playerName): ?array
     {
         $throwId = $throw->getThrowId();
-        $player = $gamePlayer->getPlayer();
-        $playerId = $player?->getId();
+        $playerId = $throw->getPlayer()?->getId();
         $roundNumber = $throw->getRound()?->getRoundNumber();
         $throwNumber = $throw->getThrowNumber();
         $value = $throw->getValue();
@@ -608,13 +609,6 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             return null;
         }
 
-        $playerName = trim($gamePlayer->getDisplayNameSnapshot() ?? '');
-        if ('' === $playerName) {
-            $playerName = trim($player?->getDisplayNameRaw() ?? '');
-        }
-        if ('' === $playerName) {
-            $playerName = trim($player?->getUsername() ?? '');
-        }
         $timestamp = $throw->getTimestamp();
 
         return [
@@ -630,6 +624,26 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             'playerName' => $playerName,
             'timestamp' => $timestamp instanceof DateTimeInterface ? $timestamp->format(DateTimeInterface::ATOM) : (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
         ];
+    }
+
+    /**
+     * @param GamePlayers $gamePlayer
+     *
+     * @return string
+     */
+    private function resolveLatestThrowPlayerName(GamePlayers $gamePlayer): string
+    {
+        $playerName = trim($gamePlayer->getDisplayNameSnapshot() ?? '');
+        if ('' !== $playerName) {
+            return $playerName;
+        }
+
+        $playerName = trim($gamePlayer->getPlayer()?->getDisplayNameRaw() ?? '');
+        if ('' !== $playerName) {
+            return $playerName;
+        }
+
+        return trim($gamePlayer->getPlayer()?->getUsername() ?? '');
     }
 
     /**
