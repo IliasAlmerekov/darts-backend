@@ -33,10 +33,12 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
 
     /**
      * Find players with user information for a specific game
+     *
      * @param int $gameId
      *
-     * @return array
+     * @return array<int, array{id:int|null,name:string|null,position:int|null,isGuest:bool}>
      */
+    #[\Override]
     public function findPlayersWithUserInfo(int $gameId): array
     {
         $players = $this->createQueryBuilder('gamePlayer')
@@ -66,11 +68,13 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
 
     /**
      * Check if a player already joined the game
+     *
      * @param int $gameId
      * @param int $playerId
      *
      * @return bool
      */
+    #[\Override]
     public function isPlayerInGame(int $gameId, int $playerId): bool
     {
         $count = $this->count([
@@ -86,6 +90,7 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
      *
      * @param int $gameId
      */
+    #[\Override]
     public function findByGameId(int $gameId): array
     {
         return $this->createQueryBuilder('gp')
@@ -105,6 +110,7 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
      *
      * @return bool
      */
+    #[\Override]
     public function existsNameInGame(int $gameId, string $name): bool
     {
         $normalizedName = trim($name);
@@ -117,7 +123,7 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
         }
 
         $connection = $this->getEntityManager()->getConnection();
-        $userTable = $connection->getDatabasePlatform()->quoteIdentifier('user');
+        $userTable = $connection->getDatabasePlatform()->quoteSingleIdentifier('user');
 
         $result = $connection->fetchOne(
             sprintf(
@@ -157,6 +163,7 @@ SQL,
      *
      * @return int
      */
+    #[\Override]
     public function findNextPositionForGame(int $gameId): int
     {
         $row = $this->getEntityManager()->getConnection()->fetchAssociative(
@@ -184,6 +191,7 @@ SQL,
      *
      * @return array<int, array{playerId:int,name:string,position:int|null,score:int|null,isGuest:bool}>
      */
+    #[\Override]
     public function findGameStatePlayersByGameId(int $gameId): array
     {
         $rows = $this->createQueryBuilder('gp')
@@ -224,6 +232,7 @@ SQL,
      *
      * @return int
      */
+    #[\Override]
     public function countFinishedPlayers(int $gameId): int
     {
         return (int) $this->createQueryBuilder('gp')

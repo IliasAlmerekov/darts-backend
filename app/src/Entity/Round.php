@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Repository\RoundRepository;
+use DateTimeImmutable;
 use DateTimeInterface;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -29,9 +30,9 @@ class Round
     private ?Game $game = null;
     #[ORM\Column]
     private ?int $roundNumber = null;
-    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?DateTimeInterface $startedAt = null;
-    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?DateTimeInterface $finishedAt = null;
     #[ORM\OneToMany(
         targetEntity: RoundThrows::class,
@@ -126,7 +127,9 @@ class Round
      */
     public function setStartedAt(?DateTimeInterface $startedAt): static
     {
-        $this->startedAt = $startedAt;
+        $this->startedAt = $startedAt instanceof DateTimeImmutable || null === $startedAt
+            ? $startedAt
+            : DateTimeImmutable::createFromInterface($startedAt);
 
         return $this;
     }
@@ -146,7 +149,9 @@ class Round
      */
     public function setFinishedAt(?DateTimeInterface $finishedAt): static
     {
-        $this->finishedAt = $finishedAt;
+        $this->finishedAt = $finishedAt instanceof DateTimeImmutable || null === $finishedAt
+            ? $finishedAt
+            : DateTimeImmutable::createFromInterface($finishedAt);
 
         return $this;
     }

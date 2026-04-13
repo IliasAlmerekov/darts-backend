@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Repository\RoundThrowsRepository;
+use DateTimeImmutable;
 use DateTimeInterface;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -42,7 +43,7 @@ class RoundThrows
     private bool $isTriple = false;
     #[ORM\Column]
     private ?int $score = null;
-    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private ?DateTimeInterface $timestamp = null;
 
     /**
@@ -246,7 +247,9 @@ class RoundThrows
      */
     public function setTimestamp(DateTimeInterface $timestamp): static
     {
-        $this->timestamp = $timestamp;
+        $this->timestamp = $timestamp instanceof DateTimeImmutable
+            ? $timestamp
+            : DateTimeImmutable::createFromInterface($timestamp);
 
         return $this;
     }
