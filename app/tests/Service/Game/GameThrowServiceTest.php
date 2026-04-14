@@ -1085,9 +1085,8 @@ final class GameThrowServiceTest extends TestCase
         $roundThrowsRepository->method('findEntityLatestForGame')
             ->with(10)
             ->willReturn($lastThrow);
-        $roundThrowsRepository->method('findLatestForGameBeforeThrow')
-            ->with(10, 103)
-            ->willReturn($previousThrow);
+        $roundThrowsRepository->expects(self::never())
+            ->method('findLatestForGameBeforeThrow');
         $roundThrowsRepository->method('findLatestForGameAndPlayerBeforeThrow')
             ->with(10, 1, 103)
             ->willReturn($previousThrow);
@@ -1184,25 +1183,14 @@ final class GameThrowServiceTest extends TestCase
             ->setValue(60)
             ->setScore(181)
             ->setTimestamp(new DateTime());
-        $latestGameThrowAfterUndo = (new RoundThrows())
-            ->setGame($game)
-            ->setRound($round)
-            ->setPlayer($otherUser)
-            ->setThrowId(399)
-            ->setThrowNumber(1)
-            ->setValue(20)
-            ->setScore(160)
-            ->setTimestamp(new DateTime());
-
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $roundRepository = $this->createMock(RoundRepositoryInterface::class);
         $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
         $roundThrowsRepository->method('findEntityLatestForGame')
             ->with(20)
             ->willReturn($lastBustThrow);
-        $roundThrowsRepository->method('findLatestForGameBeforeThrow')
-            ->with(20, 401)
-            ->willReturn($latestGameThrowAfterUndo);
+        $roundThrowsRepository->expects(self::never())
+            ->method('findLatestForGameBeforeThrow');
         $roundThrowsRepository->method('findLatestForGameAndPlayerBeforeThrow')
             ->with(20, 1, 401)
             ->willReturn($previousPlayerThrow);
@@ -1303,25 +1291,14 @@ final class GameThrowServiceTest extends TestCase
             ->setValue(20)
             ->setScore(40)
             ->setTimestamp(new DateTime());
-        $latestGameThrowAfterUndo = (new RoundThrows())
-            ->setGame($game)
-            ->setRound($round)
-            ->setPlayer($secondUser)
-            ->setThrowId(301)
-            ->setThrowNumber(1)
-            ->setValue(60)
-            ->setScore(120)
-            ->setTimestamp(new DateTime());
-
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $roundRepository = $this->createMock(RoundRepositoryInterface::class);
         $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
         $roundThrowsRepository->method('findEntityLatestForGame')
             ->with(30)
             ->willReturn($winningThrow);
-        $roundThrowsRepository->method('findLatestForGameBeforeThrow')
-            ->with(30, 303)
-            ->willReturn($latestGameThrowAfterUndo);
+        $roundThrowsRepository->expects(self::never())
+            ->method('findLatestForGameBeforeThrow');
         $roundThrowsRepository->method('findLatestForGameAndPlayerBeforeThrow')
             ->with(30, 1, 303)
             ->willReturn($previousWinnerThrow);
@@ -1408,17 +1385,6 @@ final class GameThrowServiceTest extends TestCase
             ->setScore(241)
             ->setTimestamp(new DateTime());
 
-        // Previous game throw: player 2's last throw in round 1 (different round!)
-        $previousGameThrow = (new RoundThrows())
-            ->setGame($game)
-            ->setRound($round1)
-            ->setPlayer($otherUser)
-            ->setThrowId(200)
-            ->setThrowNumber(3)
-            ->setValue(60)
-            ->setScore(241)
-            ->setTimestamp(new DateTime());
-
         // Previous player throw: player 1 has no previous throw in round 2
         $previousPlayerThrow = null;
 
@@ -1428,9 +1394,8 @@ final class GameThrowServiceTest extends TestCase
         $roundThrowsRepository->method('findEntityLatestForGame')
             ->with(40)
             ->willReturn($lastThrow);
-        $roundThrowsRepository->method('findLatestForGameBeforeThrow')
-            ->with(40, 201)
-            ->willReturn($previousGameThrow);
+        $roundThrowsRepository->expects(self::never())
+            ->method('findLatestForGameBeforeThrow');
         $roundThrowsRepository->method('findLatestForGameAndPlayerBeforeThrow')
             ->with(40, 1, 201)
             ->willReturn($previousPlayerThrow);

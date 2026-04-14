@@ -19,3 +19,5 @@ This file is append-only. Keep entries short and technical.
 - Added `.codex/context/engineering-principles.md` as a project-specific decision framework for abstraction, pattern fit, and wrong-layer fixes, and wired it into Codex and Claude read order
 - Renamed local workflow entry skills to `brainstorming-feature` and `planning-feature` so the three-step flow is skill-only and matches the old command invocation names
 - Removed mirrored `.codex/commands` and `.claude/commands` files and rewired workflow docs to point directly at skills
+- Optimized deprecated full undo snapshot assembly by removing the dead undo repository lookup and deriving current-round/latest throw maps from one round-history query in `GameService`
+- Aligned repository verification policy and mirrored `.codex`/`.claude` skill command examples with the actual PHP container by switching `bash -lc` to `sh -lc` and adding `XDEBUG_MODE=coverage` for the coverage PHPUnit command
