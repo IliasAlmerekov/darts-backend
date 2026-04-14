@@ -1,9 +1,9 @@
 ---
-name: writing-plans
+name: planning-feature
 description: Use when you have an approved spec or clear requirements for a multi-step backend change in this Symfony project and need an implementation plan before editing code.
 ---
 
-# Writing Plans
+# Planning Feature
 
 Create implementation plans that are executable in this repository without extra discovery.
 
@@ -24,7 +24,7 @@ Create implementation plans that are executable in this repository without extra
 
 Use this skill when:
 
-- a spec from local `brainstorming` is approved
+- a spec from local `brainstorming-feature` is approved
 - the user gave clear requirements for a multi-step change
 - implementation will touch multiple files, layers, or verification steps
 

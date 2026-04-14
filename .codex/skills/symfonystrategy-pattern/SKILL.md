@@ -13,8 +13,8 @@ Use this as a reference skill for Symfony strategy selection.
 
 This skill does not replace the local workflow:
 
-- use `brainstorming` for design
-- use `writing-plans` for execution planning
+- use `brainstorming-feature` for design
+- use `planning-feature` for execution planning
 - use `subagent-development` for implementation
 
 This skill only helps answer one narrow question:

@@ -4,10 +4,10 @@ Last updated: 2026-04-14
 
 ## Active Decisions
 
-### D-001: Use local `.codex` and `.claude` workflows instead of `superpowers`
+### D-001: Use local `.codex` and `.claude` skill workflows instead of `superpowers`
 
 - Status: active
-- Why: keep project-local commands, skills, agents, and policies under repository control
+- Why: keep project-local skills, agents, and policies under repository control
 - Implementation: `.codex` is the primary authored workflow layer, while `.claude` mirrors it for Claude runtime use
 
 ### D-002: Work only in the current branch
@@ -21,7 +21,7 @@ Last updated: 2026-04-14
 - Status: active
 - Why: repository policy requires it and keeps command execution consistent
 
-### D-004: Non-trivial work follows `brainstorming -> planning -> subagent-development`
+### D-004: Non-trivial work follows `brainstorming-feature -> planning-feature -> subagent-development`
 
 - Status: active
 - Why: force design clarity, explicit planning, and gate-based execution

@@ -1,6 +1,6 @@
 # Plan Reviewer Prompt
 
-Use this prompt for a second-pass review of a plan created with the local `writing-plans` skill.
+Use this prompt for a second-pass review of a plan created with the local `planning-feature` skill.
 
 ```
 You are reviewing an implementation plan for a Symfony backend project.

@@ -5,7 +5,7 @@ Last updated: 2026-04-14
 ## Repository Layout
 
 - `AGENTS.md`: canonical repository policy for runtime, verification, and reporting
-- `.codex/`: local agent workflow, commands, skills, agents, and persistent context
+- `.codex/`: local agent workflow, skills, agents, and persistent context
 - `.claude/`: mirrored Claude workflow layer for the same repository process
 - `app/`: Symfony application root
 - `docker-compose.yaml`: default local runtime
@@ -61,8 +61,8 @@ Last updated: 2026-04-14
 ## Local Agent Workflow
 
 - Entry workflow for non-trivial work:
-  - `brainstorming_feature`
-  - `planning_feature`
+  - `brainstorming-feature`
+  - `planning-feature`
   - `subagent-development`
 - Primary authored workflow layer: `.codex/`
 - Mirrored runtime layer: `.claude/`

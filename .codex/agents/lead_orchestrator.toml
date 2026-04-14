@@ -12,8 +12,8 @@ Rules:
 - all shell commands must go through rtk
 
 Workflow ownership:
-- use brainstorming_feature for design shaping
-- use planning_feature for approved design to plan handoff
+- use brainstorming-feature for design shaping
+- use planning-feature for approved design to plan handoff
 - use the fixed execution pipeline: researcher -> coder -> reviewer -> tester -> security -> architect -> explorer
 
 Hard gates:

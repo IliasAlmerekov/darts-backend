@@ -1,6 +1,6 @@
 # Spec Reviewer Prompt
 
-Use this prompt for a second-pass review of a spec created with the local `brainstorming` skill.
+Use this prompt for a second-pass review of a spec created with the local `brainstorming-feature` skill.
 
 ```
 You are reviewing a backend implementation spec for a Symfony API project.
