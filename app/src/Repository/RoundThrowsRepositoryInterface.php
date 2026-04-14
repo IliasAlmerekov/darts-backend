@@ -62,16 +62,6 @@ interface RoundThrowsRepositoryInterface
     public function findLatestForGameAndPlayer(int $gameId, int $playerId): ?RoundThrows;
 
     /**
-     * @psalm-suppress PossiblyUnusedReturnValue
-     *
-     * @param int $gameId
-     * @param int $throwId
-     *
-     * @return RoundThrows|null
-     */
-    public function findLatestForGameBeforeThrow(int $gameId, int $throwId): ?RoundThrows;
-
-    /**
      * @param int $gameId
      * @param int $playerId
      * @param int $throwId
@@ -104,13 +94,6 @@ interface RoundThrowsRepositoryInterface
      * @return array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}>
      */
     public function findCurrentRoundStateSnapshot(int $gameId, int $roundNumber): array;
-
-    /**
-     * @param int $gameId
-     *
-     * @return array<int, array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>
-     */
-    public function findLatestThrowsForGamePlayers(int $gameId): array;
 
     /**
      * @param int $gameId

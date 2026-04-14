@@ -1085,8 +1085,6 @@ final class GameThrowServiceTest extends TestCase
         $roundThrowsRepository->method('findEntityLatestForGame')
             ->with(10)
             ->willReturn($lastThrow);
-        $roundThrowsRepository->expects(self::never())
-            ->method('findLatestForGameBeforeThrow');
         $roundThrowsRepository->method('findLatestForGameAndPlayerBeforeThrow')
             ->with(10, 1, 103)
             ->willReturn($previousThrow);
@@ -1189,8 +1187,6 @@ final class GameThrowServiceTest extends TestCase
         $roundThrowsRepository->method('findEntityLatestForGame')
             ->with(20)
             ->willReturn($lastBustThrow);
-        $roundThrowsRepository->expects(self::never())
-            ->method('findLatestForGameBeforeThrow');
         $roundThrowsRepository->method('findLatestForGameAndPlayerBeforeThrow')
             ->with(20, 1, 401)
             ->willReturn($previousPlayerThrow);
@@ -1297,8 +1293,6 @@ final class GameThrowServiceTest extends TestCase
         $roundThrowsRepository->method('findEntityLatestForGame')
             ->with(30)
             ->willReturn($winningThrow);
-        $roundThrowsRepository->expects(self::never())
-            ->method('findLatestForGameBeforeThrow');
         $roundThrowsRepository->method('findLatestForGameAndPlayerBeforeThrow')
             ->with(30, 1, 303)
             ->willReturn($previousWinnerThrow);
@@ -1394,8 +1388,6 @@ final class GameThrowServiceTest extends TestCase
         $roundThrowsRepository->method('findEntityLatestForGame')
             ->with(40)
             ->willReturn($lastThrow);
-        $roundThrowsRepository->expects(self::never())
-            ->method('findLatestForGameBeforeThrow');
         $roundThrowsRepository->method('findLatestForGameAndPlayerBeforeThrow')
             ->with(40, 1, 201)
             ->willReturn($previousPlayerThrow);

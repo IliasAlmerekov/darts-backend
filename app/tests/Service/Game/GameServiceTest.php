@@ -682,8 +682,6 @@ final class GameServiceTest extends TestCase
         $repository->method('findCurrentRoundStateSnapshot')
             ->with($gameId, $currentRoundNumber)
             ->willReturn($roundStateSnapshot);
-        $repository->expects(self::never())
-            ->method('findLatestThrowsForGamePlayers');
         $repository->expects(self::once())
             ->method('findRoundHistoryForGame')
             ->with($gameId)
