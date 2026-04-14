@@ -16,6 +16,7 @@ use App\Exception\Game\GameMustHaveValidPlayerCountException;
 use App\Exception\Game\GameStartNotAllowedException;
 use App\Exception\Game\PlayerPositionsCountMismatchException;
 use App\Enum\GameStatus;
+use App\Repository\RoundRepositoryInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
@@ -33,9 +34,14 @@ final readonly class GameStartService implements GameStartServiceInterface
      * @param GameSetupService           $gameSetupService
      * @param EntityManagerInterface     $entityManager
      * @param GameAccessServiceInterface $gameAccessService
+     * @param RoundRepositoryInterface   $roundRepository
      */
-    public function __construct(private GameSetupService $gameSetupService, private EntityManagerInterface $entityManager, private GameAccessServiceInterface $gameAccessService)
-    {
+    public function __construct(
+        private GameSetupService $gameSetupService,
+        private EntityManagerInterface $entityManager,
+        private GameAccessServiceInterface $gameAccessService,
+        private RoundRepositoryInterface $roundRepository
+    ) {
     }
 
     /**
@@ -67,7 +73,7 @@ final readonly class GameStartService implements GameStartServiceInterface
         }
 
         // Initialize the first round if none exists
-        if ($game->getRounds()->isEmpty()) {
+        if (!$this->hasExistingRounds($game)) {
             $round = new Round();
             $round->setRoundNumber(1);
             $round->setStartedAt(new DateTime());
@@ -77,6 +83,21 @@ final readonly class GameStartService implements GameStartServiceInterface
 
         $this->gameSetupService->applyInitialScoresAndPositions($game, $dto->playerPositions);
         $this->entityManager->flush();
+    }
+
+    /**
+     * @param Game $game
+     *
+     * @return bool
+     */
+    private function hasExistingRounds(Game $game): bool
+    {
+        $gameId = $game->getGameId();
+        if (null === $gameId) {
+            return false === $game->getRounds()->isEmpty();
+        }
+
+        return $this->roundRepository->existsForGame($gameId);
     }
 
     /**

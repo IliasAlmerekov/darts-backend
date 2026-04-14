@@ -16,6 +16,7 @@ use App\Dto\PlayerResponseDto;
 use App\Dto\ThrowResponseDto;
 use App\Entity\Game;
 use App\Enum\GameStatus;
+use App\EventSubscriber\ApiViewSubscriber;
 use App\Exception\Game\GameIdMissingException;
 use App\Exception\Game\GameMustHaveValidPlayerCountException;
 use App\Exception\Game\NoSettingsProvidedException;
@@ -55,10 +56,21 @@ final class GameLifecycleControllerTest extends TestCase
         $dto = new StartGameRequest();
         $startService = $this->createMock(GameStartServiceInterface::class);
         $startService->expects($this->once())->method('start')->with($game, $dto);
+        $gameService = $this->createMock(GameServiceInterface::class);
+        $gameService->expects($this->once())
+            ->method('buildStateVersion')
+            ->with($game)
+            ->willReturn('state-v1');
+        $request = new Request();
 
-        $response = $this->controller->start($game, $startService, $dto);
+        $response = $this->controller->start($game, $startService, $gameService, $request, $dto);
 
         $this->assertSame($game, $response);
+        $this->assertSame([
+            'ETag' => '"state-v1"',
+            'Cache-Control' => 'private, no-cache',
+            'X-Game-State-Version' => 'state-v1',
+        ], $request->attributes->get(ApiViewSubscriber::RESPONSE_HEADERS_REQUEST_ATTRIBUTE));
     }
 
     public function testStartReturnsBadRequestOnError(): void
@@ -67,9 +79,11 @@ final class GameLifecycleControllerTest extends TestCase
         $dto = new StartGameRequest();
         $startService = $this->createMock(GameStartServiceInterface::class);
         $startService->method('start')->willThrowException(new GameMustHaveValidPlayerCountException());
+        $gameService = $this->createMock(GameServiceInterface::class);
+        $request = new Request();
 
         $this->expectException(GameMustHaveValidPlayerCountException::class);
-        $this->controller->start($game, $startService, $dto);
+        $this->controller->start($game, $startService, $gameService, $request, $dto);
     }
 
     public function testCreateAndStartRematchReturnsStartedGame(): void

@@ -26,8 +26,12 @@ use Symfony\Component\Serializer\SerializerInterface;
  */
 final class ApiViewSubscriber implements EventSubscriberInterface
 {
+    public const string RESPONSE_HEADERS_REQUEST_ATTRIBUTE = '_api_response_headers';
+
     /**
      * @param SerializerInterface $serializer
+     *
+     * @psalm-suppress PossiblyUnusedMethod Reason: constructor is used by Symfony autowiring.
      */
     public function __construct(private readonly SerializerInterface $serializer)
     {
@@ -48,6 +52,8 @@ final class ApiViewSubscriber implements EventSubscriberInterface
      * @param ViewEvent $event
      *
      * @return void
+     *
+     * @psalm-suppress PossiblyUnusedMethod Reason: Symfony event dispatcher invokes this listener.
      */
     public function onKernelView(ViewEvent $event): void
     {
@@ -74,6 +80,8 @@ final class ApiViewSubscriber implements EventSubscriberInterface
                 $context['groups'] = $apiResponse->groups;
             }
         }
+
+        $headers = array_merge($headers, $this->resolveRequestScopedHeaders($request));
 
         if (is_array($data) && isset($data['status']) && is_int($data['status'])) {
             $status = $data['status'];
@@ -123,6 +131,18 @@ final class ApiViewSubscriber implements EventSubscriberInterface
         }
 
         return $attributes[0]->newInstance();
+    }
+
+    /**
+     * @param Request $request
+     *
+     * @return array<string, string>
+     */
+    private function resolveRequestScopedHeaders(Request $request): array
+    {
+        $headers = $request->attributes->get(self::RESPONSE_HEADERS_REQUEST_ATTRIBUTE);
+
+        return is_array($headers) ? $headers : [];
     }
 
     /**
