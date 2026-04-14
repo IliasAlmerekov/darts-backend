@@ -43,6 +43,19 @@ final class RoundRepositoryTest extends KernelTestCase
         self::assertSame(2, $count);
     }
 
+    public function testExistsForGame(): void
+    {
+        $game = $this->createGame();
+        $this->entityManager->flush();
+
+        self::assertFalse($this->repository->existsForGame($game->getGameId()));
+
+        $this->createRound($game, roundNumber: 1, finished: false);
+        $this->entityManager->flush();
+
+        self::assertTrue($this->repository->existsForGame($game->getGameId()));
+    }
+
     private function createGame(): Game
     {
         $game = (new Game())

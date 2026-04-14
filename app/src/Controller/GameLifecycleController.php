@@ -18,6 +18,7 @@ use App\Dto\StartGameRequest;
 use App\Entity\Game;
 use App\Exception\ApiExceptionInterface;
 use App\Exception\Game\GameIdMissingException;
+use App\EventSubscriber\ApiViewSubscriber;
 use App\Http\Attribute\ApiResponse;
 use App\Service\Game\GameAbortServiceInterface;
 use App\Service\Game\GameFinishServiceInterface;
@@ -50,6 +51,8 @@ final class GameLifecycleController extends AbstractController
      *
      * @param Game                      $game
      * @param GameStartServiceInterface $gameStartService
+     * @param GameServiceInterface      $gameService
+     * @param Request                   $request
      * @param StartGameRequest          $dto
      *
      * @return Game
@@ -65,9 +68,13 @@ final class GameLifecycleController extends AbstractController
     )]
     #[ApiResponse(groups: ['game:read'])]
     #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'], format: 'json')]
-    public function start(#[AttributeMapEntity(id: 'gameId')] Game $game, GameStartServiceInterface $gameStartService, #[MapRequestPayload] StartGameRequest $dto): Game
+    public function start(#[AttributeMapEntity(id: 'gameId')] Game $game, GameStartServiceInterface $gameStartService, GameServiceInterface $gameService, Request $request, #[MapRequestPayload] StartGameRequest $dto): Game
     {
         $gameStartService->start($game, $dto);
+        $request->attributes->set(
+            ApiViewSubscriber::RESPONSE_HEADERS_REQUEST_ATTRIBUTE,
+            $this->createStateVersionHeaders($gameService->buildStateVersion($game)),
+        );
 
         return $game;
     }
@@ -292,20 +299,15 @@ final class GameLifecycleController extends AbstractController
     {
         $gameAccessService->assertPlayerInGameOrAdmin($game);
         $stateVersion = $gameService->buildStateVersion($game);
+        $headers = $this->createStateVersionHeaders($stateVersion);
         $isNotModified = $this->isMatchingVersion($request->headers->get('If-None-Match'), $stateVersion) || $since === $stateVersion;
         if ($isNotModified) {
-            return new Response('', Response::HTTP_NOT_MODIFIED, [
-                'ETag' => '"'.$stateVersion.'"',
-                'Cache-Control' => 'private, no-cache',
-                'X-Game-State-Version' => $stateVersion,
-            ]);
+            return new Response('', Response::HTTP_NOT_MODIFIED, $headers);
         }
 
         $gameDto = $gameService->createGameDto($game);
         $response = $this->json($gameDto);
-        $response->headers->set('ETag', '"'.$stateVersion.'"');
-        $response->headers->set('Cache-Control', 'private, no-cache');
-        $response->headers->set('X-Game-State-Version', $stateVersion);
+        $response->headers->add($headers);
 
         return $response;
     }
@@ -354,6 +356,20 @@ final class GameLifecycleController extends AbstractController
             tripleOut: $game->isTripleOut(),
             status: $game->getStatus()->value,
         );
+    }
+
+    /**
+     * @param string $stateVersion
+     *
+     * @return array<string, string>
+     */
+    private function createStateVersionHeaders(string $stateVersion): array
+    {
+        return [
+            'ETag' => '"'.$stateVersion.'"',
+            'Cache-Control' => 'private, no-cache',
+            'X-Game-State-Version' => $stateVersion,
+        ];
     }
 
     /**

@@ -39,9 +39,26 @@ final class RoundRepository extends ServiceEntityRepository implements RoundRepo
             ->getSingleScalarResult();
     }
 
+    /**
+     * @param int $gameId
+     *
+     * @return bool
+     */
+    #[\Override]
+    public function existsForGame(int $gameId): bool
+    {
+        return null !== $this->createQueryBuilder('r')
+            ->select('r.roundId')
+            ->andWhere('r.game = :gameId')
+            ->setParameter('gameId', $gameId)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
     //    /**
-    //     * @return Round[] Returns an array of Round objects
-    //     */
+     //     * @return Round[] Returns an array of Round objects
+     //     */
     //    public function findByExampleField($value): array
     //    {
     //        return $this->createQueryBuilder('r')
