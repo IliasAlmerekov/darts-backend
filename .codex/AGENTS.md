@@ -14,7 +14,7 @@ Before non-trivial work, read:
 6. `.codex/context/domain-map.md`
 7. `.codex/context/decisions.md`
 8. `.codex/context/engineering-principles.md`
-9. relevant local `.codex/commands/*` and `.codex/skills/*`
+9. relevant local `.codex/skills/*`
 
 If instructions conflict, prefer repository `AGENTS.md`, then this file.
 

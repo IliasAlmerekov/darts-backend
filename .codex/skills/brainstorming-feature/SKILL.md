@@ -1,9 +1,9 @@
 ---
-name: brainstorming
+name: brainstorming-feature
 description: Use when shaping a feature, behavior change, API contract change, schema change, or non-trivial refactor in this Symfony backend before implementation.
 ---
 
-# Brainstorming
+# Brainstorming Feature
 
 Turn a backend request into an implementation-ready design for this repository.
 
@@ -113,7 +113,7 @@ If a request is too large for one spec, decompose it and brainstorm the first sl
 8. Self-review the design before handoff.
 9. Ask the user to approve the design or spec before implementation.
 10. Hand off to planning.
-   - If a local planning skill or command exists, use it.
+   - If the local `planning-feature` skill exists, use it.
    - Otherwise write a short execution plan to `docs/plans/YYYY-MM-DD-<topic>.md` or inline before coding.
 
 ## Reasoning Standard

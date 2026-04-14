@@ -4,8 +4,8 @@ This file is append-only. Keep entries short and technical.
 
 ## 2026-04-14
 
-- Created local `.codex` workflow with project-specific commands, skills, agents, and config
-- Added `brainstorming`, `writing-plans`, and `subagent-development` skills tailored to this Symfony backend
+- Created local `.codex` workflow with project-specific skills, agents, and config
+- Added `brainstorming-feature`, `planning-feature`, and `subagent-development` skills tailored to this Symfony backend
 - Added local agent roles: `lead_orchestrator`, `researcher`, `coder`, `reviewer`, `tester`, `security`, `architect`, `explorer`
 - Hardened brainstorming and planning to preserve task mode, invariants, root-cause reasoning, regression surface, and TDD expectations
 - Hardened execution pipeline with gate semantics, handoff contracts, and final-verdict ownership in `explorer`
@@ -17,3 +17,5 @@ This file is append-only. Keep entries short and technical.
 - Restored repository root `AGENTS.md`, updated context decisions and project map for `.claude`, removed the noisy Claude Stop hook, and documented `.codex` as the primary workflow source
 - Merged useful rules from `.github/CODE_QUALITY_GUIDE.md` into repository policies, fixed raw-command guidance in `app/AGENTS.md`, and removed the stale duplicate guide
 - Added `.codex/context/engineering-principles.md` as a project-specific decision framework for abstraction, pattern fit, and wrong-layer fixes, and wired it into Codex and Claude read order
+- Renamed local workflow entry skills to `brainstorming-feature` and `planning-feature` so the three-step flow is skill-only and matches the old command invocation names
+- Removed mirrored `.codex/commands` and `.claude/commands` files and rewired workflow docs to point directly at skills

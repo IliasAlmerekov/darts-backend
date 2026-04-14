@@ -5,7 +5,7 @@ Last updated: 2026-04-14
 ## Current State
 
 - The current session focused on building the local `.codex` workflow rather than changing Symfony application code
-- The project now has local commands for brainstorming, planning, and subagent execution
+- The project now has local skills for brainstorming, planning, and subagent execution
 - The biggest recent investment was in reasoning quality: root-cause bug thinking, invariants, architecture boundaries, regression surface, TDD, and gate-based execution
 
 ## Important Immediate Context
@@ -24,7 +24,7 @@ Last updated: 2026-04-14
 
 ## Likely Next Steps
 
-- Run one dry-run task through `brainstorming_feature -> planning_feature -> subagent-development`
+- Run one dry-run task through `brainstorming-feature -> planning-feature -> subagent-development`
 - Tighten any weak handoffs discovered during that dry run
 - Decide how to handle the historical `docs/superpowers/*` documents
 

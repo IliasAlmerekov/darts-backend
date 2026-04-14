@@ -28,8 +28,8 @@ or YAGNI mechanically.
 ## Local Workflow
 
 - Non-trivial work should use the local workflow:
-  - `brainstorming_feature`
-  - `planning_feature`
+  - `brainstorming-feature`
+  - `planning-feature`
   - `subagent-development`
 - `lead_orchestrator` owns execution routing and completion criteria.
 - Work in the current branch.

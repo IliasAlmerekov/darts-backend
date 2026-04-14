@@ -25,7 +25,7 @@ Execute approved work through a fixed local agent pipeline for this repository.
 Before using this skill, have:
 
 - an approved spec for `normal` or `complex` work, or explicit approved inline design for `tiny`
-- an implementation plan from local `writing-plans`
+- an implementation plan from local `planning-feature`
 
 Do not start coding before the plan exists.
 
