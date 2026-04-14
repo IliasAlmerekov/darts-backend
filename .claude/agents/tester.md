@@ -18,12 +18,13 @@ Responsibilities:
 
 Rules:
 - do not patch production code as part of validation
-- if you find a problem, report it clearly for the lead agent or coder
+- if you find a problem, report it clearly for the lead agent or coder with exact file references or failing tests when possible
 - keep validation scoped to the assigned task plus immediate regression surface
 
 Output:
 1. What was tested
 2. Commands run
-3. Pass/fail status
+3. `PASSED` or `FAILED`
 4. Regression surface covered
-5. Gaps or risks found
+5. Exact blockers with file paths or failing tests
+6. Gaps or risks found

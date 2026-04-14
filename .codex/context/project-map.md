@@ -70,12 +70,14 @@ Last updated: 2026-04-14
 - Lead agent: `lead_orchestrator`
 - Default execution pipeline:
   - `researcher`
-  - `coder`
+  - `architect`
+  - `coder` A when safe
+  - `coder` B when safe
   - `reviewer`
   - `tester`
   - `security`
-  - `architect`
   - `explorer`
+  - `lead_orchestrator` completion decision
 
 ## Structural Notes
 

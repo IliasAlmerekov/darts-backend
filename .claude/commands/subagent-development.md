@@ -17,16 +17,24 @@ Use the local repository workflow for plan execution.
 2. Use the local `.claude/skills/subagent-development` skill.
 3. Default execution pipeline:
    - `researcher`
-   - `coder`
+   - `architect`
+   - `coder` A when safe
+   - `coder` B when safe
    - `reviewer`
    - `tester`
    - `security`
-   - `architect`
    - `explorer`
+   - `lead_orchestrator` completion decision
 4. `researcher` is context-only and must not propose changes.
-5. `coder` follows TDD.
-6. `explorer` owns the final local CI-equivalent verdict.
-7. Execution must preserve approved invariants, architecture boundaries, regression surface, and root-cause expectations for bug work.
+5. `lead_orchestrator` is the only agent allowed to spawn or coordinate other agents in this workflow.
+6. `architect` runs before implementation for non-tiny work and must approve whether dual-coder execution is safe.
+7. Both `coder` agents are leaf subagents: they follow TDD, own explicit non-overlapping file scopes, and must not spawn subagents.
+8. If ownership overlaps or shared files are unavoidable, `lead_orchestrator` must refuse the dual-coder split and use one coder or serialized slices.
+9. `reviewer` and `tester` run against the integrated coder output and both must return explicit `PASSED` before the workflow can advance.
+10. If `reviewer` or `tester` fails, route the work back to the coders with exact blocker details and file references, with a maximum of 2 retry loops before human checkpoint escalation.
+11. `explorer` is the integration verifier, not the final workflow owner.
+12. `lead_orchestrator` makes the final completion decision.
+13. Execution must preserve approved invariants, architecture boundaries, regression surface, and root-cause expectations for bug work.
 
 ## Dispatch Checklist
 

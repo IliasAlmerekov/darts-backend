@@ -35,6 +35,32 @@ or YAGNI mechanically.
 - Work in the current branch.
 - Do not require, suggest, or create `git worktree`.
 
+## Non-Trivial Execution Flow
+
+Default gate order for `subagent-development`:
+
+1. `researcher`
+2. `architect`
+3. `coder` A when safe
+4. `coder` B when safe
+5. `reviewer`
+6. `tester`
+7. `security`
+8. `explorer`
+9. `lead_orchestrator` final completion decision
+
+Execution guardrails:
+
+- `architect` runs before implementation for `normal` and `complex` work
+- `lead_orchestrator` must declare ownership before any coder starts
+- use two coders only when ownership is explicitly non-overlapping and `architect` marks the split safe
+- if shared files, shared types, or cross-layer joins make the split unsafe, use one coder or serialized slices
+- `coder` is a leaf subagent and must not spawn nested subagents
+- `reviewer` and `tester` must return explicit `PASSED` or concrete blockers with file references
+- reviewer/tester to coder retry loops are capped at 2 for the same slice; then escalate through `lead_orchestrator`
+- `explorer` is the integration verifier, not the workflow owner
+- only `lead_orchestrator` may close the task
+
 ## Execution Policy
 
 - All shell commands must go through `rtk`.
@@ -154,6 +180,12 @@ In the final handoff, report:
 - exact Docker commands run
 - pass or fail status for each command
 - remaining risks or follow-up work
+
+For non-trivial workflow-driven tasks, also report:
+
+- whether `architect` approved the ownership split or forced serialization
+- whether `explorer` returned `Ready for Lead Review` or `Blocked`
+- whether `lead_orchestrator` closed the task or escalated it
 
 ## Forbidden Shortcuts
 

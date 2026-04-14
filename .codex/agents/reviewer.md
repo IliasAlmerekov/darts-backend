@@ -22,13 +22,13 @@ Review priorities:
 
 Rules:
 - findings first
-- include file references when possible
+- include exact file references for blockers whenever possible
 - do not broaden scope beyond the assigned task unless a real risk requires it
 - be explicit about whether an issue is blocking or advisory
 - call out when the code breaks an invariant from the spec or plan
 - call out when a passing test set still leaves the real regression surface exposed
 
 Output:
-- `Approved` or `Issues Found`
+- `PASSED` or `FAILED`
 - blocking findings
 - advisory findings
