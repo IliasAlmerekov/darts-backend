@@ -645,9 +645,7 @@ final class GameServiceTest extends TestCase
      */
     private function stubBatchedThrowQueries(MockObject $repository, int $gameId, int $currentRoundNumber, array $throws): void
     {
-        $currentRoundRows = [];
         $historyRows = [];
-        $latestByPlayer = [];
         $roundStateSnapshot = [];
 
         foreach ($throws as $throw) {
@@ -668,10 +666,8 @@ final class GameServiceTest extends TestCase
             ];
 
             $historyRows[] = $row;
-            $latestByPlayer[$playerId] = $row;
 
             if ($roundNumber === $currentRoundNumber) {
-                $currentRoundRows[] = $row;
                 $roundStateSnapshot[$playerId] = [
                     'throwsCount' => ($roundStateSnapshot[$playerId]['throwsCount'] ?? 0) + 1,
                     'lastThrowNumber' => $row['throwNumber'],
@@ -681,16 +677,13 @@ final class GameServiceTest extends TestCase
             }
         }
 
-        $repository->method('findCurrentRoundThrowsForGamePlayers')
-            ->with($gameId, $currentRoundNumber)
-            ->willReturn($currentRoundRows);
+        $repository->expects(self::never())
+            ->method('findCurrentRoundThrowsForGamePlayers');
         $repository->method('findCurrentRoundStateSnapshot')
             ->with($gameId, $currentRoundNumber)
             ->willReturn($roundStateSnapshot);
-        $repository->method('findLatestThrowsForGamePlayers')
-            ->with($gameId)
-            ->willReturn(array_values($latestByPlayer));
-        $repository->method('findRoundHistoryForGame')
+        $repository->expects(self::once())
+            ->method('findRoundHistoryForGame')
             ->with($gameId)
             ->willReturn($historyRows);
     }

@@ -210,16 +210,16 @@ final readonly class GameService implements GameServiceInterface
         $historyByPlayerAndRound = [];
         $latestByPlayer = [];
 
-        foreach ($this->roundThrowsRepository->findCurrentRoundThrowsForGamePlayers($gameId, $currentRoundNumber) as $throwRow) {
-            $currentRoundByPlayer[$throwRow['playerId']][] = $throwRow;
-        }
-
-        foreach ($this->roundThrowsRepository->findLatestThrowsForGamePlayers($gameId) as $throwRow) {
-            $latestByPlayer[$throwRow['playerId']] = $throwRow;
-        }
-
         foreach ($this->roundThrowsRepository->findRoundHistoryForGame($gameId) as $throwRow) {
-            $historyByPlayerAndRound[$throwRow['playerId']][$throwRow['roundNumber']][] = $throwRow;
+            $playerId = $throwRow['playerId'];
+            $roundNumber = $throwRow['roundNumber'];
+
+            $historyByPlayerAndRound[$playerId][$roundNumber][] = $throwRow;
+            $latestByPlayer[$playerId] = $throwRow;
+
+            if ($roundNumber === $currentRoundNumber) {
+                $currentRoundByPlayer[$playerId][] = $throwRow;
+            }
         }
 
         return [

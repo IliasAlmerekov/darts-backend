@@ -217,45 +217,6 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
         ], $snapshot);
     }
 
-    public function testFindLatestThrowsForGamePlayersReturnsOneRowPerPlayer(): void
-    {
-        $game = $this->createGame(GameStatus::Started);
-        $round1 = $this->createRound($game, 1, finished: true);
-        $round2 = $this->createRound($game, 2);
-
-        $playerA = $this->createUser('latest-a');
-        $playerB = $this->createUser('latest-b');
-
-        $this->createThrow($game, $round1, $playerA, 1, 10, 10);
-        $this->createThrow($game, $round2, $playerA, 1, 20, 30, isBust: true);
-        $this->createThrow($game, $round1, $playerB, 1, 15, 15);
-        $this->createThrow($game, $round2, $playerB, 2, 25, 40);
-        $this->em->flush();
-
-        $rows = $this->repo->findLatestThrowsForGamePlayers($game->getGameId());
-
-        self::assertSame([
-            [
-                'playerId' => $playerA->getId(),
-                'roundNumber' => 2,
-                'throwNumber' => 1,
-                'value' => 20,
-                'isDouble' => false,
-                'isTriple' => false,
-                'isBust' => true,
-            ],
-            [
-                'playerId' => $playerB->getId(),
-                'roundNumber' => 2,
-                'throwNumber' => 2,
-                'value' => 25,
-                'isDouble' => false,
-                'isTriple' => false,
-                'isBust' => false,
-            ],
-        ], $rows);
-    }
-
     public function testFindRoundHistoryForGameReturnsAllThrowsInGroupingOrder(): void
     {
         $game = $this->createGame(GameStatus::Started);

@@ -10,13 +10,15 @@ Rules:
 - follow `AGENTS.md` and `app/AGENTS.md`
 - work in the current branch
 - do not use or require `git worktree`
+- you are already a subagent in this workflow; do not spawn, delegate to, or request additional subagents
 - use TDD: tests first when practical
 - keep scope limited to the assigned task
+- respect explicit ownership boundaries when paired with another coder
 - do not change unrelated files
 - preserve approved invariants and architecture boundaries
 - do not silently widen design scope during implementation
 - for bug work, remove the root cause rather than patching only the symptom
-- if the plan is insufficient or contradicted by the code, stop and report the gap
+- if the plan is insufficient or contradicted by the code, stop and report the gap to `lead_orchestrator`
 
 You are responsible for:
 - implementing the approved task
@@ -30,5 +32,6 @@ When done, return:
 2. Behavior implemented
 3. Tests added or updated
 4. Focused commands run
-5. Assumptions or plan deviations
-6. Open concerns
+5. Ownership respected
+6. Assumptions or plan deviations
+7. Open concerns or blockers for `lead_orchestrator`

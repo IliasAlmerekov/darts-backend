@@ -4,13 +4,26 @@ Last updated: 2026-04-14
 
 ## Current State
 
-- The current session focused on building the local `.codex` workflow rather than changing Symfony application code
-- The project now has local skills for brainstorming, planning, and subagent execution
-- The biggest recent investment was in reasoning quality: root-cause bug thinking, invariants, architecture boundaries, regression surface, TDD, and gate-based execution
+- The local `.codex` workflow is now active and has been exercised on a real Symfony code change
+- The `subagent-development` execution skill now treats `coder` as a leaf subagent and allows dual-coder implementation only after architect approves a truly disjoint ownership split
+- `lead_orchestrator` now has a canonical ownership-packet template for coder dispatch so handoffs stay structurally uniform across sessions
+- The ownership-packet section now also includes a concrete filled example so future sessions can copy structure and granularity directly
+- The most recent application change optimized the deprecated full undo endpoint path without changing its HTTP contract
+- The project now has local skills for brainstorming, planning, and subagent execution, plus one completed end-to-end dry run through the full gate pipeline
 
 ## Important Immediate Context
 
-- No application code was changed in the latest workflow-hardening session
+- Deprecated `DELETE /api/game/{id}/throw` now does less redundant backend work:
+  - removed the dead undo repository lookup in `GameThrowService`
+  - collapsed full snapshot throw batching in `GameService` to one ordered `findRoundHistoryForGame()` pass
+- The endpoint contract, undo semantics, and `GameResponseDto` behavior were kept unchanged
+- Repository verification guidance is now aligned with the live local container runtime:
+  - use `sh -lc` for `rtk docker compose exec -T php ...`
+  - set `XDEBUG_MODE=coverage` for the coverage PHPUnit command
+- Post-commit Psalm fallout from the undo optimization has been fixed by removing dead `RoundThrowsRepositoryInterface` methods and their obsolete tests
+- The `explorer` gate now has an explicit gameplay-state regression batch requirement before it can report integration verification readiness for undo/full-state changes
+- Architect now runs before implementation for non-tiny work, reviewer and tester act as a joint pass/fail gate before `security`, and the final completion decision belongs to `lead_orchestrator`
+- Reviewer/tester-to-coder retries are now capped and should escalate to a human checkpoint after the retry limit
 - Historical artifacts still exist under `docs/superpowers/specs` and `docs/superpowers/plans`
 - Those historical artifacts may still contain stale references, including older stack wording such as Symfony `7.4`
 - The local workflow under `.codex` should be treated as the active project workflow
@@ -24,8 +37,10 @@ Last updated: 2026-04-14
 
 ## Likely Next Steps
 
-- Run one dry-run task through `brainstorming-feature -> planning-feature -> subagent-development`
-- Tighten any weak handoffs discovered during that dry run
+- If follow-up hardening is requested, add a permanent `GameServiceTest` case that explicitly locks the repository-order dependency behind mixed-player/interleaved history rows
+- Decide whether to commit the deprecated undo optimization, verification policy fix, and related spec/plan artifacts
+- Decide whether to commit the follow-up Psalm cleanup that removed dead repository contract methods after the undo optimization
+- Decide whether to commit the explorer hardening that makes the targeted undo/full-state regression batch mandatory before explorer outputs a verdict
 - Decide how to handle the historical `docs/superpowers/*` documents
 
 ## Session Reminder

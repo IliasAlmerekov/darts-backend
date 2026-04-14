@@ -52,3 +52,27 @@ Last updated: 2026-04-14
 - Status: active
 - Why: avoid silent drift between Codex-side and Claude-side workflow behavior
 - Guardrail: update `.codex` first, then mirror relevant changes into `.claude`
+
+### D-010: In `subagent-development`, only `lead_orchestrator` may delegate
+
+- Status: active
+- Why: execution agents such as `coder` are already subagents and must remain leaf gates instead of spawning nested agent trees
+- Guardrail: route blockers back to `lead_orchestrator` rather than delegating further
+
+### D-011: Non-tiny implementation may use two coders only after architect approves a disjoint ownership split
+
+- Status: active
+- Why: parallel implementation is allowed only when ownership is non-overlapping, architect confirms the split is structurally safe, and the lead agent keeps the shared invariants coherent
+- Guardrail: if ownership would overlap, serialize or rebalance instead of letting coders edit the same file concurrently
+
+### D-012: `explorer` is the integration verifier, while `lead_orchestrator` owns workflow closure
+
+- Status: active
+- Why: integration verification evidence and final workflow judgment are different responsibilities
+- Guardrail: `explorer` reports verification readiness or blockers; only `lead_orchestrator` may close the task
+
+### D-013: Reviewer/tester-to-coder retries are capped
+
+- Status: active
+- Why: avoid unbounded loops on stylistic or ambiguous disagreements
+- Guardrail: after 2 failed retry loops on the same slice, escalate to a human checkpoint through `lead_orchestrator`

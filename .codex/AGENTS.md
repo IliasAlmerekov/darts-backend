@@ -58,12 +58,13 @@ Default closed loop:
 
 1. `lead_orchestrator`
 2. `researcher`
-3. `coder`
-4. `reviewer`
-5. `tester`
-6. `security`
-7. `architect`
+3. `architect`
+4. `coder`
+5. `reviewer`
+6. `tester`
+7. `security`
 8. `explorer`
+9. `lead_orchestrator` completion decision
 
 `lead_orchestrator` owns routing, scope control, and completion criteria.
 
@@ -109,7 +110,9 @@ return to planning rather than improvising a larger design change.
 - No coding before a plan exists
 - TDD is mandatory for `coder`
 - `researcher` is context-only and must not propose solutions
-- `explorer` owns the final local CI-equivalent verdict
+- `architect` should pressure-test ownership splits before non-trivial implementation starts
+- `explorer` owns final CI-equivalent verification evidence, not workflow closure
+- `lead_orchestrator` owns the final completion decision
 
 ## Task Packet Contract
 
@@ -132,12 +135,13 @@ Do not hand off only a filename list without the behavioral context.
 Each agent is a quality gate with a different burden of proof:
 
 - `researcher`: current behavior, boundaries, impact surface, and unknowns are concrete
+- `architect`: ownership split and structural fit are validated before coding starts
 - `coder`: implementation plus tests and focused verification evidence
 - `reviewer`: correctness, plan alignment, and no unresolved wrong-layer or regression blockers
 - `tester`: changed behavior and immediate regression surface validated
 - `security`: no unresolved security blockers in changed surface
-- `architect`: no unresolved structural, contract, migration, or abstraction blockers
 - `explorer`: required Docker verification run and reported with exact pass/fail status
+- `lead_orchestrator`: final completion decision made from the full evidence set
 
 Do not bypass a failing gate to keep momentum.
 
@@ -162,7 +166,8 @@ Before closing work, `lead_orchestrator` should be able to summarize:
 - what each gate proved
 - what commands were run
 - what was skipped, if anything, and why
-- whether `explorer` returned `Ready` or `Blocked`
+- whether `explorer` returned `Ready for Lead Review` or `Blocked`
+- whether `lead_orchestrator` closed the task or escalated it
 
 ## Context Maintenance
 
@@ -182,5 +187,6 @@ A task is not done until:
 - reviewer issues are resolved
 - tester validation is complete
 - security found no unresolved blockers
-- architect found no unresolved structural blockers
+- architect validated the ownership split and structural fit before coding, or forced a serialized path
 - explorer ran required verification or reported exact blockers
+- lead_orchestrator closed the task explicitly
