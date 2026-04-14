@@ -11,16 +11,18 @@
 - `migrations/` maps to Doctrine migrations.
 - `assets/` maps to AssetMapper and Stimulus assets.
 
-## Relative Verification Commands
-- If your current working directory is `app/`, run the same CI-equivalent checks with relative paths:
-  - `mkdir -p build`
-  - `php -d memory_limit=-1 vendor/bin/phpcs`
-  - `php vendor/bin/psalm --show-info=false --report=build/psalm-quality-report.json`
-  - `php bin/console lint:yaml -v --ansi --env=test config`
-  - `php -d memory_limit=-1 bin/console cache:clear --env=test`
-  - `php -d memory_limit=-1 bin/console doctrine:database:create --env=test --if-not-exists`
-  - `php -d memory_limit=-1 bin/console doctrine:migrations:migrate --env=test --no-interaction`
-  - `php -d memory_limit=-1 vendor/bin/phpunit --coverage-text --exclude-group ignore --coverage-clover build/phpunit.coverage.xml --coverage-cobertura build/phpunit.coverage.cobertura.xml --log-junit build/phpunit.xml`
+## App-Specific Conventions
+- In `src/`, preserve the proprietary file header when surrounding files use it, then place `declare(strict_types=1);` immediately after the header.
+- Use `#[\Override]` on overriding methods where neighboring code already follows that convention.
+- Prefer `#[MapRequestPayload]` and `#[MapQueryParameter]` for controller input binding instead of hand-rolled request parsing.
+- Keep controller logic thin and move business behavior into services.
+- Treat `FormErrorIterator` as directly iterable; avoid unnecessary `getIterator()` calls.
+- When reading optional methods from `UserInterface`, guard them with `method_exists(...)` unless the code already depends on the concrete `App\Entity\User`.
+- Build frontend URLs from configuration such as `FRONTEND_URL`; do not hard-code hosts.
+- Preserve local comparison style, including Yoda conditions where the neighboring code uses them.
 
 ## Docker Reminder
-- Prefer running those commands through the root `docker compose` `php` service so the environment matches CI as closely as possible.
+- Even if your current working directory is `app/`, verification still follows the root repository policy:
+  - run commands from the repository root
+  - use `rtk docker compose ...`
+  - do not run host-local `php`, `composer`, `phpcs`, `psalm`, or `phpunit` directly

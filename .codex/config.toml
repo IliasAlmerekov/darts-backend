@@ -1,0 +1,66 @@
+#:schema https://developers.openai.com/codex/config-schema.json
+
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+web_search = "cached"
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+model_instructions_file = "/home/ilias.almerekov/Projects/Backend/backend/.codex/AGENTS.md"
+
+[features]
+multi_agent = true
+
+[profiles.default]
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+temperature = 0.1
+
+[profiles.research]
+model = "gpt-5.3-codex-spark"
+model_reasoning_effort = "medium"
+temperature = 0.0
+web_search = "cached"
+
+[profiles.review]
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+temperature = 0.0
+
+[projects."/home/ilias.almerekov/Projects/Backend/backend"]
+trust_level = "trusted"
+
+[agents]
+max_threads = 8
+max_depth = 2
+
+[agents.lead_orchestrator]
+description = "Primary owner for non-trivial tickets. Shapes scope, chooses the workflow, delegates to specialized agents, and does not close work until all gates pass."
+config_file = "agents/lead_orchestrator.toml"
+
+[agents.researcher]
+description = "Context-only researcher. Maps code, dependencies, impact surface, and touched files without proposing changes."
+config_file = "agents/researcher.toml"
+
+[agents.coder]
+description = "Implements scoped tasks with TDD in the current branch and returns focused changes plus verification evidence."
+config_file = "agents/coder.toml"
+
+[agents.reviewer]
+description = "Reviews coder output for correctness, regressions, plan alignment, and code quality."
+config_file = "agents/reviewer.toml"
+
+[agents.tester]
+description = "Validates changed behavior with targeted tests and scenario checks without expanding implementation scope."
+config_file = "agents/tester.toml"
+
+[agents.security]
+description = "Checks completed work for security regressions, secret exposure, authorization gaps, unsafe input handling, and risky omissions."
+config_file = "agents/security.toml"
+
+[agents.architect]
+description = "Verifies architectural fit with controller/service/repository boundaries, DTO discipline, contract stability, and migration rules."
+config_file = "agents/architect.toml"
+
+[agents.explorer]
+description = "Final integration verifier. Runs local CI-equivalent checks and owns the ready-or-blocked verdict."
+config_file = "agents/explorer.toml"
