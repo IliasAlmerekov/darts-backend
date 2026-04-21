@@ -11,9 +11,11 @@ use App\Entity\Round;
 use App\Entity\RoundThrows;
 use App\Entity\User;
 use App\Enum\GameStatus;
+use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\GamePlayerNotActiveException;
 use App\Exception\Game\GameThrowNotAllowedException;
 use App\Exception\Game\InvalidThrowException;
+use App\Repository\GameRepositoryInterface;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
@@ -34,6 +36,186 @@ use ReflectionProperty;
 #[AllowMockObjectsWithoutExpectations]
 final class GameThrowServiceTest extends TestCase
 {
+    /**
+     * @throws ReflectionException
+     */
+    public function testRecordThrowByGameIdLoadsGameWithinTransactionAndPersistsThrow(): void
+    {
+        $game = new Game();
+        $this->setPrivateProperty($game, 'gameId', 10);
+        $game->setStartScore(50);
+        $game->setRound(1);
+        $game->setStatus(GameStatus::Started);
+
+        $round = new Round();
+        $round->setRoundNumber(1);
+        $round->setGame($game);
+
+        $user1 = (new User())->setUsername('Player 1');
+        $this->setPrivateProperty($user1, 'id', 1);
+        $player1 = (new GamePlayers())
+            ->setPlayer($user1)
+            ->setScore(50)
+            ->setPosition(1);
+        $game->addGamePlayer($player1);
+
+        $dto = new ThrowRequest();
+        $dto->playerId = 1;
+        $dto->value = 20;
+        $dto->isDouble = false;
+        $dto->isTriple = false;
+
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $gamePlayersRepository->method('findOneBy')
+            ->with(['game' => 10, 'player' => 1])
+            ->willReturn($player1);
+
+        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
+        $roundRepository->method('findOneBy')
+            ->with(['game' => $game, 'roundNumber' => 1])
+            ->willReturn($round);
+
+        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository->method('findCurrentRoundStateSnapshot')
+            ->with(10, 1)
+            ->willReturn([]);
+
+        $gameRepository = $this->createMock(GameRepositoryInterface::class);
+        $isInsideTransaction = false;
+        $gameRepository->expects(self::once())
+            ->method('findOneByGameIdForUpdate')
+            ->with(10)
+            ->willReturnCallback(function (int $lookupGameId) use (&$isInsideTransaction, $game): Game {
+                self::assertTrue($isInsideTransaction, 'Expected game lookup to happen inside transaction callback.');
+                self::assertSame(10, $lookupGameId);
+
+                return $game;
+            });
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')
+            ->willReturnCallback(function (\Closure $fn) use (&$isInsideTransaction): mixed {
+                $isInsideTransaction = true;
+                try {
+                    return $fn();
+                } finally {
+                    $isInsideTransaction = false;
+                }
+            });
+        $entityManager->expects(self::once())->method('persist');
+        $entityManager->expects(self::once())->method('flush');
+
+        $service = new GameThrowService(
+            $gamePlayersRepository,
+            $roundRepository,
+            $roundThrowsRepository,
+            $entityManager,
+            $this->createAccessService(),
+            $gameRepository,
+        );
+
+        $service->recordThrowByGameId(10, $dto);
+
+        self::assertSame(30, $player1->getScore());
+    }
+
+    public function testRecordThrowByGameIdThrowsWhenGameDoesNotExist(): void
+    {
+        $dto = new ThrowRequest();
+        $dto->playerId = 1;
+        $dto->value = 20;
+
+        $gameRepository = $this->createMock(GameRepositoryInterface::class);
+        $gameRepository->expects(self::once())
+            ->method('findOneByGameIdForUpdate')
+            ->with(999)
+            ->willReturn(null);
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')
+            ->willReturnCallback(static fn (\Closure $fn) => $fn());
+
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
+        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+
+        $service = new GameThrowService(
+            $gamePlayersRepository,
+            $roundRepository,
+            $roundThrowsRepository,
+            $entityManager,
+            $this->createAccessService(),
+            $gameRepository,
+        );
+
+        $this->expectException(GameNotFoundException::class);
+        $service->recordThrowByGameId(999, $dto);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    public function testRecordThrowByGameIdKeepsAuthorizationSemantics(): void
+    {
+        $game = new Game();
+        $this->setPrivateProperty($game, 'gameId', 10);
+        $game->setStartScore(50);
+        $game->setRound(1);
+        $game->setStatus(GameStatus::Started);
+
+        $round = new Round();
+        $round->setRoundNumber(1);
+        $round->setGame($game);
+
+        $user1 = (new User())->setUsername('Player 1');
+        $this->setPrivateProperty($user1, 'id', 1);
+        $player1 = (new GamePlayers())
+            ->setPlayer($user1)
+            ->setScore(50)
+            ->setPosition(1);
+        $game->addGamePlayer($player1);
+
+        $dto = new ThrowRequest();
+        $dto->playerId = 1;
+        $dto->value = 20;
+
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $gamePlayersRepository->expects(self::never())->method('findOneBy');
+
+        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
+        $roundRepository->expects(self::never())->method('findOneBy');
+
+        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+
+        $gameRepository = $this->createMock(GameRepositoryInterface::class);
+        $gameRepository->expects(self::once())
+            ->method('findOneByGameIdForUpdate')
+            ->with(10)
+            ->willReturn($game);
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')
+            ->willReturnCallback(static fn (\Closure $fn) => $fn());
+
+        $accessService = $this->createMock(GameAccessServiceInterface::class);
+        $accessService->expects(self::once())
+            ->method('assertPlayerInGameOrAdmin')
+            ->with($game)
+            ->willThrowException(new GamePlayerNotActiveException(1, 2));
+
+        $service = new GameThrowService(
+            $gamePlayersRepository,
+            $roundRepository,
+            $roundThrowsRepository,
+            $entityManager,
+            $accessService,
+            $gameRepository,
+        );
+
+        $this->expectException(GamePlayerNotActiveException::class);
+        $service->recordThrowByGameId(10, $dto);
+    }
+
     /**
      * @throws ReflectionException
      */
@@ -104,7 +286,8 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService()
+            $this->createAccessService(),
+            $this->createMock(GameRepositoryInterface::class),
         );
 
         $service->recordThrow($game, $dto);
@@ -115,6 +298,185 @@ final class GameThrowServiceTest extends TestCase
         self::assertSame(30, $persistedThrow->getScore());
         self::assertFalse($persistedThrow->isBust());
         self::assertSame(1, $persistedThrow->getThrowNumber());
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    public function testRecordThrowUsesDisplayNameSnapshotForLatestThrowPayload(): void
+    {
+        $game = new Game();
+        $this->setPrivateProperty($game, 'gameId', 13);
+        $game->setStartScore(301);
+        $game->setRound(1);
+        $game->setStatus(GameStatus::Started);
+
+        $round = new Round();
+        $round->setRoundNumber(1);
+        $round->setGame($game);
+
+        $user = $this->createMock(User::class);
+        $user->method('getId')
+            ->willReturn(7);
+        $user->expects(self::never())
+            ->method('getDisplayNameRaw');
+        $user->expects(self::never())
+            ->method('getUsername');
+
+        $player = (new GamePlayers())
+            ->setDisplayNameSnapshot('Snapshot Name')
+            ->setScore(301)
+            ->setPosition(1)
+            ->setPlayer($user);
+        $game->addGamePlayer($player);
+
+        $dto = new ThrowRequest();
+        $dto->playerId = 7;
+        $dto->value = 20;
+        $dto->isDouble = false;
+        $dto->isTriple = false;
+
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $gamePlayersRepository->method('findOneBy')
+            ->with(['game' => 13, 'player' => 7])
+            ->willReturn($player);
+
+        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
+        $roundRepository->method('findOneBy')
+            ->with(['game' => $game, 'roundNumber' => 1])
+            ->willReturn($round);
+
+        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository->method('findCurrentRoundStateSnapshot')
+            ->with(13, 1)
+            ->willReturn([]);
+
+        $persistedThrow = null;
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')
+            ->willReturnCallback(static fn (\Closure $fn) => $fn());
+        $entityManager->expects(self::once())
+            ->method('persist')
+            ->with(self::callback(function (object $entity) use (&$persistedThrow): bool {
+                if ($entity instanceof RoundThrows) {
+                    $persistedThrow = $entity;
+                }
+
+                return true;
+            }));
+        $entityManager->expects(self::once())
+            ->method('flush')
+            ->willReturnCallback(function () use (&$persistedThrow): void {
+                self::assertInstanceOf(RoundThrows::class, $persistedThrow);
+                $this->setPrivateProperty($persistedThrow, 'throwId', 999);
+            });
+
+        $service = new GameThrowService(
+            $gamePlayersRepository,
+            $roundRepository,
+            $roundThrowsRepository,
+            $entityManager,
+            $this->createAccessService(),
+            $this->createMock(GameRepositoryInterface::class),
+        );
+
+        $result = $service->recordThrow($game, $dto);
+
+        self::assertNotNull($result->latestThrow);
+        self::assertSame('Snapshot Name', $result->latestThrow['playerName']);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    public function testRecordThrowFallsBackToPlayerDisplayNameWhenSnapshotIsBlank(): void
+    {
+        $game = new Game();
+        $this->setPrivateProperty($game, 'gameId', 14);
+        $game->setStartScore(301);
+        $game->setRound(1);
+        $game->setStatus(GameStatus::Started);
+
+        $round = new Round();
+        $round->setRoundNumber(1);
+        $round->setGame($game);
+
+        $didFlush = false;
+        $user = $this->createMock(User::class);
+        $user->method('getId')
+            ->willReturn(8);
+        $user->expects(self::once())
+            ->method('getDisplayNameRaw')
+            ->willReturnCallback(function () use (&$didFlush): string {
+                self::assertFalse($didFlush, 'Display name fallback must be resolved before flush.');
+
+                return 'Fallback Name';
+            });
+        $user->expects(self::never())
+            ->method('getUsername');
+
+        $player = (new GamePlayers())
+            ->setDisplayNameSnapshot('   ')
+            ->setScore(301)
+            ->setPosition(1)
+            ->setPlayer($user);
+        $game->addGamePlayer($player);
+
+        $dto = new ThrowRequest();
+        $dto->playerId = 8;
+        $dto->value = 20;
+        $dto->isDouble = false;
+        $dto->isTriple = false;
+
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $gamePlayersRepository->method('findOneBy')
+            ->with(['game' => 14, 'player' => 8])
+            ->willReturn($player);
+
+        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
+        $roundRepository->method('findOneBy')
+            ->with(['game' => $game, 'roundNumber' => 1])
+            ->willReturn($round);
+
+        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository->method('findCurrentRoundStateSnapshot')
+            ->with(14, 1)
+            ->willReturn([]);
+
+        $persistedThrow = null;
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')
+            ->willReturnCallback(static fn (\Closure $fn) => $fn());
+        $entityManager->expects(self::once())
+            ->method('persist')
+            ->with(self::callback(function (object $entity) use (&$persistedThrow): bool {
+                if ($entity instanceof RoundThrows) {
+                    $persistedThrow = $entity;
+                }
+
+                return true;
+            }));
+        $entityManager->expects(self::once())
+            ->method('flush')
+            ->willReturnCallback(function () use (&$persistedThrow, &$didFlush): void {
+                $didFlush = true;
+                self::assertInstanceOf(RoundThrows::class, $persistedThrow);
+                $this->setPrivateProperty($persistedThrow, 'throwId', 1000);
+            });
+
+        $service = new GameThrowService(
+            $gamePlayersRepository,
+            $roundRepository,
+            $roundThrowsRepository,
+            $entityManager,
+            $this->createAccessService(),
+            $this->createMock(GameRepositoryInterface::class),
+        );
+
+        $result = $service->recordThrow($game, $dto);
+
+        self::assertNotNull($result->latestThrow);
+        self::assertSame('Fallback Name', $result->latestThrow['playerName']);
     }
 
     /**
@@ -166,7 +528,8 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService()
+            $this->createAccessService(),
+            $this->createMock(GameRepositoryInterface::class),
         );
 
         $this->expectException(GameThrowNotAllowedException::class);
@@ -203,7 +566,8 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService()
+            $this->createAccessService(),
+            $this->createMock(GameRepositoryInterface::class),
         );
 
         $this->expectException(GameThrowNotAllowedException::class);
@@ -265,7 +629,8 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService()
+            $this->createAccessService(),
+            $this->createMock(GameRepositoryInterface::class),
         );
 
         $this->expectException(InvalidThrowException::class);
@@ -327,7 +692,8 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService()
+            $this->createAccessService(),
+            $this->createMock(GameRepositoryInterface::class),
         );
 
         $this->expectException(InvalidThrowException::class);
@@ -395,7 +761,8 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService()
+            $this->createAccessService(),
+            $this->createMock(GameRepositoryInterface::class),
         );
 
         $this->expectException(GamePlayerNotActiveException::class);
@@ -480,7 +847,8 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService()
+            $this->createAccessService(),
+            $this->createMock(GameRepositoryInterface::class),
         );
 
         $this->expectException(GamePlayerNotActiveException::class);
@@ -565,6 +933,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->createAccessService(),
+            $this->createMock(GameRepositoryInterface::class),
             $activePlayerResolver,
         );
 
@@ -635,14 +1004,15 @@ final class GameThrowServiceTest extends TestCase
 
                 return true;
             }));
-        $entityManager->expects(self::exactly(2))->method('flush');
+        $entityManager->expects(self::once())->method('flush');
 
         $service = new GameThrowService(
             $gamePlayersRepository,
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService()
+            $this->createAccessService(),
+            $this->createMock(GameRepositoryInterface::class),
         );
 
         $result = $service->recordThrow($game, $dto);
@@ -715,9 +1085,6 @@ final class GameThrowServiceTest extends TestCase
         $roundThrowsRepository->method('findEntityLatestForGame')
             ->with(10)
             ->willReturn($lastThrow);
-        $roundThrowsRepository->method('findLatestForGameBeforeThrow')
-            ->with(10, 103)
-            ->willReturn($previousThrow);
         $roundThrowsRepository->method('findLatestForGameAndPlayerBeforeThrow')
             ->with(10, 1, 103)
             ->willReturn($previousThrow);
@@ -742,7 +1109,8 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService()
+            $this->createAccessService(),
+            $this->createMock(GameRepositoryInterface::class),
         );
 
         $undoneThrow = $service->undoLastThrow($game);
@@ -813,25 +1181,12 @@ final class GameThrowServiceTest extends TestCase
             ->setValue(60)
             ->setScore(181)
             ->setTimestamp(new DateTime());
-        $latestGameThrowAfterUndo = (new RoundThrows())
-            ->setGame($game)
-            ->setRound($round)
-            ->setPlayer($otherUser)
-            ->setThrowId(399)
-            ->setThrowNumber(1)
-            ->setValue(20)
-            ->setScore(160)
-            ->setTimestamp(new DateTime());
-
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $roundRepository = $this->createMock(RoundRepositoryInterface::class);
         $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
         $roundThrowsRepository->method('findEntityLatestForGame')
             ->with(20)
             ->willReturn($lastBustThrow);
-        $roundThrowsRepository->method('findLatestForGameBeforeThrow')
-            ->with(20, 401)
-            ->willReturn($latestGameThrowAfterUndo);
         $roundThrowsRepository->method('findLatestForGameAndPlayerBeforeThrow')
             ->with(20, 1, 401)
             ->willReturn($previousPlayerThrow);
@@ -855,7 +1210,8 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService()
+            $this->createAccessService(),
+            $this->createMock(GameRepositoryInterface::class),
         );
 
         $undoneThrow = $service->undoLastThrow($game);
@@ -931,25 +1287,12 @@ final class GameThrowServiceTest extends TestCase
             ->setValue(20)
             ->setScore(40)
             ->setTimestamp(new DateTime());
-        $latestGameThrowAfterUndo = (new RoundThrows())
-            ->setGame($game)
-            ->setRound($round)
-            ->setPlayer($secondUser)
-            ->setThrowId(301)
-            ->setThrowNumber(1)
-            ->setValue(60)
-            ->setScore(120)
-            ->setTimestamp(new DateTime());
-
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $roundRepository = $this->createMock(RoundRepositoryInterface::class);
         $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
         $roundThrowsRepository->method('findEntityLatestForGame')
             ->with(30)
             ->willReturn($winningThrow);
-        $roundThrowsRepository->method('findLatestForGameBeforeThrow')
-            ->with(30, 303)
-            ->willReturn($latestGameThrowAfterUndo);
         $roundThrowsRepository->method('findLatestForGameAndPlayerBeforeThrow')
             ->with(30, 1, 303)
             ->willReturn($previousWinnerThrow);
@@ -973,7 +1316,8 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService()
+            $this->createAccessService(),
+            $this->createMock(GameRepositoryInterface::class),
         );
 
         $undoneThrow = $service->undoLastThrow($game);
@@ -1035,17 +1379,6 @@ final class GameThrowServiceTest extends TestCase
             ->setScore(241)
             ->setTimestamp(new DateTime());
 
-        // Previous game throw: player 2's last throw in round 1 (different round!)
-        $previousGameThrow = (new RoundThrows())
-            ->setGame($game)
-            ->setRound($round1)
-            ->setPlayer($otherUser)
-            ->setThrowId(200)
-            ->setThrowNumber(3)
-            ->setValue(60)
-            ->setScore(241)
-            ->setTimestamp(new DateTime());
-
         // Previous player throw: player 1 has no previous throw in round 2
         $previousPlayerThrow = null;
 
@@ -1055,9 +1388,6 @@ final class GameThrowServiceTest extends TestCase
         $roundThrowsRepository->method('findEntityLatestForGame')
             ->with(40)
             ->willReturn($lastThrow);
-        $roundThrowsRepository->method('findLatestForGameBeforeThrow')
-            ->with(40, 201)
-            ->willReturn($previousGameThrow);
         $roundThrowsRepository->method('findLatestForGameAndPlayerBeforeThrow')
             ->with(40, 1, 201)
             ->willReturn($previousPlayerThrow);
@@ -1081,7 +1411,8 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService()
+            $this->createAccessService(),
+            $this->createMock(GameRepositoryInterface::class),
         );
 
         $service->undoLastThrow($game);
@@ -1179,7 +1510,8 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService()
+            $this->createAccessService(),
+            $this->createMock(GameRepositoryInterface::class),
         );
 
         $service->recordThrow($game, $dto);

@@ -12,9 +12,10 @@ use App\Entity\Game;
 interface GameStateVersionServiceInterface
 {
     /**
-     * @param Game $game
+     * @param Game     $game
+     * @param int|null $latestThrowId
      *
      * @return string
      */
-    public function buildStateVersion(Game $game): string;
+    public function buildStateVersion(Game $game, ?int $latestThrowId = null): string;
 }

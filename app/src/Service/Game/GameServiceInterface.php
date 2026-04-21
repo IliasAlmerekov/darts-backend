@@ -47,9 +47,10 @@ interface GameServiceInterface
      * Build a stable version hash for quick game-state change detection.
      * Used by clients that poll frequently to skip unchanged payloads.
      *
-     * @param Game $game The game entity
+     * @param Game     $game          The game entity
+     * @param int|null $latestThrowId Already-known latest throw id to avoid redundant lookup
      *
      * @return string Deterministic version hash for the current game state
      */
-    public function buildStateVersion(Game $game): string;
+    public function buildStateVersion(Game $game, ?int $latestThrowId = null): string;
 }

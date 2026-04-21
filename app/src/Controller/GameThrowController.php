@@ -14,6 +14,7 @@ use App\Dto\ThrowAckDto;
 use App\Dto\ThrowRequest;
 use App\Dto\UndoAckDto;
 use App\Entity\Game;
+use App\Exception\Game\GameNotFoundException;
 use App\Http\Attribute\ApiResponse;
 use App\Service\Game\GameDeltaServiceInterface;
 use App\Service\Game\GameServiceInterface;
@@ -25,6 +26,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
@@ -73,7 +75,7 @@ final class GameThrowController extends AbstractController
     /**
      * Records a throw and returns compact delta payload.
      *
-     * @param Game                      $game
+     * @param int                       $gameId
      * @param GameThrowServiceInterface $gameThrowService
      * @param GameDeltaServiceInterface $gameDeltaService
      * @param ThrowRequest              $dto
@@ -93,11 +95,15 @@ final class GameThrowController extends AbstractController
     )]
     #[ApiResponse]
     #[Route('/api/game/{gameId}/throw/delta', name: 'app_game_throw_delta', methods: ['POST'], format: 'json')]
-    public function throwDelta(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameDeltaServiceInterface $gameDeltaService, #[MapRequestPayload] ThrowRequest $dto): ThrowAckDto
+    public function throwDelta(int $gameId, GameThrowServiceInterface $gameThrowService, GameDeltaServiceInterface $gameDeltaService, #[MapRequestPayload] ThrowRequest $dto): ThrowAckDto
     {
-        $throwRecordingResult = $gameThrowService->recordThrow($game, $dto);
+        try {
+            $throwRecordingResult = $gameThrowService->recordThrowByGameId($gameId, $dto);
+        } catch (GameNotFoundException) {
+            throw new NotFoundHttpException();
+        }
 
-        return $gameDeltaService->buildThrowAck($game, $throwRecordingResult->latestThrow, $throwRecordingResult->currentRoundStateSnapshot);
+        return $gameDeltaService->buildThrowAck($throwRecordingResult->game, $throwRecordingResult->latestThrow, $throwRecordingResult->currentRoundStateSnapshot);
     }
 
     /**

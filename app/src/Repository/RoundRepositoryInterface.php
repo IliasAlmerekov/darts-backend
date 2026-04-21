@@ -37,4 +37,11 @@ interface RoundRepositoryInterface
      * @return int
      */
     public function countFinishedRounds(int $gameId): int;
+
+    /**
+     * @param int $gameId
+     *
+     * @return bool
+     */
+    public function existsForGame(int $gameId): bool;
 }

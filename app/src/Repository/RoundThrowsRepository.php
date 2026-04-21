@@ -117,20 +117,6 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
 
     /**
      * @param int $gameId
-     * @param int $throwId
-     *
-     * @return RoundThrows|null
-     */
-    #[\Override]
-    public function findLatestForGameBeforeThrow(int $gameId, int $throwId): ?RoundThrows
-    {
-        return $this->createLatestBeforeThrowQueryBuilder($gameId, $throwId)
-            ->getQuery()
-            ->getOneOrNullResult();
-    }
-
-    /**
-     * @param int $gameId
      * @param int $playerId
      * @param int $throwId
      *
@@ -242,30 +228,6 @@ SQL,
         );
 
         return $this->normalizeRoundStateSnapshotRows($rows);
-    }
-
-    /**
-     * @param int $gameId
-     *
-     * @return array<int, array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>
-     */
-    #[\Override]
-    public function findLatestThrowsForGamePlayers(int $gameId): array
-    {
-        $rows = $this->createGameStateThrowQueryBuilder()
-            ->andWhere('rt.game = :gameId')
-            ->andWhere('rt.throwId IN (
-                SELECT MAX(rtLatest.throwId)
-                FROM App\\Entity\\RoundThrows rtLatest
-                WHERE rtLatest.game = :gameId
-                GROUP BY rtLatest.player
-            )')
-            ->setParameter('gameId', $gameId)
-            ->orderBy('rt.player', 'ASC')
-            ->getQuery()
-            ->getArrayResult();
-
-        return $this->normalizeGameStateThrowRows($rows);
     }
 
     /**
