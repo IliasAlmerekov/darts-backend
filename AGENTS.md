@@ -1,194 +1,67 @@
-# AGENTS.md
+# Darts App (backend)
 
-## Scope
+Symfony 8 / PHP 8.4 API for the darts game: game lifecycle, throws, statistics,
+invitations, registration, security. The application root is `app/`
+(`src/`, `tests/`, `config/`, `migrations/`). The frontend lives in a separate
+repository and consumes this API.
 
-- This repository is a Symfony 8.0 backend. The application lives in `app/`.
-- Use this file as the canonical repository policy.
-- If you work inside `app/`, also read `app/AGENTS.md`.
+## Conventions
 
-## Source Of Truth
+Match the neighbouring code; these are the conventions it follows:
 
-Before non-trivial work, read:
+- `declare(strict_types=1);` in every PHP file, right after the proprietary license
+  header where the surrounding files carry one.
+- PSR-12, `app/.editorconfig`, `app/phpcs.xml.dist`.
+- Thin controllers, business logic in services, persistence in repositories.
+- `final` classes, explicit types, constructor injection.
+- `#[\Override]` on overriding methods, and Yoda comparisons, where nearby code uses them.
+- Controller input binds through `#[MapRequestPayload]` / `#[MapQueryParameter]` into DTOs
+  validated with Symfony Validator attributes, never into Doctrine entities.
+- Optional `UserInterface` methods are guarded with `method_exists(...)` unless the code
+  already depends on `App\Entity\User`.
+- `FormErrorIterator` is iterable directly, without `getIterator()`.
+- Frontend URLs and redirects come from configuration such as `FRONTEND_URL`.
+- Errors map to the correct HTTP status; clients never see internal exception details.
 
-1. `AGENTS.md`
-2. `app/AGENTS.md`
-3. `.codex/AGENTS.md`
-4. `.codex/context/current-focus.md`
-5. `.codex/context/project-map.md`
-6. `.codex/context/domain-map.md`
-7. `.codex/context/decisions.md`
-8. `.codex/context/engineering-principles.md`
+## API contract
 
-Trust the repository over stale prose when they disagree.
+Response shape is a contract with the frontend. When a response changes, check serializer
+groups and the Nelmio API docs in the same change.
 
-Use `engineering-principles.md` as the project-specific decision framework for
-abstraction, pattern fit, and wrong-layer fixes. Do not apply SOLID, DRY, KISS,
-or YAGNI mechanically.
+## Doctrine
 
-## Local Workflow
+Every schema change ships with a migration in `app/migrations`. Bind query parameters.
+Watch for N+1 queries and lazy loading in loops.
 
-- Non-trivial work should use the local workflow:
-  - `brainstorming-feature`
-  - `planning-feature`
-  - `subagent-development`
-- `lead_orchestrator` owns execution routing and completion criteria.
-- Work in the current branch.
-- Do not require, suggest, or create `git worktree`.
+## Tests
 
-## Non-Trivial Execution Flow
+Every behaviour change gets a test: unit for pure logic, integration for services and
+repositories, functional for HTTP endpoints. The test DB uses DAMA Doctrine Test Bundle.
 
-Default gate order for `subagent-development`:
+## Verification
 
-1. `researcher`
-2. `architect`
-3. `coder` A when safe
-4. `coder` B when safe
-5. `reviewer`
-6. `tester`
-7. `security`
-8. `explorer`
-9. `lead_orchestrator` final completion decision
-
-Execution guardrails:
-
-- `architect` runs before implementation for `normal` and `complex` work
-- `lead_orchestrator` must declare ownership before any coder starts
-- use two coders only when ownership is explicitly non-overlapping and `architect` marks the split safe
-- if shared files, shared types, or cross-layer joins make the split unsafe, use one coder or serialized slices
-- `coder` is a leaf subagent and must not spawn nested subagents
-- `reviewer` and `tester` must return explicit `PASSED` or concrete blockers with file references
-- reviewer/tester to coder retry loops are capped at 2 for the same slice; then escalate through `lead_orchestrator`
-- `explorer` is the integration verifier, not the workflow owner
-- only `lead_orchestrator` may close the task
-
-## Execution Policy
-
-- All shell commands must go through `rtk`.
-- Never execute raw shell commands.
-
-## Current Stack
-
-- PHP: `>=8.4`
-- Symfony: `8.0.*`
-- Doctrine ORM: `^3.5.8`
-- Doctrine DBAL: `^4.0`
-- PHPUnit: `^12.5.8`
-- Psalm: `^6.13.1`
-- PHPCS: via `escapestudios/symfony2-coding-standard`
-- API docs: `nelmio/api-doc-bundle`
-- Local runtime: root `docker-compose.yaml`
-
-## Runtime And Docker
-
-- Default runtime is the root `docker-compose.yaml`.
-- Main services:
-  - `php`
-  - `nginx`
-  - `mysql`
-  - `phpmyadmin`
-- App path inside the PHP container: `/var/www/html`
-- Prefer the root compose stack over nested compose files unless the task explicitly targets them.
-
-## Symfony And PHP Rules
-
-- Always add `declare(strict_types=1);` after the file header.
-- Follow PSR-1, PSR-12, `.editorconfig`, and `app/phpcs.xml.dist`.
-- Keep controllers thin.
-- Put business logic in services.
-- Put persistence logic in repositories.
-- Prefer `final` classes and explicit types.
-- Use constructor dependency injection.
-- Do not use the container as a service locator.
-- Preserve existing code style, PHPDoc patterns, and comparison style from nearby code.
-- Use `#[\Override]` on overriding methods where the surrounding code follows that convention.
-- Prefer Symfony request mapping attributes such as `#[MapRequestPayload]` and `#[MapQueryParameter]` for controller DTO and query binding.
-- Preserve existing proprietary license headers and add them in new application PHP files when the surrounding files in that area use the same header.
-- Keep Yoda comparisons where the existing code around the change uses them.
-
-## API, Validation, And Security
-
-- Never bind request payloads directly to Doctrine entities.
-- Use DTOs and Symfony Validator attributes for input validation.
-- Treat API output as a contract.
-- If response shape changes, review serializer usage and Nelmio implications.
-- Map failures to correct HTTP status codes.
-- Do not expose internal exception details to clients.
-- Treat all external input as untrusted.
-- Enforce authorization explicitly.
-- Never log secrets, tokens, passwords, or unsafe raw user input.
-- When working with `UserInterface`, guard optional methods with `method_exists(...)` unless the code already depends on a concrete application user type.
-- Build frontend-facing URLs and redirects from configuration parameters such as `FRONTEND_URL` rather than hard-coded hosts.
-
-## Doctrine Rules
-
-- Use Doctrine ORM attributes and typed collections.
-- Do not put non-trivial business logic in entities.
-- Do not concatenate SQL with user input.
-- Bind parameters.
-- Watch for N+1 queries, accidental lazy loading, and oversized transaction scopes.
-- Every schema change must include a migration in `app/migrations`.
-
-## Testing Expectations
-
-- Add or update tests for every behavior change.
-- Prefer unit tests for pure logic.
-- Prefer integration tests for services and repositories.
-- Prefer functional tests for HTTP endpoints.
-- Keep tests deterministic.
-- Respect the existing PHPUnit and DAMA Doctrine Test Bundle setup.
-
-## Mandatory Verification After Code Changes
-
-- Run verification from the repository root.
-- Keep verification Docker-based to match CI.
-- Minimum required checks after code changes:
-  - PHPCS
-  - Psalm
-  - CI-equivalent Symfony and PHPUnit flow
-
-If the containers are not running yet, start them first:
+Run checks in Docker from the repository root, to match `.gitlab-ci.yml`. Host-local
+`php`, `composer`, or `vendor/bin/*` runs only when the user accepts the deviation.
 
 ```bash
-rtk docker compose up -d php mysql
+docker compose up -d php mysql
+docker compose exec -T php sh -lc 'cd /var/www/html && mkdir -p build'
+docker compose exec -T php sh -lc 'cd /var/www/html && php -d memory_limit=-1 vendor/bin/phpcs'
+docker compose exec -T php sh -lc 'cd /var/www/html && php vendor/bin/psalm --show-info=false --report=build/psalm-quality-report.json'
+docker compose exec -T php sh -lc 'cd /var/www/html && php bin/console lint:yaml -v --ansi --env=test config'
+docker compose exec -T php sh -lc 'cd /var/www/html && php -d memory_limit=-1 bin/console cache:clear --env=test'
+docker compose exec -T php sh -lc 'cd /var/www/html && php -d memory_limit=-1 bin/console doctrine:database:create --env=test --if-not-exists'
+docker compose exec -T php sh -lc 'cd /var/www/html && php -d memory_limit=-1 bin/console doctrine:migrations:migrate --env=test --no-interaction'
+docker compose exec -T php sh -lc 'cd /var/www/html && XDEBUG_MODE=coverage php -d memory_limit=-1 vendor/bin/phpunit --coverage-text --exclude-group ignore --coverage-clover build/phpunit.coverage.xml --coverage-cobertura build/phpunit.coverage.cobertura.xml --log-junit build/phpunit.xml'
 ```
 
-Required command forms:
+A green result comes from fixing the code; Psalm, PHPCS, and PHPUnit configs stay as they
+are. In the final report, list each command run with its pass or fail status, and name
+any check you skipped.
 
-```bash
-rtk docker compose exec -T php sh -lc 'cd /var/www/html && mkdir -p build'
-rtk docker compose exec -T php sh -lc 'cd /var/www/html && php -d memory_limit=-1 vendor/bin/phpcs'
-rtk docker compose exec -T php sh -lc 'cd /var/www/html && php vendor/bin/psalm --show-info=false --report=build/psalm-quality-report.json'
-rtk docker compose exec -T php sh -lc 'cd /var/www/html && php bin/console lint:yaml -v --ansi --env=test config'
-rtk docker compose exec -T php sh -lc 'cd /var/www/html && php -d memory_limit=-1 bin/console cache:clear --env=test'
-rtk docker compose exec -T php sh -lc 'cd /var/www/html && php -d memory_limit=-1 bin/console doctrine:database:create --env=test --if-not-exists'
-rtk docker compose exec -T php sh -lc 'cd /var/www/html && php -d memory_limit=-1 bin/console doctrine:migrations:migrate --env=test --no-interaction'
-rtk docker compose exec -T php sh -lc 'cd /var/www/html && XDEBUG_MODE=coverage php -d memory_limit=-1 vendor/bin/phpunit --coverage-text --exclude-group ignore --coverage-clover build/phpunit.coverage.xml --coverage-cobertura build/phpunit.coverage.cobertura.xml --log-junit build/phpunit.xml'
-```
+## Guardrails
 
-## CI Parity Notes
-
-- These commands should mirror the current `.gitlab-ci.yml` test stages.
-- If Composer dependencies or metadata change, also run the relevant dependency checks inside Docker.
-- Do not claim success if required verification was skipped.
-
-## Reporting Rules
-
-In the final handoff, report:
-
-- what changed
-- why it changed
-- exact Docker commands run
-- pass or fail status for each command
-- remaining risks or follow-up work
-
-For non-trivial workflow-driven tasks, also report:
-
-- whether `architect` approved the ownership split or forced serialization
-- whether `explorer` returned `Ready for Lead Review` or `Blocked`
-- whether `lead_orchestrator` closed the task or escalated it
-
-## Forbidden Shortcuts
-
-- Do not weaken Psalm, PHPCS, PHPUnit, Symfony, or Doctrine checks to get a green result.
-- Do not skip migrations when schema changes are involved.
-- Do not bypass Docker verification with host-only commands unless the user explicitly accepts that deviation.
+Ask the user first before you run a migration against a non-test database, change
+dependencies, or touch auth, roles, tokens, or credentials. Keep secrets,
+tokens, and passwords out of logs, prompts, and commits. Commits carry the human author
+only, with no `Co-Authored-By` trailer.
