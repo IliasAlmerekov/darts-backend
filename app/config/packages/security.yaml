@@ -36,16 +36,19 @@ security:
             # https://symfony.com/doc/current/security/impersonating_user.html
             # switch_user: true
 
-    # Easy way to control access for large sections of your site
-    # Note: Only the *first* access control that matches will be used
+    # Only the first rule that matches a request applies. Every game action runs on the
+    # shared tablet under the admin account (docs/adr/0001-single-tablet-admin.md), so
+    # the final rule closes the whole API to everyone else, including routes added later.
     access_control:
-        - { path: ^/api/csrf, roles: PUBLIC_ACCESS}
-        - { path: /api/room/waiting, roles: ROLE_PLAYER }
-        - { path: ^/api/room, roles: ROLE_ADMIN }
-        - { path: ^/api/invite/create/, roles: ROLE_ADMIN }
-        - { path: ^/api/game, roles: [ROLE_PLAYER, ROLE_ADMIN] }
-        - { path: ^/api/login, roles: PUBLIC_ACCESS}
-        - { path: ^/api/register, roles: PUBLIC_ACCESS}
+        - { path: ^/api/login$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/login/success$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/register$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/csrf$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/health$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/logout$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/invite/join/[^/]+$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/invite/process$, roles: ROLE_PLAYER }
+        - { path: ^/api, roles: ROLE_ADMIN }
 
 when@test:
     security:
