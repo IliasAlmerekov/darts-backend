@@ -28,7 +28,7 @@ final class GameEndpointsBaselineTest extends WebTestCase
     public function testCollectsBaselineMetricsForGameEndpoints(): void
     {
         $entityManager = static::getContainer()->get(EntityManagerInterface::class);
-        $benchmarkUser = $this->createUser($entityManager, 'baseline-primary', ['ROLE_PLAYER']);
+        $benchmarkUser = $this->createUser($entityManager, 'baseline-primary', ['ROLE_ADMIN']);
         $entityManager->flush();
 
         $scenarioNotes = [

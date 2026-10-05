@@ -28,7 +28,7 @@ final class GameSettingsReadBaselineTest extends WebTestCase
     public function testCollectsBaselineMetricsForGameSettingsReadEndpoint(): void
     {
         $entityManager = static::getContainer()->get(EntityManagerInterface::class);
-        $benchmarkUser = $this->createUser($entityManager, 'be201-primary', ['ROLE_PLAYER']);
+        $benchmarkUser = $this->createUser($entityManager, 'be201-primary', ['ROLE_ADMIN']);
         $entityManager->flush();
 
         $scenarioNotes = [
