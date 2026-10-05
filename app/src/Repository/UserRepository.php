@@ -86,6 +86,27 @@ final class UserRepository extends ServiceEntityRepository implements UserReposi
         return $result instanceof User ? $result : null;
     }
 
+    /**
+     * Roles live in a JSON column, so the match runs against its text form.
+     *
+     * @param string $role
+     *
+     * @return bool
+     */
+    #[\Override]
+    public function hasUserWithRole(string $role): bool
+    {
+        $result = $this->createQueryBuilder('u')
+            ->select('u.id')
+            ->andWhere('u.roles LIKE :role')
+            ->setParameter('role', '%"'.addcslashes($role, '%_\\').'"%')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        return null !== $result;
+    }
+
     //    /**
     //     * @return User[] Returns an array of User objects
     //     */
