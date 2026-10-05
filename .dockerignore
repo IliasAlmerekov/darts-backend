@@ -1,12 +1,28 @@
-.git
-.gitignore
+# Build context is the repository root (docker build -f app/Dockerfile .).
+**/.git
+**/.gitignore
 .idea
+.claude
+.codex
+etc
+scripts
 
 app/vendor
 app/var
 app/build
 app/.phpunit.cache
+app/public/bundles
+app/public/assets
+app/assets/vendor
 
-app/.env.local
-app/.env.local.php
-app/.env.*.local
+# Local environment files and key material never enter the build. The committed,
+# secret-free defaults below are needed by the test target only; the prune stage in
+# app/Dockerfile removes them before the runtime image is assembled, and the runtime
+# image disables Dotenv.
+**/.env*
+!app/.env
+!app/.env.dev
+!app/.env.test
+**/*.pem
+**/*.key
+app/config/secrets
