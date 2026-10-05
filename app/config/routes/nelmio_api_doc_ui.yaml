@@ -1,6 +1,6 @@
-# Expose your documentation with Swagger UI
-app.swagger_ui:
-    path: /api/doc
-    methods: GET
-    defaults: { _controller: nelmio_api_doc.controller.swagger_ui }
-
+# Swagger UI needs the Twig bundle, which is enabled in dev and test only.
+when@dev:
+    app.swagger_ui:
+        path: /api/doc
+        methods: GET
+        defaults: { _controller: nelmio_api_doc.controller.swagger_ui }
