@@ -41,6 +41,15 @@ interface UserRepositoryInterface extends PasswordUpgraderInterface
     public function findOneByUsername(string $username): ?User;
 
     /**
+     * Tells whether at least one stored user holds the given role.
+     *
+     * @param string $role
+     *
+     * @return bool
+     */
+    public function hasUserWithRole(string $role): bool;
+
+    /**
      * @psalm-suppress PossiblyUnusedMethod
      *
      * @param array<string, mixed>       $criteria

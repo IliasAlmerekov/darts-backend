@@ -85,6 +85,31 @@ final class UserRepositoryTest extends KernelTestCase
         $this->repository->upgradePassword($unsupportedUser, 'hash');
     }
 
+    public function testHasUserWithRoleMatchesStoredRolesOnly(): void
+    {
+        $this->createUser('player')->setRoles(['ROLE_PLAYER']);
+        $this->entityManager->flush();
+
+        self::assertFalse($this->repository->hasUserWithRole('ROLE_ADMIN'));
+        self::assertTrue($this->repository->hasUserWithRole('ROLE_PLAYER'));
+        // ROLE_USER is added by User::getRoles() and is never stored.
+        self::assertFalse($this->repository->hasUserWithRole('ROLE_USER'));
+
+        $this->createUser('boss')->setRoles(['ROLE_PLAYER', 'ROLE_ADMIN']);
+        $this->entityManager->flush();
+
+        self::assertTrue($this->repository->hasUserWithRole('ROLE_ADMIN'));
+    }
+
+    public function testHasUserWithRoleTreatsWildcardsLiterally(): void
+    {
+        $this->createUser('wildcard')->setRoles(['ROLE_ADMIN']);
+        $this->entityManager->flush();
+
+        self::assertFalse($this->repository->hasUserWithRole('ROLE%'));
+        self::assertFalse($this->repository->hasUserWithRole('ROLE_ADMI_'));
+    }
+
     private function createUser(string $username, string $password = 'secret'): User
     {
         static $counter = 1;
