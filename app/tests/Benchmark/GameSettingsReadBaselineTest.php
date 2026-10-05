@@ -12,11 +12,13 @@ use App\Entity\User;
 use App\Enum\GameStatus;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\CoversNothing;
+use PHPUnit\Framework\Attributes\Group;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 #[CoversNothing]
+#[Group('benchmark')]
 final class GameSettingsReadBaselineTest extends WebTestCase
 {
     private const int MEASUREMENT_RUNS = 3;
