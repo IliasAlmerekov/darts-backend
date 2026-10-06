@@ -300,7 +300,12 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     {
         $gamePlayer = new GamePlayers();
         $playerId = $player->getId();
-        $gamePlayer->setGame($this->entityManager->getReference(Game::class, $gameId));
+        // getReference() returns the managed Game when it is already loaded, so add the
+        // seat through the inverse side too; otherwise getGamePlayers() misses it until reload.
+        // The first add loads the game's seats (and the game, if still a proxy); later adds reuse them.
+        /** @var Game $game */
+        $game = $this->entityManager->getReference(Game::class, $gameId);
+        $game->addGamePlayer($gamePlayer);
         $gamePlayer->setPlayer($player);
         $gamePlayer->setDisplayNameSnapshot($this->resolveDisplayNameSnapshot($player, $playerId));
         $gamePlayer->setPosition($this->resolvePosition($position, $gameId));

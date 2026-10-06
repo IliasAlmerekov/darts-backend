@@ -73,7 +73,6 @@
   </file>
   <file src="src/Entity/Game.php">
     <PossiblyUnusedMethod>
-      <code><![CDATA[addGamePlayer]]></code>
       <code><![CDATA[getInvitation]]></code>
       <code><![CDATA[removeGamePlayer]]></code>
       <code><![CDATA[removeRound]]></code>

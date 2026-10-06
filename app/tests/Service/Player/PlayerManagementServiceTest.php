@@ -67,12 +67,13 @@ final class PlayerManagementServiceTest extends TestCase
             ->method('findNextPositionForGame')
             ->with(100)
             ->willReturn(1);
+        $game = (new Game())->setGameId(100);
         $this->entityManager
             ->expects(self::exactly(2))
             ->method('getReference')
-            ->willReturnCallback(static function (string $class, int $id) {
+            ->willReturnCallback(static function (string $class, int $id) use ($game) {
                 if ($class === Game::class) {
-                    return (new Game())->setGameId($id);
+                    return $game;
                 }
                 if ($class === User::class) {
                     $user = new User();
@@ -92,6 +93,7 @@ final class PlayerManagementServiceTest extends TestCase
         self::assertSame(200, $result->getPlayer()?->getId());
         self::assertSame(100, $result->getGame()?->getGameId());
         self::assertSame(1, $result->getPosition());
+        self::assertSame([$result], $game->getGamePlayers()->toArray());
     }
 
     public function testAddPlayerRespectsProvidedZeroBasedPosition(): void
@@ -200,11 +202,12 @@ final class PlayerManagementServiceTest extends TestCase
             ->with(302)
             ->willReturn(4);
 
+        $game = (new Game())->setGameId(302);
         $this->entityManager
             ->expects(self::once())
             ->method('getReference')
             ->with(Game::class, 302)
-            ->willReturn((new Game())->setGameId(302));
+            ->willReturn($game);
 
         $this->entityManager->expects(self::once())->method('persist')->with(self::isInstanceOf(GamePlayers::class));
         $this->entityManager->expects(self::never())->method('flush');
@@ -214,6 +217,7 @@ final class PlayerManagementServiceTest extends TestCase
         self::assertSame(4, $result->getPosition());
         self::assertSame('Guest 402', $result->getDisplayNameSnapshot());
         self::assertSame(402, $result->getPlayer()?->getId());
+        self::assertSame([$result], $game->getGamePlayers()->toArray());
     }
 
     public function testCopyPlayersCopiesOnlyFilteredPlayers(): void
@@ -229,12 +233,13 @@ final class PlayerManagementServiceTest extends TestCase
             ->willReturn([$sourcePlayer1, $sourcePlayer2, $sourcePlayer3]);
 
         $persistedGamePlayers = [];
+        $targetGame = (new Game())->setGameId(20);
         $this->entityManager
             ->expects(self::exactly(2))
             ->method('getReference')
-            ->willReturnCallback(function (string $class, int $id) {
-                if ($class === Game::class) {
-                    return (new Game())->setGameId($id);
+            ->willReturnCallback(function (string $class, int $id) use ($targetGame) {
+                if ($class === Game::class && 20 === $id) {
+                    return $targetGame;
                 }
                 throw new \LogicException('Unexpected getReference call');
             });
@@ -254,6 +259,7 @@ final class PlayerManagementServiceTest extends TestCase
         self::assertCount(2, $persistedGamePlayers);
         self::assertSame([2, 5], array_map(static fn (GamePlayers $gamePlayer): ?int => $gamePlayer->getPosition(), $persistedGamePlayers));
         self::assertSame(['Alpha', 'gamma'], array_map(static fn (GamePlayers $gamePlayer): ?string => $gamePlayer->getDisplayNameSnapshot(), $persistedGamePlayers));
+        self::assertSame($persistedGamePlayers, $targetGame->getGamePlayers()->toArray());
     }
 
     public function testUpdatePlayerPositionsUpdatesExistingPlayers(): void
