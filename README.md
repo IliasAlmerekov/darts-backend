@@ -19,6 +19,7 @@ cp app/.env.local.example app/.env.local
 Notes:
 - Symfony loads `.env.local` for `dev` and `prod`, but **not** for `test`.
 - If you need test secrets locally, create `app/.env.test.local` and set `APP_SECRET` / `DATABASE_URL` there.
+- `app/.env.test` already matches the default MySQL root password in `docker-compose.yaml`. You need `app/.env.test.local` only if you set `MYSQL_ROOT_PASSWORD`.
 
 ## Docker
 
