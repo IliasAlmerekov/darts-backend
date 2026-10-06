@@ -18,7 +18,7 @@ final class BenchmarkGroupExclusionTest extends TestCase
 {
     private const string BENCHMARK_GROUP = 'benchmark';
 
-    public function testDefaultConfigurationExcludesTheBenchmarkGroup(): void
+    public function testDefaultConfigurationExcludesTheBenchmarkAndIgnoreGroups(): void
     {
         $configPath = dirname(__DIR__, 2).'/phpunit.dist.xml';
         self::assertFileExists($configPath);
@@ -34,6 +34,24 @@ final class BenchmarkGroupExclusionTest extends TestCase
         }
 
         self::assertContains(self::BENCHMARK_GROUP, $excludedGroups, 'phpunit.dist.xml must exclude the benchmark group.');
+        self::assertContains('ignore', $excludedGroups, 'phpunit.dist.xml must exclude the ignore group.');
+    }
+
+    /**
+     * PHPUnit 12 drops the XML exclude list when --exclude-group is passed on the command line.
+     */
+    public function testCiDoesNotOverrideTheXmlGroupExclusions(): void
+    {
+        $ciPath = dirname(__DIR__, 3).'/.gitlab-ci.yml';
+        if (!is_file($ciPath)) {
+            // The compose php container mounts app/ only; CI checks out the whole repository.
+            self::markTestSkipped('.gitlab-ci.yml is outside the mounted application root.');
+        }
+
+        $ci = file_get_contents($ciPath);
+        self::assertNotFalse($ci);
+        self::assertStringContainsString('vendor/bin/phpunit', $ci);
+        self::assertStringNotContainsString('--exclude-group', $ci, '.gitlab-ci.yml must not pass --exclude-group: it replaces the XML exclusions.');
     }
 
     public function testEveryBenchmarkClassIsInTheBenchmarkGroup(): void

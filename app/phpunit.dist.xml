@@ -25,6 +25,7 @@
     <groups>
         <exclude>
             <group>benchmark</group>
+            <group>ignore</group>
         </exclude>
     </groups>
 

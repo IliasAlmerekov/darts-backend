@@ -52,7 +52,7 @@ docker compose exec -T php sh -lc 'cd /var/www/html && php bin/console lint:yaml
 docker compose exec -T php sh -lc 'cd /var/www/html && php -d memory_limit=-1 bin/console cache:clear --env=test'
 docker compose exec -T php sh -lc 'cd /var/www/html && php -d memory_limit=-1 bin/console doctrine:database:create --env=test --if-not-exists'
 docker compose exec -T php sh -lc 'cd /var/www/html && php -d memory_limit=-1 bin/console doctrine:migrations:migrate --env=test --no-interaction'
-docker compose exec -T php sh -lc 'cd /var/www/html && XDEBUG_MODE=coverage php -d memory_limit=-1 vendor/bin/phpunit --coverage-text --exclude-group ignore --coverage-clover build/phpunit.coverage.xml --coverage-cobertura build/phpunit.coverage.cobertura.xml --log-junit build/phpunit.xml'
+docker compose exec -T php sh -lc 'cd /var/www/html && XDEBUG_MODE=coverage php -d memory_limit=-1 vendor/bin/phpunit --coverage-text --coverage-clover build/phpunit.coverage.xml --coverage-cobertura build/phpunit.coverage.cobertura.xml --log-junit build/phpunit.xml'
 ```
 
 A green result comes from fixing the code. Never change the Psalm, PHPCS, or PHPUnit
