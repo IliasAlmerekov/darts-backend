@@ -43,8 +43,17 @@ repositories, functional for HTTP endpoints. The test DB uses DAMA Doctrine Test
 Run checks in Docker from the repository root, to match `.gitlab-ci.yml`. Host-local
 `php`, `composer`, or `vendor/bin/*` runs only when the user accepts the deviation.
 
+`app/.env.test` uses the default MySQL root password from `docker-compose.yaml`.
+`scripts/check-test-db-env.sh` fails when the two differ. Run it on the host, because the
+php container mounts only `app/`. If you set `MYSQL_ROOT_PASSWORD`, or your `mysql_data`
+volume was created before commit 7ee392b (root password `root123`), put the matching
+`DATABASE_URL` in `app/.env.test.local`, or recreate the volume with `docker compose down -v`,
+which deletes the local database.
+
 ```bash
+sh scripts/check-test-db-env.sh
 docker compose up -d php mysql
+docker compose exec -T php sh -lc 'cd /var/www/html && composer install --no-interaction'
 docker compose exec -T php sh -lc 'cd /var/www/html && mkdir -p build'
 docker compose exec -T php sh -lc 'cd /var/www/html && php -d memory_limit=-1 vendor/bin/phpcs'
 docker compose exec -T php sh -lc 'cd /var/www/html && php vendor/bin/psalm --show-info=false --report=build/psalm-quality-report.json'

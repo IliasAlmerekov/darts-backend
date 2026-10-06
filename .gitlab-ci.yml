@@ -125,6 +125,13 @@ test:php:
       # https://docs.gitlab.com/ci/testing/unit_test_report_examples/#php
       junit: app/build/phpunit.xml
 
+test:dev-env:
+  image: ${HARBOR_REGISTRY}/library/php:${PHP_VERSION}
+  stage: test
+  script:
+    - sh scripts/check-test-db-env.sh
+  needs: []
+
 test:codesniffer:
   image: ${HARBOR_REGISTRY}/library/php:${PHP_VERSION}-dev
   stage: test
