@@ -7,9 +7,11 @@ namespace App\Tests\Security;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\Invitation;
+use App\Entity\Round;
 use App\Entity\User;
 use App\Enum\GameStatus;
 use DateTime;
+use DateTimeImmutable;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -27,6 +29,8 @@ use Symfony\Component\Uid\Uuid;
  * The policy comes from docs/adr/0001-single-tablet-admin.md: a few routes are public,
  * invitation processing is for players, and everything else under /api is for the admin
  * account on the shared tablet.
+ *
+ * @psalm-type MatrixEntry = array{route: string, method: string, access: string, parameters: array<string, string>, body: string, state: string, payload: array<string, mixed>, query: array<string, string>, expected: int|array<string, int>}
  */
 final class ApiAccessMatrixTest extends WebTestCase
 {
@@ -52,75 +56,93 @@ final class ApiAccessMatrixTest extends WebTestCase
     private const string BODY_JSON = 'json';
     private const string BODY_LOGIN_FORM = 'login_form';
 
+    /** Game states the fixture can be built in. */
+    private const string STATE_LOBBY = 'lobby';
+    private const string STATE_STARTED = 'started';
+    private const string STATE_FINISHED = 'finished';
+
+    /** Placeholders in payloads and queries that resolve to fixture user ids. */
+    private const string TOKEN_PARTICIPANT_ID = '@participantId';
+    private const string TOKEN_OPPONENT_ID = '@opponentId';
+
     private const string LOGIN_PASSWORD = 'matrix-secret';
 
     /**
      * Route parameters map to fixture keys so the URIs point at real rows.
      *
-     * `room_stream` points at a missing game on purpose: for an allowed caller the
-     * controller would otherwise open an endless SSE loop, and the 404 it returns
-     * instead still proves the request passed the access rules.
+     * Each entry also pins the exact status every allowed persona gets. Where a minimal
+     * request honestly ends in a 4xx, the entry says why in a comment next to it.
      *
-     * @return list<array{route: string, method: string, access: string, parameters: array<string, string>, body: string}>
+     * `room_stream` points at a missing game on purpose: for an allowed caller the
+     * controller would otherwise open an endless SSE loop in the test client, and the
+     * 404 it returns instead still proves the request passed the access rules.
+     *
+     * @return list<MatrixEntry>
      */
     private static function matrix(): array
     {
         $game = ['gameId' => self::FIXTURE_GAME];
         $room = ['id' => self::FIXTURE_GAME];
+        $throw = ['playerId' => self::TOKEN_PARTICIPANT_ID, 'value' => 20];
 
         return [
             // Public
-            self::entry('app_login', Request::METHOD_GET, self::ACCESS_PUBLIC),
-            self::entry('app_login', Request::METHOD_POST, self::ACCESS_PUBLIC, body: self::BODY_LOGIN_FORM),
-            self::entry('login_success', self::METHOD_ANY, self::ACCESS_PUBLIC),
-            self::entry('app_logout', self::METHOD_ANY, self::ACCESS_PUBLIC),
-            self::entry('app_register', Request::METHOD_POST, self::ACCESS_PUBLIC),
-            self::entry('app_csrf_tokens', Request::METHOD_GET, self::ACCESS_PUBLIC),
-            self::entry('api_health', Request::METHOD_GET, self::ACCESS_PUBLIC),
-            self::entry('join_invitation', self::METHOD_ANY, self::ACCESS_PUBLIC, ['uuid' => self::FIXTURE_INVITATION]),
+            self::entry('app_login', Request::METHOD_GET, self::ACCESS_PUBLIC, expected: Response::HTTP_OK),
+            self::entry('app_login', Request::METHOD_POST, self::ACCESS_PUBLIC, body: self::BODY_LOGIN_FORM, expected: Response::HTTP_OK),
+            self::entry('login_success', self::METHOD_ANY, self::ACCESS_PUBLIC, expected: Response::HTTP_OK),
+            self::entry('app_logout', self::METHOD_ANY, self::ACCESS_PUBLIC, expected: Response::HTTP_FOUND),
+            self::entry('app_register', Request::METHOD_POST, self::ACCESS_PUBLIC, payload: ['email' => 'matrix-register@test.dev', 'username' => 'matrix_register', 'plainPassword' => 'matrix-secret'], expected: Response::HTTP_CREATED),
+            self::entry('app_csrf_tokens', Request::METHOD_GET, self::ACCESS_PUBLIC, expected: Response::HTTP_OK),
+            self::entry('api_health', Request::METHOD_GET, self::ACCESS_PUBLIC, expected: Response::HTTP_OK),
+            self::entry('join_invitation', self::METHOD_ANY, self::ACCESS_PUBLIC, ['uuid' => self::FIXTURE_INVITATION], expected: Response::HTTP_FOUND),
 
             // Players
-            self::entry('process_invitation', Request::METHOD_POST, self::ACCESS_PLAYER),
+            // The session holds no joined invitation, so the service answers 400 with a redirect to /start.
+            self::entry('process_invitation', Request::METHOD_POST, self::ACCESS_PLAYER, expected: Response::HTTP_BAD_REQUEST),
 
             // Admin: invitations
-            self::entry('create_invitation', Request::METHOD_POST, self::ACCESS_ADMIN, $room),
+            self::entry('create_invitation', Request::METHOD_POST, self::ACCESS_ADMIN, $room, expected: Response::HTTP_OK),
 
             // Admin: rooms
-            self::entry('room_create', Request::METHOD_POST, self::ACCESS_ADMIN),
-            self::entry('room_player_leave', Request::METHOD_DELETE, self::ACCESS_ADMIN, $room),
-            self::entry('room_player_guest_add', Request::METHOD_POST, self::ACCESS_ADMIN, $room),
-            self::entry('room_update_player_positions', Request::METHOD_POST, self::ACCESS_ADMIN, $room),
-            self::entry('room_stream', Request::METHOD_GET, self::ACCESS_ADMIN, ['id' => self::FIXTURE_MISSING_GAME]),
-            self::entry('room_rematch', Request::METHOD_POST, self::ACCESS_ADMIN, $room),
+            self::entry('room_create', Request::METHOD_POST, self::ACCESS_ADMIN, expected: Response::HTTP_OK),
+            self::entry('room_player_leave', Request::METHOD_DELETE, self::ACCESS_ADMIN, $room, query: ['playerId' => self::TOKEN_OPPONENT_ID], expected: Response::HTTP_OK),
+            self::entry('room_player_guest_add', Request::METHOD_POST, self::ACCESS_ADMIN, $room, payload: ['username' => 'Guest Alex'], expected: Response::HTTP_OK),
+            self::entry('room_update_player_positions', Request::METHOD_POST, self::ACCESS_ADMIN, $room, payload: ['positions' => [['playerId' => self::TOKEN_PARTICIPANT_ID, 'position' => 2], ['playerId' => self::TOKEN_OPPONENT_ID, 'position' => 1]]], expected: Response::HTTP_OK),
+            // Missing game, see the method comment: the exception is the honest 404 here.
+            self::entry('room_stream', Request::METHOD_GET, self::ACCESS_ADMIN, ['id' => self::FIXTURE_MISSING_GAME], expected: Response::HTTP_NOT_FOUND),
+            self::entry('room_rematch', Request::METHOD_POST, self::ACCESS_ADMIN, $room, expected: Response::HTTP_CREATED),
 
             // Admin: game lifecycle
-            self::entry('app_game_state', Request::METHOD_GET, self::ACCESS_ADMIN, $game),
-            self::entry('app_game_start', Request::METHOD_POST, self::ACCESS_ADMIN, $game),
-            self::entry('app_game_rematch_start', Request::METHOD_POST, self::ACCESS_ADMIN, $game),
-            self::entry('app_game_settings_create', Request::METHOD_POST, self::ACCESS_ADMIN),
-            self::entry('app_game_settings', Request::METHOD_PATCH, self::ACCESS_ADMIN, $game),
-            self::entry('app_game_settings_read', Request::METHOD_GET, self::ACCESS_ADMIN, $game),
-            self::entry('app_game_finish', Request::METHOD_POST, self::ACCESS_ADMIN, $game),
-            self::entry('app_game_reopen', Request::METHOD_PATCH, self::ACCESS_ADMIN, $game),
-            self::entry('app_game_finished', Request::METHOD_GET, self::ACCESS_ADMIN, $game),
-            self::entry('app_games_finished', Request::METHOD_GET, self::ACCESS_ADMIN, $game),
-            self::entry('app_game_abort', Request::METHOD_PATCH, self::ACCESS_ADMIN, $game),
+            self::entry('app_game_state', Request::METHOD_GET, self::ACCESS_ADMIN, $game, expected: Response::HTTP_OK),
+            self::entry('app_game_start', Request::METHOD_POST, self::ACCESS_ADMIN, $game, expected: Response::HTTP_OK),
+            // Pinned to the current 400 (GAME_INVALID_PLAYER_COUNT) although the finished game has two players:
+            // the rematch copies the players with raw persists, so start() still sees an empty player collection.
+            // That looks like a production bug; change this to 201 when it is fixed.
+            self::entry('app_game_rematch_start', Request::METHOD_POST, self::ACCESS_ADMIN, $game, state: self::STATE_FINISHED, expected: Response::HTTP_BAD_REQUEST),
+            self::entry('app_game_settings_create', Request::METHOD_POST, self::ACCESS_ADMIN, payload: ['startScore' => 501], expected: Response::HTTP_CREATED),
+            self::entry('app_game_settings', Request::METHOD_PATCH, self::ACCESS_ADMIN, $game, payload: ['startScore' => 501], expected: Response::HTTP_OK),
+            self::entry('app_game_settings_read', Request::METHOD_GET, self::ACCESS_ADMIN, $game, expected: Response::HTTP_OK),
+            self::entry('app_game_finish', Request::METHOD_POST, self::ACCESS_ADMIN, $game, expected: Response::HTTP_OK),
+            self::entry('app_game_reopen', Request::METHOD_PATCH, self::ACCESS_ADMIN, $game, state: self::STATE_FINISHED, expected: Response::HTTP_OK),
+            self::entry('app_game_finished', Request::METHOD_GET, self::ACCESS_ADMIN, $game, expected: Response::HTTP_OK),
+            self::entry('app_games_finished', Request::METHOD_GET, self::ACCESS_ADMIN, $game, expected: Response::HTTP_OK),
+            self::entry('app_game_abort', Request::METHOD_PATCH, self::ACCESS_ADMIN, $game, expected: Response::HTTP_OK),
 
             // Admin: throws
-            self::entry('app_game_throw', Request::METHOD_POST, self::ACCESS_ADMIN, $game),
-            self::entry('app_game_throw_delta', Request::METHOD_POST, self::ACCESS_ADMIN, $game),
-            self::entry('app_game_throw_undo', Request::METHOD_DELETE, self::ACCESS_ADMIN, $game),
-            self::entry('app_game_throw_undo_delta', Request::METHOD_DELETE, self::ACCESS_ADMIN, $game),
+            self::entry('app_game_throw', Request::METHOD_POST, self::ACCESS_ADMIN, $game, state: self::STATE_STARTED, payload: $throw, expected: Response::HTTP_OK),
+            self::entry('app_game_throw_delta', Request::METHOD_POST, self::ACCESS_ADMIN, $game, state: self::STATE_STARTED, payload: $throw, expected: Response::HTTP_OK),
+            self::entry('app_game_throw_undo', Request::METHOD_DELETE, self::ACCESS_ADMIN, $game, state: self::STATE_STARTED, expected: Response::HTTP_OK),
+            self::entry('app_game_throw_undo_delta', Request::METHOD_DELETE, self::ACCESS_ADMIN, $game, state: self::STATE_STARTED, expected: Response::HTTP_OK),
 
             // Admin: statistics
-            self::entry('app_games_overview', Request::METHOD_GET, self::ACCESS_ADMIN),
-            self::entry('app_games_details', Request::METHOD_GET, self::ACCESS_ADMIN, $game),
-            self::entry('app_players_stats', Request::METHOD_GET, self::ACCESS_ADMIN),
+            self::entry('app_games_overview', Request::METHOD_GET, self::ACCESS_ADMIN, expected: Response::HTTP_OK),
+            self::entry('app_games_details', Request::METHOD_GET, self::ACCESS_ADMIN, $game, expected: Response::HTTP_OK),
+            self::entry('app_players_stats', Request::METHOD_GET, self::ACCESS_ADMIN, expected: Response::HTTP_OK),
         ];
     }
 
     /**
-     * @return iterable<string, array{string, string, string, array<string, string>, string, string}>
+     * @return iterable<string, array{MatrixEntry, string}>
      */
     public static function accessCaseProvider(): iterable
     {
@@ -135,48 +157,44 @@ final class ApiAccessMatrixTest extends WebTestCase
 
         foreach (self::matrix() as $entry) {
             foreach ($personas as $persona) {
-                $name = sprintf('%s %s as %s', $entry['method'], $entry['route'], $persona);
-
-                yield $name => [$entry['route'], $entry['method'], $entry['access'], $entry['parameters'], $entry['body'], $persona];
+                yield sprintf('%s %s as %s', $entry['method'], $entry['route'], $persona) => [$entry, $persona];
             }
         }
     }
 
     /**
-     * @param array<string, string> $parameters
+     * @param MatrixEntry $entry
      */
     #[DataProvider('accessCaseProvider')]
-    public function testRouteAccessForPersona(string $route, string $method, string $access, array $parameters, string $body, string $persona): void
+    public function testRouteAccessForPersona(array $entry, string $persona): void
     {
         $client = static::createClient();
-        $fixtures = $this->createFixtures();
+        $fixtures = $this->createFixtures($entry['state']);
 
         if (self::PERSONA_ANONYMOUS !== $persona) {
             $client->loginUser($fixtures['personas'][$persona]);
         }
 
         $router = static::getContainer()->get(RouterInterface::class);
-        $uri = $router->generate($route, $this->resolveParameters($parameters, $fixtures));
-        $httpMethod = self::METHOD_ANY === $method ? Request::METHOD_GET : $method;
+        $uri = $router->generate($entry['route'], $this->resolveParameters($entry['parameters'], $fixtures) + $this->resolveTokens($entry['query'], $fixtures));
+        $httpMethod = self::METHOD_ANY === $entry['method'] ? Request::METHOD_GET : $entry['method'];
 
         $snapshotBefore = $this->snapshotDatabase();
-        $this->sendRequest($client, $httpMethod, $uri, $body, $fixtures['loginEmail']);
-        $status = $client->getResponse()->getStatusCode();
+        $this->sendRequest($client, $httpMethod, $uri, $entry['body'], $this->resolveTokens($entry['payload'], $fixtures), $fixtures['loginEmail']);
 
-        if (self::isAllowed($access, $persona)) {
-            self::assertNotContains(
-                $status,
-                [Response::HTTP_UNAUTHORIZED, Response::HTTP_FORBIDDEN],
-                sprintf('%s %s should be reachable for %s, got %d.', $httpMethod, $uri, $persona, $status),
+        if (self::isAllowed($entry['access'], $persona)) {
+            $expected = is_int($entry['expected']) ? $entry['expected'] : $entry['expected'][$persona] ?? $entry['expected']['*'];
+            self::assertResponseStatusCodeSame(
+                $expected,
+                sprintf('%s %s should return %d for %s.', $httpMethod, $uri, $expected, $persona),
             );
 
             return;
         }
 
         $expectedStatus = self::PERSONA_ANONYMOUS === $persona ? Response::HTTP_UNAUTHORIZED : Response::HTTP_FORBIDDEN;
-        self::assertSame(
+        self::assertResponseStatusCodeSame(
             $expectedStatus,
-            $status,
             sprintf('%s %s should be denied for %s.', $httpMethod, $uri, $persona),
         );
 
@@ -219,13 +237,25 @@ final class ApiAccessMatrixTest extends WebTestCase
     }
 
     /**
-     * @param array<string, string> $parameters
+     * @param array<string, string>   $parameters
+     * @param array<string, mixed>    $payload
+     * @param array<string, string>   $query
+     * @param int|array<string, int> $expected Exact status for every allowed persona, or per persona with a '*' fallback.
      *
-     * @return array{route: string, method: string, access: string, parameters: array<string, string>, body: string}
+     * @return MatrixEntry
      */
-    private static function entry(string $route, string $method, string $access, array $parameters = [], string $body = self::BODY_JSON): array
-    {
-        return ['route' => $route, 'method' => $method, 'access' => $access, 'parameters' => $parameters, 'body' => $body];
+    private static function entry(
+        string $route,
+        string $method,
+        string $access,
+        array $parameters = [],
+        string $body = self::BODY_JSON,
+        string $state = self::STATE_LOBBY,
+        array $payload = [],
+        array $query = [],
+        int|array $expected = Response::HTTP_OK,
+    ): array {
+        return ['route' => $route, 'method' => $method, 'access' => $access, 'parameters' => $parameters, 'body' => $body, 'state' => $state, 'payload' => $payload, 'query' => $query, 'expected' => $expected];
     }
 
     private static function isAllowed(string $access, string $persona): bool
@@ -238,7 +268,10 @@ final class ApiAccessMatrixTest extends WebTestCase
         };
     }
 
-    private function sendRequest(KernelBrowser $client, string $method, string $uri, string $body, string $loginEmail): void
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function sendRequest(KernelBrowser $client, string $method, string $uri, string $body, array $payload, string $loginEmail): void
     {
         if (self::BODY_LOGIN_FORM === $body) {
             $client->request($method, $uri, ['_username' => $loginEmail, '_password' => self::LOGIN_PASSWORD]);
@@ -246,12 +279,35 @@ final class ApiAccessMatrixTest extends WebTestCase
             return;
         }
 
-        $client->request($method, $uri, [], [], ['CONTENT_TYPE' => 'application/json'], '{}');
+        $client->request($method, $uri, [], [], ['CONTENT_TYPE' => 'application/json'], json_encode([] === $payload ? new \stdClass() : $payload, JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * Swaps the id placeholders in a payload or query for the fixture's user ids.
+     *
+     * @param array<array-key, mixed> $values
+     * @param array{playerIds: array<string, int>} $fixtures
+     *
+     * @return array<array-key, mixed>
+     */
+    private function resolveTokens(array $values, array $fixtures): array
+    {
+        $resolved = [];
+        foreach ($values as $key => $value) {
+            $resolved[$key] = match (true) {
+                is_array($value) => $this->resolveTokens($value, $fixtures),
+                self::TOKEN_PARTICIPANT_ID === $value => $fixtures['playerIds']['participant'],
+                self::TOKEN_OPPONENT_ID === $value => $fixtures['playerIds']['opponent'],
+                default => $value,
+            };
+        }
+
+        return $resolved;
     }
 
     /**
      * @param array<string, string>                                                                   $parameters
-     * @param array{personas: array<string, User>, loginEmail: string, gameId: int, invitationUuid: string} $fixtures
+     * @param array{personas: array<string, User>, playerIds: array<string, int>, loginEmail: string, gameId: int, invitationUuid: string} $fixtures
      *
      * @return array<string, int|string>
      */
@@ -271,12 +327,14 @@ final class ApiAccessMatrixTest extends WebTestCase
     }
 
     /**
-     * Builds one lobby game with an invitation, the five logged-in personas, and a user
-     * with a known password for the login route. DAMA rolls all of it back after the test.
+     * Builds one game with an invitation, the five logged-in personas, an opponent for the
+     * participant, and a user with a known password for the login route. The game is in the
+     * lobby, started with an empty first round, or finished. DAMA rolls all of it back after
+     * the test.
      *
-     * @return array{personas: array<string, User>, loginEmail: string, gameId: int, invitationUuid: string}
+     * @return array{personas: array<string, User>, playerIds: array<string, int>, loginEmail: string, gameId: int, invitationUuid: string}
      */
-    private function createFixtures(): array
+    private function createFixtures(string $state): array
     {
         $container = static::getContainer();
         $entityManager = $container->get(EntityManagerInterface::class);
@@ -290,6 +348,7 @@ final class ApiAccessMatrixTest extends WebTestCase
             self::PERSONA_ADMIN => $this->createUser($entityManager, 'admin', ['ROLE_ADMIN']),
         ];
 
+        $opponent = $this->createUser($entityManager, 'opponent', ['ROLE_PLAYER']);
         $loginUser = $this->createUser($entityManager, 'login', ['ROLE_PLAYER']);
         $loginUser->setPassword($passwordHasher->hashPassword($loginUser, self::LOGIN_PASSWORD));
 
@@ -298,8 +357,22 @@ final class ApiAccessMatrixTest extends WebTestCase
             ->setStartScore(301)
             ->setDoubleOut(false)
             ->setTripleOut(false)
-            ->setStatus(GameStatus::Lobby);
+            ->setStatus(match ($state) {
+                self::STATE_LOBBY => GameStatus::Lobby,
+                self::STATE_STARTED => GameStatus::Started,
+                self::STATE_FINISHED => GameStatus::Finished,
+                default => throw new \LogicException(sprintf('Unknown game state "%s".', $state)),
+            });
+        if (self::STATE_FINISHED === $state) {
+            $game->setFinishedAt(new DateTimeImmutable());
+        }
         $entityManager->persist($game);
+
+        if (self::STATE_STARTED === $state) {
+            $round = (new Round())->setRoundNumber(1)->setStartedAt(new DateTime());
+            $game->addRound($round);
+            $game->setRound(1);
+        }
 
         $gamePlayer = (new GamePlayers())
             ->setGame($game)
@@ -309,6 +382,15 @@ final class ApiAccessMatrixTest extends WebTestCase
             ->setIsWinner(false);
         $game->addGamePlayer($gamePlayer);
         $entityManager->persist($gamePlayer);
+
+        $opponentSeat = (new GamePlayers())
+            ->setGame($game)
+            ->setPlayer($opponent)
+            ->setPosition(2)
+            ->setScore(301)
+            ->setIsWinner(false);
+        $game->addGamePlayer($opponentSeat);
+        $entityManager->persist($opponentSeat);
         $entityManager->flush();
 
         $gameId = $game->getGameId();
@@ -324,6 +406,10 @@ final class ApiAccessMatrixTest extends WebTestCase
 
         return [
             'personas' => $personas,
+            'playerIds' => [
+                'participant' => (int) $personas[self::PERSONA_PLAYER_PARTICIPANT]->getId(),
+                'opponent' => (int) $opponent->getId(),
+            ],
             'loginEmail' => (string) $loginUser->getEmail(),
             'gameId' => $gameId,
             'invitationUuid' => $invitationUuid,
