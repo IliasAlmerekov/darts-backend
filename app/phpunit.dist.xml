@@ -21,6 +21,14 @@
         </testsuite>
     </testsuites>
 
+    <!-- Benchmarks are slow and write reports to var/benchmarks. Run them on demand with the "benchmark" group. -->
+    <groups>
+        <exclude>
+            <group>benchmark</group>
+            <group>ignore</group>
+        </exclude>
+    </groups>
+
     <source ignoreSuppressionOfDeprecations="true"
             ignoreIndirectDeprecations="true"
             restrictNotices="true"

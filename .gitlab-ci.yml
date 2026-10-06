@@ -108,7 +108,7 @@ test:php:
     - until php -r 'new PDO("mysql:host=mysql;port=3306", "root", "root123");' >/dev/null 2>&1; do sleep 1; done
     - php -d memory_limit=-1 bin/console doctrine:database:create --env=test --if-not-exists
     - php -d memory_limit=-1 bin/console doctrine:migrations:migrate --env=test --no-interaction
-    - php -d memory_limit=-1 vendor/bin/phpunit --coverage-text  --exclude-group ignore --coverage-clover build/phpunit.coverage.xml --coverage-cobertura build/phpunit.coverage.cobertura.xml --log-junit build/phpunit.xml
+    - php -d memory_limit=-1 vendor/bin/phpunit --coverage-text  --coverage-clover build/phpunit.coverage.xml --coverage-cobertura build/phpunit.coverage.cobertura.xml --log-junit build/phpunit.xml
   needs:
     - job: build:php
       artifacts: true

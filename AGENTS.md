@@ -52,11 +52,13 @@ docker compose exec -T php sh -lc 'cd /var/www/html && php bin/console lint:yaml
 docker compose exec -T php sh -lc 'cd /var/www/html && php -d memory_limit=-1 bin/console cache:clear --env=test'
 docker compose exec -T php sh -lc 'cd /var/www/html && php -d memory_limit=-1 bin/console doctrine:database:create --env=test --if-not-exists'
 docker compose exec -T php sh -lc 'cd /var/www/html && php -d memory_limit=-1 bin/console doctrine:migrations:migrate --env=test --no-interaction'
-docker compose exec -T php sh -lc 'cd /var/www/html && XDEBUG_MODE=coverage php -d memory_limit=-1 vendor/bin/phpunit --coverage-text --exclude-group ignore --coverage-clover build/phpunit.coverage.xml --coverage-cobertura build/phpunit.coverage.cobertura.xml --log-junit build/phpunit.xml'
+docker compose exec -T php sh -lc 'cd /var/www/html && XDEBUG_MODE=coverage php -d memory_limit=-1 vendor/bin/phpunit --coverage-text --coverage-clover build/phpunit.coverage.xml --coverage-cobertura build/phpunit.coverage.cobertura.xml --log-junit build/phpunit.xml'
 ```
 
-A green result comes from fixing the code; Psalm, PHPCS, and PHPUnit configs stay as they
-are. In the final report, list each command run with its pass or fail status, and name
+A green result comes from fixing the code. Never change the Psalm, PHPCS, or PHPUnit
+configs to hide a failure; a deliberate config change, such as excluding the slow
+`benchmark` group from the default PHPUnit run, ships with its reason in the commit and a
+test that pins it. In the final report, list each command run with its pass or fail status, and name
 any check you skipped.
 
 ## Guardrails
