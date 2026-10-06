@@ -72,5 +72,12 @@ final class RematchStartEndpointTest extends WebTestCase
         );
         sort($playerIds);
         self::assertSame([$first->getId(), $second->getId()], $playerIds);
+
+        // The old seats ended on 0, so 301 shows that the start set up the copied seats.
+        $scores = array_map(
+            static fn (GamePlayers $seat): ?int => $seat->getScore(),
+            $newGame->getGamePlayers()->toArray(),
+        );
+        self::assertSame([301, 301], $scores);
     }
 }
