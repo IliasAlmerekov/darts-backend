@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Security;
 
+use App\Tests\Support\DevFunctionalKernel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -26,6 +28,40 @@ final class ApiDocExposureTest extends WebTestCase
         $client->request('GET', $uri);
 
         self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
+    }
+
+    /**
+     * Dev boots the functional kernel variant; every other environment boots the app kernel.
+     *
+     * @param array<string, mixed> $options
+     *
+     * @return KernelInterface
+     */
+    protected static function createKernel(array $options = []): KernelInterface
+    {
+        if ('dev' !== ($options['environment'] ?? null)) {
+            return parent::createKernel($options);
+        }
+
+        return new DevFunctionalKernel('dev', (bool) ($options['debug'] ?? true));
+    }
+
+    /**
+     * The real dev kernel serves the doc routes to an anonymous client.
+     *
+     * @param string $uri
+     * @param string $contentType
+     *
+     * @return void
+     */
+    #[DataProvider('devApiDocResponsesProvider')]
+    public function testApiDocRoutesArePublicInDev(string $uri, string $contentType): void
+    {
+        $client = static::createClient(['environment' => 'dev', 'debug' => true]);
+        $client->request('GET', $uri);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_OK);
+        self::assertStringContainsString($contentType, (string) $client->getResponse()->headers->get('Content-Type'));
     }
 
     /**
@@ -64,6 +100,15 @@ final class ApiDocExposureTest extends WebTestCase
         yield 'lookalike doc prefix' => ['/api/docs', false];
         yield 'doc subpath' => ['/api/doc/anything', false];
         yield 'unrelated API route' => ['/api/games', false];
+    }
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function devApiDocResponsesProvider(): iterable
+    {
+        yield 'Swagger UI' => ['/api/doc', 'text/html'];
+        yield 'OpenAPI JSON' => ['/api/doc.json', 'application/json'];
     }
 
     /**
