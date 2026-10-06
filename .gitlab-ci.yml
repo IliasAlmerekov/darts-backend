@@ -132,6 +132,14 @@ test:dev-env:
     - sh scripts/check-test-db-env.sh
   needs: []
 
+test:line-endings:
+  # The -dev image ships git, which the check needs for .gitattributes lookups.
+  image: ${HARBOR_REGISTRY}/library/php:${PHP_VERSION}-dev
+  stage: test
+  script:
+    - sh scripts/check-image-eol.sh
+  needs: []
+
 test:codesniffer:
   image: ${HARBOR_REGISTRY}/library/php:${PHP_VERSION}-dev
   stage: test
