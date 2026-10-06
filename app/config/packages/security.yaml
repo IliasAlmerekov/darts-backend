@@ -48,6 +48,8 @@ security:
         - { path: ^/api/logout$, roles: PUBLIC_ACCESS }
         - { path: ^/api/invite/join/[^/]+$, roles: PUBLIC_ACCESS }
         - { path: ^/api/invite/process$, roles: ROLE_PLAYER }
+        # Swagger UI and its JSON exist in dev only (config/routes/nelmio_api_doc*.yaml).
+        - { path: ^/api/doc(\.json)?$, roles: PUBLIC_ACCESS }
         - { path: ^/api, roles: ROLE_ADMIN }
 
 when@test:
