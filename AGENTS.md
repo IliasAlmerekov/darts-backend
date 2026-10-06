@@ -50,8 +50,12 @@ volume was created before commit 7ee392b (root password `root123`), put the matc
 `DATABASE_URL` in `app/.env.test.local`, or recreate the volume with `docker compose down -v`,
 which deletes the local database.
 
+`scripts/check-image-eol.sh`, also run on the host, fails when a shell script, a Dockerfile,
+or a file under `app/docker/` lacks `eol=lf` in `.gitattributes` or is committed with CRLF.
+
 ```bash
 sh scripts/check-test-db-env.sh
+sh scripts/check-image-eol.sh
 docker compose up -d php mysql
 docker compose exec -T php sh -lc 'cd /var/www/html && composer install --no-interaction'
 docker compose exec -T php sh -lc 'cd /var/www/html && mkdir -p build'
