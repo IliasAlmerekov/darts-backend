@@ -30,7 +30,7 @@ use Symfony\Component\Uid\Uuid;
  * invitation processing is for players, and everything else under /api is for the admin
  * account on the shared tablet.
  *
- * @psalm-type MatrixEntry = array{route: string, method: string, access: string, parameters: array<string, string>, body: string, state: string, payload: array<string, mixed>, query: array<string, string>, expected: int|array<string, int>}
+ * @psalm-type MatrixEntry = array{route: string, method: string, access: string, parameters: array<string, string>, body: string, state: string, payload: array<string, mixed>, query: array<string, string>, expected: int|array<string, int>, knownIssue: string|null}
  */
 final class ApiAccessMatrixTest extends WebTestCase
 {
@@ -115,10 +115,8 @@ final class ApiAccessMatrixTest extends WebTestCase
             // Admin: game lifecycle
             self::entry('app_game_state', Request::METHOD_GET, self::ACCESS_ADMIN, $game, expected: Response::HTTP_OK),
             self::entry('app_game_start', Request::METHOD_POST, self::ACCESS_ADMIN, $game, expected: Response::HTTP_OK),
-            // Pinned to the current 400 (GAME_INVALID_PLAYER_COUNT) although the finished game has two players:
-            // the rematch copies the players with raw persists, so start() still sees an empty player collection.
-            // That looks like a production bug; change this to 201 when it is fixed.
-            self::entry('app_game_rematch_start', Request::METHOD_POST, self::ACCESS_ADMIN, $game, state: self::STATE_FINISHED, expected: Response::HTTP_BAD_REQUEST),
+            // Returns 400 GAME_INVALID_PLAYER_COUNT for a finished two-player game until #73 is fixed.
+            self::entry('app_game_rematch_start', Request::METHOD_POST, self::ACCESS_ADMIN, $game, state: self::STATE_FINISHED, expected: Response::HTTP_CREATED, knownIssue: '#73'),
             self::entry('app_game_settings_create', Request::METHOD_POST, self::ACCESS_ADMIN, payload: ['startScore' => 501], expected: Response::HTTP_CREATED),
             self::entry('app_game_settings', Request::METHOD_PATCH, self::ACCESS_ADMIN, $game, payload: ['startScore' => 501], expected: Response::HTTP_OK),
             self::entry('app_game_settings_read', Request::METHOD_GET, self::ACCESS_ADMIN, $game, expected: Response::HTTP_OK),
@@ -184,6 +182,16 @@ final class ApiAccessMatrixTest extends WebTestCase
 
         if (self::isAllowed($entry['access'], $persona)) {
             $expected = is_int($entry['expected']) ? $entry['expected'] : $entry['expected'][$persona] ?? $entry['expected']['*'];
+            if (null !== $entry['knownIssue']) {
+                $actual = $client->getResponse()->getStatusCode();
+                self::assertNotSame(
+                    $expected,
+                    $actual,
+                    sprintf('%s %s now returns %d: %s looks fixed, drop knownIssue from this entry.', $httpMethod, $uri, $expected, $entry['knownIssue']),
+                );
+                self::markTestIncomplete(sprintf('%s %s returns %d instead of %d, see %s.', $httpMethod, $uri, $actual, $expected, $entry['knownIssue']));
+            }
+
             self::assertResponseStatusCodeSame(
                 $expected,
                 sprintf('%s %s should return %d for %s.', $httpMethod, $uri, $expected, $persona),
@@ -240,7 +248,8 @@ final class ApiAccessMatrixTest extends WebTestCase
      * @param array<string, string>   $parameters
      * @param array<string, mixed>    $payload
      * @param array<string, string>   $query
-     * @param int|array<string, int> $expected Exact status for every allowed persona, or per persona with a '*' fallback.
+     * @param int|array<string, int> $expected   Exact status for every allowed persona, or per persona with a '*' fallback.
+     * @param string|null            $knownIssue Issue that keeps an allowed cell from returning $expected; the cell is incomplete until the issue is fixed.
      *
      * @return MatrixEntry
      */
@@ -254,8 +263,9 @@ final class ApiAccessMatrixTest extends WebTestCase
         array $payload = [],
         array $query = [],
         int|array $expected = Response::HTTP_OK,
+        ?string $knownIssue = null,
     ): array {
-        return ['route' => $route, 'method' => $method, 'access' => $access, 'parameters' => $parameters, 'body' => $body, 'state' => $state, 'payload' => $payload, 'query' => $query, 'expected' => $expected];
+        return ['route' => $route, 'method' => $method, 'access' => $access, 'parameters' => $parameters, 'body' => $body, 'state' => $state, 'payload' => $payload, 'query' => $query, 'expected' => $expected, 'knownIssue' => $knownIssue];
     }
 
     private static function isAllowed(string $access, string $persona): bool
