@@ -8,9 +8,10 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 COMPOSE_FILE="${1:-${ROOT_DIR}/docker-compose.yaml}"
 ENV_TEST_FILE="${2:-${ROOT_DIR}/app/.env.test}"
 
-# tr drops CR so a CRLF checkout parses the same as LF.
+# tr drops CR so a CRLF checkout parses the same as LF. Symfony uses the last
+# DATABASE_URL line, so the check does too.
 compose_password="$(tr -d '\r' < "${COMPOSE_FILE}" | sed -n 's/^[[:space:]]*MYSQL_ROOT_PASSWORD:[[:space:]]*\${MYSQL_ROOT_PASSWORD:-\([^}]*\)}.*$/\1/p')"
-database_url="$(tr -d '\r' < "${ENV_TEST_FILE}" | sed -n 's/^DATABASE_URL="\{0,1\}\([^"]*\)"\{0,1\}[[:space:]]*$/\1/p')"
+database_url="$(tr -d '\r' < "${ENV_TEST_FILE}" | sed -n 's/^DATABASE_URL="\{0,1\}\([^"]*\)"\{0,1\}[[:space:]]*$/\1/p' | tail -n 1)"
 
 if [ -z "${compose_password}" ]; then
     echo "No default MYSQL_ROOT_PASSWORD found in ${COMPOSE_FILE}."
@@ -32,4 +33,4 @@ if [ "root:${compose_password}" != "${credentials}" ]; then
     exit 1
 fi
 
-echo "app/.env.test matches the MySQL root password in docker-compose.yaml."
+echo "DATABASE_URL in ${ENV_TEST_FILE} matches the MySQL root password in ${COMPOSE_FILE}."
