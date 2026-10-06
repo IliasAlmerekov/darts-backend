@@ -10,6 +10,7 @@ use App\Entity\Invitation;
 use App\Entity\Round;
 use App\Entity\User;
 use App\Enum\GameStatus;
+use App\Tests\Support\TestUserFactory;
 use DateTime;
 use DateTimeImmutable;
 use Doctrine\DBAL\Connection;
@@ -34,6 +35,8 @@ use Symfony\Component\Uid\Uuid;
  */
 final class ApiAccessMatrixTest extends WebTestCase
 {
+    private const string USER_PREFIX = 'matrix';
+
     private const string ACCESS_PUBLIC = 'public';
     private const string ACCESS_PLAYER = 'player';
     private const string ACCESS_ADMIN = 'admin';
@@ -115,8 +118,7 @@ final class ApiAccessMatrixTest extends WebTestCase
             // Admin: game lifecycle
             self::entry('app_game_state', Request::METHOD_GET, self::ACCESS_ADMIN, $game, expected: Response::HTTP_OK),
             self::entry('app_game_start', Request::METHOD_POST, self::ACCESS_ADMIN, $game, expected: Response::HTTP_OK),
-            // Returns 400 GAME_INVALID_PLAYER_COUNT for a finished two-player game until #73 is fixed.
-            self::entry('app_game_rematch_start', Request::METHOD_POST, self::ACCESS_ADMIN, $game, state: self::STATE_FINISHED, expected: Response::HTTP_CREATED, knownIssue: '#73'),
+            self::entry('app_game_rematch_start', Request::METHOD_POST, self::ACCESS_ADMIN, $game, state: self::STATE_FINISHED, expected: Response::HTTP_CREATED),
             self::entry('app_game_settings_create', Request::METHOD_POST, self::ACCESS_ADMIN, payload: ['startScore' => 501], expected: Response::HTTP_CREATED),
             self::entry('app_game_settings', Request::METHOD_PATCH, self::ACCESS_ADMIN, $game, payload: ['startScore' => 501], expected: Response::HTTP_OK),
             self::entry('app_game_settings_read', Request::METHOD_GET, self::ACCESS_ADMIN, $game, expected: Response::HTTP_OK),
@@ -351,15 +353,15 @@ final class ApiAccessMatrixTest extends WebTestCase
         $passwordHasher = $container->get(UserPasswordHasherInterface::class);
 
         $personas = [
-            self::PERSONA_ROLE_USER_ONLY => $this->createUser($entityManager, 'roleless', []),
-            self::PERSONA_GUEST => $this->createUser($entityManager, 'guest', ['ROLE_GUEST']),
-            self::PERSONA_PLAYER_OUTSIDER => $this->createUser($entityManager, 'outsider', ['ROLE_PLAYER']),
-            self::PERSONA_PLAYER_PARTICIPANT => $this->createUser($entityManager, 'participant', ['ROLE_PLAYER']),
-            self::PERSONA_ADMIN => $this->createUser($entityManager, 'admin', ['ROLE_ADMIN']),
+            self::PERSONA_ROLE_USER_ONLY => TestUserFactory::create($entityManager, self::USER_PREFIX, 'roleless', []),
+            self::PERSONA_GUEST => TestUserFactory::create($entityManager, self::USER_PREFIX, 'guest', ['ROLE_GUEST']),
+            self::PERSONA_PLAYER_OUTSIDER => TestUserFactory::create($entityManager, self::USER_PREFIX, 'outsider', ['ROLE_PLAYER']),
+            self::PERSONA_PLAYER_PARTICIPANT => TestUserFactory::create($entityManager, self::USER_PREFIX, 'participant', ['ROLE_PLAYER']),
+            self::PERSONA_ADMIN => TestUserFactory::create($entityManager, self::USER_PREFIX, 'admin', ['ROLE_ADMIN']),
         ];
 
-        $opponent = $this->createUser($entityManager, 'opponent', ['ROLE_PLAYER']);
-        $loginUser = $this->createUser($entityManager, 'login', ['ROLE_PLAYER']);
+        $opponent = TestUserFactory::create($entityManager, self::USER_PREFIX, 'opponent', ['ROLE_PLAYER']);
+        $loginUser = TestUserFactory::create($entityManager, self::USER_PREFIX, 'login', ['ROLE_PLAYER']);
         $loginUser->setPassword($passwordHasher->hashPassword($loginUser, self::LOGIN_PASSWORD));
 
         $game = (new Game())
@@ -424,22 +426,6 @@ final class ApiAccessMatrixTest extends WebTestCase
             'gameId' => $gameId,
             'invitationUuid' => $invitationUuid,
         ];
-    }
-
-    /**
-     * @param list<string> $roles
-     */
-    private function createUser(EntityManagerInterface $entityManager, string $label, array $roles): User
-    {
-        $suffix = bin2hex(random_bytes(4));
-        $user = (new User())
-            ->setEmail(sprintf('matrix-%s-%s@test.dev', $label, $suffix))
-            ->setUsername(sprintf('matrix_%s_%s', $label, $suffix))
-            ->setPassword('unused')
-            ->setRoles($roles);
-        $entityManager->persist($user);
-
-        return $user;
     }
 
     /**
