@@ -204,7 +204,7 @@ final class InvitationController extends AbstractController
         description: 'Einladung wurde verarbeitet (User dem Spiel hinzugefügt) und Redirect fürs Frontend zurückgegeben.',
         content: new OA\JsonContent(
             type: 'object',
-            required: ['success', 'redirect'],
+            required: ['success', 'roles', 'id', 'redirect', 'gameId'],
             properties: [
                 new OA\Property(property: 'success', type: 'boolean', example: true),
                 new OA\Property(property: 'roles', type: 'array', items: new OA\Items(type: 'string'), example: ['ROLE_PLAYER']),
