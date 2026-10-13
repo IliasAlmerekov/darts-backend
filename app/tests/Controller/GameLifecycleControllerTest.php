@@ -342,6 +342,7 @@ final class GameLifecycleControllerTest extends TestCase
         $this->assertSame(Response::HTTP_OK, $response->getStatusCode());
         $this->assertSame('state-contract', $response->headers->get('X-Game-State-Version'));
         $this->assertSame([
+            'type' => 'full-state',
             'id' => 55,
             'status' => 'started',
             'currentRound' => 9,

@@ -124,8 +124,8 @@ final class ApiAccessMatrixTest extends WebTestCase
             self::entry('app_game_settings_read', Request::METHOD_GET, self::ACCESS_ADMIN, $game, expected: Response::HTTP_OK),
             self::entry('app_game_finish', Request::METHOD_POST, self::ACCESS_ADMIN, $game, expected: Response::HTTP_OK),
             self::entry('app_game_reopen', Request::METHOD_PATCH, self::ACCESS_ADMIN, $game, state: self::STATE_FINISHED, expected: Response::HTTP_OK),
-            self::entry('app_game_finished', Request::METHOD_GET, self::ACCESS_ADMIN, $game, expected: Response::HTTP_OK),
-            self::entry('app_games_finished', Request::METHOD_GET, self::ACCESS_ADMIN, $game, expected: Response::HTTP_OK),
+            self::entry('app_game_finished', Request::METHOD_GET, self::ACCESS_ADMIN, $game, state: self::STATE_FINISHED, expected: Response::HTTP_OK),
+            self::entry('app_games_finished', Request::METHOD_GET, self::ACCESS_ADMIN, $game, state: self::STATE_FINISHED, expected: Response::HTTP_OK),
             self::entry('app_game_abort', Request::METHOD_PATCH, self::ACCESS_ADMIN, $game, expected: Response::HTTP_OK),
 
             // Admin: throws

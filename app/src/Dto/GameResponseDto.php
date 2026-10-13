@@ -9,12 +9,22 @@ declare(strict_types=1);
 
 namespace App\Dto;
 
+use OpenApi\Attributes as OA;
+
 /**
  * @psalm-immutable
  * This class is used to serialize game stats
  */
 final class GameResponseDto
 {
+    /**
+     * Discriminator the frontend uses to tell a full-state payload from an ack.
+     *
+     * @psalm-suppress PossiblyUnusedProperty Used via Symfony Serializer
+     */
+    #[OA\Property(type: 'string', enum: ['full-state'], example: 'full-state')]
+    public string $type = 'full-state';
+
     /**
      * @param int                                       $id
      * @param string                                    $status

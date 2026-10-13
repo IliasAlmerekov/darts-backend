@@ -273,6 +273,7 @@ final class GameLifecycleController extends AbstractController
     )]
     #[ApiResponse]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
+    #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Das Spiel ist nicht beendet (`GAME_NOT_FINISHED`).')]
     #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['GET'], format: 'json')]
     #[Route('/api/games/{gameId}/finished', name: 'app_games_finished', methods: ['GET'], format: 'json', requirements: ['gameId' => '\d+'])]
     public function finished(#[AttributeMapEntity(id: 'gameId')] Game $game, GameFinishServiceInterface $gameFinishService): GameSummaryResponseDto

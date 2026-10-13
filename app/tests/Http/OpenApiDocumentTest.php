@@ -131,6 +131,21 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertArrayNotHasKey('default', $paths['/api/logout']['post']['responses']);
     }
 
+    public function testFinishedDocuments409AndTheTypeDiscriminatorsAreLiterals(): void
+    {
+        $document = $this->document();
+
+        foreach (['/api/game/{gameId}/finished', '/api/games/{gameId}/finished'] as $path) {
+            self::assertArrayHasKey('409', $document['paths'][$path]['get']['responses'], $path);
+        }
+        self::assertArrayNotHasKey('409', $document['paths']['/api/game/{gameId}/settings']['get']['responses']);
+
+        $schemas = $document['components']['schemas'];
+        self::assertSame(['full-state'], $schemas['GameResponseDto']['properties']['type']['enum']);
+        self::assertSame(['ack'], $schemas['ThrowAckDto']['properties']['type']['enum']);
+        self::assertSame(['ack'], $schemas['UndoAckDto']['properties']['type']['enum']);
+    }
+
     /**
      * @return array<string, mixed>
      */
