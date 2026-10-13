@@ -57,7 +57,7 @@ final class GameThrowControllerTest extends TestCase
 
         $this->assertInstanceOf(JsonResponse::class, $response);
         $this->assertSame('true', $response->headers->get('Deprecation'));
-        $this->assertSame('Wed, 30 Sep 2026 23:59:59 GMT', $response->headers->get('Sunset'));
+        $this->assertFalse($response->headers->has('Sunset'));
         $this->assertSame('</api/game/123/throw/delta>; rel="successor-version"', $response->headers->get('Link'));
     }
 
@@ -89,7 +89,7 @@ final class GameThrowControllerTest extends TestCase
 
         $this->assertInstanceOf(JsonResponse::class, $response);
         $this->assertSame('true', $response->headers->get('Deprecation'));
-        $this->assertSame('Wed, 30 Sep 2026 23:59:59 GMT', $response->headers->get('Sunset'));
+        $this->assertFalse($response->headers->has('Sunset'));
         $this->assertSame('</api/game/123/throw/delta>; rel="successor-version"', $response->headers->get('Link'));
     }
 

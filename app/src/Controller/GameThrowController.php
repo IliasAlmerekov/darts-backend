@@ -57,6 +57,7 @@ final class GameThrowController extends AbstractController
         description: 'Wurf ist im aktuellen Zustand nicht erlaubt (z. B. falscher aktiver Spieler).'
     )]
     #[ApiResponse]
+    #[OA\Post(deprecated: true)]
     #[Route('/api/game/{gameId}/throw', name: 'app_game_throw', methods: ['POST'], format: 'json')]
     public function throw(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameServiceInterface $gameService, #[MapRequestPayload] ThrowRequest $dto): JsonResponse
     {
@@ -66,7 +67,6 @@ final class GameThrowController extends AbstractController
 
         $response = $this->json($gameDto);
         $response->headers->set('Deprecation', 'true');
-        $response->headers->set('Sunset', 'Wed, 30 Sep 2026 23:59:59 GMT');
         $response->headers->set('Link', sprintf('</api/game/%d/throw/delta>; rel="successor-version"', (int) $game->getGameId()));
 
         return $response;
@@ -122,6 +122,7 @@ final class GameThrowController extends AbstractController
         content: new OA\JsonContent(ref: new Model(type: GameResponseDto::class))
     )]
     #[ApiResponse]
+    #[OA\Delete(deprecated: true)]
     #[Route('/api/game/{gameId}/throw', name: 'app_game_throw_undo', methods: ['DELETE'], format: 'json')]
     public function undoThrow(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameServiceInterface $gameService): JsonResponse
     {
@@ -130,7 +131,6 @@ final class GameThrowController extends AbstractController
 
         $response = $this->json($gameDto);
         $response->headers->set('Deprecation', 'true');
-        $response->headers->set('Sunset', 'Wed, 30 Sep 2026 23:59:59 GMT');
         $response->headers->set('Link', sprintf('</api/game/%d/throw/delta>; rel="successor-version"', (int) $game->getGameId()));
 
         return $response;
