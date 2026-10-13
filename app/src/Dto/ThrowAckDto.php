@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace App\Dto;
 
+use OpenApi\Attributes as OA;
+
 /**
  * Lightweight acknowledgement payload returned after a throw write.
  *
@@ -19,6 +21,7 @@ final class ThrowAckDto
     /**
      * Discriminator the frontend uses to tell an ack from a full-state payload.
      */
+    #[OA\Property(type: 'string', enum: ['ack'], example: 'ack')]
     public string $type = 'ack';
 
     /**

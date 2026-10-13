@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace App\Dto;
 
+use OpenApi\Attributes as OA;
+
 /**
  * @psalm-immutable
  * This class is used to serialize game stats
@@ -20,6 +22,7 @@ final class GameResponseDto
      *
      * @psalm-suppress PossiblyUnusedProperty Used via Symfony Serializer
      */
+    #[OA\Property(type: 'string', enum: ['full-state'], example: 'full-state')]
     public string $type = 'full-state';
 
     /**
