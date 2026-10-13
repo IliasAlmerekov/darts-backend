@@ -102,3 +102,17 @@ Commits, PR titles and bodies, and issue comments carry the human author only: n
 Ask the user first before you run a migration against a non-test database, change
 dependencies, or touch auth, roles, tokens, or credentials. Keep secrets,
 tokens, and passwords out of logs, prompts, and commits.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues at `IliasAlmerekov/darts-backend`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.

@@ -87,10 +87,9 @@ final class InvitationController extends AbstractController
         description: 'Einladungslink wurde erstellt oder existierte bereits.',
         content: new OA\JsonContent(
             type: 'object',
-            required: ['success', 'status'],
+            required: ['success'],
             properties: [
                 new OA\Property(property: 'success', type: 'boolean', example: true),
-                new OA\Property(property: 'status', type: 'integer', example: 200),
                 new OA\Property(property: 'gameId', type: 'integer', nullable: true, example: 123),
                 new OA\Property(property: 'invitationLink', type: 'string', nullable: true, example: '/api/invite/join/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'),
                 new OA\Property(
@@ -111,6 +110,7 @@ final class InvitationController extends AbstractController
     )]
     #[OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Spiel nicht gefunden.')]
     #[ApiResponse(headers: ['X-Accel-Buffering' => 'no'])]
+    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
     #[Route('/api/invite/create/{id}', name: 'create_invitation', methods: ['POST'], format: 'json')]
     public function createInvitation(#[MapEntity(id: 'id')] Game $game, InvitationServiceInterface $invitationService): array
     {
@@ -147,7 +147,7 @@ final class InvitationController extends AbstractController
         description: 'Spiel kann nicht gejoint werden (z. B. nicht mehr in Lobby oder Raum bereits voll).'
     )]
     #[Security(name: null)]
-    #[Route('api/invite/join/{uuid}', name: 'join_invitation', format: 'json')]
+    #[Route('/api/invite/join/{uuid}', name: 'join_invitation', methods: ['GET'], format: 'json')]
     public function joinInvitation(#[MapEntity(mapping: ['uuid' => 'uuid'])] Invitation $invitation, SessionInterface $session, InvitationServiceInterface $invitationService): Response
     {
         $gameId = $invitation->getGameId();

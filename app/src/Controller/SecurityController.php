@@ -61,7 +61,20 @@ final class SecurityController extends AbstractController
                 new OA\Property(property: 'redirect', type: 'string', nullable: true, example: '/api/login/success'),
                 new OA\Property(property: 'last_username', type: 'string', nullable: true, example: 'alice'),
                 new OA\Property(property: 'error', type: 'string', nullable: true, example: 'Ungültige Zugangsdaten.'),
-                new OA\Property(property: 'status', type: 'integer', nullable: true, example: 401),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: Response::HTTP_UNAUTHORIZED,
+        description: 'Anmeldung fehlgeschlagen.',
+        content: new OA\JsonContent(
+            type: 'object',
+            required: ['success', 'error'],
+            properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: false),
+                new OA\Property(property: 'last_username', type: 'string', nullable: true, example: 'alice'),
+                new OA\Property(property: 'error', type: 'string', example: 'Ungültige Zugangsdaten.'),
+                new OA\Property(property: 'status', type: 'integer', example: 401, description: 'Nur bei POST: ApiAuthenticationFailureHandler antwortet direkt und lässt `status` im Body.'),
             ]
         )
     )]
@@ -124,7 +137,7 @@ final class SecurityController extends AbstractController
         )
     )]
     #[OA\Response(response: Response::HTTP_UNAUTHORIZED, description: 'User ist nicht authentifiziert.')]
-    #[Route('/api/login/success', name: 'login_success', format: 'json')]
+    #[Route('/api/login/success', name: 'login_success', methods: ['GET'], format: 'json')]
     public function loginSuccess(Request $request, SecurityServiceInterface $securityService): Response
     {
         $user = $this->getUser();
@@ -146,7 +159,8 @@ final class SecurityController extends AbstractController
      *
      * @psalm-suppress PossiblyUnusedMethod Handled by Symfony firewall logout
      */
-    #[Route(path: '/api/logout', name: 'app_logout')]
+    #[OA\Response(response: Response::HTTP_FOUND, description: 'Abgemeldet. Weiterleitung auf `/`.')]
+    #[Route(path: '/api/logout', name: 'app_logout', methods: ['POST'])]
     public function logout(): void
     {
         throw new LogicException(
