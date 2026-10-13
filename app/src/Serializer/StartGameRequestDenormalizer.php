@@ -27,7 +27,7 @@ final class StartGameRequestDenormalizer implements DenormalizerInterface, Denor
 {
     use DenormalizerAwareTrait;
 
-    private const string APPLIED = 'start_game_request_keys_applied';
+    private const string KEYS_MERGED = 'start_game_request_keys_merged';
 
     /**
      * Legacy key => camelCase key.
@@ -49,7 +49,7 @@ final class StartGameRequestDenormalizer implements DenormalizerInterface, Denor
     #[Override]
     public function supportsDenormalization(mixed $data, string $type, ?string $format = null, array $context = []): bool
     {
-        return StartGameRequest::class === $type && is_array($data) && !isset($context[self::APPLIED]);
+        return StartGameRequest::class === $type && is_array($data) && !isset($context[self::KEYS_MERGED]);
     }
 
     /**
@@ -63,10 +63,7 @@ final class StartGameRequestDenormalizer implements DenormalizerInterface, Denor
     #[Override]
     public function denormalize(mixed $data, string $type, ?string $format = null, array $context = []): mixed
     {
-        if (!is_array($data)) {
-            return $this->denormalizer->denormalize($data, $type, $format, $context);
-        }
-
+        /** @var array<string, mixed> $data */
         foreach (self::LEGACY_KEYS as $legacyKey => $camelCaseKey) {
             if (!array_key_exists($legacyKey, $data)) {
                 continue;
@@ -80,7 +77,7 @@ final class StartGameRequestDenormalizer implements DenormalizerInterface, Denor
             unset($data[$legacyKey]);
         }
 
-        return $this->denormalizer->denormalize($data, $type, $format, $context + [self::APPLIED => true]);
+        return $this->denormalizer->denormalize($data, $type, $format, $context + [self::KEYS_MERGED => true]);
     }
 
     /**

@@ -11,12 +11,15 @@ namespace App\Tests\Controller;
 
 use App\Entity\Game;
 use App\Entity\GamePlayers;
+use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Repository\GameRepository;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\Attributes\DataProvider;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -27,6 +30,8 @@ use Symfony\Component\HttpFoundation\Response;
 final class StartSettingsKeysEndpointTest extends WebTestCase
 {
     private const string USER_PREFIX = 'startkeys';
+
+    private User $admin;
 
     /**
      * @return iterable<string, array{string, array<string, mixed>}>
@@ -62,7 +67,7 @@ final class StartSettingsKeysEndpointTest extends WebTestCase
      * @param array<string, mixed> $body
      *
      */
-    #[\PHPUnit\Framework\Attributes\DataProvider('acceptedBodies')]
+    #[DataProvider('acceptedBodies')]
     public function testSettingsAreApplied(string $endpoint, array $body): void
     {
         $client = static::createClient();
@@ -82,7 +87,7 @@ final class StartSettingsKeysEndpointTest extends WebTestCase
     /**
      * @param array<string, mixed> $body
      */
-    #[\PHPUnit\Framework\Attributes\DataProvider('conflictingBodies')]
+    #[DataProvider('conflictingBodies')]
     public function testConflictingSpellingsAreRejected(string $endpoint, array $body): void
     {
         $client = static::createClient();
@@ -92,20 +97,21 @@ final class StartSettingsKeysEndpointTest extends WebTestCase
         $this->post($client, $endpoint, $gameId, $body);
 
         self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST, (string) $client->getResponse()->getContent());
+        $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($payload);
+        self::assertSame('REQUEST_CONFLICTING_SETTING_KEYS', $payload['error'] ?? null);
     }
 
     /**
-     * @param \Symfony\Bundle\FrameworkBundle\KernelBrowser $client
-     * @param array<string, mixed>                          $body
+     * @param KernelBrowser        $client
+     * @param array<string, mixed> $body
      */
-    private function post($client, string $endpoint, int $gameId, array $body): void
+    private function post(KernelBrowser $client, string $endpoint, int $gameId, array $body): void
     {
         $path = 'start' === $endpoint ? '/api/game/%d/start' : '/api/game/%d/rematch/start';
         $client->loginUser($this->admin);
         $client->request(Request::METHOD_POST, sprintf($path, $gameId), [], [], ['CONTENT_TYPE' => 'application/json'], json_encode($body, JSON_THROW_ON_ERROR));
     }
-
-    private \App\Entity\User $admin;
 
     private function createGame(string $endpoint): Game
     {
