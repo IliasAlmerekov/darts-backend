@@ -30,6 +30,7 @@ enum ErrorCode: string
     case GameThrowNotAllowed = 'GAME_THROW_NOT_ALLOWED';
     case GameIdMissing = 'GAME_ID_MISSING';
     case RequestInvalidJsonBody = 'REQUEST_INVALID_JSON_BODY';
+    case RequestConflictingSettingKeys = 'REQUEST_CONFLICTING_SETTING_KEYS';
     case RequestPlayerIdRequired = 'REQUEST_PLAYER_ID_REQUIRED';
     case SecurityUserNotAuthenticated = 'SECURITY_USER_NOT_AUTHENTICATED';
     case SecurityAccessDenied = 'SECURITY_ACCESS_DENIED';

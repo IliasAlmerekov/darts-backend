@@ -146,6 +146,27 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertSame(['ack'], $schemas['UndoAckDto']['properties']['type']['enum']);
     }
 
+    public function testStartGameRequestDocumentsOnlyCamelCaseSettingKeys(): void
+    {
+        $properties = array_keys($this->document()['components']['schemas']['StartGameRequest']['properties']);
+
+        foreach (['startScore', 'doubleOut', 'tripleOut'] as $key) {
+            self::assertContains($key, $properties);
+        }
+        foreach (['startscore', 'doubleout', 'tripleout'] as $legacyKey) {
+            self::assertNotContains($legacyKey, $properties);
+        }
+    }
+
+    public function testGameStartAndRematchStartDocument400ForConflictingSettingKeys(): void
+    {
+        $paths = $this->document()['paths'];
+
+        foreach (['/api/game/{gameId}/start', '/api/game/{gameId}/rematch/start'] as $path) {
+            self::assertArrayHasKey('400', $paths[$path]['post']['responses'], $path);
+        }
+    }
+
     /**
      * @return array<string, mixed>
      */
