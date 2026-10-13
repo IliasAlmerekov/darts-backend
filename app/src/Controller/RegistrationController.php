@@ -50,12 +50,11 @@ final class RegistrationController extends AbstractController
         description: 'Registrierung erfolgreich.',
         content: new OA\JsonContent(
             type: 'object',
-            required: ['success', 'message', 'status'],
+            required: ['success', 'message'],
             properties: [
                 new OA\Property(property: 'success', type: 'boolean', example: true),
                 new OA\Property(property: 'message', type: 'string', example: 'Registrierung erfolgreich'),
                 new OA\Property(property: 'redirect', type: 'string', nullable: true, example: '/'),
-                new OA\Property(property: 'status', type: 'integer', example: 201),
             ]
         )
     )]
@@ -64,11 +63,10 @@ final class RegistrationController extends AbstractController
         description: 'Validierungsfehler.',
         content: new OA\JsonContent(
             type: 'object',
-            required: ['success', 'message', 'status'],
+            required: ['success', 'message'],
             properties: [
                 new OA\Property(property: 'success', type: 'boolean', example: false),
                 new OA\Property(property: 'message', type: 'string'),
-                new OA\Property(property: 'status', type: 'integer', example: 400),
                 new OA\Property(
                     property: 'errors',
                     type: 'object',

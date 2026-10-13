@@ -92,12 +92,12 @@ final class ApiAccessMatrixTest extends WebTestCase
             // Public
             self::entry('app_login', Request::METHOD_GET, self::ACCESS_PUBLIC, expected: Response::HTTP_OK),
             self::entry('app_login', Request::METHOD_POST, self::ACCESS_PUBLIC, body: self::BODY_LOGIN_FORM, expected: Response::HTTP_OK),
-            self::entry('login_success', self::METHOD_ANY, self::ACCESS_PUBLIC, expected: Response::HTTP_OK),
-            self::entry('app_logout', self::METHOD_ANY, self::ACCESS_PUBLIC, expected: Response::HTTP_FOUND),
+            self::entry('login_success', Request::METHOD_GET, self::ACCESS_PUBLIC, expected: Response::HTTP_OK),
+            self::entry('app_logout', Request::METHOD_POST, self::ACCESS_PUBLIC, expected: Response::HTTP_FOUND),
             self::entry('app_register', Request::METHOD_POST, self::ACCESS_PUBLIC, payload: ['email' => 'matrix-register@test.dev', 'username' => 'matrix_register', 'plainPassword' => 'matrix-secret'], expected: Response::HTTP_CREATED),
             self::entry('app_csrf_tokens', Request::METHOD_GET, self::ACCESS_PUBLIC, expected: Response::HTTP_OK),
             self::entry('api_health', Request::METHOD_GET, self::ACCESS_PUBLIC, expected: Response::HTTP_OK),
-            self::entry('join_invitation', self::METHOD_ANY, self::ACCESS_PUBLIC, ['uuid' => self::FIXTURE_INVITATION], expected: Response::HTTP_FOUND),
+            self::entry('join_invitation', Request::METHOD_GET, self::ACCESS_PUBLIC, ['uuid' => self::FIXTURE_INVITATION], expected: Response::HTTP_FOUND),
 
             // Players
             // The session holds no joined invitation, so the service answers 400 with a redirect to /start.
