@@ -96,7 +96,7 @@ final class GameRoomController extends AbstractController
     )]
     #[ApiResponse]
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht.')]
-    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: Der Nutzer ist weder Spieler dieses Spiels noch Admin.')]
+    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: Der Nutzer ist weder Spieler des betroffenen Spiels noch Admin.')]
     #[Route(path: '/api/room/create', name: 'room_create', methods: ['POST'], format: 'json')]
     public function roomCreateApi(#[MapRequestPayload] RoomCreateRequest $dto): array
     {
@@ -347,7 +347,7 @@ final class GameRoomController extends AbstractController
     )]
     #[OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Vorheriges Spiel nicht gefunden.')]
     #[ApiResponse(status: Response::HTTP_CREATED)]
-    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: Der Nutzer ist weder Spieler dieses Spiels noch Admin.')]
+    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: Der Nutzer ist weder Spieler des betroffenen Spiels noch Admin.')]
     #[Route(path: '/api/room/{id}/rematch', name: 'room_rematch', methods: ['POST'])]
     public function rematch(int $id): array
     {
