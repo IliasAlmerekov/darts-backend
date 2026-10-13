@@ -110,7 +110,7 @@ final class InvitationController extends AbstractController
     )]
     #[OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Spiel nicht gefunden.')]
     #[ApiResponse(headers: ['X-Accel-Buffering' => 'no'])]
-    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: Der Nutzer ist weder Spieler des betroffenen Spiels noch Admin.')]
+    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
     #[Route('/api/invite/create/{id}', name: 'create_invitation', methods: ['POST'], format: 'json')]
     public function createInvitation(#[MapEntity(id: 'id')] Game $game, InvitationServiceInterface $invitationService): array
     {

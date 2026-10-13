@@ -59,7 +59,7 @@ final class GameThrowController extends AbstractController
     #[ApiResponse]
     #[OA\Post(deprecated: true)]
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht.')]
-    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: Der Nutzer ist weder Spieler des betroffenen Spiels noch Admin.')]
+    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
     #[Route('/api/game/{gameId}/throw', name: 'app_game_throw', methods: ['POST'], format: 'json')]
     public function throw(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameServiceInterface $gameService, #[MapRequestPayload] ThrowRequest $dto): JsonResponse
     {
@@ -97,7 +97,7 @@ final class GameThrowController extends AbstractController
     )]
     #[ApiResponse]
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht.')]
-    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: Der Nutzer ist weder Spieler des betroffenen Spiels noch Admin.')]
+    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
     #[Route('/api/game/{gameId}/throw/delta', name: 'app_game_throw_delta', methods: ['POST'], format: 'json')]
     public function throwDelta(int $gameId, GameThrowServiceInterface $gameThrowService, GameDeltaServiceInterface $gameDeltaService, #[MapRequestPayload] ThrowRequest $dto): ThrowAckDto
     {
@@ -127,7 +127,7 @@ final class GameThrowController extends AbstractController
     )]
     #[ApiResponse]
     #[OA\Delete(deprecated: true)]
-    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: Der Nutzer ist weder Spieler des betroffenen Spiels noch Admin.')]
+    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
     #[Route('/api/game/{gameId}/throw', name: 'app_game_throw_undo', methods: ['DELETE'], format: 'json')]
     public function undoThrow(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameServiceInterface $gameService): JsonResponse
     {
@@ -157,7 +157,7 @@ final class GameThrowController extends AbstractController
         content: new OA\JsonContent(ref: new Model(type: UndoAckDto::class))
     )]
     #[ApiResponse]
-    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: Der Nutzer ist weder Spieler des betroffenen Spiels noch Admin.')]
+    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
     #[Route('/api/game/{gameId}/throw/delta', name: 'app_game_throw_undo_delta', methods: ['DELETE'], format: 'json')]
     public function undoThrowDelta(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameDeltaServiceInterface $gameDeltaService): UndoAckDto
     {

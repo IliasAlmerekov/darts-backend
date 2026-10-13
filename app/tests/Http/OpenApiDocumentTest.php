@@ -48,6 +48,8 @@ final class OpenApiDocumentTest extends WebTestCase
         'create_invitation',
     ];
 
+    private const array LOGIN_FAILURE = ['/api/login', '401'];
+
     /** @var array<string, mixed>|null */
     private ?array $document = null;
 
@@ -77,7 +79,9 @@ final class OpenApiDocumentTest extends WebTestCase
             foreach ($operation['responses'] ?? [] as $code => $response) {
                 $schema = $response['content']['application/json']['schema'] ?? [];
                 // The subscriber strips only an int status; the health probe's string "ok" stays.
-                if ('integer' === ($schema['properties']['status']['type'] ?? null)) {
+                // A failed login is answered by ApiAuthenticationFailureHandler, which bypasses
+                // the subscriber, so its 401 body really carries "status". The GET variant shares the schema.
+                if (self::LOGIN_FAILURE !== [$path, (string) $code] && 'integer' === ($schema['properties']['status']['type'] ?? null)) {
                     $offences[] = strtoupper($method).' '.$path.' '.$code;
                 }
             }

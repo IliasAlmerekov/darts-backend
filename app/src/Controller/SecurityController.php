@@ -74,6 +74,7 @@ final class SecurityController extends AbstractController
                 new OA\Property(property: 'success', type: 'boolean', example: false),
                 new OA\Property(property: 'last_username', type: 'string', nullable: true, example: 'alice'),
                 new OA\Property(property: 'error', type: 'string', example: 'Ungültige Zugangsdaten.'),
+                new OA\Property(property: 'status', type: 'integer', example: 401, description: 'Nur bei POST: ApiAuthenticationFailureHandler antwortet direkt und lässt `status` im Body.'),
             ]
         )
     )]
