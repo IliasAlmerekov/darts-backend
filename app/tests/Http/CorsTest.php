@@ -9,6 +9,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Http;
 
+use App\Entity\Game;
+use App\Enum\GameStatus;
+use App\Tests\Support\TestUserFactory;
+use DateTime;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -39,10 +44,25 @@ final class CorsTest extends WebTestCase
     public function testGameResponseExposesVersionHeaders(): void
     {
         $client = static::createClient();
+        $entityManager = static::getContainer()->get(EntityManagerInterface::class);
+        $admin = TestUserFactory::create($entityManager, 'cors', 'admin', ['ROLE_ADMIN']);
+        $game = (new Game())
+            ->setDate(new DateTime())
+            ->setStartScore(301)
+            ->setDoubleOut(false)
+            ->setTripleOut(false)
+            ->setStatus(GameStatus::Started);
+        $entityManager->persist($game);
+        $entityManager->flush();
+        $client->loginUser($admin);
 
-        $client->request('GET', '/api/game/1', server: ['HTTP_ORIGIN' => self::ORIGIN]);
+        $client->request('GET', sprintf('/api/game/%d', (int) $game->getGameId()), server: ['HTTP_ORIGIN' => self::ORIGIN]);
 
-        $exposed = $this->headerList($client->getResponse()->headers->get('Access-Control-Expose-Headers'));
+        $response = $client->getResponse();
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode(), (string) $response->getContent());
+        self::assertNotNull($response->headers->get('ETag'));
+        self::assertNotNull($response->headers->get('X-Game-State-Version'));
+        $exposed = $this->headerList($response->headers->get('Access-Control-Expose-Headers'));
         self::assertContains('etag', $exposed);
         self::assertContains('x-game-state-version', $exposed);
         self::assertContains('link', $exposed);
