@@ -67,6 +67,7 @@ final class GameLifecycleController extends AbstractController
         content: new OA\JsonContent(ref: new Model(type: Game::class, groups: ['game:read']))
     )]
     #[ApiResponse(groups: ['game:read'])]
+    #[OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Ein Setting wurde in camelCase und in Kleinschreibung mit unterschiedlichen Werten gesendet (`REQUEST_CONFLICTING_SETTING_KEYS`).')]
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht.')]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
     #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'], format: 'json')]
@@ -100,6 +101,7 @@ final class GameLifecycleController extends AbstractController
         content: new OA\JsonContent(ref: new Model(type: Game::class, groups: ['game:read']))
     )]
     #[ApiResponse(status: Response::HTTP_CREATED, groups: ['game:read'])]
+    #[OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Ein Setting wurde in camelCase und in Kleinschreibung mit unterschiedlichen Werten gesendet (`REQUEST_CONFLICTING_SETTING_KEYS`).')]
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht.')]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
     #[Route('/api/game/{gameId}/rematch/start', name: 'app_game_rematch_start', methods: ['POST'], format: 'json')]

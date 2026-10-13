@@ -158,6 +158,15 @@ final class OpenApiDocumentTest extends WebTestCase
         }
     }
 
+    public function testGameStartAndRematchStartDocument400ForConflictingSettingKeys(): void
+    {
+        $paths = $this->document()['paths'];
+
+        foreach (['/api/game/{gameId}/start', '/api/game/{gameId}/rematch/start'] as $path) {
+            self::assertArrayHasKey('400', $paths[$path]['post']['responses'], $path);
+        }
+    }
+
     /**
      * @return array<string, mixed>
      */
