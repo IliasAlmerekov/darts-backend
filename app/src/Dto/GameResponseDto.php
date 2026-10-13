@@ -16,6 +16,13 @@ namespace App\Dto;
 final class GameResponseDto
 {
     /**
+     * Discriminator the frontend uses to tell a full-state payload from an ack.
+     *
+     * @psalm-suppress PossiblyUnusedProperty Used via Symfony Serializer
+     */
+    public string $type = 'full-state';
+
+    /**
      * @param int                                       $id
      * @param string                                    $status
      * @param int                                       $currentRound

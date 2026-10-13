@@ -199,6 +199,7 @@ final class GameLifecycleController extends AbstractController
         content: new OA\JsonContent(ref: new Model(type: GameSettingsResponseDto::class))
     )]
     #[ApiResponse]
+    #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Das Spiel ist nicht beendet (`GAME_NOT_FINISHED`).')]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
     #[Route('/api/game/{gameId}/settings', name: 'app_game_settings_read', methods: ['GET'], format: 'json')]
     public function getSettings(#[AttributeMapEntity(id: 'gameId')] Game $game, GameAccessServiceInterface $gameAccessService): GameSettingsResponseDto

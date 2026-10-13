@@ -15,6 +15,7 @@ use App\Dto\GameSummaryWinnerDto;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Enum\GameStatus;
+use App\Exception\Game\GameNotFinishedException;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
@@ -81,6 +82,9 @@ final readonly class GameFinishService implements GameFinishServiceInterface
     public function getGameSummary(Game $game): GameSummaryResponseDto
     {
         $this->gameAccessService->assertPlayerInGameOrAdmin($game);
+        if (GameStatus::Finished !== $game->getStatus()) {
+            throw new GameNotFinishedException($game->getStatus());
+        }
 
         return $this->buildGameSummary($game);
     }

@@ -17,6 +17,11 @@ namespace App\Dto;
 final class ThrowAckDto
 {
     /**
+     * Discriminator the frontend uses to tell an ack from a full-state payload.
+     */
+    public string $type = 'ack';
+
+    /**
      * @param bool               $success
      * @param int                $gameId
      * @param string             $stateVersion
