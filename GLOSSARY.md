@@ -40,6 +40,14 @@ _Avoid_: Waiting room (the player's screen in the frontend), pre-game
 The QR code the admin shows for a room. Scanning it lets a player register or log in and join that room.
 _Avoid_: Invite link, join code
 
+**Waiting room**:
+The screen on a player's phone after they join a room and before the admin starts the game.
+_Avoid_: Joined page, lobby
+
 **Profile**:
 The page a player lands on when they open the app without an invitation. It shows their own recent games and statistics.
 _Avoid_: Dashboard, home page
+
+**Remembered login**:
+A player's phone that stays signed in for 7 days after the player's last visit, so the player skips the login form. A new visit restarts the 7 days.
+_Avoid_: Session, auto-login, remember me
