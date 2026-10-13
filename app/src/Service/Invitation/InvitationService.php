@@ -207,7 +207,7 @@ final readonly class InvitationService implements InvitationServiceInterface
             return new JsonResponse(['success' => false, 'redirect' => '/login'], Response::HTTP_UNAUTHORIZED);
         }
 
-        return $this->entityManager->wrapInTransaction(function () use ($gameId, $userId, $session): Response {
+        return $this->entityManager->wrapInTransaction(function () use ($gameId, $userId, $user, $session): Response {
             $game = $this->gameRepository->find($gameId);
             if (!$game instanceof Game) {
                 throw new GameNotFoundException();
@@ -227,7 +227,12 @@ final readonly class InvitationService implements InvitationServiceInterface
 
             return new JsonResponse([
                 'success' => true,
+                'roles' => $user->getStoredRoles(),
+                'id' => $userId,
+                'email' => $user->getEmail(),
+                'username' => $user->getUsername(),
                 'redirect' => rtrim($this->frontendUrl, '/').'/joined',
+                'gameId' => $gameId,
             ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
         });
     }
