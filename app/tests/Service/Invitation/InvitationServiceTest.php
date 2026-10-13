@@ -297,6 +297,11 @@ final class InvitationServiceTest extends TestCase
         $content = json_decode($response->getContent() ?: '{}', true, 512, JSON_THROW_ON_ERROR);
         self::assertTrue($content['success']);
         self::assertSame('http://example.test/app/joined', $content['redirect'] ?? null);
+        self::assertSame(50, $content['gameId'] ?? null);
+        self::assertSame(5, $content['id'] ?? null);
+        self::assertSame($user->getStoredRoles(), $content['roles'] ?? null);
+        self::assertSame($user->getEmail(), $content['email'] ?? null);
+        self::assertSame($user->getUsername(), $content['username'] ?? null);
         sort($removedKeys);
         self::assertSame(['game_id', 'invitation_uuid'], $removedKeys);
     }

@@ -133,6 +133,7 @@ final class SecurityController extends AbstractController
                 new OA\Property(property: 'email', type: 'string', nullable: true, example: 'alice@example.com'),
                 new OA\Property(property: 'username', type: 'string', nullable: true, example: 'alice'),
                 new OA\Property(property: 'redirect', type: 'string', example: 'http://localhost:5173/joined'),
+                new OA\Property(property: 'gameId', type: 'integer', example: 42, description: 'Nur nach einem Einladungs-Login: ID des beigetretenen Spiels.'),
             ]
         )
     )]
