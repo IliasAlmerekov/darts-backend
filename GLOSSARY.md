@@ -22,6 +22,14 @@ _Avoid_: Anonymous player, offline player
 A player or guest who holds a place in a specific game at the moment of the request. Someone who left the room is no longer a participant.
 _Avoid_: Member, joined player
 
+**Username**:
+The name a player picks when registering. It is unique across the whole app, and a guest has none.
+_Avoid_: Login name, handle; "username" for a guest's name
+
+**Display name**:
+The name shown for a participant in a game: a player's username, or the name the admin typed for a guest. The admin cannot add a guest under a display name already used in that game; two participants can still share one when a player joins after a guest of the same name.
+_Avoid_: Nickname, username (for guests)
+
 ### Game flow
 
 **Lobby**:
