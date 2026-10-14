@@ -207,7 +207,25 @@ final readonly class InvitationService implements InvitationServiceInterface
             return new JsonResponse(['success' => false, 'redirect' => '/login'], Response::HTTP_UNAUTHORIZED);
         }
 
-        return $this->entityManager->wrapInTransaction(function () use ($gameId, $userId, $user, $session): Response {
+        // Whatever the join outcome, the invitation is spent: a stale one must not block later logins.
+        try {
+            return $this->joinGame($gameId, $userId, $user);
+        } finally {
+            $session->remove('invitation_uuid');
+            $session->remove('game_id');
+        }
+    }
+
+    /**
+     * @param int  $gameId
+     * @param int  $userId
+     * @param User $user
+     *
+     * @return Response
+     */
+    private function joinGame(int $gameId, int $userId, User $user): Response
+    {
+        return $this->entityManager->wrapInTransaction(function () use ($gameId, $userId, $user): Response {
             $game = $this->gameRepository->find($gameId);
             if (!$game instanceof Game) {
                 throw new GameNotFoundException();
@@ -221,9 +239,6 @@ final readonly class InvitationService implements InvitationServiceInterface
                 $this->assertGameJoinableForGame($game);
                 $this->playerManagementService->addPlayer($gameId, $userId);
             }
-
-            $session->remove('invitation_uuid');
-            $session->remove('game_id');
 
             return new JsonResponse([
                 'success' => true,

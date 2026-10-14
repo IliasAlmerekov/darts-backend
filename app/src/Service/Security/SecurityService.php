@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace App\Service\Security;
 
 use App\Entity\User;
+use App\Exception\ApiExceptionInterface;
 use App\Service\Invitation\InvitationServiceInterface;
 use Override;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -56,7 +57,20 @@ final readonly class SecurityService implements SecurityServiceInterface
         }
 
         if ($session->has('invitation_uuid')) {
-            return $this->invitationService->processInvitation($session, $user);
+            try {
+                return $this->invitationService->processInvitation($session, $user);
+            } catch (ApiExceptionInterface $exception) {
+                // The login itself succeeded; report why the join did not instead of failing the request.
+                return new JsonResponse([
+                    'success' => true,
+                    'roles' => $payload['roles'],
+                    'id' => $payload['id'],
+                    'email' => $payload['email'],
+                    'username' => $payload['username'],
+                    'redirect' => rtrim($this->frontendUrl, '/').'/joined',
+                    'invitationError' => $exception->getErrorCode(),
+                ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
+            }
         }
 
         return new JsonResponse([

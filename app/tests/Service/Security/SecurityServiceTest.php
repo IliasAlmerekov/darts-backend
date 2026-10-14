@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Security;
 
 use App\Entity\User;
+use App\Enum\GameStatus;
+use App\Exception\Game\GameJoinNotAllowedException;
 use App\Service\Invitation\InvitationServiceInterface;
 use App\Service\Security\SecurityService;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -60,6 +62,27 @@ final class SecurityServiceTest extends TestCase
         $response = $this->service->buildLoginSuccessResponse($user, $session);
 
         self::assertSame($expected, $response);
+    }
+
+    public function testFailedInvitationJoinStillReturnsUserPayload(): void
+    {
+        $user = $this->userWithIdAndRoles(4, ['ROLE_PLAYER']);
+        $session = $this->createMock(SessionInterface::class);
+        $session->expects(self::once())->method('has')->with('invitation_uuid')->willReturn(true);
+
+        $this->invitationService
+            ->expects(self::once())
+            ->method('processInvitation')
+            ->willThrowException(new GameJoinNotAllowedException(GameStatus::Started));
+
+        $response = $this->service->buildLoginSuccessResponse($user, $session);
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        $payload = json_decode($response->getContent() ?: '{}', true, 512, JSON_THROW_ON_ERROR);
+        self::assertTrue($payload['success']);
+        self::assertSame($user->getId(), $payload['id']);
+        self::assertSame('/joined', parse_url($payload['redirect'], PHP_URL_PATH));
+        self::assertSame('GAME_JOIN_NOT_ALLOWED', $payload['invitationError']);
     }
 
     public function testDefaultFlowRedirectsToJoined(): void

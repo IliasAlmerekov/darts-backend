@@ -310,6 +310,7 @@ final class InvitationServiceTest extends TestCase
     {
         $session = $this->createMock(SessionInterface::class);
         $session->expects(self::once())->method('get')->with('game_id')->willReturn(60);
+        $session->expects(self::exactly(2))->method('remove');
 
         $game = (new Game())->setGameId(60)->setStatus(GameStatus::Started);
         $this->gameRepository
@@ -329,6 +330,7 @@ final class InvitationServiceTest extends TestCase
     {
         $session = $this->createMock(SessionInterface::class);
         $session->expects(self::once())->method('get')->with('game_id')->willReturn(61);
+        $session->expects(self::exactly(2))->method('remove');
 
         $game = (new Game())->setGameId(61)->setStatus(GameStatus::Lobby);
         $this->gameRepository
@@ -354,6 +356,25 @@ final class InvitationServiceTest extends TestCase
 
         $this->expectException(GameRoomFullException::class);
         $this->expectExceptionMessage('The room is already full (10 players). Please wait for an available spot.');
+
+        $this->service->processInvitation($session, $user);
+    }
+
+    public function testProcessInvitationClearsSessionWhenGameIsGone(): void
+    {
+        $session = $this->createMock(SessionInterface::class);
+        $session->expects(self::once())->method('get')->with('game_id')->willReturn(62);
+        $session->expects(self::exactly(2))->method('remove');
+
+        $this->gameRepository
+            ->expects(self::once())
+            ->method('find')
+            ->with(62)
+            ->willReturn(null);
+
+        $user = $this->createUserWithId(10, 'player4', 'p4@test');
+
+        $this->expectException(GameNotFoundException::class);
 
         $this->service->processInvitation($session, $user);
     }

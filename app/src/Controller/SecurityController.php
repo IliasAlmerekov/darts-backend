@@ -134,6 +134,7 @@ final class SecurityController extends AbstractController
                 new OA\Property(property: 'username', type: 'string', nullable: true, example: 'alice'),
                 new OA\Property(property: 'redirect', type: 'string', example: 'http://localhost:5173/joined'),
                 new OA\Property(property: 'gameId', type: 'integer', example: 42, description: 'Nur nach einem Einladungs-Login: ID des beigetretenen Spiels.'),
+                new OA\Property(property: 'invitationError', type: 'string', example: 'GAME_JOIN_NOT_ALLOWED', description: 'Nur wenn der Einladungs-Beitritt scheiterte (GAME_JOIN_NOT_ALLOWED, GAME_ROOM_FULL, GAME_NOT_FOUND). Der Login selbst war erfolgreich.'),
             ]
         )
     )]
