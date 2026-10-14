@@ -14,6 +14,7 @@ use App\Entity\GamePlayers;
 use App\Entity\Invitation;
 use App\Entity\User;
 use App\Enum\GameStatus;
+use App\Exception\Game\GameAlreadyStartedException;
 use App\Exception\Game\GameJoinNotAllowedException;
 use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\GameRoomFullException;
@@ -26,6 +27,7 @@ use App\Service\Player\PlayerManagementServiceInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -178,53 +180,6 @@ final class InvitationServiceTest extends TestCase
         self::assertSame(Response::HTTP_UNAUTHORIZED, $response->getStatusCode());
     }
 
-    public function testAssertGameJoinableThrowsWhenGameMissing(): void
-    {
-        $this->gameRepository
-            ->expects(self::once())
-            ->method('find')
-            ->with(404)
-            ->willReturn(null);
-
-        $this->expectException(GameNotFoundException::class);
-
-        $this->service->assertGameJoinable(404);
-    }
-
-    public function testAssertGameJoinableThrowsWhenNotInLobby(): void
-    {
-        $game = (new Game())->setGameId(12)->setStatus(GameStatus::Started);
-        $this->gameRepository
-            ->expects(self::once())
-            ->method('find')
-            ->with(12)
-            ->willReturn($game);
-
-        $this->expectException(GameJoinNotAllowedException::class);
-
-        $this->service->assertGameJoinable(12);
-    }
-
-    public function testAssertGameJoinableThrowsWhenRoomIsFull(): void
-    {
-        $game = (new Game())->setGameId(13)->setStatus(GameStatus::Lobby);
-        $this->gameRepository
-            ->expects(self::once())
-            ->method('find')
-            ->with(13)
-            ->willReturn($game);
-
-        $this->gamePlayersRepository
-            ->expects(self::once())
-            ->method('count')
-            ->with(['game' => 13])
-            ->willReturn(10);
-
-        $this->expectException(GameRoomFullException::class);
-
-        $this->service->assertGameJoinable(13);
-    }
-
     public function testGetUsersForGameReturnsEmptyWhenNoGameId(): void
     {
         $game = new Game();
@@ -310,6 +265,7 @@ final class InvitationServiceTest extends TestCase
     {
         $session = $this->createMock(SessionInterface::class);
         $session->expects(self::once())->method('get')->with('game_id')->willReturn(60);
+        $session->expects(self::exactly(2))->method('remove');
 
         $game = (new Game())->setGameId(60)->setStatus(GameStatus::Started);
         $this->gameRepository
@@ -320,15 +276,46 @@ final class InvitationServiceTest extends TestCase
 
         $user = $this->createUserWithId(8, 'player2', 'p2@test');
 
+        $this->expectException(GameAlreadyStartedException::class);
+
+        $this->service->processInvitation($session, $user);
+    }
+
+    #[DataProvider('endedGameStatuses')]
+    public function testProcessInvitationRejectsEndedGameWithoutClaimingItStarted(GameStatus $status): void
+    {
+        $session = $this->createMock(SessionInterface::class);
+        $session->expects(self::once())->method('get')->with('game_id')->willReturn(62);
+        $session->expects(self::exactly(2))->method('remove');
+
+        $game = (new Game())->setGameId(62)->setStatus($status);
+        $this->gameRepository
+            ->expects(self::once())
+            ->method('find')
+            ->with(62)
+            ->willReturn($game);
+
+        $user = $this->createUserWithId(9, 'player3', 'p3@test');
+
         $this->expectException(GameJoinNotAllowedException::class);
 
         $this->service->processInvitation($session, $user);
+    }
+
+    /**
+     * @return iterable<string, array{GameStatus}>
+     */
+    public static function endedGameStatuses(): iterable
+    {
+        yield 'finished' => [GameStatus::Finished];
+        yield 'aborted' => [GameStatus::Aborted];
     }
 
     public function testProcessInvitationRejectsWhenRoomIsFull(): void
     {
         $session = $this->createMock(SessionInterface::class);
         $session->expects(self::once())->method('get')->with('game_id')->willReturn(61);
+        $session->expects(self::exactly(2))->method('remove');
 
         $game = (new Game())->setGameId(61)->setStatus(GameStatus::Lobby);
         $this->gameRepository
@@ -354,6 +341,25 @@ final class InvitationServiceTest extends TestCase
 
         $this->expectException(GameRoomFullException::class);
         $this->expectExceptionMessage('The room is already full (10 players). Please wait for an available spot.');
+
+        $this->service->processInvitation($session, $user);
+    }
+
+    public function testProcessInvitationClearsSessionWhenGameIsGone(): void
+    {
+        $session = $this->createMock(SessionInterface::class);
+        $session->expects(self::once())->method('get')->with('game_id')->willReturn(62);
+        $session->expects(self::exactly(2))->method('remove');
+
+        $this->gameRepository
+            ->expects(self::once())
+            ->method('find')
+            ->with(62)
+            ->willReturn(null);
+
+        $user = $this->createUserWithId(10, 'player4', 'p4@test');
+
+        $this->expectException(GameNotFoundException::class);
 
         $this->service->processInvitation($session, $user);
     }

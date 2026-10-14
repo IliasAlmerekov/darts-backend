@@ -24,6 +24,7 @@ enum ErrorCode: string
     case GameSettingsNotEditable = 'GAME_SETTINGS_NOT_EDITABLE';
     case GameStartNotAllowed = 'GAME_START_NOT_ALLOWED';
     case GameStartScoreChangeNotAllowed = 'GAME_START_SCORE_CHANGE_NOT_ALLOWED';
+    case GameAlreadyStarted = 'GAME_ALREADY_STARTED';
     case GameJoinNotAllowed = 'GAME_JOIN_NOT_ALLOWED';
     case GameNotFinished = 'GAME_NOT_FINISHED';
     case GameReopenNotAllowed = 'GAME_REOPEN_NOT_ALLOWED';
