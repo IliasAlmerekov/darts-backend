@@ -17,7 +17,7 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * Thrown when a game cannot be joined in its current state.
  */
-final class GameJoinNotAllowedException extends ApiHttpException
+final class GameAlreadyStartedException extends ApiHttpException
 {
     /**
      * @param GameStatus $status
@@ -27,7 +27,7 @@ final class GameJoinNotAllowedException extends ApiHttpException
     public function __construct(GameStatus $status)
     {
         parent::__construct(
-            ErrorCode::GameJoinNotAllowed,
+            ErrorCode::GameAlreadyStarted,
             Response::HTTP_CONFLICT,
             sprintf('Game cannot be joined while it is %s.', $status->value)
         );

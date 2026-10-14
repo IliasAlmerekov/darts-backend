@@ -14,7 +14,7 @@ use App\Entity\GamePlayers;
 use App\Entity\Invitation;
 use App\Entity\User;
 use App\Enum\GameStatus;
-use App\Exception\Game\GameJoinNotAllowedException;
+use App\Exception\Game\GameAlreadyStartedException;
 use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\GameRoomFullException;
 use App\Repository\GamePlayersRepositoryInterface;
@@ -178,53 +178,6 @@ final class InvitationServiceTest extends TestCase
         self::assertSame(Response::HTTP_UNAUTHORIZED, $response->getStatusCode());
     }
 
-    public function testAssertGameJoinableThrowsWhenGameMissing(): void
-    {
-        $this->gameRepository
-            ->expects(self::once())
-            ->method('find')
-            ->with(404)
-            ->willReturn(null);
-
-        $this->expectException(GameNotFoundException::class);
-
-        $this->service->assertGameJoinable(404);
-    }
-
-    public function testAssertGameJoinableThrowsWhenNotInLobby(): void
-    {
-        $game = (new Game())->setGameId(12)->setStatus(GameStatus::Started);
-        $this->gameRepository
-            ->expects(self::once())
-            ->method('find')
-            ->with(12)
-            ->willReturn($game);
-
-        $this->expectException(GameJoinNotAllowedException::class);
-
-        $this->service->assertGameJoinable(12);
-    }
-
-    public function testAssertGameJoinableThrowsWhenRoomIsFull(): void
-    {
-        $game = (new Game())->setGameId(13)->setStatus(GameStatus::Lobby);
-        $this->gameRepository
-            ->expects(self::once())
-            ->method('find')
-            ->with(13)
-            ->willReturn($game);
-
-        $this->gamePlayersRepository
-            ->expects(self::once())
-            ->method('count')
-            ->with(['game' => 13])
-            ->willReturn(10);
-
-        $this->expectException(GameRoomFullException::class);
-
-        $this->service->assertGameJoinable(13);
-    }
-
     public function testGetUsersForGameReturnsEmptyWhenNoGameId(): void
     {
         $game = new Game();
@@ -321,7 +274,7 @@ final class InvitationServiceTest extends TestCase
 
         $user = $this->createUserWithId(8, 'player2', 'p2@test');
 
-        $this->expectException(GameJoinNotAllowedException::class);
+        $this->expectException(GameAlreadyStartedException::class);
 
         $this->service->processInvitation($session, $user);
     }

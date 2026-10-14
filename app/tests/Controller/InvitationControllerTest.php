@@ -111,7 +111,6 @@ final class InvitationControllerTest extends TestCase
 
         $session = $this->createMock(SessionInterface::class);
         $invitationService = $this->createMock(InvitationServiceInterface::class);
-        $invitationService->expects(self::never())->method('assertGameJoinable');
 
         $this->logger->expects(self::once())
             ->method('warning')
@@ -146,9 +145,6 @@ final class InvitationControllerTest extends TestCase
             });
 
         $invitationService = $this->createMock(InvitationServiceInterface::class);
-        $invitationService->expects(self::once())
-            ->method('assertGameJoinable')
-            ->with($gameId);
 
         $this->logger->expects(self::exactly(2))
             ->method('info');

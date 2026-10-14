@@ -142,10 +142,6 @@ final class InvitationController extends AbstractController
             new OA\Header(header: 'Location', description: 'Frontend-URL', schema: new OA\Schema(type: 'string')),
         ]
     )]
-    #[OA\Response(
-        response: Response::HTTP_CONFLICT,
-        description: 'Spiel kann nicht gejoint werden (z. B. nicht mehr in Lobby oder Raum bereits voll).'
-    )]
     #[Security(name: null)]
     #[Route('/api/invite/join/{uuid}', name: 'join_invitation', methods: ['GET'], format: 'json')]
     public function joinInvitation(#[MapEntity(mapping: ['uuid' => 'uuid'])] Invitation $invitation, SessionInterface $session, InvitationServiceInterface $invitationService): Response
@@ -167,7 +163,6 @@ final class InvitationController extends AbstractController
         ]);
 
         try {
-            $invitationService->assertGameJoinable($gameId);
             $session->remove('invitation_uuid');
             $session->set('invitation_uuid', $invitationUuid);
             $session->set('game_id', $gameId);

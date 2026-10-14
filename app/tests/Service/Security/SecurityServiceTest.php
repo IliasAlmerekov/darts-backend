@@ -6,7 +6,7 @@ namespace App\Tests\Service\Security;
 
 use App\Entity\User;
 use App\Enum\GameStatus;
-use App\Exception\Game\GameJoinNotAllowedException;
+use App\Exception\Game\GameAlreadyStartedException;
 use App\Service\Invitation\InvitationServiceInterface;
 use App\Service\Security\SecurityService;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -73,7 +73,7 @@ final class SecurityServiceTest extends TestCase
         $this->invitationService
             ->expects(self::once())
             ->method('processInvitation')
-            ->willThrowException(new GameJoinNotAllowedException(GameStatus::Started));
+            ->willThrowException(new GameAlreadyStartedException(GameStatus::Started));
 
         $response = $this->service->buildLoginSuccessResponse($user, $session);
 
@@ -82,7 +82,7 @@ final class SecurityServiceTest extends TestCase
         self::assertTrue($payload['success']);
         self::assertSame($user->getId(), $payload['id']);
         self::assertSame('/joined', parse_url($payload['redirect'], PHP_URL_PATH));
-        self::assertSame('GAME_JOIN_NOT_ALLOWED', $payload['invitationError']);
+        self::assertSame('GAME_ALREADY_STARTED', $payload['invitationError']);
     }
 
     public function testDefaultFlowRedirectsToJoined(): void

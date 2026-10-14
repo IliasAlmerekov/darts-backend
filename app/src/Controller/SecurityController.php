@@ -59,6 +59,7 @@ final class SecurityController extends AbstractController
                 new OA\Property(property: 'username', type: 'string', nullable: true, example: 'alice'),
                 new OA\Property(property: 'roles', type: 'array', items: new OA\Items(type: 'string'), example: ['ROLE_PLAYER']),
                 new OA\Property(property: 'redirect', type: 'string', nullable: true, example: '/api/login/success'),
+                new OA\Property(property: 'invitationError', type: 'string', enum: ['GAME_ALREADY_STARTED', 'GAME_ROOM_FULL', 'GAME_NOT_FOUND'], example: 'GAME_ALREADY_STARTED', description: 'Nur wenn die gespeicherte Einladung nicht mehr nutzbar ist. Der Login war erfolgreich, `gameId` fehlt in diesem Fall.'),
                 new OA\Property(property: 'last_username', type: 'string', nullable: true, example: 'alice'),
                 new OA\Property(property: 'error', type: 'string', nullable: true, example: 'Ungültige Zugangsdaten.'),
             ]
@@ -134,7 +135,7 @@ final class SecurityController extends AbstractController
                 new OA\Property(property: 'username', type: 'string', nullable: true, example: 'alice'),
                 new OA\Property(property: 'redirect', type: 'string', example: 'http://localhost:5173/joined'),
                 new OA\Property(property: 'gameId', type: 'integer', example: 42, description: 'Nur nach einem Einladungs-Login: ID des beigetretenen Spiels.'),
-                new OA\Property(property: 'invitationError', type: 'string', example: 'GAME_JOIN_NOT_ALLOWED', description: 'Nur wenn der Einladungs-Beitritt scheiterte (GAME_JOIN_NOT_ALLOWED, GAME_ROOM_FULL, GAME_NOT_FOUND). Der Login selbst war erfolgreich.'),
+                new OA\Property(property: 'invitationError', type: 'string', enum: ['GAME_ALREADY_STARTED', 'GAME_ROOM_FULL', 'GAME_NOT_FOUND'], example: 'GAME_ALREADY_STARTED', description: 'Nur wenn die gespeicherte Einladung nicht mehr nutzbar ist. Der Login war erfolgreich, `gameId` fehlt in diesem Fall.'),
             ]
         )
     )]

@@ -10,7 +10,9 @@ declare(strict_types=1);
 namespace App\Service\Security;
 
 use App\Entity\User;
-use App\Exception\ApiExceptionInterface;
+use App\Exception\Game\GameAlreadyStartedException;
+use App\Exception\Game\GameNotFoundException;
+use App\Exception\Game\GameRoomFullException;
 use App\Service\Invitation\InvitationServiceInterface;
 use Override;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -59,7 +61,7 @@ final readonly class SecurityService implements SecurityServiceInterface
         if ($session->has('invitation_uuid')) {
             try {
                 return $this->invitationService->processInvitation($session, $user);
-            } catch (ApiExceptionInterface $exception) {
+            } catch (GameAlreadyStartedException|GameRoomFullException|GameNotFoundException $exception) {
                 // The login itself succeeded; report why the join did not instead of failing the request.
                 return new JsonResponse([
                     'success' => true,
