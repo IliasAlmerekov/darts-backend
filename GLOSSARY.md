@@ -24,6 +24,10 @@ _Avoid_: Member, joined player
 
 ### Game flow
 
+**Lobby**:
+The phase of a game before it starts. Participants join through the invitation, and the tablet sees them arrive.
+_Avoid_: Waiting room (the player's screen in the frontend), pre-game
+
 **Invitation**:
 The QR code the admin shows for a room. Scanning it lets a player register or log in and join that room.
 _Avoid_: Invite link, join code

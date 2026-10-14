@@ -10,3 +10,5 @@ A game is played around one shared tablet, which stays logged in as the single a
 
 - `access_control` denies `/api` to everyone except the admin by default; player-facing endpoints (invitation processing, the future profile) need an explicit rule.
 - The participant branch of `GameAccessService::assertPlayerInGameOrAdmin` is unreachable over HTTP while game routes stay admin-only.
+- Only the tablet follows a running game. No second live viewer is supported: no second admin tab, second device, or wall scoreboard. The tablet gets the scoreboard from the responses to its own throw and undo requests.
+- The room stream serves only the lobby. It carries `players` events and closes when the game leaves the lobby. A live channel for throws needs a new ADR (see #44).
