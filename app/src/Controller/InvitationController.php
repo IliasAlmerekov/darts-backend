@@ -123,9 +123,8 @@ final class InvitationController extends AbstractController
     /**
      * Joins an invitation by UUID and stores it in session.
      *
-     * @param Invitation                 $invitation
-     * @param SessionInterface           $session
-     * @param InvitationServiceInterface $invitationService
+     * @param Invitation       $invitation
+     * @param SessionInterface $session
      *
      * @return Response
      */
@@ -144,7 +143,7 @@ final class InvitationController extends AbstractController
     )]
     #[Security(name: null)]
     #[Route('/api/invite/join/{uuid}', name: 'join_invitation', methods: ['GET'], format: 'json')]
-    public function joinInvitation(#[MapEntity(mapping: ['uuid' => 'uuid'])] Invitation $invitation, SessionInterface $session, InvitationServiceInterface $invitationService): Response
+    public function joinInvitation(#[MapEntity(mapping: ['uuid' => 'uuid'])] Invitation $invitation, SessionInterface $session): Response
     {
         $gameId = $invitation->getGameId();
         if (null === $gameId) {

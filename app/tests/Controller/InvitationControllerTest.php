@@ -110,7 +110,6 @@ final class InvitationControllerTest extends TestCase
         $invitation->method('getUuid')->willReturn('missing-game-id');
 
         $session = $this->createMock(SessionInterface::class);
-        $invitationService = $this->createMock(InvitationServiceInterface::class);
 
         $this->logger->expects(self::once())
             ->method('warning')
@@ -120,7 +119,7 @@ final class InvitationControllerTest extends TestCase
 
         $this->expectException(GameNotFoundException::class);
 
-        $this->controller->joinInvitation($invitation, $session, $invitationService);
+        $this->controller->joinInvitation($invitation, $session);
     }
 
     public function testJoinInvitationStoresSessionAndRedirects(): void
@@ -144,12 +143,10 @@ final class InvitationControllerTest extends TestCase
                 $setCalls[$key] = $value;
             });
 
-        $invitationService = $this->createMock(InvitationServiceInterface::class);
-
         $this->logger->expects(self::exactly(2))
             ->method('info');
 
-        $response = $this->controller->joinInvitation($invitation, $session, $invitationService);
+        $response = $this->controller->joinInvitation($invitation, $session);
 
         self::assertSame($gameId, $setCalls['game_id']);
         self::assertSame($uuid, $setCalls['invitation_uuid']);
