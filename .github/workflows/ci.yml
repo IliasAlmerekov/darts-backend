@@ -100,4 +100,5 @@ jobs:
       - run: php -d memory_limit=-1 bin/console cache:clear --env=test
       - run: php -d memory_limit=-1 bin/console doctrine:database:create --env=test --if-not-exists
       - run: php -d memory_limit=-1 bin/console doctrine:migrations:migrate --env=test --no-interaction
+      - run: php -d memory_limit=-1 bin/console doctrine:schema:validate --env=test
       - run: php -d memory_limit=-1 vendor/bin/phpunit
