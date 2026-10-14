@@ -148,6 +148,22 @@ final class LoginSuccessInvitationEndpointTest extends WebTestCase
         $this->assertLoginSucceedsWithInvitationError($client, 'GAME_ALREADY_STARTED');
     }
 
+    public function testInvitationToAbortedGameReportsJoinNotAllowed(): void
+    {
+        $client = static::createClient();
+        $entityManager = static::getContainer()->get(EntityManagerInterface::class);
+
+        $player = TestUserFactory::create($entityManager, self::USER_PREFIX, 'late', ['ROLE_PLAYER']);
+        $game = $this->createGame($entityManager, GameStatus::Aborted);
+        $invitation = $this->createInvitation($entityManager, $game);
+
+        $client->request(Request::METHOD_GET, sprintf('/api/invite/join/%s', $invitation->getUuid()));
+        self::assertResponseStatusCodeSame(Response::HTTP_FOUND);
+
+        $client->loginUser($player);
+        $this->assertLoginSucceedsWithInvitationError($client, 'GAME_JOIN_NOT_ALLOWED');
+    }
+
     public function testUnknownInvitationUuidReturnsNotFound(): void
     {
         $client = static::createClient();

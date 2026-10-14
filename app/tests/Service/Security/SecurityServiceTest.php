@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\Security;
 
 use App\Entity\User;
-use App\Enum\GameStatus;
 use App\Exception\Game\GameAlreadyStartedException;
 use App\Service\Invitation\InvitationServiceInterface;
 use App\Service\Security\SecurityService;
@@ -73,7 +72,7 @@ final class SecurityServiceTest extends TestCase
         $this->invitationService
             ->expects(self::once())
             ->method('processInvitation')
-            ->willThrowException(new GameAlreadyStartedException(GameStatus::Started));
+            ->willThrowException(new GameAlreadyStartedException());
 
         $response = $this->service->buildLoginSuccessResponse($user, $session);
 

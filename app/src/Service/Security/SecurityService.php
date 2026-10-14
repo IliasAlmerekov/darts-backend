@@ -11,6 +11,7 @@ namespace App\Service\Security;
 
 use App\Entity\User;
 use App\Exception\Game\GameAlreadyStartedException;
+use App\Exception\Game\GameJoinNotAllowedException;
 use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\GameRoomFullException;
 use App\Service\Invitation\InvitationServiceInterface;
@@ -61,7 +62,7 @@ final readonly class SecurityService implements SecurityServiceInterface
         if ($session->has('invitation_uuid')) {
             try {
                 return $this->invitationService->processInvitation($session, $user);
-            } catch (GameAlreadyStartedException|GameRoomFullException|GameNotFoundException $exception) {
+            } catch (GameAlreadyStartedException|GameJoinNotAllowedException|GameRoomFullException|GameNotFoundException $exception) {
                 // The login itself succeeded; report why the join did not instead of failing the request.
                 return new JsonResponse([
                     'success' => true,

@@ -9,27 +9,24 @@ declare(strict_types=1);
 
 namespace App\Exception\Game;
 
-use App\Enum\GameStatus;
 use App\Exception\ApiHttpException;
 use App\Exception\ErrorCode;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Thrown when a game cannot be joined in its current state.
+ * Thrown when a game cannot be joined because it has already started.
  */
 final class GameAlreadyStartedException extends ApiHttpException
 {
     /**
-     * @param GameStatus $status
-     *
      * @return void
      */
-    public function __construct(GameStatus $status)
+    public function __construct()
     {
         parent::__construct(
             ErrorCode::GameAlreadyStarted,
             Response::HTTP_CONFLICT,
-            sprintf('Game cannot be joined while it is %s.', $status->value)
+            'Game cannot be joined because it has already started.'
         );
     }
 }

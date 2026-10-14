@@ -15,6 +15,7 @@ use App\Entity\Invitation;
 use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Exception\Game\GameAlreadyStartedException;
+use App\Exception\Game\GameJoinNotAllowedException;
 use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\GameRoomFullException;
 use App\Repository\GamePlayersRepositoryInterface;
@@ -26,6 +27,7 @@ use App\Service\Player\PlayerManagementServiceInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -277,6 +279,36 @@ final class InvitationServiceTest extends TestCase
         $this->expectException(GameAlreadyStartedException::class);
 
         $this->service->processInvitation($session, $user);
+    }
+
+    #[DataProvider('endedGameStatuses')]
+    public function testProcessInvitationRejectsEndedGameWithoutClaimingItStarted(GameStatus $status): void
+    {
+        $session = $this->createMock(SessionInterface::class);
+        $session->expects(self::once())->method('get')->with('game_id')->willReturn(62);
+        $session->expects(self::exactly(2))->method('remove');
+
+        $game = (new Game())->setGameId(62)->setStatus($status);
+        $this->gameRepository
+            ->expects(self::once())
+            ->method('find')
+            ->with(62)
+            ->willReturn($game);
+
+        $user = $this->createUserWithId(9, 'player3', 'p3@test');
+
+        $this->expectException(GameJoinNotAllowedException::class);
+
+        $this->service->processInvitation($session, $user);
+    }
+
+    /**
+     * @return iterable<string, array{GameStatus}>
+     */
+    public static function endedGameStatuses(): iterable
+    {
+        yield 'finished' => [GameStatus::Finished];
+        yield 'aborted' => [GameStatus::Aborted];
     }
 
     public function testProcessInvitationRejectsWhenRoomIsFull(): void

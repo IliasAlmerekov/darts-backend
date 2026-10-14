@@ -14,6 +14,7 @@ use App\Entity\Invitation;
 use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Exception\Game\GameAlreadyStartedException;
+use App\Exception\Game\GameJoinNotAllowedException;
 use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\GameRoomFullException;
 use App\Repository\GamePlayersRepositoryInterface;
@@ -249,8 +250,12 @@ final readonly class InvitationService implements InvitationServiceInterface
         }
 
         $status = $game->getStatus();
+        if (GameStatus::Started === $status) {
+            throw new GameAlreadyStartedException();
+        }
+
         if (GameStatus::Lobby !== $status) {
-            throw new GameAlreadyStartedException($status);
+            throw new GameJoinNotAllowedException($status);
         }
 
         $playersCount = $this->gamePlayersRepository->count(['game' => $gameId]);
