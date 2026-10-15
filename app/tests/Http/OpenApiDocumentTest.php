@@ -131,6 +131,21 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertArrayNotHasKey('default', $paths['/api/logout']['post']['responses']);
     }
 
+    public function testRegisterDocumentsTheLoginSuccessBodyAndTheRememberMeCookie(): void
+    {
+        $created = $this->document()['paths']['/api/register']['post']['responses']['201'];
+        $schema = $created['content']['application/json']['schema'];
+
+        self::assertSame(['success', 'roles', 'id', 'email', 'username', 'redirect'], $schema['required']);
+        self::assertArrayHasKey('gameId', $schema['properties']);
+        self::assertSame(
+            ['GAME_ALREADY_STARTED', 'GAME_JOIN_NOT_ALLOWED', 'GAME_ROOM_FULL', 'GAME_NOT_FOUND'],
+            $schema['properties']['invitationError']['enum'],
+        );
+        self::assertArrayNotHasKey('message', $schema['properties']);
+        self::assertArrayHasKey('Set-Cookie', $created['headers']);
+    }
+
     public function testFinishedDocuments409AndTheTypeDiscriminatorsAreLiterals(): void
     {
         $document = $this->document();

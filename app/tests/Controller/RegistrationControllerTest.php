@@ -11,6 +11,7 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -27,10 +28,11 @@ final class RegistrationControllerTest extends TestCase
         $this->controller->setContainer($this->container);
     }
 
-    public function testRegisterReturnsCreatedOnSuccess(): void
+    public function testRegisterReturnsTheServiceLoginResponseOnSuccess(): void
     {
         $request = Request::create('/api/register', 'POST', server: ['CONTENT_TYPE' => 'application/json'], content: '{"username":"new","email":"new@example.com","plainPassword":"pass","_csrf_token":"csrf-token"}');
 
+        $loginResponse = new JsonResponse(['success' => true], Response::HTTP_CREATED);
         $service = $this->createMock(RegistrationServiceInterface::class);
         $service->expects($this->once())
             ->method('register')
@@ -40,18 +42,11 @@ final class RegistrationControllerTest extends TestCase
                 'plainPassword' => 'pass',
                 '_csrf_token' => 'csrf-token',
             ])
-            ->willReturn([
-                'success' => true,
-                'message' => 'Registrierung erfolgreich',
-                'redirect' => '/',
-                'status' => Response::HTTP_CREATED,
-            ]);
+            ->willReturn($loginResponse);
 
         $response = $this->controller->register($request, $service);
 
-        $this->assertIsArray($response);
-        $this->assertTrue($response['success']);
-        $this->assertSame(Response::HTTP_CREATED, $response['status']);
+        $this->assertSame($loginResponse, $response);
     }
 
     public function testRegisterReturnsBadRequestOnInvalidJson(): void
