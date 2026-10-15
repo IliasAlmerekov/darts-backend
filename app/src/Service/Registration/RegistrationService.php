@@ -91,7 +91,12 @@ final readonly class RegistrationService implements RegistrationServiceInterface
             throw new LogicException('The form_login success handler returned no response.');
         }
 
-        return $response->setStatusCode(Response::HTTP_CREATED);
+        // Only a successful login becomes 201; a failed invitation lookup keeps its own status.
+        if (Response::HTTP_OK === $response->getStatusCode()) {
+            $response->setStatusCode(Response::HTTP_CREATED);
+        }
+
+        return $response;
     }
 
     /**

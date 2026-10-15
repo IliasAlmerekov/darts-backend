@@ -153,4 +153,35 @@ final class RegistrationServiceTest extends TestCase
         self::assertSame('hashed_secret', $persistedUser->getPassword());
         self::assertContains('ROLE_PLAYER', $persistedUser->getRoles());
     }
+
+    public function testRegisterKeepsAFailedLoginStatus(): void
+    {
+        $this->givenValidForm(['username' => 'bob', 'email' => 'bob@test.dev', 'plainPassword' => 'secret']);
+        $loginResponse = new JsonResponse(['success' => false, 'redirect' => '/start'], Response::HTTP_BAD_REQUEST);
+        $this->security->method('login')->willReturn($loginResponse);
+
+        $result = $this->service->register(['username' => 'bob', 'email' => 'bob@test.dev', 'plainPassword' => 'secret']);
+
+        self::assertSame($loginResponse, $result);
+        self::assertSame(Response::HTTP_BAD_REQUEST, $loginResponse->getStatusCode());
+    }
+
+    /**
+     * @param array{username: string, email: string, plainPassword: string} $data
+     */
+    private function givenValidForm(array $data): void
+    {
+        $form = $this->createMock(FormInterface::class);
+        $form->method('isSubmitted')->willReturn(true);
+        $form->method('isValid')->willReturn(true);
+        $fields = [];
+        foreach ($data as $name => $value) {
+            $field = $this->createMock(FormInterface::class);
+            $field->method('getData')->willReturn($value);
+            $fields[] = [$name, $field];
+        }
+        $form->method('get')->willReturnMap($fields);
+        $this->formFactory->method('create')->willReturn($form);
+        $this->passwordHasher->method('hashPassword')->willReturn('hashed');
+    }
 }
