@@ -30,6 +30,10 @@ services:
         arguments:
             $cookieName: REMEMBERME
             $lifetime: "%app.remembered_login.lifetime%"
+    App\EventSubscriber\RememberedLoginRefreshSubscriber:
+        arguments:
+            $rememberMeHandler: '@security.authenticator.remember_me_handler.main'
+            $cookieName: REMEMBERME
     App\Controller\InvitationController:
         arguments:
             $frontendUrl: "%frontend_url%"

@@ -93,6 +93,39 @@ final class RememberedLoginTest extends WebTestCase
         self::assertFalse(str_contains((string) $client->getResponse()->getContent(), 'AUTHENTICATION_REQUIRED'));
     }
 
+    public function testVisitWithALiveSessionRefreshesTheTokenAndCookie(): void
+    {
+        $client = static::createClient();
+        $player = $this->createUser('session', ['ROLE_PLAYER']);
+
+        $this->logIn($client, $player);
+        $this->backdateTokens(self::SEVEN_DAYS / 2);
+
+        $client->request(Request::METHOD_GET, '/api/login/success');
+
+        self::assertResponseStatusCodeSame(Response::HTTP_OK);
+        self::assertEqualsWithDelta(time(), $this->lastUsedTimestamp(), 60);
+        $cookie = $this->rememberCookie($client);
+        self::assertNotNull($cookie);
+        self::assertEqualsWithDelta(time() + self::SEVEN_DAYS, $cookie->getExpiresTime(), 60);
+    }
+
+    public function testAdminLoginWithRememberMeParameterStillGetsNoCookie(): void
+    {
+        $client = static::createClient();
+        $admin = $this->createUser('adminparam', ['ROLE_ADMIN']);
+
+        $client->request(Request::METHOD_POST, '/api/login', [
+            '_username' => $admin->getEmail(),
+            '_password' => self::LOGIN_PASSWORD,
+            '_remember_me' => '1',
+        ]);
+
+        self::assertResponseIsSuccessful();
+        self::assertNull($this->rememberCookie($client));
+        self::assertSame(0, $this->tokenCount());
+    }
+
     public function testAdminLoginGetsNoRememberCookie(): void
     {
         $client = static::createClient();
@@ -172,6 +205,13 @@ final class RememberedLoginTest extends WebTestCase
             'UPDATE rememberme_token SET lastUsed = :lastUsed',
             ['lastUsed' => gmdate('Y-m-d H:i:s', time() - $seconds)],
         );
+    }
+
+    private function lastUsedTimestamp(): int
+    {
+        $lastUsed = static::getContainer()->get(Connection::class)->fetchOne('SELECT lastUsed FROM rememberme_token');
+
+        return (int) strtotime($lastUsed.' UTC');
     }
 
     private function tokenCount(): int
