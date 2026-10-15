@@ -148,6 +148,35 @@ final class RememberedLoginTest extends WebTestCase
         self::assertSame(0, $this->tokenCount());
     }
 
+    public function testPlayerLoginPurgesExpiredTokens(): void
+    {
+        $client = static::createClient();
+        $player = $this->createUser('purge', ['ROLE_PLAYER']);
+        $connection = static::getContainer()->get(Connection::class);
+        $insert = 'INSERT INTO rememberme_token (series, value, lastUsed, class, username) VALUES (:series, :value, :lastUsed, :class, :username)';
+        $connection->executeStatement($insert, [
+            'series' => 'expired-series',
+            'value' => 'unused',
+            'lastUsed' => gmdate('Y-m-d H:i:s', time() - self::SEVEN_DAYS - 3600),
+            'class' => User::class,
+            'username' => 'gone@test.dev',
+        ]);
+        $connection->executeStatement($insert, [
+            'series' => 'live-series',
+            'value' => 'unused',
+            'lastUsed' => gmdate('Y-m-d H:i:s', time() - 3600),
+            'class' => User::class,
+            'username' => 'still-here@test.dev',
+        ]);
+
+        $this->logIn($client, $player);
+
+        $series = $connection->fetchFirstColumn('SELECT series FROM rememberme_token ORDER BY series');
+        self::assertNotContains('expired-series', $series);
+        self::assertContains('live-series', $series);
+        self::assertCount(2, $series);
+    }
+
     public function testAdminLoginGetsNoRememberCookie(): void
     {
         $client = static::createClient();
