@@ -33,8 +33,8 @@ security:
                 lifetime: '%app.remembered_login.lifetime%'
                 token_provider:
                     doctrine: true
-                # Same flags as the session cookie. Prod sets secure and samesite lax in
-                # framework.yaml; the frontend runs on another origin with credentials.
+                # Same flags as the session cookie: framework.yaml sets secure and samesite
+                # lax in prod. The frontend runs on another origin with credentials.
                 secure: auto
                 samesite: lax
             logout:
@@ -63,6 +63,13 @@ security:
         # Swagger UI and its JSON exist in dev only (config/routes/nelmio_api_doc*.yaml).
         - { path: ^/api/doc(\.json)?$, roles: PUBLIC_ACCESS }
         - { path: ^/api, roles: ROLE_ADMIN }
+
+when@prod:
+    security:
+        firewalls:
+            main:
+                remember_me:
+                    secure: true
 
 when@test:
     security:
