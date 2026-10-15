@@ -94,9 +94,9 @@ final class RegistrationEndpointTest extends WebTestCase
         self::assertSame($body['email'], $payload['email']);
         self::assertSame($body['username'], $payload['username']);
         self::assertSame(['ROLE_PLAYER'], $payload['roles']);
-        self::assertSame('/joined', parse_url($payload['redirect'], PHP_URL_PATH));
         self::assertArrayNotHasKey('gameId', $payload);
         self::assertArrayNotHasKey('invitationError', $payload);
+        self::assertSame($this->loginRedirect($client, $body, null), $payload['redirect']);
     }
 
     public function testRegistrationWithInvitationJoinsTheRoom(): void
@@ -115,9 +115,10 @@ final class RegistrationEndpointTest extends WebTestCase
         self::assertTrue(static::getContainer()->get(GamePlayersRepositoryInterface::class)->isPlayerInGame($gameId, (int) $user->getId()));
         self::assertSame($gameId, $payload['gameId']);
         self::assertSame($user->getId(), $payload['id']);
-        self::assertSame('/joined', parse_url($payload['redirect'], PHP_URL_PATH));
         self::assertArrayNotHasKey('invitationError', $payload);
         $this->assertInvitationCleared($client);
+        $nextInvitation = $this->createInvitation($entityManager, $this->createGame($entityManager, GameStatus::Lobby));
+        self::assertSame($this->loginRedirect($client, $body, $nextInvitation), $payload['redirect']);
     }
 
     /**
@@ -254,6 +255,26 @@ final class RegistrationEndpointTest extends WebTestCase
                     ->setDisplayNameSnapshot((string) $member->getUsername())
             );
         }
+    }
+
+    /**
+     * Logs out, then logs the same player in through the login form, optionally after
+     * scanning an invitation, and returns the redirect that login answers with.
+     *
+     * @param array{email: string, username: string, plainPassword: string} $body
+     */
+    private function loginRedirect(KernelBrowser $client, array $body, ?Invitation $invitation): string
+    {
+        $client->request(Request::METHOD_POST, '/api/logout');
+        if (null !== $invitation) {
+            $this->scanInvitation($client, $invitation);
+        }
+        $client->request(Request::METHOD_POST, '/api/login', ['_username' => $body['email'], '_password' => $body['plainPassword']]);
+        self::assertResponseStatusCodeSame(Response::HTTP_OK, (string) $client->getResponse()->getContent());
+        $payload = json_decode((string) $client->getResponse()->getContent(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertSame(null !== $invitation, isset($payload['gameId']));
+
+        return $payload['redirect'];
     }
 
     private function assertInvitationCleared(KernelBrowser $client): void
