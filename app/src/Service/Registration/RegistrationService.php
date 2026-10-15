@@ -12,12 +12,15 @@ namespace App\Service\Registration;
 use App\Entity\User;
 use App\Form\RegistrationFormType;
 use Doctrine\ORM\EntityManagerInterface;
+use LogicException;
 use Override;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\Form\FormErrorIterator;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\Security\Http\Authenticator\Passport\Badge\RememberMeBadge;
 
 /**
  * Handles user registration logic.
@@ -28,18 +31,23 @@ final readonly class RegistrationService implements RegistrationServiceInterface
      * @param FormFactoryInterface        $formFactory
      * @param UserPasswordHasherInterface $passwordHasher
      * @param EntityManagerInterface      $entityManager
+     * @param Security                    $security
      */
-    public function __construct(private FormFactoryInterface $formFactory, private UserPasswordHasherInterface $passwordHasher, private EntityManagerInterface $entityManager)
-    {
+    public function __construct(
+        private FormFactoryInterface $formFactory,
+        private UserPasswordHasherInterface $passwordHasher,
+        private EntityManagerInterface $entityManager,
+        private Security $security,
+    ) {
     }
 
     /**
      * @param array<string, mixed> $data
      *
-     * @return array{success:bool,message:string,status:int,redirect?:string,errors?:array<string,array<int,string>>}
+     * @return Response|array{success:false,message:string,status:int,errors:array<string,array<int,string>>}
      */
     #[Override]
-    public function register(array $data): array
+    public function register(array $data): Response|array
     {
         $user = new User();
         $form = $this->formFactory->create(RegistrationFormType::class, $user);
@@ -62,12 +70,33 @@ final readonly class RegistrationService implements RegistrationServiceInterface
         $this->entityManager->persist($user);
         $this->entityManager->flush();
 
-        return [
-            'success' => true,
-            'message' => 'Registrierung erfolgreich',
-            'redirect' => '/',
-            'status' => Response::HTTP_CREATED,
-        ];
+        return $this->logIn($user);
+    }
+
+    /**
+     * Logs the new player in on the main firewall, as a form login would.
+     *
+     * The form_login success handler builds the response, so registration returns the same
+     * body as login, including the invitation join or its `invitationError`. The remember-me
+     * badge lets RememberedLoginSubscriber start a Remembered login for the player.
+     *
+     * @param User $user
+     *
+     * @return Response
+     */
+    private function logIn(User $user): Response
+    {
+        $response = $this->security->login($user, 'form_login', 'main', [new RememberMeBadge()]);
+        if (!$response instanceof Response) {
+            throw new LogicException('The form_login success handler returned no response.');
+        }
+
+        // Only a successful login becomes 201; a failed invitation lookup keeps its own status.
+        if (Response::HTTP_OK === $response->getStatusCode()) {
+            $response->setStatusCode(Response::HTTP_CREATED);
+        }
+
+        return $response;
     }
 
     /**

@@ -26,12 +26,12 @@ use Symfony\Component\Routing\Attribute\Route;
 final class RegistrationController extends AbstractController
 {
     /**
-     * Registers a user from JSON payload.
+     * Registers a player from JSON payload and logs them in.
      *
      * @param Request                      $request
      * @param RegistrationServiceInterface $registrationService
      *
-     * @return array<array-key, mixed>
+     * @return Response|array<array-key, mixed>
      */
     #[OA\RequestBody(
         required: true,
@@ -47,14 +47,26 @@ final class RegistrationController extends AbstractController
     )]
     #[OA\Response(
         response: Response::HTTP_CREATED,
-        description: 'Registrierung erfolgreich.',
+        description: 'Registrierung erfolgreich. Der Spieler ist angemeldet, der Body entspricht `/api/login/success`. Mit einer Einladung in der Session tritt er dem Spiel bei, die Einladung wird verbraucht.',
+        headers: [
+            new OA\Header(
+                header: 'Set-Cookie',
+                description: 'Session-Cookie und `REMEMBERME`-Cookie: der Spieler bleibt 7 Tage nach dem letzten Besuch angemeldet.',
+                schema: new OA\Schema(type: 'string')
+            ),
+        ],
         content: new OA\JsonContent(
             type: 'object',
-            required: ['success', 'message'],
+            required: ['success', 'roles', 'id', 'email', 'username', 'redirect'],
             properties: [
                 new OA\Property(property: 'success', type: 'boolean', example: true),
-                new OA\Property(property: 'message', type: 'string', example: 'Registrierung erfolgreich'),
-                new OA\Property(property: 'redirect', type: 'string', nullable: true, example: '/'),
+                new OA\Property(property: 'roles', type: 'array', items: new OA\Items(type: 'string'), example: ['ROLE_PLAYER']),
+                new OA\Property(property: 'id', type: 'integer', example: 1),
+                new OA\Property(property: 'email', type: 'string', example: 'alice@example.com'),
+                new OA\Property(property: 'username', type: 'string', example: 'alice'),
+                new OA\Property(property: 'redirect', type: 'string', example: 'http://localhost:5173/joined'),
+                new OA\Property(property: 'gameId', type: 'integer', example: 42, description: 'Nur mit Einladung: ID des beigetretenen Spiels.'),
+                new OA\Property(property: 'invitationError', type: 'string', enum: ['GAME_ALREADY_STARTED', 'GAME_JOIN_NOT_ALLOWED', 'GAME_ROOM_FULL', 'GAME_NOT_FOUND'], example: 'GAME_ALREADY_STARTED', description: 'Nur wenn die gespeicherte Einladung nicht mehr nutzbar ist. Konto und Login bestehen trotzdem, `gameId` fehlt in diesem Fall.'),
             ]
         )
     )]
@@ -78,15 +90,13 @@ final class RegistrationController extends AbstractController
     #[Security(name: null)]
     #[ApiResponse]
     #[Route('/api/register', name: 'app_register', methods: ['POST'], format: 'json')]
-    public function register(Request $request, RegistrationServiceInterface $registrationService): array
+    public function register(Request $request, RegistrationServiceInterface $registrationService): Response|array
     {
         $data = json_decode($request->getContent(), true);
         if (JSON_ERROR_NONE !== json_last_error() || !is_array($data)) {
             throw new InvalidJsonBodyException();
         }
 
-        $result = $registrationService->register($data);
-
-        return $result;
+        return $registrationService->register($data);
     }
 }
