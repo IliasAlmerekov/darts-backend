@@ -73,6 +73,28 @@ final class RememberedLoginTest extends WebTestCase
         self::assertFalse($this->isAuthenticated($client));
     }
 
+    public function testParallelRequestsWithTheSameCookieStayAuthenticated(): void
+    {
+        $client = static::createClient();
+        $player = $this->createUser('parallel', ['ROLE_PLAYER']);
+
+        $this->logIn($client, $player);
+        $this->dropSessionCookie($client);
+        $this->backdateTokens(self::SEVEN_DAYS / 2);
+        $staleCookie = $this->rememberCookie($client);
+        self::assertNotNull($staleCookie);
+
+        // The first request rotates the token. A second request sent before the browser saw
+        // the new cookie still presents the old value and must not be treated as theft.
+        $client->request(Request::METHOD_GET, '/api/login/success');
+        self::assertTrue($this->isAuthenticated($client));
+
+        $this->dropSessionCookie($client);
+        $client->getCookieJar()->set($staleCookie);
+        $client->request(Request::METHOD_GET, '/api/login/success');
+        self::assertTrue($this->isAuthenticated($client));
+    }
+
     public function testRememberedPlayerReachesOnlyWhatASessionPlayerReaches(): void
     {
         $client = static::createClient();

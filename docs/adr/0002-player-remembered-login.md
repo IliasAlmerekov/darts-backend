@@ -1,6 +1,6 @@
 # Players stay logged in through remember_me tokens stored in the database
 
-Players open the app by scanning a QR code on their own phone, often days apart, and should not have to log in each time. A player's login now survives for 7 days after their last visit through Symfony `remember_me` with the Doctrine token provider. Each restored login reissues the cookie, so an active player never sees the login form, while one who stays away longer than a week logs in again. Registration logs the player in the same way.
+Players open the app by scanning a QR code on their own phone, often days apart, and should not have to log in each time. A player's login now survives for 7 days after their last visit through Symfony `remember_me` with the Doctrine token provider. Each restored login reissues the cookie, so an active player never sees the login form, while one who stays away longer than a week logs in again. Registration will log the player in the same way once #81 lands. Until then a newly registered player logs in once by hand.
 
 ## Considered Options
 
