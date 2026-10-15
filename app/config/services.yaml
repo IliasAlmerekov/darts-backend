@@ -5,6 +5,8 @@
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
     frontend_url: "%env(string:FRONTEND_URL)%"
+    # Seconds a player stays logged in after the last visit (docs/adr/0002-player-remembered-login.md).
+    app.remembered_login.lifetime: 604800
 
 services:
     # default configuration for services in *this* file
@@ -24,6 +26,10 @@ services:
     App\Repository\InvitationRepositoryInterface: '@App\Repository\InvitationRepository'
     App\Repository\PlayerStatsRepositoryInterface: '@App\Repository\PlayerStatsRepository'
     App\Repository\UserRepositoryInterface: '@App\Repository\UserRepository'
+    App\EventSubscriber\RememberedLoginCookieSubscriber:
+        arguments:
+            $cookieName: REMEMBERME
+            $lifetime: "%app.remembered_login.lifetime%"
     App\Controller\InvitationController:
         arguments:
             $frontendUrl: "%frontend_url%"

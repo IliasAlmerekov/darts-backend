@@ -25,6 +25,18 @@ security:
                 default_target_path: login_success
                 success_handler: App\Security\ApiAuthenticationSuccessHandler
                 failure_handler: App\Security\ApiAuthenticationFailureHandler
+            # Players stay logged in for 7 days after their last visit
+            # (docs/adr/0002-player-remembered-login.md). No form parameter turns it on:
+            # RememberedLoginSubscriber decides who is remembered, by role.
+            remember_me:
+                secret: '%kernel.secret%'
+                lifetime: '%app.remembered_login.lifetime%'
+                token_provider:
+                    doctrine: true
+                # Same flags as the session cookie. Prod sets secure and samesite lax in
+                # framework.yaml; the frontend runs on another origin with credentials.
+                secure: auto
+                samesite: lax
             logout:
                 path: app_logout
                 # where to redirect after logout
