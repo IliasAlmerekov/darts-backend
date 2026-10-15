@@ -25,6 +25,18 @@ security:
                 default_target_path: login_success
                 success_handler: App\Security\ApiAuthenticationSuccessHandler
                 failure_handler: App\Security\ApiAuthenticationFailureHandler
+            # Players stay logged in for 7 days after their last visit
+            # (docs/adr/0002-player-remembered-login.md). No form parameter turns it on:
+            # RememberedLoginSubscriber decides who is remembered, by role.
+            remember_me:
+                secret: '%kernel.secret%'
+                lifetime: '%app.remembered_login.lifetime%'
+                token_provider:
+                    doctrine: true
+                # Same flags as the session cookie: framework.yaml sets secure and samesite
+                # lax in prod. The frontend runs on another origin with credentials.
+                secure: auto
+                samesite: lax
             logout:
                 path: app_logout
                 # where to redirect after logout
@@ -51,6 +63,13 @@ security:
         # Swagger UI and its JSON exist in dev only (config/routes/nelmio_api_doc*.yaml).
         - { path: ^/api/doc(\.json)?$, roles: PUBLIC_ACCESS }
         - { path: ^/api, roles: ROLE_ADMIN }
+
+when@prod:
+    security:
+        firewalls:
+            main:
+                remember_me:
+                    secure: true
 
 when@test:
     security:
