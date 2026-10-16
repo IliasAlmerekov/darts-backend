@@ -18,6 +18,11 @@ security:
             provider: app_user_provider
             entry_point: App\Security\ApiAuthenticationEntryPoint
 #           access_denied_handler: App\Security\AccessDeniedHandler
+            # 5 failed logins per minute for one email and IP, plus Symfony's wider per-IP limit.
+            # ApiAuthenticationFailureHandler answers the limit with 429.
+            login_throttling:
+                max_attempts: 5
+                interval: '1 minute'
             form_login:
                 login_path: app_login
                 check_path: app_login

@@ -10,6 +10,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
+use Symfony\Component\Security\Core\Exception\TooManyLoginAttemptsAuthenticationException;
 use Symfony\Component\Security\Http\Authentication\AuthenticationFailureHandlerInterface;
 
 /**
@@ -36,12 +37,26 @@ final readonly class ApiAuthenticationFailureHandler implements AuthenticationFa
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): Response
     {
         if ($this->isApiRequest($request)) {
-            return new JsonResponse([
+            $tooManyAttempts = $exception instanceof TooManyLoginAttemptsAuthenticationException;
+            $status = $tooManyAttempts ? Response::HTTP_TOO_MANY_REQUESTS : Response::HTTP_UNAUTHORIZED;
+            $response = new JsonResponse([
                 'success' => false,
                 'last_username' => (string) $request->request->get('_username', ''),
-                'error' => $exception->getMessage(),
-                'status' => Response::HTTP_UNAUTHORIZED,
-            ], Response::HTTP_UNAUTHORIZED);
+                // The throttling exception keeps %minutes% in its message; fill it in.
+                'error' => $tooManyAttempts
+                    ? strtr($exception->getMessageKey(), $exception->getMessageData())
+                    : $exception->getMessage(),
+                'status' => $status,
+            ], $status);
+
+            if ($tooManyAttempts) {
+                $minutes = $exception->getMessageData()['%minutes%'];
+                if (is_int($minutes) && $minutes > 0) {
+                    $response->headers->set('Retry-After', (string) ($minutes * 60));
+                }
+            }
+
+            return $response;
         }
 
         return new RedirectResponse($this->urlGenerator->generate('app_login'));

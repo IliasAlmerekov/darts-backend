@@ -79,6 +79,23 @@ final class SecurityController extends AbstractController
             ]
         )
     )]
+    #[OA\Response(
+        response: Response::HTTP_TOO_MANY_REQUESTS,
+        description: 'Zu viele fehlgeschlagene Anmeldungen (5 pro Minute je E-Mail und IP-Adresse, dazu ein weiteres Limit pro IP). Nur bei POST.',
+        headers: [
+            new OA\Header(header: 'Retry-After', description: 'Sekunden bis zum nächsten erlaubten Versuch, wenn der Limiter sie nennt.', schema: new OA\Schema(type: 'integer')),
+        ],
+        content: new OA\JsonContent(
+            type: 'object',
+            required: ['success', 'error', 'status'],
+            properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: false),
+                new OA\Property(property: 'last_username', type: 'string', nullable: true, example: 'alice@example.com'),
+                new OA\Property(property: 'error', type: 'string', example: 'Too many failed login attempts, please try again in 1 minute.'),
+                new OA\Property(property: 'status', type: 'integer', example: 429, description: 'Nur bei POST: ApiAuthenticationFailureHandler antwortet direkt und lässt `status` im Body.'),
+            ]
+        )
+    )]
     #[Security(name: null)]
     #[ApiResponse]
     #[Route(path: '/api/login', name: 'app_login', methods: ['GET', 'POST'], format: 'json')]

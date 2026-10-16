@@ -48,7 +48,8 @@ final class OpenApiDocumentTest extends WebTestCase
         'create_invitation',
     ];
 
-    private const array LOGIN_FAILURE = ['/api/login', '401'];
+    /** @var list<array{string, string}> */
+    private const array LOGIN_FAILURES = [['/api/login', '401'], ['/api/login', '429']];
 
     /** @var array<string, mixed>|null */
     private ?array $document = null;
@@ -81,7 +82,7 @@ final class OpenApiDocumentTest extends WebTestCase
                 // The subscriber strips only an int status; the health probe's string "ok" stays.
                 // A failed login is answered by ApiAuthenticationFailureHandler, which bypasses
                 // the subscriber, so its 401 body really carries "status". The GET variant shares the schema.
-                if (self::LOGIN_FAILURE !== [$path, (string) $code] && 'integer' === ($schema['properties']['status']['type'] ?? null)) {
+                if (!in_array([$path, (string) $code], self::LOGIN_FAILURES, true) && 'integer' === ($schema['properties']['status']['type'] ?? null)) {
                     $offences[] = strtoupper($method).' '.$path.' '.$code;
                 }
             }
@@ -127,8 +128,17 @@ final class OpenApiDocumentTest extends WebTestCase
         $paths = $this->document()['paths'];
 
         self::assertArrayHasKey('401', $paths['/api/login']['post']['responses']);
+        self::assertArrayHasKey('429', $paths['/api/login']['post']['responses']);
+        self::assertArrayHasKey('429', $paths['/api/register']['post']['responses']);
         self::assertArrayHasKey('responses', $paths['/api/logout']['post']);
         self::assertArrayNotHasKey('default', $paths['/api/logout']['post']['responses']);
+    }
+
+    public function testRegisterDocumentsTheEightCharacterPasswordMinimum(): void
+    {
+        $body = $this->document()['paths']['/api/register']['post']['requestBody']['content']['application/json']['schema'];
+
+        self::assertSame(8, $body['properties']['plainPassword']['minLength']);
     }
 
     public function testRegisterDocumentsTheLoginSuccessBodyAndTheRememberMeCookie(): void
