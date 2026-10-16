@@ -44,7 +44,7 @@ final class RegistrationController extends AbstractController
             properties: [
                 new OA\Property(property: 'username', type: 'string', example: 'alice'),
                 new OA\Property(property: 'email', type: 'string', format: 'email', example: 'alice@example.com'),
-                new OA\Property(property: 'plainPassword', type: 'string', format: 'password', example: 'secret123'),
+                new OA\Property(property: 'plainPassword', type: 'string', format: 'password', minLength: 8, example: 'secret123'),
             ]
         )
     )]

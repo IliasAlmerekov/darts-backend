@@ -134,6 +134,13 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertArrayNotHasKey('default', $paths['/api/logout']['post']['responses']);
     }
 
+    public function testRegisterDocumentsTheEightCharacterPasswordMinimum(): void
+    {
+        $body = $this->document()['paths']['/api/register']['post']['requestBody']['content']['application/json']['schema'];
+
+        self::assertSame(8, $body['properties']['plainPassword']['minLength']);
+    }
+
     public function testRegisterDocumentsTheLoginSuccessBodyAndTheRememberMeCookie(): void
     {
         $created = $this->document()['paths']['/api/register']['post']['responses']['201'];
