@@ -43,6 +43,13 @@ repositories, functional for HTTP endpoints. The test DB uses DAMA Doctrine Test
 Run checks in Docker from the repository root, to match `.gitlab-ci.yml`. Host-local
 `php`, `composer`, or `vendor/bin/*` runs only when the user accepts the deviation.
 
+Locally backend and frontend run as one Compose stack, the project `darts`: nginx on :8001,
+php, mysql, and the frontend on :5173. Both repos' compose files carry `name: darts`, so every
+`docker compose` command below joins that stack; start the whole stack with
+`docker compose up -d` in the workspace folder that holds both repos. `docker compose up` run
+from a worktree recreates the php container on that worktree's `app/`; run
+`docker compose up -d` in the workspace folder afterwards to point it back at the main checkout.
+
 `app/.env.test` uses the default MySQL root password from `docker-compose.yaml`.
 `scripts/check-test-db-env.sh` fails when the two differ. Run it on the host, because the
 php container mounts only `app/`. If you set `MYSQL_ROOT_PASSWORD`, or your `mysql_data`
