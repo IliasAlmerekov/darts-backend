@@ -56,6 +56,22 @@ final class LoginThrottlingTest extends WebTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_OK, (string) $client->getResponse()->getContent());
     }
 
+    public function testEmailCaseVariantsShareOneBucket(): void
+    {
+        // MySQL compares emails case-insensitively, so each spelling hits the same account.
+        $client = $this->throttledClient();
+        $email = (string) $this->createUser('casing')->getEmail();
+        $variants = [$email, strtoupper($email), ucfirst($email), strtoupper($email), $email];
+
+        foreach ($variants as $i => $variant) {
+            $this->login($client, $variant, 'wrong-password');
+            self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED, 'Attempt '.($i + 1));
+        }
+        $this->login($client, ucfirst($email), 'wrong-password');
+
+        self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
+    }
+
     private function throttledClient(): KernelBrowser
     {
         $client = static::createClient();

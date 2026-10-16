@@ -10,6 +10,8 @@ framework:
 
     # Every POST /api/register counts, whatever its outcome. A whole game (up to 10 Players)
     # registers from one public IP on the venue's Wi-Fi, so 20 per hour leaves room for it.
+    # These counters and the login counters live in the filesystem cache of one container.
+    # Several app containers would each count on their own; they need a shared cache first.
     rate_limiter:
         registration:
             policy: fixed_window
