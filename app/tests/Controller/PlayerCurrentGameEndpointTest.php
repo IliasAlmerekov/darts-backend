@@ -120,6 +120,19 @@ final class PlayerCurrentGameEndpointTest extends WebTestCase
         self::assertSame(['gameId' => $rematchId, 'status' => 'lobby'], $this->getCurrentGame($client));
     }
 
+    public function testJoinOrderWinsOverGameCreationOrder(): void
+    {
+        $client = static::createClient();
+        $player = $this->createUser('player', 'ROLE_PLAYER');
+        $olderGameId = $this->createEmptyGame(GameStatus::Lobby);
+        $newerGameId = $this->createEmptyGame(GameStatus::Lobby);
+        $this->seatPlayer($newerGameId, $player);
+        $this->seatPlayer($olderGameId, $player);
+        $client->loginUser($player);
+
+        self::assertSame(['gameId' => $olderGameId, 'status' => 'lobby'], $this->getCurrentGame($client));
+    }
+
     public function testStartedGameJoinedAfterLobbyWinsAndLobbyAfterStartedWins(): void
     {
         $client = static::createClient();
@@ -199,6 +212,14 @@ final class PlayerCurrentGameEndpointTest extends WebTestCase
 
     private function createGame(GameStatus $status, User $player): int
     {
+        $gameId = $this->createEmptyGame($status);
+        $this->seatPlayer($gameId, $player);
+
+        return $gameId;
+    }
+
+    private function createEmptyGame(GameStatus $status): int
+    {
         $entityManager = static::getContainer()->get(EntityManagerInterface::class);
         $game = (new Game())
             ->setDate(new DateTime())
@@ -207,20 +228,28 @@ final class PlayerCurrentGameEndpointTest extends WebTestCase
             ->setTripleOut(false)
             ->setStatus($status);
         $entityManager->persist($game);
-
-        $seat = (new GamePlayers())
-            ->setGame($game)
-            ->setPlayer($player)
-            ->setPosition(1)
-            ->setScore(301)
-            ->setIsWinner(false);
-        $game->addGamePlayer($seat);
-        $entityManager->persist($seat);
         $entityManager->flush();
 
         $gameId = $game->getGameId();
         self::assertNotNull($gameId);
 
         return $gameId;
+    }
+
+    private function seatPlayer(int $gameId, User $player): void
+    {
+        $entityManager = static::getContainer()->get(EntityManagerInterface::class);
+        $game = $entityManager->find(Game::class, $gameId);
+        self::assertNotNull($game);
+
+        $seat = (new GamePlayers())
+            ->setGame($game)
+            ->setPlayer($player)
+            ->setPosition($game->getGamePlayers()->count() + 1)
+            ->setScore(301)
+            ->setIsWinner(false);
+        $game->addGamePlayer($seat);
+        $entityManager->persist($seat);
+        $entityManager->flush();
     }
 }
