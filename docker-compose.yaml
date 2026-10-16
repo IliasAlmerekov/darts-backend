@@ -1,3 +1,7 @@
+# The project name matches the workspace compose.yaml, so commands run from this folder
+# reach the one local stack for backend and frontend.
+name: darts
+
 services:
   php:
     image: registry.deepblue.technology/library/php:8.4.11-0-dev
