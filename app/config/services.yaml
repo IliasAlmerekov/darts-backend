@@ -69,3 +69,15 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+
+when@test:
+    services:
+        # Same as cache.adapter.array, but without the reset tag. The kernel resets services
+        # after every request, which would empty the limiter between two requests of one test.
+        # Each booted kernel still starts with an empty pool, so state never leaks between tests.
+        app.cache.adapter.in_memory:
+            class: Symfony\Component\Cache\Adapter\ArrayAdapter
+            abstract: true
+            arguments: [0]
+            tags:
+                - { name: cache.pool, clearer: cache.default_clearer }

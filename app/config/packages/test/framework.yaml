@@ -1,4 +1,10 @@
 framework:
     test: true
+    # Limiter state lives in memory (see services.yaml), so it starts empty for every kernel and never leaks
+    # between tests. Production keeps the default cache.rate_limiter pool.
+    cache:
+        pools:
+            cache.rate_limiter:
+                adapter: app.cache.adapter.in_memory
     session:
         storage_factory_id: session.storage.factory.mock_file

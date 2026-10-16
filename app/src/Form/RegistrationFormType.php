@@ -52,7 +52,7 @@ final class RegistrationFormType extends AbstractType
                 'constraints' => [
                     new NotBlank(message: 'Please enter a password'),
                     new Length(
-                        min: 6,
+                        min: 8,
                         minMessage: 'Your password should be at least {{ limit }} characters long.',
                         max: 4096,
                     ),

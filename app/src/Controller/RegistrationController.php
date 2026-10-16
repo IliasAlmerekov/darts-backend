@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Exception\Registration\RegistrationRateLimitedException;
 use App\Exception\Request\InvalidJsonBodyException;
 use App\Http\Attribute\ApiResponse;
 use App\Service\Registration\RegistrationServiceInterface;
@@ -17,6 +18,7 @@ use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
@@ -30,6 +32,7 @@ final class RegistrationController extends AbstractController
      *
      * @param Request                      $request
      * @param RegistrationServiceInterface $registrationService
+     * @param RateLimiterFactoryInterface  $registrationLimiter
      *
      * @return Response|array<array-key, mixed>
      */
@@ -41,7 +44,7 @@ final class RegistrationController extends AbstractController
             properties: [
                 new OA\Property(property: 'username', type: 'string', example: 'alice'),
                 new OA\Property(property: 'email', type: 'string', format: 'email', example: 'alice@example.com'),
-                new OA\Property(property: 'plainPassword', type: 'string', format: 'password', example: 'secret'),
+                new OA\Property(property: 'plainPassword', type: 'string', format: 'password', example: 'secret123'),
             ]
         )
     )]
@@ -87,11 +90,36 @@ final class RegistrationController extends AbstractController
             ]
         )
     )]
+    #[OA\Response(
+        response: Response::HTTP_TOO_MANY_REQUESTS,
+        description: 'Zu viele Registrierungsversuche von dieser IP-Adresse (höchstens 20 pro Stunde, jede Anfrage zählt). Es wird kein Konto angelegt, kein Login gestartet und keine Einladung verbraucht.',
+        headers: [
+            new OA\Header(header: 'Retry-After', description: 'Sekunden bis zum nächsten erlaubten Versuch.', schema: new OA\Schema(type: 'integer')),
+        ],
+        content: new OA\JsonContent(
+            type: 'object',
+            required: ['success', 'error', 'message'],
+            properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: false),
+                new OA\Property(property: 'error', type: 'string', example: 'REGISTRATION_RATE_LIMITED'),
+                new OA\Property(property: 'message', type: 'string'),
+            ]
+        )
+    )]
     #[Security(name: null)]
     #[ApiResponse]
     #[Route('/api/register', name: 'app_register', methods: ['POST'], format: 'json')]
-    public function register(Request $request, RegistrationServiceInterface $registrationService): Response|array
-    {
+    public function register(
+        Request $request,
+        RegistrationServiceInterface $registrationService,
+        RateLimiterFactoryInterface $registrationLimiter,
+    ): Response|array {
+        // Before any registration work: every request counts, whatever its outcome.
+        $rateLimit = $registrationLimiter->create($request->getClientIp() ?? 'unknown')->consume();
+        if (!$rateLimit->isAccepted()) {
+            throw new RegistrationRateLimitedException($rateLimit->getRetryAfter());
+        }
+
         $data = json_decode($request->getContent(), true);
         if (JSON_ERROR_NONE !== json_last_error() || !is_array($data)) {
             throw new InvalidJsonBodyException();

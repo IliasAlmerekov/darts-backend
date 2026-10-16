@@ -31,7 +31,8 @@ final class ErrorController extends AbstractController
                     'error' => $exception->getErrorCode(),
                     'message' => $exception->getMessage(),
                 ],
-                $exception->getStatusCode()
+                $exception->getStatusCode(),
+                $exception->getHeaders()
             );
         }
 

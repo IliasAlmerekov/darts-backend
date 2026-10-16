@@ -160,7 +160,7 @@ final class RegistrationEndpointTest extends WebTestCase
         $game = $this->createGame($entityManager, GameStatus::Lobby);
         $invitation = $this->createInvitation($entityManager, $game);
         $this->scanInvitation($client, $invitation);
-        $body = ['plainPassword' => '12345'] + $this->validBody();
+        $body = ['plainPassword' => '1234567'] + $this->validBody();
 
         $this->postRegistration($client, $body, Response::HTTP_BAD_REQUEST);
 
@@ -198,9 +198,60 @@ final class RegistrationEndpointTest extends WebTestCase
     {
         $client = static::createClient();
 
-        $payload = $this->postRegistration($client, ['plainPassword' => '12345'] + $this->validBody(), Response::HTTP_BAD_REQUEST);
+        $payload = $this->postRegistration($client, ['plainPassword' => '1234567'] + $this->validBody(), Response::HTTP_BAD_REQUEST);
 
-        self::assertSame(['Your password should be at least 6 characters long.'], $payload['errors']['plainPassword'] ?? null);
+        self::assertSame(['Your password should be at least 8 characters long.'], $payload['errors']['plainPassword'] ?? null);
+    }
+
+    public function testSevenCharacterPasswordIsRejectedAndEightIsAccepted(): void
+    {
+        $client = static::createClient();
+
+        $rejected = $this->postRegistration($client, ['plainPassword' => '1234567'] + $this->validBody(), Response::HTTP_BAD_REQUEST);
+        $this->postRegistration($client, ['plainPassword' => '12345678'] + $this->validBody(), Response::HTTP_CREATED);
+
+        self::assertSame(['Your password should be at least 8 characters long.'], $rejected['errors']['plainPassword'] ?? null);
+    }
+
+    public function testTwentyFirstRegistrationFromOneIpAnswers429AndCreatesNoUser(): void
+    {
+        $client = static::createClient();
+        $client->disableReboot();
+        $server = ['CONTENT_TYPE' => 'application/json', 'REMOTE_ADDR' => '203.0.113.7'];
+
+        for ($i = 1; $i <= 20; ++$i) {
+            // Failed requests count too, so mixing outcomes proves "every request counts".
+            $body = ['plainPassword' => 0 === $i % 2 ? 'short' : 'secret123'] + $this->validBody();
+            $client->request(Request::METHOD_POST, '/api/register', [], [], $server, json_encode($body, JSON_THROW_ON_ERROR));
+            self::assertNotSame(Response::HTTP_TOO_MANY_REQUESTS, $client->getResponse()->getStatusCode(), 'Request '.$i);
+        }
+
+        $body = $this->validBody();
+        $client->request(Request::METHOD_POST, '/api/register', [], [], $server, json_encode($body, JSON_THROW_ON_ERROR));
+
+        $response = $client->getResponse();
+        self::assertSame(Response::HTTP_TOO_MANY_REQUESTS, $response->getStatusCode(), (string) $response->getContent());
+        self::assertGreaterThan(0, (int) $response->headers->get('Retry-After'));
+        $payload = json_decode((string) $response->getContent(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertFalse($payload['success']);
+        self::assertSame('REGISTRATION_RATE_LIMITED', $payload['error']);
+        self::assertStringNotContainsString('Exception', (string) $response->getContent());
+        self::assertNull(static::getContainer()->get(UserRepository::class)->findOneBy(['email' => $body['email']]));
+    }
+
+    public function testRegistrationLimitIsPerClientIp(): void
+    {
+        $client = static::createClient();
+        $client->disableReboot();
+        $payload = json_encode(['email' => '', 'username' => '', 'plainPassword' => ''], JSON_THROW_ON_ERROR);
+        for ($i = 0; $i < 21; ++$i) {
+            $client->request(Request::METHOD_POST, '/api/register', [], [], ['CONTENT_TYPE' => 'application/json', 'REMOTE_ADDR' => '203.0.113.8'], $payload);
+        }
+        self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
+
+        $client->request(Request::METHOD_POST, '/api/register', [], [], ['CONTENT_TYPE' => 'application/json', 'REMOTE_ADDR' => '203.0.113.9'], $payload);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
     }
 
     private function createGame(EntityManagerInterface $entityManager, GameStatus $status): Game

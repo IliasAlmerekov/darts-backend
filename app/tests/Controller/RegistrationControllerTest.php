@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\Controller\RegistrationController;
+use App\Exception\Registration\RegistrationRateLimitedException;
 use App\Exception\Request\InvalidJsonBodyException;
 use App\Service\Registration\RegistrationServiceInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -44,9 +48,21 @@ final class RegistrationControllerTest extends TestCase
             ])
             ->willReturn($loginResponse);
 
-        $response = $this->controller->register($request, $service);
+        $response = $this->controller->register($request, $service, $this->limiter(20));
 
         $this->assertSame($loginResponse, $response);
+    }
+
+    public function testRegisterThrows429BeforeAnyWorkWhenTheLimitIsUsedUp(): void
+    {
+        $request = Request::create('/api/register', 'POST', server: ['CONTENT_TYPE' => 'application/json', 'REMOTE_ADDR' => '203.0.113.5'], content: '{"username":"new"}');
+        $service = $this->createMock(RegistrationServiceInterface::class);
+        $service->expects($this->never())->method('register');
+        $limiter = $this->limiter(1);
+        $this->controller->register($request, $this->createStub(RegistrationServiceInterface::class), $limiter);
+
+        $this->expectException(RegistrationRateLimitedException::class);
+        $this->controller->register($request, $service, $limiter);
     }
 
     public function testRegisterReturnsBadRequestOnInvalidJson(): void
@@ -56,7 +72,7 @@ final class RegistrationControllerTest extends TestCase
         $service->expects($this->never())->method('register');
 
         $this->expectException(InvalidJsonBodyException::class);
-        $this->controller->register($request, $service);
+        $this->controller->register($request, $service, $this->limiter(20));
     }
 
     public function testRegisterReturnsServiceErrorPayload(): void
@@ -72,11 +88,19 @@ final class RegistrationControllerTest extends TestCase
                 'errors' => ['username' => ['Required']],
             ]);
 
-        $response = $this->controller->register($request, $service);
+        $response = $this->controller->register($request, $service, $this->limiter(20));
 
         $this->assertIsArray($response);
         $this->assertSame(Response::HTTP_BAD_REQUEST, $response['status']);
         $this->assertFalse($response['success']);
         $this->assertArrayHasKey('errors', $response);
+    }
+
+    private function limiter(int $limit): RateLimiterFactoryInterface
+    {
+        return new RateLimiterFactory(
+            ['id' => 'registration', 'policy' => 'fixed_window', 'limit' => $limit, 'interval' => '1 hour'],
+            new InMemoryStorage(),
+        );
     }
 }
