@@ -37,4 +37,10 @@ final class RateLimiterLockTest extends KernelTestCase
 
         self::assertInstanceOf(LockFactory::class, $lockFactory);
     }
+
+    public function testLockDsnDefaultsToFlockWhenTheEnvironmentLacksIt(): void
+    {
+        // The prod image ships without .env, so the config must supply the fallback itself.
+        self::assertSame('flock', static::getContainer()->getParameter('env(LOCK_DSN)'));
+    }
 }

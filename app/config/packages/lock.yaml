@@ -1,2 +1,7 @@
+parameters:
+    # The prod image has no .env file. Without this default, every service that needs the
+    # lock (the login and registration limiters) fails with EnvNotFoundException.
+    env(LOCK_DSN): flock
+
 framework:
     lock: '%env(LOCK_DSN)%'
