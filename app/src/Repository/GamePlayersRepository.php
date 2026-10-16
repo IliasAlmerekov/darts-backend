@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\GamePlayers;
+use App\Enum\GameStatus;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -223,6 +224,34 @@ SQL,
                 'isGuest' => isset($row['isGuest']) ? (bool) $row['isGuest'] : false,
             ];
         }, $rows);
+    }
+
+    /**
+     * @param int $playerId
+     *
+     * @return array{gameId:int,status:GameStatus}|null
+     */
+    #[\Override]
+    public function findCurrentGameForPlayer(int $playerId): ?array
+    {
+        /** @var array{gameId:int|string,status:GameStatus}|null $row */
+        $row = $this->createQueryBuilder('gp')
+            ->select('game.gameId AS gameId', 'game.status AS status')
+            ->innerJoin('gp.game', 'game')
+            ->andWhere('gp.player = :playerId')
+            ->andWhere('game.status IN (:statuses)')
+            ->setParameter('playerId', $playerId)
+            ->setParameter('statuses', [GameStatus::Lobby, GameStatus::Started])
+            ->orderBy('gp.gamePlayerId', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        if (null === $row) {
+            return null;
+        }
+
+        return ['gameId' => (int) $row['gameId'], 'status' => $row['status']];
     }
 
     /**
