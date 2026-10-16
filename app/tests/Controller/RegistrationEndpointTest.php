@@ -260,15 +260,15 @@ final class RegistrationEndpointTest extends WebTestCase
         $client->disableReboot();
         $trustedProxies = Request::getTrustedProxies();
         $trustedHeaderSet = Request::getTrustedHeaderSet();
-        // What .env.prod.example sets: the load balancer on a private network appends the real client.
-        Request::setTrustedProxies(['PRIVATE_SUBNETS'], Request::HEADER_X_FORWARDED_FOR);
+        // Prod trusts REMOTE_ADDR, which is Caddy on the Compose network.
+        Request::setTrustedProxies(['172.18.0.5'], Request::HEADER_X_FORWARDED_FOR);
 
         try {
             $payload = json_encode(['email' => '', 'username' => '', 'plainPassword' => ''], JSON_THROW_ON_ERROR);
             for ($i = 1; $i <= 21; ++$i) {
                 $client->request(Request::METHOD_POST, '/api/register', [], [], [
                     'CONTENT_TYPE' => 'application/json',
-                    'REMOTE_ADDR' => '10.0.0.5',
+                    'REMOTE_ADDR' => '172.18.0.5',
                     'HTTP_X_FORWARDED_FOR' => sprintf('198.51.%d.1, 93.184.216.34', $i),
                 ], $payload);
             }
@@ -276,7 +276,7 @@ final class RegistrationEndpointTest extends WebTestCase
 
             $client->request(Request::METHOD_POST, '/api/register', [], [], [
                 'CONTENT_TYPE' => 'application/json',
-                'REMOTE_ADDR' => '10.0.0.5',
+                'REMOTE_ADDR' => '172.18.0.5',
                 'HTTP_X_FORWARDED_FOR' => '93.184.216.35',
             ], $payload);
             self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
