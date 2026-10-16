@@ -27,7 +27,7 @@ use Symfony\Component\Routing\Attribute\Route;
 final class PlayerCurrentGameController extends AbstractController
 {
     /**
-     * Returns the newest Lobby or Started game the player still sits in.
+     * Returns the Lobby or Started game the player joined most recently and still sits in.
      *
      * @param GamePlayersRepositoryInterface $gamePlayersRepository
      *

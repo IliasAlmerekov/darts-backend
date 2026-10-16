@@ -23,7 +23,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * GET /api/player/current-game: the newest Lobby or Started game the player still sits in.
+ * GET /api/player/current-game: the Lobby or Started game the player joined most recently and still sits in.
  */
 final class PlayerCurrentGameEndpointTest extends WebTestCase
 {
@@ -124,13 +124,13 @@ final class PlayerCurrentGameEndpointTest extends WebTestCase
     {
         $client = static::createClient();
         $player = $this->createUser('player', 'ROLE_PLAYER');
-        $olderGameId = $this->createEmptyGame(GameStatus::Lobby);
-        $newerGameId = $this->createEmptyGame(GameStatus::Lobby);
-        $this->seatPlayer($newerGameId, $player);
-        $this->seatPlayer($olderGameId, $player);
+        $olderGame = $this->createEmptyGame(GameStatus::Lobby);
+        $newerGame = $this->createEmptyGame(GameStatus::Lobby);
+        $this->seatPlayer($newerGame, $player);
+        $this->seatPlayer($olderGame, $player);
         $client->loginUser($player);
 
-        self::assertSame(['gameId' => $olderGameId, 'status' => 'lobby'], $this->getCurrentGame($client));
+        self::assertSame(['gameId' => $olderGame->getGameId(), 'status' => 'lobby'], $this->getCurrentGame($client));
     }
 
     public function testStartedGameJoinedAfterLobbyWinsAndLobbyAfterStartedWins(): void
@@ -158,13 +158,14 @@ final class PlayerCurrentGameEndpointTest extends WebTestCase
         $client->loginUser($admin);
         $client->request(Request::METHOD_POST, sprintf('/api/room/%d/rematch', $finishedId));
         self::assertResponseIsSuccessful((string) $client->getResponse()->getContent());
+        $rematch = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($rematch);
+        self::assertIsInt($rematch['gameId']);
+        self::assertNotSame($finishedId, $rematch['gameId']);
 
         $client->loginUser($player);
-        $body = $this->getCurrentGame($client);
 
-        self::assertSame('lobby', $body['status']);
-        self::assertIsInt($body['gameId']);
-        self::assertNotSame($finishedId, $body['gameId']);
+        self::assertSame(['gameId' => $rematch['gameId'], 'status' => 'lobby'], $this->getCurrentGame($client));
     }
 
     public function testAnonymousGets401(): void
@@ -212,13 +213,16 @@ final class PlayerCurrentGameEndpointTest extends WebTestCase
 
     private function createGame(GameStatus $status, User $player): int
     {
-        $gameId = $this->createEmptyGame($status);
-        $this->seatPlayer($gameId, $player);
+        $game = $this->createEmptyGame($status);
+        $this->seatPlayer($game, $player);
+
+        $gameId = $game->getGameId();
+        self::assertNotNull($gameId);
 
         return $gameId;
     }
 
-    private function createEmptyGame(GameStatus $status): int
+    private function createEmptyGame(GameStatus $status): Game
     {
         $entityManager = static::getContainer()->get(EntityManagerInterface::class);
         $game = (new Game())
@@ -230,17 +234,12 @@ final class PlayerCurrentGameEndpointTest extends WebTestCase
         $entityManager->persist($game);
         $entityManager->flush();
 
-        $gameId = $game->getGameId();
-        self::assertNotNull($gameId);
-
-        return $gameId;
+        return $game;
     }
 
-    private function seatPlayer(int $gameId, User $player): void
+    private function seatPlayer(Game $game, User $player): void
     {
         $entityManager = static::getContainer()->get(EntityManagerInterface::class);
-        $game = $entityManager->find(Game::class, $gameId);
-        self::assertNotNull($game);
 
         $seat = (new GamePlayers())
             ->setGame($game)
