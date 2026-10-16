@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\GamePlayers;
+use App\Enum\GameStatus;
 
 /**
  * Contract for game players' repository.
@@ -95,4 +96,14 @@ interface GamePlayersRepositoryInterface
      * @return bool
      */
     public function isPlayerInGame(int $gameId, int $playerId): bool;
+
+    /**
+     * The game the player joined most recently (highest GamePlayers id) among the games
+     * they still sit in whose status is Lobby or Started, or null when there is none.
+     *
+     * @param int $playerId
+     *
+     * @return array{gameId:int,status:GameStatus}|null
+     */
+    public function findCurrentGameForPlayer(int $playerId): ?array;
 }

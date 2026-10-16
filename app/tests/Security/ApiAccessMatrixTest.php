@@ -103,6 +103,8 @@ final class ApiAccessMatrixTest extends WebTestCase
             // The session holds no joined invitation, so the service answers 400 with a redirect to /start.
             self::entry('process_invitation', Request::METHOD_POST, self::ACCESS_PLAYER, expected: Response::HTTP_BAD_REQUEST),
 
+            self::entry('app_player_current_game', Request::METHOD_GET, self::ACCESS_PLAYER, expected: Response::HTTP_OK),
+
             // Admin: invitations
             self::entry('create_invitation', Request::METHOD_POST, self::ACCESS_ADMIN, $room, expected: Response::HTTP_OK),
 

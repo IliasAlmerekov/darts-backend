@@ -161,6 +161,24 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertSame(['ack'], $schemas['UndoAckDto']['properties']['type']['enum']);
     }
 
+    public function testCurrentGameDocumentsNullableFieldsAnd401And403(): void
+    {
+        $document = $this->document();
+
+        $responses = $document['paths']['/api/player/current-game']['get']['responses'];
+        self::assertArrayHasKey('200', $responses);
+        self::assertArrayHasKey('401', $responses);
+        self::assertArrayHasKey('403', $responses);
+        $examples = $responses['200']['content']['application/json']['examples'];
+        self::assertSame(['gameId' => 12, 'status' => 'lobby'], $examples['lobby']['value']);
+        self::assertSame(['gameId' => null, 'status' => null], $examples['none']['value']);
+
+        $properties = $document['components']['schemas']['CurrentGameResponseDto']['properties'];
+        self::assertSame(['gameId', 'status'], array_keys($properties));
+        self::assertTrue($properties['gameId']['nullable'] ?? in_array('null', (array) ($properties['gameId']['type'] ?? []), true));
+        self::assertTrue($properties['status']['nullable'] ?? in_array('null', (array) ($properties['status']['type'] ?? []), true));
+    }
+
     public function testStartGameRequestDocumentsOnlyCamelCaseSettingKeys(): void
     {
         $properties = array_keys($this->document()['components']['schemas']['StartGameRequest']['properties']);
