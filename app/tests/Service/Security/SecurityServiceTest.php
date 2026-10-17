@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Security;
 
 use App\Entity\User;
+use App\Enum\GameStatus;
 use App\Exception\Game\GameAlreadyStartedException;
+use App\Repository\GamePlayersRepositoryInterface;
 use App\Service\Invitation\InvitationServiceInterface;
 use App\Service\Security\SecurityService;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -19,12 +21,14 @@ use Symfony\Component\HttpFoundation\Session\SessionInterface;
 final class SecurityServiceTest extends TestCase
 {
     private InvitationServiceInterface&MockObject $invitationService;
+    private GamePlayersRepositoryInterface&MockObject $gamePlayersRepository;
     private SecurityService $service;
 
     protected function setUp(): void
     {
         $this->invitationService = $this->createMock(InvitationServiceInterface::class);
-        $this->service = new SecurityService($this->invitationService, 'http://frontend.test');
+        $this->gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $this->service = new SecurityService($this->invitationService, $this->gamePlayersRepository, 'http://frontend.test');
     }
 
     public function testAdminGetsStartRedirect(): void
@@ -80,22 +84,42 @@ final class SecurityServiceTest extends TestCase
         $payload = json_decode($response->getContent() ?: '{}', true, 512, JSON_THROW_ON_ERROR);
         self::assertTrue($payload['success']);
         self::assertSame($user->getId(), $payload['id']);
-        self::assertSame('/joined', parse_url($payload['redirect'], PHP_URL_PATH));
+        self::assertSame('/playerprofile', parse_url($payload['redirect'], PHP_URL_PATH));
         self::assertSame('GAME_ALREADY_STARTED', $payload['invitationError']);
     }
 
-    public function testDefaultFlowRedirectsToJoined(): void
+    public function testPlayerWithCurrentGameRedirectsToJoined(): void
+    {
+        $user = $this->userWithIdAndRoles(5, ['ROLE_PLAYER']);
+        $session = $this->createMock(SessionInterface::class);
+        $session->expects(self::once())->method('has')->with('invitation_uuid')->willReturn(false);
+        $this->gamePlayersRepository
+            ->expects(self::once())
+            ->method('findCurrentGameForPlayer')
+            ->with(5)
+            ->willReturn(['gameId' => 42, 'status' => GameStatus::Lobby]);
+
+        $response = $this->service->buildLoginSuccessResponse($user, $session);
+
+        $payload = json_decode($response->getContent() ?: '{}', true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('/joined', parse_url($payload['redirect'], PHP_URL_PATH));
+        self::assertSame(42, $payload['gameId']);
+    }
+
+    public function testPlayerWithoutCurrentGameRedirectsToProfile(): void
     {
         $user = $this->userWithIdAndRoles(3, ['ROLE_PLAYER']);
         $user->setEmail('player@test.dev');
         $session = $this->createMock(SessionInterface::class);
         $session->expects(self::once())->method('has')->with('invitation_uuid')->willReturn(false);
+        $this->gamePlayersRepository->method('findCurrentGameForPlayer')->willReturn(null);
 
         $response = $this->service->buildLoginSuccessResponse($user, $session);
 
         self::assertInstanceOf(JsonResponse::class, $response);
         $payload = json_decode($response->getContent() ?: '{}', true, 512, JSON_THROW_ON_ERROR);
-        self::assertSame('/joined', parse_url($payload['redirect'], PHP_URL_PATH));
+        self::assertSame('/playerprofile', parse_url($payload['redirect'], PHP_URL_PATH));
+        self::assertArrayNotHasKey('gameId', $payload);
         self::assertSame($user->getId(), $payload['id']);
         self::assertSame($user->getEmail(), $payload['email']);
         self::assertSame($user->getUsername(), $payload['username']);

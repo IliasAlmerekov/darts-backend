@@ -96,6 +96,7 @@ final class RegistrationEndpointTest extends WebTestCase
         self::assertSame(['ROLE_PLAYER'], $payload['roles']);
         self::assertArrayNotHasKey('gameId', $payload);
         self::assertArrayNotHasKey('invitationError', $payload);
+        self::assertSame('/playerprofile', parse_url($payload['redirect'], PHP_URL_PATH));
         self::assertSame($this->loginRedirect($client, $body, null), $payload['redirect']);
     }
 
@@ -147,7 +148,7 @@ final class RegistrationEndpointTest extends WebTestCase
         self::assertInstanceOf(User::class, static::getContainer()->get(UserRepository::class)->findOneBy(['email' => $body['email']]));
         self::assertTrue($payload['success']);
         self::assertSame($errorCode, $payload['invitationError']);
-        self::assertSame('/joined', parse_url($payload['redirect'], PHP_URL_PATH));
+        self::assertSame('/playerprofile', parse_url($payload['redirect'], PHP_URL_PATH));
         self::assertArrayNotHasKey('gameId', $payload);
         $this->assertInvitationCleared($client);
         $this->assertLoggedInAs($client, $body['email']);

@@ -44,8 +44,12 @@ _Avoid_: Invite link, join code
 The screen on a player's phone after they join a room and before the admin starts the game.
 _Avoid_: Joined page, lobby
 
+**Current game**:
+The game a player takes part in right now. A player has at most one; joining another game replaces it.
+_Avoid_: active game
+
 **Profile**:
-The page a player lands on when they open the app without an invitation. It shows their own recent games and statistics.
+The page a player lands on when they open the app without an invitation and without a current game. It shows their own recent games and statistics.
 _Avoid_: Dashboard, home page
 
 **Remembered login**:
