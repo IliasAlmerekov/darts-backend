@@ -109,6 +109,18 @@ interface GamePlayersRepositoryInterface
     public function isPlayerInGame(int $gameId, int $playerId): bool;
 
     /**
+     * Like isPlayerInGame, but reads with a shared lock (FOR SHARE), so it also sees a seat
+     * committed after the transaction's snapshot was taken. Must be called inside a
+     * transaction.
+     *
+     * @param int $gameId
+     * @param int $playerId
+     *
+     * @return bool
+     */
+    public function isPlayerInGameForShare(int $gameId, int $playerId): bool;
+
+    /**
      * The game the player joined most recently (highest GamePlayers id) among the games
      * they still sit in whose status is Lobby or Started, or null when there is none.
      *

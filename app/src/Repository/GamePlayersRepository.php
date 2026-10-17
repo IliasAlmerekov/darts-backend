@@ -89,6 +89,29 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
     }
 
     /**
+     * @param int $gameId
+     * @param int $playerId
+     *
+     * @return bool
+     */
+    #[\Override]
+    public function isPlayerInGameForShare(int $gameId, int $playerId): bool
+    {
+        $seats = $this->createQueryBuilder('gp')
+            ->select('gp.gamePlayerId')
+            ->andWhere('gp.game = :gameId')
+            ->andWhere('gp.player = :playerId')
+            ->setParameter('gameId', $gameId)
+            ->setParameter('playerId', $playerId)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->setLockMode(LockMode::PESSIMISTIC_READ)
+            ->getScalarResult();
+
+        return [] !== $seats;
+    }
+
+    /**
      * @return GamePlayers[]
      *
      * @param int $gameId

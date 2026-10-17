@@ -237,7 +237,7 @@ final class InvitationServiceTest extends TestCase
 
         $this->gamePlayersRepository
             ->expects(self::once())
-            ->method('isPlayerInGame')
+            ->method('isPlayerInGameForShare')
             ->with(50, 5)
             ->willReturn(false);
 
@@ -330,7 +330,7 @@ final class InvitationServiceTest extends TestCase
             ->willReturn(10);
         $this->gamePlayersRepository
             ->expects(self::once())
-            ->method('isPlayerInGame')
+            ->method('isPlayerInGameForShare')
             ->with(61, 9)
             ->willReturn(false);
         $this->playerManagementService

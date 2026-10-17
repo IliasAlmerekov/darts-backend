@@ -220,7 +220,9 @@ final readonly class InvitationService implements InvitationServiceInterface
                 $this->entityManager->lock($game, LockMode::PESSIMISTIC_WRITE);
             }
 
-            if (false === $this->gamePlayersRepository->isPlayerInGame($gameId, $userId)) {
+            // A plain read would use the snapshot taken by find() above and miss a seat that a
+            // rematch committed while this request waited for the lock.
+            if (false === $this->gamePlayersRepository->isPlayerInGameForShare($gameId, $userId)) {
                 $this->assertGameJoinableForGame($game);
                 $this->playerManagementService->addPlayer($gameId, $userId);
             }
