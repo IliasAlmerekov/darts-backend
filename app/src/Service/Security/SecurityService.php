@@ -14,6 +14,7 @@ use App\Exception\Game\GameAlreadyStartedException;
 use App\Exception\Game\GameJoinNotAllowedException;
 use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\GameRoomFullException;
+use App\Repository\GamePlayersRepositoryInterface;
 use App\Service\Invitation\InvitationServiceInterface;
 use Override;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -26,11 +27,13 @@ use Symfony\Component\HttpFoundation\Session\SessionInterface;
 final readonly class SecurityService implements SecurityServiceInterface
 {
     /**
-     * @param InvitationServiceInterface $invitationService
-     * @param string                     $frontendUrl
+     * @param InvitationServiceInterface     $invitationService
+     * @param GamePlayersRepositoryInterface $gamePlayersRepository
+     * @param string                         $frontendUrl
      */
     public function __construct(
         private InvitationServiceInterface $invitationService,
+        private GamePlayersRepositoryInterface $gamePlayersRepository,
         private string $frontendUrl,
     ) {
     }
@@ -70,10 +73,24 @@ final readonly class SecurityService implements SecurityServiceInterface
                     'id' => $payload['id'],
                     'email' => $payload['email'],
                     'username' => $payload['username'],
-                    'redirect' => rtrim($this->frontendUrl, '/').'/joined',
+                    'redirect' => rtrim($this->frontendUrl, '/').'/playerprofile',
                     'invitationError' => $exception->getErrorCode(),
                 ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
             }
+        }
+
+        // Without an invitation a player returns to the Waiting room of their current game, if any.
+        $currentGame = null !== $payload['id'] ? $this->gamePlayersRepository->findCurrentGameForPlayer($payload['id']) : null;
+        if (null !== $currentGame) {
+            return new JsonResponse([
+                'success' => true,
+                'roles' => $payload['roles'],
+                'id' => $payload['id'],
+                'email' => $payload['email'],
+                'username' => $payload['username'],
+                'redirect' => rtrim($this->frontendUrl, '/').'/joined',
+                'gameId' => $currentGame['gameId'],
+            ]);
         }
 
         return new JsonResponse([
@@ -82,7 +99,7 @@ final readonly class SecurityService implements SecurityServiceInterface
             'id' => $payload['id'],
             'email' => $payload['email'],
             'username' => $payload['username'],
-            'redirect' => rtrim($this->frontendUrl, '/').'/joined',
+            'redirect' => rtrim($this->frontendUrl, '/').'/playerprofile',
         ]);
     }
 

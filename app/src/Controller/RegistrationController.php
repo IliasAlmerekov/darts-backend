@@ -67,7 +67,7 @@ final class RegistrationController extends AbstractController
                 new OA\Property(property: 'id', type: 'integer', example: 1),
                 new OA\Property(property: 'email', type: 'string', example: 'alice@example.com'),
                 new OA\Property(property: 'username', type: 'string', example: 'alice'),
-                new OA\Property(property: 'redirect', type: 'string', example: 'http://localhost:5173/joined'),
+                new OA\Property(property: 'redirect', type: 'string', example: 'http://localhost:5173/playerprofile', description: 'Mit beigetretener Einladung: `/joined`. Sonst, auch bei `invitationError`: `/playerprofile`.'),
                 new OA\Property(property: 'gameId', type: 'integer', example: 42, description: 'Nur mit Einladung: ID des beigetretenen Spiels.'),
                 new OA\Property(property: 'invitationError', type: 'string', enum: ['GAME_ALREADY_STARTED', 'GAME_JOIN_NOT_ALLOWED', 'GAME_ROOM_FULL', 'GAME_NOT_FOUND'], example: 'GAME_ALREADY_STARTED', description: 'Nur wenn die gespeicherte Einladung nicht mehr nutzbar ist. Konto und Login bestehen trotzdem, `gameId` fehlt in diesem Fall.'),
             ]

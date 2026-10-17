@@ -199,7 +199,7 @@ final class LoginSuccessInvitationEndpointTest extends WebTestCase
         $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
         self::assertTrue($payload['success']);
         self::assertSame($player->getId(), $payload['id']);
-        self::assertSame('/joined', parse_url($payload['redirect'], PHP_URL_PATH));
+        self::assertSame('/playerprofile', parse_url($payload['redirect'], PHP_URL_PATH));
         self::assertSame('GAME_ALREADY_STARTED', $payload['invitationError']);
         self::assertArrayNotHasKey('gameId', $payload);
 
@@ -279,7 +279,7 @@ final class LoginSuccessInvitationEndpointTest extends WebTestCase
         $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
         self::assertTrue($payload['success']);
         self::assertSame($errorCode, $payload['invitationError']);
-        self::assertSame('/joined', parse_url($payload['redirect'], PHP_URL_PATH));
+        self::assertSame('/playerprofile', parse_url($payload['redirect'], PHP_URL_PATH));
         self::assertArrayNotHasKey('gameId', $payload);
 
         // The failed join consumed the invitation: the next call is a plain login success.

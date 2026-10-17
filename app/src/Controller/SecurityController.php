@@ -150,8 +150,8 @@ final class SecurityController extends AbstractController
                 new OA\Property(property: 'id', type: 'integer', nullable: true, example: 1),
                 new OA\Property(property: 'email', type: 'string', nullable: true, example: 'alice@example.com'),
                 new OA\Property(property: 'username', type: 'string', nullable: true, example: 'alice'),
-                new OA\Property(property: 'redirect', type: 'string', example: 'http://localhost:5173/joined'),
-                new OA\Property(property: 'gameId', type: 'integer', example: 42, description: 'Nur nach einem Einladungs-Login: ID des beigetretenen Spiels.'),
+                new OA\Property(property: 'redirect', type: 'string', example: 'http://localhost:5173/playerprofile', description: 'Admin: `/start`. Spieler mit Einladung oder mit aktuellem Spiel (`lobby` oder `started`): `/joined`. Sonst, auch bei `invitationError`: `/playerprofile`.'),
+                new OA\Property(property: 'gameId', type: 'integer', example: 42, description: 'Nur bei Redirect auf `/joined`: ID des beigetretenen oder des aktuellen Spiels.'),
                 new OA\Property(property: 'invitationError', type: 'string', enum: ['GAME_ALREADY_STARTED', 'GAME_JOIN_NOT_ALLOWED', 'GAME_ROOM_FULL', 'GAME_NOT_FOUND'], example: 'GAME_ALREADY_STARTED', description: 'Nur wenn die gespeicherte Einladung nicht mehr nutzbar ist. Der Login war erfolgreich, `gameId` fehlt in diesem Fall.'),
             ]
         )
