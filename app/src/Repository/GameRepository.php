@@ -176,11 +176,11 @@ SQL,
      * @return Game|null
      */
     #[\Override]
-    public function findOpenLobbyForUpdate(): ?Game
+    public function findOpenLobbyForShare(): ?Game
     {
         return $this->createOpenLobbyQueryBuilder()
             ->getQuery()
-            ->setLockMode(LockMode::PESSIMISTIC_WRITE)
+            ->setLockMode(LockMode::PESSIMISTIC_READ)
             ->getOneOrNullResult();
     }
 

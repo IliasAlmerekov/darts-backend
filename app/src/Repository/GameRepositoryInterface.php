@@ -77,13 +77,15 @@ interface GameRepositoryInterface
     public function findOpenLobby(): ?Game;
 
     /**
-     * Returns the game in the lobby and acquires a pessimistic write lock. Unlike a plain
+     * Returns the game in the lobby and acquires a shared lock (FOR SHARE). Unlike a plain
      * read inside a transaction, the locking read also sees rows committed after the
-     * transaction's snapshot was taken.
+     * transaction's snapshot was taken. A shared lock, unlike FOR UPDATE, does not deadlock
+     * with other requests that hold a shared lock on the same index record after their
+     * insert was rejected as a duplicate.
      *
      * @return Game|null
      */
-    public function findOpenLobbyForUpdate(): ?Game;
+    public function findOpenLobbyForShare(): ?Game;
 
     /**
      * @return int|null

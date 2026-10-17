@@ -64,8 +64,8 @@ final class OpenLobbyServiceTest extends KernelTestCase
 
         $staleRepository = $this->createMock(GameRepositoryInterface::class);
         $staleRepository->method('findOpenLobby')->willReturn(null);
-        $staleRepository->method('findOpenLobbyForUpdate')
-            ->willReturnCallback(fn (): ?Game => $this->gameRepository->findOpenLobbyForUpdate());
+        $staleRepository->method('findOpenLobbyForShare')
+            ->willReturnCallback(fn (): ?Game => $this->gameRepository->findOpenLobbyForShare());
         $service = new OpenLobbyService($staleRepository, $this->entityManager);
 
         $lobby = $service->findOrCreate();

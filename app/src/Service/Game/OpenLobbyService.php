@@ -61,7 +61,7 @@ final readonly class OpenLobbyService implements OpenLobbyServiceInterface
         } catch (UniqueConstraintViolationException) {
             // A plain read inside a transaction would not see the other request's lobby. The
             // locking read needs a transaction, and rematch runs without one.
-            $lobby = $connection->transactional(fn (): ?Game => $this->gameRepository->findOpenLobbyForUpdate())
+            $lobby = $connection->transactional(fn (): ?Game => $this->gameRepository->findOpenLobbyForShare())
                 ?? throw new LogicException('The open lobby index rejected the insert, but no game is in the lobby.');
 
             return new OpenLobby($lobby, false);
