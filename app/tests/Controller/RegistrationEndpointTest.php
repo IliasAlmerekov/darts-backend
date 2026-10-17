@@ -118,6 +118,8 @@ final class RegistrationEndpointTest extends WebTestCase
         self::assertSame($user->getId(), $payload['id']);
         self::assertArrayNotHasKey('invitationError', $payload);
         $this->assertInvitationCleared($client);
+        // At most one game is in the lobby, so the first room starts before the next one opens.
+        $entityManager->getConnection()->update('game', ['status' => GameStatus::Started->value], ['game_id' => $gameId]);
         $nextInvitation = $this->createInvitation($entityManager, $this->createGame($entityManager, GameStatus::Lobby));
         self::assertSame($this->loginRedirect($client, $body, $nextInvitation), $payload['redirect']);
     }

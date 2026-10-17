@@ -20,6 +20,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: GameRepository::class)]
 #[ORM\Table(name: 'game')]
 #[ORM\Index(name: 'idx_game_status_game_id', columns: ['status', 'game_id'])]
+#[ORM\UniqueConstraint(name: 'uniq_game_open_lobby', columns: ['open_lobby'])]
 class Game
 {
     #[ORM\Id]
@@ -47,6 +48,23 @@ class Game
 
     #[ORM\Column(enumType: GameStatus::class, options: ['default' => GameStatus::Lobby->value])]
     private GameStatus $status = GameStatus::Lobby;
+
+    /**
+     * TRUE while the game is in the lobby, NULL otherwise. MySQL computes the value; the unique
+     * index on it allows at most one game in the lobby, because MySQL has no partial indexes.
+     *
+     * @psalm-suppress UnusedProperty Reason: exists only so the schema tools know the column.
+     */
+    #[ORM\Column(
+        name: 'open_lobby',
+        type: Types::BOOLEAN,
+        nullable: true,
+        insertable: false,
+        updatable: false,
+        columnDefinition: "TINYINT GENERATED ALWAYS AS (IF(status = 'lobby', 1, NULL)) VIRTUAL",
+        generated: 'ALWAYS',
+    )]
+    private ?bool $openLobby = null;
 
     #[ORM\OneToMany(
         targetEntity: GamePlayers::class,

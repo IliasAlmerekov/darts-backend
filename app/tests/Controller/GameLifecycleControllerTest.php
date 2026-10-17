@@ -23,6 +23,7 @@ use App\Exception\Game\NoSettingsProvidedException;
 use App\Service\Game\GameFinishServiceInterface;
 use App\Service\Game\GameReopenServiceInterface;
 use App\Service\Game\GameRoomServiceInterface;
+use App\Service\Game\OpenLobby;
 use App\Service\Game\GameServiceInterface;
 use App\Service\Game\GameSettingsServiceInterface;
 use App\Service\Game\GameStartServiceInterface;
@@ -108,7 +109,7 @@ final class GameLifecycleControllerTest extends TestCase
         $game = $this->createMock(Game::class);
 
         $roomService = $this->createMock(GameRoomServiceInterface::class);
-        $roomService->method('createGame')->willReturn($game);
+        $roomService->method('openLobby')->willReturn(new OpenLobby($game, true));
 
         $settingsService = $this->createMock(GameSettingsServiceInterface::class);
         $settingsService->expects($this->once())->method('updateSettings')->with($game, $dto);

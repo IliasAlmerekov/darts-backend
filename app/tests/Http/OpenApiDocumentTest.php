@@ -210,6 +210,15 @@ final class OpenApiDocumentTest extends WebTestCase
         }
     }
 
+    public function testRoomCreateAndRematchDocumentTheOpenLobbyReuse(): void
+    {
+        $paths = $this->document()['paths'];
+
+        foreach (['/api/room/create', '/api/room/{id}/rematch', '/api/game/{gameId}/rematch/start'] as $path) {
+            self::assertStringContainsString('höchstens ein Spiel in der Lobby', $paths[$path]['post']['description'] ?? '', $path);
+        }
+    }
+
     /**
      * @return array<string, mixed>
      */

@@ -15,12 +15,15 @@ use App\Entity\User;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
 use App\Service\Game\GameRoomService;
+use App\Service\Game\OpenLobby;
+use App\Service\Game\OpenLobbyServiceInterface;
 use App\Service\Player\PlayerManagementService;
 use App\Service\Security\GameAccessServiceInterface;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use ReflectionException;
 use ReflectionProperty;
@@ -33,6 +36,8 @@ final class GameRoomServiceTest extends TestCase
     private EntityManagerInterface $entityManager;
     private PlayerManagementService $playerManagementService;
     private GameAccessServiceInterface $gameAccessService;
+    private OpenLobbyServiceInterface&MockObject $openLobbyService;
+    private Game $lobbyGame;
 
     protected function setUp(): void
     {
@@ -63,18 +68,35 @@ final class GameRoomServiceTest extends TestCase
         $this->gameAccessService = $this->createMock(GameAccessServiceInterface::class);
         $this->gameAccessService->method('requireAuthenticatedUser')->willReturn(new User());
         $this->gameAccessService->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+        $this->lobbyGame = (new Game())->setGameId(99)->setDate(new DateTime());
+        $this->openLobbyService = $this->createMock(OpenLobbyServiceInterface::class);
     }
 
-    public function testCreateGamePersistsAndSetsDate(): void
+    public function testOpenLobbyRequiresAuthenticatedUserAndReturnsTheLobby(): void
     {
-        $this->entityManager->expects(self::once())->method('persist');
-        $this->entityManager->expects(self::once())->method('flush');
+        $lobby = new OpenLobby($this->lobbyGame, false);
+        $this->gameAccessService->expects(self::once())->method('requireAuthenticatedUser');
+        $this->openLobbyService->expects(self::once())->method('findOrCreate')->willReturn($lobby);
 
         $service = $this->createService();
 
-        $game = $service->createGame();
+        self::assertSame($lobby, $service->openLobby());
+    }
 
-        self::assertInstanceOf(DateTime::class, $game->getDate());
+    /**
+     * @throws ORMException
+     */
+    public function testCreateGameWithPreviousPlayersLeavesAnExistingLobbyUnchanged(): void
+    {
+        $this->openLobbyService->method('findOrCreate')->willReturn(new OpenLobby($this->lobbyGame, false));
+        $this->gameRepository->expects(self::never())->method('find');
+        $this->entityManager->expects(self::never())->method('persist');
+
+        $service = $this->createService();
+
+        $game = $service->createGameWithPreviousPlayers(10, [1, 2, 3], [2]);
+
+        self::assertSame($this->lobbyGame, $game);
     }
 
     /**
@@ -101,6 +123,7 @@ final class GameRoomServiceTest extends TestCase
         $this->entityManager->expects(self::atLeast(1))->method('persist');
         $this->entityManager->expects(self::atLeast(1))->method('flush');
 
+        $this->openLobbyService->method('findOrCreate')->willReturn(new OpenLobby($this->lobbyGame, true));
         $service = $this->createService();
 
         $game = $service->createGameWithPreviousPlayers(10, [1, 2, 3], [2]);
@@ -116,6 +139,7 @@ final class GameRoomServiceTest extends TestCase
         $this->entityManager->expects(self::atLeast(1))->method('persist');
         $this->entityManager->expects(self::atLeast(1))->method('flush');
 
+        $this->openLobbyService->method('findOrCreate')->willReturn(new OpenLobby($this->lobbyGame, true));
         $service = $this->createService();
 
         $game = $service->createGameWithPreviousPlayers(null, [1, 2, 3], [2]);
@@ -178,9 +202,9 @@ final class GameRoomServiceTest extends TestCase
         return new GameRoomService(
             $this->gameRepository,
             $this->gamePlayersRepository,
-            $this->entityManager,
             $this->playerManagementService,
-            $this->gameAccessService
+            $this->gameAccessService,
+            $this->openLobbyService,
         );
     }
 

@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace App\Service\Game;
 
 use App\Entity\Invitation;
-use App\Enum\GameStatus;
 use App\Repository\InvitationRepositoryInterface;
 use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
@@ -23,7 +22,7 @@ use Override;
 
 /**
  * Service to handle rematches.
- * This class is responsible for creating a new game and copying players from the old game.
+ * Returns the open lobby, or a new one, with the old game's players and settings (ADR 0003).
  *
  * @psalm-suppress UnusedClass Reason: service is auto-wired and used via interface.
  */
@@ -59,21 +58,26 @@ final readonly class RematchService implements RematchServiceInterface
         }
         $this->gameAccessService->assertPlayerInGameOrAdmin($oldGame);
 
-        $newGame = $this->gameRoomService->createGame();
-        $newGame->setStatus(GameStatus::Lobby);
-        $newGame->setRound(null);
+        $lobby = $this->gameRoomService->openLobby();
+        $newGame = $lobby->game;
         $newGame->setStartScore($oldGame->getStartScore());
         $newGame->setDoubleOut($oldGame->isDoubleOut());
         $newGame->setTripleOut($oldGame->isTripleOut());
         if (null !== $oldGame->getType()) {
             $newGame->setType((int) $oldGame->getType());
         }
+        $this->entityManager->flush();
         $newGameId = $newGame->getGameId();
         if (null === $newGameId) {
             return ['success' => false, 'message' => 'Failed to create new game'];
         }
 
-        $this->playerManagementService->copyPlayers($oldGameId, $newGameId);
+        if ($lobby->created) {
+            $this->playerManagementService->copyPlayers($oldGameId, $newGameId);
+        } else {
+            // Players who joined the open lobby keep their seats.
+            $this->playerManagementService->appendMissingPlayers($oldGameId, $newGameId);
+        }
         $invitationLink = $this->createInvitation($newGameId);
 
         return [

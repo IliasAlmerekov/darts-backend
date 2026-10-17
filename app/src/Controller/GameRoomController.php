@@ -78,13 +78,17 @@ final class GameRoomController extends AbstractController
      *
      * @throws ORMException
      */
+    #[OA\Post(
+        summary: 'Spielraum erstellen oder die offene Lobby zurückgeben',
+        description: 'Es ist höchstens ein Spiel in der Lobby. Ist ein Spiel in der Lobby, liefert der Endpoint dessen `gameId` und legt kein Spiel an. Die Lobby übernimmt `startScore`, `doubleOut` und `tripleOut` aus dem Request und behält ihre Spieler; `previousGameId`, `playerIds` und `excludePlayerIds` werden dann ignoriert. Ohne offene Lobby wird eine neue Lobby angelegt.'
+    )]
     #[OA\RequestBody(
         required: false,
         content: new OA\JsonContent(ref: new Model(type: RoomCreateRequest::class))
     )]
     #[OA\Response(
         response: Response::HTTP_OK,
-        description: 'Spielraum wurde erfolgreich erstellt (oder wiederverwendet).',
+        description: 'Die offene Lobby wurde zurückgegeben oder eine neue Lobby angelegt.',
         content: new OA\JsonContent(
             required: ['success', 'gameId'],
             properties: [
@@ -322,7 +326,7 @@ final class GameRoomController extends AbstractController
     }
 
     /**
-     * Creates a rematch for a finished game.
+     * Returns the open lobby, or a new one, with the players and settings of a finished game.
      *
      * @param int $id
      *
@@ -330,10 +334,14 @@ final class GameRoomController extends AbstractController
      *
      * @throws ORMException
      */
+    #[OA\Post(
+        summary: 'Rematch in der offenen Lobby oder in einer neuen Lobby',
+        description: 'Es ist höchstens ein Spiel in der Lobby. Ist ein Spiel in der Lobby, liefert der Endpoint dessen `gameId`: Spieler des alten Spiels, die noch fehlen, kommen hinter die vorhandenen Spieler, und Startpunktzahl, Double Out, Triple Out und Typ werden aus dem alten Spiel übernommen. Spieler, die der Lobby beigetreten sind, bleiben. Ohne offene Lobby wird eine neue Lobby mit den Spielern des alten Spiels angelegt.'
+    )]
     #[OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
     #[OA\Response(
         response: Response::HTTP_CREATED,
-        description: 'Rematch-Spiel wurde erstellt.',
+        description: 'Die offene Lobby wurde zurückgegeben oder eine neue Lobby angelegt.',
         content: new OA\JsonContent(
             required: ['success'],
             properties: [

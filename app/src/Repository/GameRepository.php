@@ -13,6 +13,7 @@ use Doctrine\DBAL\LockMode;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -161,6 +162,29 @@ SQL,
     }
 
     /**
+     * @return Game|null
+     */
+    #[\Override]
+    public function findOpenLobby(): ?Game
+    {
+        return $this->createOpenLobbyQueryBuilder()
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
+     * @return Game|null
+     */
+    #[\Override]
+    public function findOpenLobbyForUpdate(): ?Game
+    {
+        return $this->createOpenLobbyQueryBuilder()
+            ->getQuery()
+            ->setLockMode(LockMode::PESSIMISTIC_WRITE)
+            ->getOneOrNullResult();
+    }
+
+    /**
      * @return int|null
      */
     #[\Override]
@@ -273,5 +297,16 @@ SQL,
         } catch (\Exception) {
             return null;
         }
+    }
+
+    /**
+     * Matches on the generated open_lobby column, so MySQL reads its unique index.
+     *
+     * @return QueryBuilder
+     */
+    private function createOpenLobbyQueryBuilder(): QueryBuilder
+    {
+        return $this->createQueryBuilder('g')
+            ->andWhere('g.openLobby = true');
     }
 }

@@ -14,8 +14,6 @@ use App\Repository\GameRepositoryInterface;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Service\Player\PlayerManagementService;
 use App\Service\Security\GameAccessServiceInterface;
-use DateTime;
-use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
 use Override;
 
@@ -27,30 +25,28 @@ final readonly class GameRoomService implements GameRoomServiceInterface
     /**
      * @param GameRepositoryInterface        $gameRepository
      * @param GamePlayersRepositoryInterface $gamePlayersRepository
-     * @param EntityManagerInterface         $entityManager
      * @param PlayerManagementService        $playerManagementService
      * @param GameAccessServiceInterface     $gameAccessService
+     * @param OpenLobbyServiceInterface      $openLobbyService
      */
-    public function __construct(private GameRepositoryInterface $gameRepository, private GamePlayersRepositoryInterface $gamePlayersRepository, private EntityManagerInterface $entityManager, private PlayerManagementService $playerManagementService, private GameAccessServiceInterface $gameAccessService)
+    public function __construct(private GameRepositoryInterface $gameRepository, private GamePlayersRepositoryInterface $gamePlayersRepository, private PlayerManagementService $playerManagementService, private GameAccessServiceInterface $gameAccessService, private OpenLobbyServiceInterface $openLobbyService)
     {
     }
 
     /**
-     * @return Game
+     * @return OpenLobby
      */
     #[Override]
-    public function createGame(): Game
+    public function openLobby(): OpenLobby
     {
         $this->gameAccessService->requireAuthenticatedUser();
-        $game = new Game();
-        $game->setDate(new DateTime());
-        $this->entityManager->persist($game);
-        $this->entityManager->flush();
 
-        return $game;
+        return $this->openLobbyService->findOrCreate();
     }
 
     /**
+     * Returns the open lobby unchanged when one exists; the arguments then change nothing.
+     *
      * @param int|null       $previousGameId
      * @param list<int>|null $includePlayerIds Explicit list of players to place into the new game
      * @param list<int>|null $excludePlayerIds Players to omit from the include list
@@ -62,7 +58,12 @@ final readonly class GameRoomService implements GameRoomServiceInterface
     #[Override]
     public function createGameWithPreviousPlayers(?int $previousGameId = null, ?array $includePlayerIds = null, ?array $excludePlayerIds = null): Game
     {
-        $game = $this->createGame();
+        $lobby = $this->openLobby();
+        $game = $lobby->game;
+        if (!$lobby->created) {
+            return $game;
+        }
+
         if (null !== $includePlayerIds) {
             $ids = array_values(array_unique($includePlayerIds));
             if (null !== $excludePlayerIds) {

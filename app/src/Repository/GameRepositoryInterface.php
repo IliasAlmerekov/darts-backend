@@ -70,6 +70,22 @@ interface GameRepositoryInterface
     public function findOneByGameIdForUpdate(int $gameId): ?Game;
 
     /**
+     * Returns the game in the lobby; at most one exists (ADR 0003).
+     *
+     * @return Game|null
+     */
+    public function findOpenLobby(): ?Game;
+
+    /**
+     * Returns the game in the lobby and acquires a pessimistic write lock. Unlike a plain
+     * read inside a transaction, the locking read also sees rows committed after the
+     * transaction's snapshot was taken.
+     *
+     * @return Game|null
+     */
+    public function findOpenLobbyForUpdate(): ?Game;
+
+    /**
      * @return int|null
      */
     /** @psalm-suppress PossiblyUnusedMethod */

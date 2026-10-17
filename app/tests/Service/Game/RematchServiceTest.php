@@ -10,6 +10,8 @@ use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\InvitationRepositoryInterface;
 use App\Service\Game\GameRoomService;
+use App\Service\Game\OpenLobby;
+use App\Service\Game\OpenLobbyServiceInterface;
 use App\Service\Game\RematchService;
 use App\Service\Player\PlayerManagementService;
 use App\Service\Security\GameAccessServiceInterface;
@@ -31,7 +33,9 @@ final class RematchServiceTest extends TestCase
         $playerManagementService = new PlayerManagementService($gamePlayersRepository, $entityManager);
         $access = $this->createMock(GameAccessServiceInterface::class);
         $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
-        $gameRoomService = new GameRoomService($gameRepository, $gamePlayersRepository, $entityManager, $playerManagementService, $access);
+        $openLobbyService = $this->createMock(OpenLobbyServiceInterface::class);
+        $openLobbyService->expects(self::never())->method('findOrCreate');
+        $gameRoomService = new GameRoomService($gameRepository, $gamePlayersRepository, $playerManagementService, $access, $openLobbyService);
         $invitationRepository = $this->createMock(InvitationRepositoryInterface::class);
         $urlGenerator = $this->createMock(UrlGeneratorInterface::class);
 
@@ -65,18 +69,17 @@ final class RematchServiceTest extends TestCase
             ->willReturn([]);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->method('persist')->willReturnCallback(function (object $entity): void {
-            if ($entity instanceof Game && null === $entity->getGameId()) {
-                $this->setPrivateProperty($entity, 'gameId', 100);
-            }
-        });
         $entityManager->expects(self::atLeastOnce())->method('flush');
 
         $playerManagementService = new PlayerManagementService($gamePlayersRepository, $entityManager);
         $access = $this->createMock(GameAccessServiceInterface::class);
         $access->method('requireAuthenticatedUser')->willReturn(new User());
         $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
-        $gameRoomService = new GameRoomService($gameRepository, $gamePlayersRepository, $entityManager, $playerManagementService, $access);
+        $newLobby = new Game();
+        $this->setPrivateProperty($newLobby, 'gameId', 100);
+        $openLobbyService = $this->createMock(OpenLobbyServiceInterface::class);
+        $openLobbyService->method('findOrCreate')->willReturn(new OpenLobby($newLobby, true));
+        $gameRoomService = new GameRoomService($gameRepository, $gamePlayersRepository, $playerManagementService, $access, $openLobbyService);
 
         $invitationRepository = $this->createMock(InvitationRepositoryInterface::class);
         $invitationRepository->method('findOneBy')->willReturn(null);

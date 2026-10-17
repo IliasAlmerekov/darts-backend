@@ -33,7 +33,7 @@ _Avoid_: Nickname, username (for guests)
 ### Game flow
 
 **Lobby**:
-The phase of a game before it starts. Participants join through the invitation, and the tablet sees them arrive.
+The phase of a game before it starts. Participants join through the invitation, and the tablet sees them arrive. At most one game is in the lobby at a time. Creating a room or a rematch while a game is in the lobby returns that game.
 _Avoid_: Waiting room (the player's screen in the frontend), pre-game
 
 **Invitation**:

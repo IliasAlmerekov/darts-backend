@@ -83,7 +83,7 @@ final class GameLifecycleController extends AbstractController
     }
 
     /**
-     * Creates a rematch from a finished game and starts it immediately.
+     * Starts the open lobby, or a new one, as a rematch of a finished game.
      *
         * @param int                          $gameId
      * @param RematchStartServiceInterface $rematchStartService
@@ -93,11 +93,15 @@ final class GameLifecycleController extends AbstractController
      *
      * @throws ApiExceptionInterface
      */
+    #[OA\Post(
+        summary: 'Rematch in der offenen Lobby oder in einer neuen Lobby direkt starten',
+        description: 'Wie `POST /api/room/{id}/rematch`, danach wird das Spiel gestartet. Es ist höchstens ein Spiel in der Lobby. Ist ein Spiel in der Lobby, startet dieses Spiel mit seinen Spielern und den fehlenden Spielern des alten Spiels; sonst wird eine neue Lobby angelegt und gestartet.'
+    )]
     #[OA\Parameter(name: 'gameId', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
     #[OA\RequestBody(required: true, content: new OA\JsonContent(ref: new Model(type: StartGameRequest::class)))]
     #[OA\Response(
         response: Response::HTTP_CREATED,
-        description: 'Rematch-Spiel wurde erstellt, mit Spielern befüllt und direkt gestartet.',
+        description: 'Die offene Lobby oder eine neue Lobby wurde mit den Spielern befüllt und gestartet.',
         content: new OA\JsonContent(ref: new Model(type: Game::class, groups: ['game:read']))
     )]
     #[ApiResponse(status: Response::HTTP_CREATED, groups: ['game:read'])]
@@ -141,7 +145,7 @@ final class GameLifecycleController extends AbstractController
     public function createSettings(GameRoomServiceInterface $gameRoomService, GameSettingsServiceInterface $gameSettingsService, GameServiceInterface $gameService, EntityManagerInterface $entityManager, #[MapRequestPayload] GameSettingsRequest $dto): mixed
     {
         return $entityManager->wrapInTransaction(function () use ($gameRoomService, $gameSettingsService, $gameService, $dto): mixed {
-            $game = $gameRoomService->createGame();
+            $game = $gameRoomService->openLobby()->game;
 
             $gameSettingsService->updateSettings($game, $dto);
 
