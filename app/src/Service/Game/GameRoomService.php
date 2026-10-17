@@ -56,7 +56,7 @@ final readonly class GameRoomService implements GameRoomServiceInterface
      * @throws ORMException
      */
     #[Override]
-    public function createGameWithPreviousPlayers(?int $previousGameId = null, ?array $includePlayerIds = null, ?array $excludePlayerIds = null): Game
+    public function openRoom(?int $previousGameId = null, ?array $includePlayerIds = null, ?array $excludePlayerIds = null): Game
     {
         $lobby = $this->openLobby();
         $game = $lobby->game;

@@ -36,7 +36,7 @@ interface GameRoomServiceInterface
      *
      * @throws ORMException
      */
-    public function createGameWithPreviousPlayers(?int $previousGameId = null, ?array $includePlayerIds = null, ?array $excludePlayerIds = null): Game;
+    public function openRoom(?int $previousGameId = null, ?array $includePlayerIds = null, ?array $excludePlayerIds = null): Game;
 
     /**
      * Find a game by its ID.

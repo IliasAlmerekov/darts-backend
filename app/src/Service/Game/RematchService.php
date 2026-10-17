@@ -59,30 +59,30 @@ final readonly class RematchService implements RematchServiceInterface
         $this->gameAccessService->assertPlayerInGameOrAdmin($oldGame);
 
         $lobby = $this->gameRoomService->openLobby();
-        $newGame = $lobby->game;
-        $newGame->setStartScore($oldGame->getStartScore());
-        $newGame->setDoubleOut($oldGame->isDoubleOut());
-        $newGame->setTripleOut($oldGame->isTripleOut());
+        $lobbyGame = $lobby->game;
+        $lobbyGame->setStartScore($oldGame->getStartScore());
+        $lobbyGame->setDoubleOut($oldGame->isDoubleOut());
+        $lobbyGame->setTripleOut($oldGame->isTripleOut());
         if (null !== $oldGame->getType()) {
-            $newGame->setType((int) $oldGame->getType());
+            $lobbyGame->setType((int) $oldGame->getType());
         }
         $this->entityManager->flush();
-        $newGameId = $newGame->getGameId();
-        if (null === $newGameId) {
-            return ['success' => false, 'message' => 'Failed to create new game'];
+        $lobbyGameId = $lobbyGame->getGameId();
+        if (null === $lobbyGameId) {
+            return ['success' => false, 'message' => 'Failed to open the lobby'];
         }
 
         if ($lobby->created) {
-            $this->playerManagementService->copyPlayers($oldGameId, $newGameId);
+            $this->playerManagementService->copyPlayers($oldGameId, $lobbyGameId);
         } else {
             // Players who joined the open lobby keep their seats.
-            $this->playerManagementService->appendMissingPlayers($oldGameId, $newGameId);
+            $this->playerManagementService->appendMissingPlayers($oldGameId, $lobbyGameId);
         }
-        $invitationLink = $this->createInvitation($newGameId);
+        $invitationLink = $this->createInvitation($lobbyGameId);
 
         return [
             'success' => true,
-            'gameId' => $newGameId,
+            'gameId' => $lobbyGameId,
             'invitationLink' => $invitationLink,
         ];
     }

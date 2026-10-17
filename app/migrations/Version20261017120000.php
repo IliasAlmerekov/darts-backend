@@ -29,6 +29,7 @@ final class Version20261017120000 extends AbstractMigration
 
     public function down(Schema $schema): void
     {
+        // Lossy: the games up() moved from lobby to aborted stay aborted.
         $this->addSql('DROP INDEX uniq_game_open_lobby ON game');
         $this->addSql('ALTER TABLE game DROP open_lobby');
     }

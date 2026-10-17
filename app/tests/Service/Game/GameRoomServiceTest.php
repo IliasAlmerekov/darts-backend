@@ -86,7 +86,7 @@ final class GameRoomServiceTest extends TestCase
     /**
      * @throws ORMException
      */
-    public function testCreateGameWithPreviousPlayersLeavesAnExistingLobbyUnchanged(): void
+    public function testOpenRoomLeavesAnExistingLobbyUnchanged(): void
     {
         $this->openLobbyService->method('findOrCreate')->willReturn(new OpenLobby($this->lobbyGame, false));
         $this->gameRepository->expects(self::never())->method('find');
@@ -94,7 +94,7 @@ final class GameRoomServiceTest extends TestCase
 
         $service = $this->createService();
 
-        $game = $service->createGameWithPreviousPlayers(10, [1, 2, 3], [2]);
+        $game = $service->openRoom(10, [1, 2, 3], [2]);
 
         self::assertSame($this->lobbyGame, $game);
     }
@@ -103,7 +103,7 @@ final class GameRoomServiceTest extends TestCase
      * @throws ReflectionException
      * @throws ORMException
      */
-    public function testCreateGameWithPreviousPlayersCopiesPlayers(): void
+    public function testOpenRoomCopiesPlayersIntoANewLobby(): void
     {
         $previousGame = new Game();
         $this->setPrivateProperty($previousGame, 'gameId', 10);
@@ -126,7 +126,7 @@ final class GameRoomServiceTest extends TestCase
         $this->openLobbyService->method('findOrCreate')->willReturn(new OpenLobby($this->lobbyGame, true));
         $service = $this->createService();
 
-        $game = $service->createGameWithPreviousPlayers(10, [1, 2, 3], [2]);
+        $game = $service->openRoom(10, [1, 2, 3], [2]);
 
         self::assertInstanceOf(DateTime::class, $game->getDate());
     }
@@ -134,7 +134,7 @@ final class GameRoomServiceTest extends TestCase
     /**
      * @throws ORMException
      */
-    public function testCreateGameWithNewPlayersAddsThemWhenNoPreviousGame(): void
+    public function testOpenRoomAddsPlayersToANewLobbyWhenNoPreviousGame(): void
     {
         $this->entityManager->expects(self::atLeast(1))->method('persist');
         $this->entityManager->expects(self::atLeast(1))->method('flush');
@@ -142,7 +142,7 @@ final class GameRoomServiceTest extends TestCase
         $this->openLobbyService->method('findOrCreate')->willReturn(new OpenLobby($this->lobbyGame, true));
         $service = $this->createService();
 
-        $game = $service->createGameWithPreviousPlayers(null, [1, 2, 3], [2]);
+        $game = $service->openRoom(null, [1, 2, 3], [2]);
 
         self::assertInstanceOf(DateTime::class, $game->getDate());
     }

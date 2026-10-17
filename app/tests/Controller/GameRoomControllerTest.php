@@ -70,7 +70,7 @@ class GameRoomControllerTest extends TestCase
         $gameMock->method('getGameId')->willReturn(123);
 
         $this->gameRoomService->expects($this->once())
-            ->method('createGameWithPreviousPlayers')
+            ->method('openRoom')
             ->with(null, null, null)
             ->willReturn($gameMock);
         $this->gameSettingsService->expects($this->never())->method('applySettings');
@@ -93,7 +93,7 @@ class GameRoomControllerTest extends TestCase
         $gameMock->method('getGameId')->willReturn(123);
 
         $this->gameRoomService->expects($this->once())
-            ->method('createGameWithPreviousPlayers')
+            ->method('openRoom')
             ->with(12, [1, 2], [2])
             ->willReturn($gameMock);
         $this->gameSettingsService->expects($this->once())

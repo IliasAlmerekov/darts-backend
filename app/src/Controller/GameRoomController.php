@@ -70,7 +70,7 @@ final class GameRoomController extends AbstractController
     }
 
     /**
-     * Creates a game with optional preselected players.
+     * Returns the open lobby, or creates one with optional preselected players.
      *
      * @param RoomCreateRequest $dto
      *
@@ -112,7 +112,7 @@ final class GameRoomController extends AbstractController
                 ? $dto->excludePlayerIds
                 : null;
 
-            $game = $this->gameRoomService->createGameWithPreviousPlayers(
+            $game = $this->gameRoomService->openRoom(
                 $dto->previousGameId,
                 $includePlayerIds,
                 $excludePlayerIds,
