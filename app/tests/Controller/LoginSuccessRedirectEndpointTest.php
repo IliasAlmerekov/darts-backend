@@ -11,6 +11,7 @@ namespace App\Tests\Controller;
 
 use App\Entity\Game;
 use App\Entity\GamePlayers;
+use App\Entity\Invitation;
 use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Tests\Support\TestUserFactory;
@@ -21,10 +22,12 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\Uid\Uuid;
 
 /**
- * GET /api/login/success for a player without an invitation: back to their current game,
- * or the Profile when they have none (#105).
+ * Login success (GET /api/login/success and POST /api/login) for a player without a working
+ * invitation: back to their current game, or the Profile when they have none (#105).
  */
 final class LoginSuccessRedirectEndpointTest extends WebTestCase
 {
@@ -110,13 +113,75 @@ final class LoginSuccessRedirectEndpointTest extends WebTestCase
         self::assertArrayNotHasKey('gameId', $payload);
     }
 
+    public function testPostLoginWithCurrentGameReturnsToIt(): void
+    {
+        $client = static::createClient();
+        $hasher = static::getContainer()->get(UserPasswordHasherInterface::class);
+        $player = $this->createUser('poster', 'ROLE_PLAYER');
+        $player->setPassword($hasher->hashPassword($player, 'correct-password'));
+        $gameId = $this->createGame(GameStatus::Lobby, $player);
+
+        $client->request(Request::METHOD_POST, '/api/login', [
+            '_username' => $player->getEmail(),
+            '_password' => 'correct-password',
+        ]);
+
+        $payload = $this->decodeLoginSuccess($client);
+        self::assertSame('/joined', parse_url($payload['redirect'], PHP_URL_PATH));
+        self::assertSame($gameId, $payload['gameId']);
+    }
+
+    public function testFailedInvitationLandsOnProfileEvenWithACurrentGame(): void
+    {
+        $client = static::createClient();
+        $entityManager = static::getContainer()->get(EntityManagerInterface::class);
+        $player = $this->createUser('player', 'ROLE_PLAYER');
+        $this->createGame(GameStatus::Lobby, $player);
+        $startedGameId = $this->createGame(GameStatus::Started, $this->createUser('other', 'ROLE_PLAYER'));
+        $invitation = (new Invitation())->setUuid(Uuid::v4())->setGameId($startedGameId);
+        $entityManager->persist($invitation);
+        $entityManager->flush();
+
+        $client->request(Request::METHOD_GET, sprintf('/api/invite/join/%s', $invitation->getUuid()));
+        self::assertResponseStatusCodeSame(Response::HTTP_FOUND);
+        $client->loginUser($player);
+        $payload = $this->getLoginSuccess($client);
+
+        self::assertSame('/playerprofile', parse_url($payload['redirect'], PHP_URL_PATH));
+        self::assertSame('GAME_ALREADY_STARTED', $payload['invitationError']);
+        self::assertArrayNotHasKey('gameId', $payload);
+    }
+
+    public function testAdminWithoutInvitationLandsOnStart(): void
+    {
+        $client = static::createClient();
+        $client->loginUser($this->createUser('admin', 'ROLE_ADMIN'));
+
+        $payload = $this->getLoginSuccess($client);
+
+        self::assertSame('/start', parse_url($payload['redirect'], PHP_URL_PATH));
+        self::assertArrayNotHasKey('gameId', $payload);
+    }
+
     /**
      * @return array<string, mixed>
      */
     private function getLoginSuccess(KernelBrowser $client): array
     {
         $client->request(Request::METHOD_GET, '/api/login/success');
+
+        return $this->decodeLoginSuccess($client);
+    }
+
+    /**
+     * Every login success response, whatever its target, disables nginx buffering.
+     *
+     * @return array<string, mixed>
+     */
+    private function decodeLoginSuccess(KernelBrowser $client): array
+    {
         self::assertResponseStatusCodeSame(Response::HTTP_OK, (string) $client->getResponse()->getContent());
+        self::assertResponseHeaderSame('X-Accel-Buffering', 'no');
 
         $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
         self::assertIsArray($payload);
