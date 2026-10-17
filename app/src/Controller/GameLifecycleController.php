@@ -129,13 +129,13 @@ final class GameLifecycleController extends AbstractController
      */
     #[OA\Post(
         summary: 'Legacy-Endpoint für Spielanlage mit vollständigem Spielzustand',
-        description: 'Deprecated. Verwenden Sie stattdessen `POST /api/room/create`, danach `PATCH /api/game/{gameId}/settings` und `GET /api/game/{gameId}/settings` für den kompakten Settings-Flow.',
+        description: 'Deprecated. Ist ein Spiel in der Lobby, liefert der Endpoint dieses Spiel und überschreibt seine Einstellungen; sonst legt er eine neue Lobby an. Verwenden Sie stattdessen `POST /api/room/create`, danach `PATCH /api/game/{gameId}/settings` und `GET /api/game/{gameId}/settings` für den kompakten Settings-Flow.',
         deprecated: true
     )]
     #[OA\RequestBody(required: true, content: new OA\JsonContent(ref: new Model(type: GameSettingsRequest::class)))]
     #[OA\Response(
         response: Response::HTTP_CREATED,
-        description: 'Deprecated: erstellt ein Spiel und liefert weiterhin den vollständigen Spielzustand zurück.',
+        description: 'Deprecated: liefert die offene Lobby oder eine neue Lobby mit vollständigem Spielzustand zurück.',
         content: new OA\JsonContent(ref: new Model(type: GameResponseDto::class))
     )]
     #[ApiResponse(status: Response::HTTP_CREATED)]

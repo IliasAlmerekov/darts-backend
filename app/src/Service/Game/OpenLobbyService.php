@@ -29,6 +29,8 @@ use Override;
  */
 final readonly class OpenLobbyService implements OpenLobbyServiceInterface
 {
+    private const int MAX_ATTEMPTS = 3;
+
     /**
      * @param GameRepositoryInterface $gameRepository
      * @param EntityManagerInterface  $entityManager
@@ -43,32 +45,36 @@ final readonly class OpenLobbyService implements OpenLobbyServiceInterface
     #[Override]
     public function findOrCreate(): OpenLobby
     {
-        $lobby = $this->gameRepository->findOpenLobby();
-        if (null !== $lobby && $this->lock($lobby)) {
-            return new OpenLobby($lobby, false);
+        for ($attempt = 1; $attempt <= self::MAX_ATTEMPTS; $attempt++) {
+            $lobby = $this->gameRepository->findOpenLobby();
+            if (null !== $lobby && $this->lock($lobby)) {
+                return new OpenLobby($lobby, false);
+            }
+
+            try {
+                $gameId = $this->gameRepository->insertLobby();
+                $game = $this->entityManager->find(Game::class, $gameId)
+                    ?? throw new LogicException('The new lobby game was not found after the insert.');
+
+                return new OpenLobby($game, true);
+            } catch (UniqueConstraintViolationException) {
+                // A plain read inside a transaction would not see the other request's lobby.
+                $lobby = $this->gameRepository->findOpenLobbyForShare();
+                if (null !== $lobby && $this->lock($lobby)) {
+                    return new OpenLobby($lobby, false);
+                }
+                // That lobby started before this request locked it; look again.
+            }
         }
 
-        try {
-            $gameId = $this->gameRepository->insertLobby();
-        } catch (UniqueConstraintViolationException) {
-            // A plain read inside a transaction would not see the other request's lobby.
-            $lobby = $this->gameRepository->findOpenLobbyForShare()
-                ?? throw new LogicException('The open lobby index rejected the insert, but no game is in the lobby.');
-            $this->lock($lobby);
-
-            return new OpenLobby($lobby, false);
-        }
-
-        $game = $this->entityManager->find(Game::class, $gameId)
-            ?? throw new LogicException('The new lobby game was not found after the insert.');
-
-        return new OpenLobby($game, true);
+        throw new LogicException(sprintf('No game stayed in the lobby over %d attempts.', self::MAX_ATTEMPTS));
     }
 
     /**
      * Locks the game row until the transaction ends and reloads it, so requests that change
-     * the same lobby run one after another. The lock goes through the primary key; a lock on
-     * the open_lobby index would deadlock with requests that hold a shared lock there.
+     * the same lobby run one after another. Two requests that both read the lobby with
+     * findOpenLobbyForShare hold shared locks on this row and can deadlock here; MySQL then
+     * rolls one back, and the caller's transaction runs again (ADR 0003).
      *
      * @param Game $lobby
      *

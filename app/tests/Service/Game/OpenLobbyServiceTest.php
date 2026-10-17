@@ -105,6 +105,28 @@ final class OpenLobbyServiceTest extends KernelTestCase
         self::assertSame(GameStatus::Lobby, $lobby->game->getStatus());
     }
 
+    public function testRetriesWhenTheOtherRequestsLobbyStartedBeforeTheLock(): void
+    {
+        $lobby = (new Game())->setDate(new DateTime())->setStatus(GameStatus::Lobby);
+        $started = (new Game())->setDate(new DateTime())->setStatus(GameStatus::Started);
+        $this->entityManager->persist($lobby);
+        $this->entityManager->persist($started);
+        $this->entityManager->flush();
+
+        $staleRepository = $this->createMock(GameRepositoryInterface::class);
+        $staleRepository->method('findOpenLobby')->willReturn(null);
+        $staleRepository->method('insertLobby')
+            ->willReturnCallback(fn (): int => $this->gameRepository->insertLobby());
+        // The first locking read still names a lobby that started before this request locked it.
+        $staleRepository->method('findOpenLobbyForShare')->willReturnOnConsecutiveCalls($started, $lobby);
+        $service = new OpenLobbyService($staleRepository, $this->entityManager);
+
+        $result = $this->inTransaction($service);
+
+        self::assertFalse($result->created);
+        self::assertSame($lobby->getGameId(), $result->game->getGameId());
+    }
+
     private function inTransaction(OpenLobbyService $service): OpenLobby
     {
         return $this->entityManager->getConnection()->transactional(static fn (): OpenLobby => $service->findOrCreate());
