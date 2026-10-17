@@ -79,7 +79,7 @@ final readonly class SecurityService implements SecurityServiceInterface
             }
         }
 
-        // Without an invitation a player returns to the Waiting room of their current game, if any.
+        // Without an invitation a player returns to their current game, if they have one.
         $currentGame = null !== $payload['id'] ? $this->gamePlayersRepository->findCurrentGameForPlayer($payload['id']) : null;
         if (null !== $currentGame) {
             return new JsonResponse([

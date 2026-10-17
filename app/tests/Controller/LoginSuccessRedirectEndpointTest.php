@@ -23,8 +23,8 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * GET /api/login/success for a player without an invitation: the Waiting room of their
- * current game, or the Profile when they have none (#105).
+ * GET /api/login/success for a player without an invitation: back to their current game,
+ * or the Profile when they have none (#105).
  */
 final class LoginSuccessRedirectEndpointTest extends WebTestCase
 {
@@ -54,7 +54,7 @@ final class LoginSuccessRedirectEndpointTest extends WebTestCase
     }
 
     #[DataProvider('currentGameStatuses')]
-    public function testPlayerWithCurrentGameReturnsToItsWaitingRoom(GameStatus $status): void
+    public function testPlayerWithCurrentGameReturnsToIt(GameStatus $status): void
     {
         $client = static::createClient();
         $player = $this->createUser('player', 'ROLE_PLAYER');
