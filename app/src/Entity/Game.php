@@ -105,11 +105,11 @@ class Game
     }
 
     /**
-     * @param int $type
+     * @param int|null $type
      *
      * @return static
      */
-    public function setType(int $type): static
+    public function setType(?int $type): static
     {
         $this->type = $type;
 

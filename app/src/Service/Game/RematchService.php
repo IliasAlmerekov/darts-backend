@@ -16,6 +16,7 @@ use App\Service\Player\PlayerManagementServiceInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
+use LogicException;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Uid\Uuid;
 use Override;
@@ -35,10 +36,11 @@ final readonly class RematchService implements RematchServiceInterface
      * @param EntityManagerInterface           $entityManager
      * @param UrlGeneratorInterface            $urlGenerator
      * @param GameAccessServiceInterface       $gameAccessService
+     * @param OpenLobbyServiceInterface        $openLobbyService
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
-    public function __construct(private GameRoomServiceInterface $gameRoomService, private PlayerManagementServiceInterface $playerManagementService, private InvitationRepositoryInterface $invitationRepository, private EntityManagerInterface $entityManager, private UrlGeneratorInterface $urlGenerator, private GameAccessServiceInterface $gameAccessService)
+    public function __construct(private GameRoomServiceInterface $gameRoomService, private PlayerManagementServiceInterface $playerManagementService, private InvitationRepositoryInterface $invitationRepository, private EntityManagerInterface $entityManager, private UrlGeneratorInterface $urlGenerator, private GameAccessServiceInterface $gameAccessService, private OpenLobbyServiceInterface $openLobbyService)
     {
     }
 
@@ -58,19 +60,14 @@ final readonly class RematchService implements RematchServiceInterface
         }
         $this->gameAccessService->assertPlayerInGameOrAdmin($oldGame);
 
-        $lobby = $this->gameRoomService->openLobby();
+        $lobby = $this->openLobbyService->findOrCreate();
         $lobbyGame = $lobby->game;
         $lobbyGame->setStartScore($oldGame->getStartScore());
         $lobbyGame->setDoubleOut($oldGame->isDoubleOut());
         $lobbyGame->setTripleOut($oldGame->isTripleOut());
-        if (null !== $oldGame->getType()) {
-            $lobbyGame->setType((int) $oldGame->getType());
-        }
+        $lobbyGame->setType($oldGame->getType());
         $this->entityManager->flush();
-        $lobbyGameId = $lobbyGame->getGameId();
-        if (null === $lobbyGameId) {
-            return ['success' => false, 'message' => 'Failed to open the lobby'];
-        }
+        $lobbyGameId = $lobbyGame->getGameId() ?? throw new LogicException('The lobby game has no id.');
 
         if ($lobby->created) {
             $this->playerManagementService->copyPlayers($oldGameId, $lobbyGameId);

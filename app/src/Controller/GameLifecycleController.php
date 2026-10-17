@@ -145,7 +145,7 @@ final class GameLifecycleController extends AbstractController
     public function createSettings(GameRoomServiceInterface $gameRoomService, GameSettingsServiceInterface $gameSettingsService, GameServiceInterface $gameService, EntityManagerInterface $entityManager, #[MapRequestPayload] GameSettingsRequest $dto): mixed
     {
         return $entityManager->wrapInTransaction(function () use ($gameRoomService, $gameSettingsService, $gameService, $dto): mixed {
-            $game = $gameRoomService->openLobby()->game;
+            $game = $gameRoomService->openRoom();
 
             $gameSettingsService->updateSettings($game, $dto);
 

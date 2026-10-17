@@ -18,13 +18,6 @@ use Doctrine\ORM\Exception\ORMException;
 interface GameRoomServiceInterface
 {
     /**
-     * Return the game in the lobby, creating it when no game is in the lobby.
-     *
-     * @return OpenLobby The lobby game, and whether this call created it
-     */
-    public function openLobby(): OpenLobby;
-
-    /**
      * Return the game in the lobby. Only when this call creates it, place players from a
      * previous game or from the include list into it.
      *

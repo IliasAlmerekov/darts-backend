@@ -34,17 +34,6 @@ final readonly class GameRoomService implements GameRoomServiceInterface
     }
 
     /**
-     * @return OpenLobby
-     */
-    #[Override]
-    public function openLobby(): OpenLobby
-    {
-        $this->gameAccessService->requireAuthenticatedUser();
-
-        return $this->openLobbyService->findOrCreate();
-    }
-
-    /**
      * Returns the open lobby unchanged when one exists; the arguments then change nothing.
      *
      * @param int|null       $previousGameId
@@ -58,7 +47,8 @@ final readonly class GameRoomService implements GameRoomServiceInterface
     #[Override]
     public function openRoom(?int $previousGameId = null, ?array $includePlayerIds = null, ?array $excludePlayerIds = null): Game
     {
-        $lobby = $this->openLobby();
+        $this->gameAccessService->requireAuthenticatedUser();
+        $lobby = $this->openLobbyService->findOrCreate();
         $game = $lobby->game;
         if (!$lobby->created) {
             return $game;

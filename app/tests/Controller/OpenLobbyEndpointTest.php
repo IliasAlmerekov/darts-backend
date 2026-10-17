@@ -117,6 +117,20 @@ final class OpenLobbyEndpointTest extends WebTestCase
         self::assertSame(2, $reloaded->getType());
     }
 
+    public function testRematchOverwritesTheLobbyTypeEvenWhenTheOldGameHasNone(): void
+    {
+        $bob = $this->createPlayer('bob');
+        $finished = $this->createGame(GameStatus::Finished, [$bob]);
+        $lobby = $this->createGame(GameStatus::Lobby, []);
+        $lobby->setType(2);
+        $this->entityManager->flush();
+
+        $this->postJson(sprintf('/api/room/%d/rematch', $finished->getGameId()));
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        self::assertNull($this->reload($lobby)->getType());
+    }
+
     public function testRepeatedRematchReturnsTheSameLobbyWithoutDuplicateSeats(): void
     {
         $bob = $this->createPlayer('bob');
@@ -164,6 +178,7 @@ final class OpenLobbyEndpointTest extends WebTestCase
         $vanya = $this->createPlayer('vanya');
         $anna = $this->createPlayer('anna');
         $finished = $this->createGame(GameStatus::Finished, [$bob, $vanya]);
+        $finished->setStartScore(501)->setDoubleOut(true);
         $lobby = $this->createGame(GameStatus::Lobby, [$bob, $vanya, $anna]);
         $gameCount = $this->countGames();
 
@@ -174,6 +189,8 @@ final class OpenLobbyEndpointTest extends WebTestCase
         $reloaded = $this->reload($lobby);
         self::assertSame(GameStatus::Started, $reloaded->getStatus());
         self::assertSame([$bob->getId(), $vanya->getId(), $anna->getId()], $this->seatedPlayerIds($reloaded));
+        self::assertSame(501, $reloaded->getStartScore());
+        self::assertTrue($reloaded->isDoubleOut());
     }
 
     public function testRematchStartWithoutOpenLobbyCreatesAndStartsOne(): void

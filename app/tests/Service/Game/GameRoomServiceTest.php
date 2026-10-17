@@ -72,17 +72,6 @@ final class GameRoomServiceTest extends TestCase
         $this->openLobbyService = $this->createMock(OpenLobbyServiceInterface::class);
     }
 
-    public function testOpenLobbyRequiresAuthenticatedUserAndReturnsTheLobby(): void
-    {
-        $lobby = new OpenLobby($this->lobbyGame, false);
-        $this->gameAccessService->expects(self::once())->method('requireAuthenticatedUser');
-        $this->openLobbyService->expects(self::once())->method('findOrCreate')->willReturn($lobby);
-
-        $service = $this->createService();
-
-        self::assertSame($lobby, $service->openLobby());
-    }
-
     /**
      * @throws ORMException
      */

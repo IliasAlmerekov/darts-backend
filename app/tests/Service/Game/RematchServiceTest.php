@@ -35,7 +35,7 @@ final class RematchServiceTest extends TestCase
         $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
         $openLobbyService = $this->createMock(OpenLobbyServiceInterface::class);
         $openLobbyService->expects(self::never())->method('findOrCreate');
-        $gameRoomService = new GameRoomService($gameRepository, $gamePlayersRepository, $playerManagementService, $access, $openLobbyService);
+        $gameRoomService = new GameRoomService($gameRepository, $gamePlayersRepository, $playerManagementService, $access, $this->createMock(OpenLobbyServiceInterface::class));
         $invitationRepository = $this->createMock(InvitationRepositoryInterface::class);
         $urlGenerator = $this->createMock(UrlGeneratorInterface::class);
 
@@ -45,7 +45,8 @@ final class RematchServiceTest extends TestCase
             $invitationRepository,
             $entityManager,
             $urlGenerator,
-            $access
+            $access,
+            $openLobbyService,
         );
 
         $result = $service->createRematch(42);
@@ -79,7 +80,7 @@ final class RematchServiceTest extends TestCase
         $this->setPrivateProperty($newLobby, 'gameId', 100);
         $openLobbyService = $this->createMock(OpenLobbyServiceInterface::class);
         $openLobbyService->method('findOrCreate')->willReturn(new OpenLobby($newLobby, true));
-        $gameRoomService = new GameRoomService($gameRepository, $gamePlayersRepository, $playerManagementService, $access, $openLobbyService);
+        $gameRoomService = new GameRoomService($gameRepository, $gamePlayersRepository, $playerManagementService, $access, $this->createMock(OpenLobbyServiceInterface::class));
 
         $invitationRepository = $this->createMock(InvitationRepositoryInterface::class);
         $invitationRepository->method('findOneBy')->willReturn(null);
@@ -93,7 +94,8 @@ final class RematchServiceTest extends TestCase
             $invitationRepository,
             $entityManager,
             $urlGenerator,
-            $access
+            $access,
+            $openLobbyService,
         );
 
         $result = $service->createRematch(42);
