@@ -11,6 +11,7 @@ The one tablet runs every game (ADR 0001), so the system needs one lobby at most
 
 - `OpenLobbyService` is the one find-or-create path. `GameRepository::insertLobby` inserts through DBAL, because a failed ORM flush closes the EntityManager and the request still needs it after the index rejects the insert.
 - The deprecated `POST /api/game/settings` goes through the same path, so it also returns the open lobby and applies its settings to it.
+- `OpenLobbyService` locks the lobby row through its primary key until the caller's transaction ends, so room create and rematch run in a transaction. Rematch reads the lobby's seats with a shared lock, because a plain read inside the transaction could miss seats another request committed and seat a player twice.
 - Room create ignores `previousGameId`, `playerIds` and `excludePlayerIds` while a game is in the lobby.
 - Players who were in a lobby game when the migration ran have no current game afterwards, because `GamePlayersRepository::findCurrentGame` returns only `lobby` and `started` games.
 - An old lobby stays open until it starts or a rematch reuses it. A timeout or a Close room button needs its own decision.

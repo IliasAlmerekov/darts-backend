@@ -11,6 +11,7 @@ namespace App\Repository;
 
 use App\Entity\GamePlayers;
 use App\Enum\GameStatus;
+use Doctrine\DBAL\LockMode;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -102,6 +103,24 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
             ->orderBy('gp.position', 'ASC')
             ->addOrderBy('gp.gamePlayerId', 'ASC')
             ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * @return GamePlayers[]
+     *
+     * @param int $gameId
+     */
+    #[\Override]
+    public function findByGameIdForShare(int $gameId): array
+    {
+        return $this->createQueryBuilder('gp')
+            ->andWhere('gp.game = :gameId')
+            ->setParameter('gameId', $gameId)
+            ->orderBy('gp.position', 'ASC')
+            ->addOrderBy('gp.gamePlayerId', 'ASC')
+            ->getQuery()
+            ->setLockMode(LockMode::PESSIMISTIC_READ)
             ->getResult();
     }
 

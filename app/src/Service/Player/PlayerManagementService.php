@@ -157,7 +157,9 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     {
         $seatedPlayerIds = [];
         $lastPosition = 0;
-        foreach ($this->gamePlayersRepository->findByGameId($toGameId) as $seat) {
+        // A plain read inside the caller's transaction could miss seats another request
+        // committed after the snapshot, and seat those players twice.
+        foreach ($this->gamePlayersRepository->findByGameIdForShare($toGameId) as $seat) {
             $playerId = $seat->getPlayer()?->getId();
             if (null !== $playerId) {
                 $seatedPlayerIds[$playerId] = true;

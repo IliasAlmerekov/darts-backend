@@ -71,6 +71,9 @@ final class RematchServiceTest extends TestCase
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::atLeastOnce())->method('flush');
+        $entityManager->expects(self::once())
+            ->method('wrapInTransaction')
+            ->willReturnCallback(static fn (callable $callback): mixed => $callback());
 
         $playerManagementService = new PlayerManagementService($gamePlayersRepository, $entityManager);
         $access = $this->createMock(GameAccessServiceInterface::class);

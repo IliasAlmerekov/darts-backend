@@ -60,28 +60,31 @@ final readonly class RematchService implements RematchServiceInterface
         }
         $this->gameAccessService->assertPlayerInGameOrAdmin($oldGame);
 
-        $lobby = $this->openLobbyService->findOrCreate();
-        $lobbyGame = $lobby->game;
-        $lobbyGame->setStartScore($oldGame->getStartScore());
-        $lobbyGame->setDoubleOut($oldGame->isDoubleOut());
-        $lobbyGame->setTripleOut($oldGame->isTripleOut());
-        $lobbyGame->setType($oldGame->getType());
-        $this->entityManager->flush();
-        $lobbyGameId = $lobbyGame->getGameId() ?? throw new LogicException('The lobby game has no id.');
+        // One transaction: the lobby row stays locked until the seats are in, so concurrent
+        // rematches into the same lobby cannot seat a player twice.
+        return $this->entityManager->wrapInTransaction(function () use ($oldGame, $oldGameId): array {
+            $lobby = $this->openLobbyService->findOrCreate();
+            $lobbyGame = $lobby->game;
+            $lobbyGame->setStartScore($oldGame->getStartScore());
+            $lobbyGame->setDoubleOut($oldGame->isDoubleOut());
+            $lobbyGame->setTripleOut($oldGame->isTripleOut());
+            $lobbyGame->setType($oldGame->getType());
+            $this->entityManager->flush();
+            $lobbyGameId = $lobbyGame->getGameId() ?? throw new LogicException('The lobby game has no id.');
 
-        if ($lobby->created) {
-            $this->playerManagementService->copyPlayers($oldGameId, $lobbyGameId);
-        } else {
-            // Players who joined the open lobby keep their seats.
-            $this->playerManagementService->appendMissingPlayers($oldGameId, $lobbyGameId);
-        }
-        $invitationLink = $this->createInvitation($lobbyGameId);
+            if ($lobby->created) {
+                $this->playerManagementService->copyPlayers($oldGameId, $lobbyGameId);
+            } else {
+                // Players who joined the open lobby keep their seats.
+                $this->playerManagementService->appendMissingPlayers($oldGameId, $lobbyGameId);
+            }
 
-        return [
-            'success' => true,
-            'gameId' => $lobbyGameId,
-            'invitationLink' => $invitationLink,
-        ];
+            return [
+                'success' => true,
+                'gameId' => $lobbyGameId,
+                'invitationLink' => $this->createInvitation($lobbyGameId),
+            ];
+        });
     }
 
     /**

@@ -76,6 +76,7 @@ interface PlayerManagementServiceInterface
     /**
      * Seat every player of the source game who is missing from the target game. They take
      * the positions after the players already in the target game, in their source order.
+     * Must be called inside a transaction, because it reads the target seats with a lock.
      *
      * @param int $fromGameId Source game ID
      * @param int $toGameId   Target game ID

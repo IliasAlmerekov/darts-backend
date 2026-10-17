@@ -13,6 +13,7 @@ use App\Entity\Game;
 use App\Enum\GameStatus;
 use App\Repository\GameRepository;
 use App\Repository\GameRepositoryInterface;
+use App\Service\Game\OpenLobby;
 use App\Service\Game\OpenLobbyService;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
@@ -43,12 +44,12 @@ final class OpenLobbyServiceTest extends KernelTestCase
     {
         $service = new OpenLobbyService($this->gameRepository, $this->entityManager);
 
-        $lobby = $service->findOrCreate();
+        $lobby = $this->inTransaction($service);
 
         self::assertTrue($lobby->created);
         self::assertSame(GameStatus::Lobby, $lobby->game->getStatus());
-        self::assertSame($lobby->game, $service->findOrCreate()->game);
-        self::assertFalse($service->findOrCreate()->created);
+        self::assertSame($lobby->game, $this->inTransaction($service)->game);
+        self::assertFalse($this->inTransaction($service)->created);
     }
 
     /**
@@ -70,7 +71,7 @@ final class OpenLobbyServiceTest extends KernelTestCase
             ->willReturnCallback(fn (): ?Game => $this->gameRepository->findOpenLobbyForShare());
         $service = new OpenLobbyService($staleRepository, $this->entityManager);
 
-        $lobby = $service->findOrCreate();
+        $lobby = $this->inTransaction($service);
 
         self::assertFalse($lobby->created);
         self::assertSame($winner->getGameId(), $lobby->game->getGameId());
@@ -81,6 +82,32 @@ final class OpenLobbyServiceTest extends KernelTestCase
         $this->entityManager->flush();
         $this->entityManager->clear();
         self::assertSame(501, $this->entityManager->find(Game::class, $winner->getGameId())?->getStartScore());
+    }
+
+    public function testCreatesALobbyWhenTheFoundLobbyStartedBeforeTheLock(): void
+    {
+        $started = (new Game())->setDate(new DateTime())->setStatus(GameStatus::Lobby);
+        $this->entityManager->persist($started);
+        $this->entityManager->flush();
+        // Another request starts the game after this request read it as the lobby.
+        $this->entityManager->getConnection()->update('game', ['status' => GameStatus::Started->value], ['game_id' => $started->getGameId()]);
+
+        $staleRepository = $this->createMock(GameRepositoryInterface::class);
+        $staleRepository->method('findOpenLobby')->willReturn($started);
+        $staleRepository->method('insertLobby')
+            ->willReturnCallback(fn (): int => $this->gameRepository->insertLobby());
+        $service = new OpenLobbyService($staleRepository, $this->entityManager);
+
+        $lobby = $this->inTransaction($service);
+
+        self::assertTrue($lobby->created);
+        self::assertNotSame($started->getGameId(), $lobby->game->getGameId());
+        self::assertSame(GameStatus::Lobby, $lobby->game->getStatus());
+    }
+
+    private function inTransaction(OpenLobbyService $service): OpenLobby
+    {
+        return $this->entityManager->getConnection()->transactional(static fn (): OpenLobby => $service->findOrCreate());
     }
 
     private function countGames(): int

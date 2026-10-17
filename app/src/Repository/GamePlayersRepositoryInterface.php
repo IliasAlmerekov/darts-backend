@@ -83,6 +83,17 @@ interface GamePlayersRepositoryInterface
     public function findByGameId(int $gameId): array;
 
     /**
+     * Returns the game's seats with a shared lock (FOR SHARE), so the read also sees seats
+     * committed after the transaction's snapshot was taken. Players stay unloaded proxies.
+     * Must be called inside a transaction.
+     *
+     * @param int $gameId
+     *
+     * @return GamePlayers[]
+     */
+    public function findByGameIdForShare(int $gameId): array;
+
+    /**
      * @param int $gameId
      *
      * @return array<int, array{playerId:int,name:string,position:int|null,score:int|null,isGuest:bool}>
