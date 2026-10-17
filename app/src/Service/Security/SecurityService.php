@@ -49,17 +49,8 @@ final readonly class SecurityService implements SecurityServiceInterface
     #[Override]
     public function buildLoginSuccessResponse(User $user, SessionInterface $session): Response
     {
-        $payload = $this->buildUserPayload($user);
-
         if (in_array('ROLE_ADMIN', $user->getRoles(), true)) {
-            return new JsonResponse([
-                'success' => true,
-                'roles' => $payload['roles'],
-                'id' => $payload['id'],
-                'email' => $payload['email'],
-                'username' => $payload['username'],
-                'redirect' => rtrim($this->frontendUrl, '/').'/start',
-            ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
+            return $this->buildResponse($user, '/start');
         }
 
         if ($session->has('invitation_uuid')) {
@@ -67,54 +58,37 @@ final readonly class SecurityService implements SecurityServiceInterface
                 return $this->invitationService->processInvitation($session, $user);
             } catch (GameAlreadyStartedException|GameJoinNotAllowedException|GameRoomFullException|GameNotFoundException $exception) {
                 // The login itself succeeded; report why the join did not instead of failing the request.
-                return new JsonResponse([
-                    'success' => true,
-                    'roles' => $payload['roles'],
-                    'id' => $payload['id'],
-                    'email' => $payload['email'],
-                    'username' => $payload['username'],
-                    'redirect' => rtrim($this->frontendUrl, '/').'/playerprofile',
-                    'invitationError' => $exception->getErrorCode(),
-                ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
+                return $this->buildResponse($user, '/playerprofile', ['invitationError' => $exception->getErrorCode()]);
             }
         }
 
         // Without an invitation a player returns to their current game, if they have one.
-        $currentGame = null !== $payload['id'] ? $this->gamePlayersRepository->findCurrentGameForPlayer($payload['id']) : null;
+        $playerId = $user->getId();
+        $currentGame = null !== $playerId ? $this->gamePlayersRepository->findCurrentGameForPlayer($playerId) : null;
         if (null !== $currentGame) {
-            return new JsonResponse([
-                'success' => true,
-                'roles' => $payload['roles'],
-                'id' => $payload['id'],
-                'email' => $payload['email'],
-                'username' => $payload['username'],
-                'redirect' => rtrim($this->frontendUrl, '/').'/joined',
-                'gameId' => $currentGame['gameId'],
-            ]);
+            return $this->buildResponse($user, '/joined', ['gameId' => $currentGame['gameId']]);
         }
 
-        return new JsonResponse([
-            'success' => true,
-            'roles' => $payload['roles'],
-            'id' => $payload['id'],
-            'email' => $payload['email'],
-            'username' => $payload['username'],
-            'redirect' => rtrim($this->frontendUrl, '/').'/playerprofile',
-        ]);
+        return $this->buildResponse($user, '/playerprofile');
     }
 
     /**
-     * @param User $user
+     * @param User                 $user
+     * @param string               $frontendPath path on the frontend the client should open next
+     * @param array<string, mixed> $extra        fields appended after `redirect`
      *
-     * @return array{id:int|null,email:string|null,username:string|null,roles:list<string>}
+     * @return JsonResponse
      */
-    private function buildUserPayload(User $user): array
+    private function buildResponse(User $user, string $frontendPath, array $extra = []): JsonResponse
     {
-        return [
+        return new JsonResponse([
+            'success' => true,
+            'roles' => $user->getStoredRoles(),
             'id' => $user->getId(),
             'email' => $user->getEmail(),
             'username' => $user->getUsername(),
-            'roles' => $user->getStoredRoles(),
-        ];
+            'redirect' => rtrim($this->frontendUrl, '/').$frontendPath,
+            ...$extra,
+        ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
     }
 }
