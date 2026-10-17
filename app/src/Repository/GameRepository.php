@@ -7,11 +7,13 @@ namespace App\Repository;
 use App\Entity\Game;
 use App\Enum\GameStatus;
 use App\Util\SqlResultValueAccessor;
+use DateTime;
 use DateTimeImmutable;
 use DateTimeInterface;
 use Doctrine\DBAL\LockMode;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -182,6 +184,22 @@ SQL,
             ->getQuery()
             ->setLockMode(LockMode::PESSIMISTIC_READ)
             ->getOneOrNullResult();
+    }
+
+    /**
+     * @return int
+     */
+    #[\Override]
+    public function insertLobby(): int
+    {
+        $connection = $this->getEntityManager()->getConnection();
+        $connection->insert(
+            'game',
+            ['date' => new DateTime(), 'status' => GameStatus::Lobby->value],
+            ['date' => Types::DATE_MUTABLE],
+        );
+
+        return (int) $connection->lastInsertId();
     }
 
     /**

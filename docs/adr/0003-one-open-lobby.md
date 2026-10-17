@@ -9,7 +9,7 @@ The one tablet runs every game (ADR 0001), so the system needs one lobby at most
 
 ## Consequences
 
-- `OpenLobbyService` is the one find-or-create path. It inserts through DBAL, because a failed ORM flush closes the EntityManager and the request still needs it after the index rejects the insert.
+- `OpenLobbyService` is the one find-or-create path. `GameRepository::insertLobby` inserts through DBAL, because a failed ORM flush closes the EntityManager and the request still needs it after the index rejects the insert.
 - The deprecated `POST /api/game/settings` goes through the same path, so it also returns the open lobby and applies its settings to it.
 - Room create ignores `previousGameId`, `playerIds` and `excludePlayerIds` while a game is in the lobby.
 - Players who were in a lobby game when the migration ran have no current game afterwards, because `GamePlayersRepository::findCurrentGame` returns only `lobby` and `started` games.

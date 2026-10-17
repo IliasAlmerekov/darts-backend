@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Game;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\QueryBuilder;
 
@@ -86,6 +87,17 @@ interface GameRepositoryInterface
      * @return Game|null
      */
     public function findOpenLobbyForShare(): ?Game;
+
+    /**
+     * Inserts a game in the lobby through DBAL and returns its id. The insert bypasses the
+     * EntityManager, because a failed flush would close it, and callers still need it after
+     * the open lobby index rejects the insert.
+     *
+     * @return int
+     *
+     * @throws UniqueConstraintViolationException When a game is already in the lobby
+     */
+    public function insertLobby(): int;
 
     /**
      * @return int|null

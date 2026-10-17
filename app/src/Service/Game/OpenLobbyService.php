@@ -10,11 +10,8 @@ declare(strict_types=1);
 namespace App\Service\Game;
 
 use App\Entity\Game;
-use App\Enum\GameStatus;
 use App\Repository\GameRepositoryInterface;
-use DateTime;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
 use LogicException;
 use Override;
@@ -49,25 +46,18 @@ final readonly class OpenLobbyService implements OpenLobbyServiceInterface
             return new OpenLobby($lobby, false);
         }
 
-        // Insert through DBAL: a failed ORM flush closes the EntityManager, and the
-        // request still needs it after the index rejects the insert.
-        $connection = $this->entityManager->getConnection();
         try {
-            $connection->insert(
-                'game',
-                ['date' => new DateTime(), 'status' => GameStatus::Lobby->value],
-                ['date' => Types::DATE_MUTABLE],
-            );
+            $gameId = $this->gameRepository->insertLobby();
         } catch (UniqueConstraintViolationException) {
             // A plain read inside a transaction would not see the other request's lobby. The
             // locking read needs a transaction, and rematch runs without one.
-            $lobby = $connection->transactional(fn (): ?Game => $this->gameRepository->findOpenLobbyForShare())
+            $lobby = $this->entityManager->getConnection()->transactional(fn (): ?Game => $this->gameRepository->findOpenLobbyForShare())
                 ?? throw new LogicException('The open lobby index rejected the insert, but no game is in the lobby.');
 
             return new OpenLobby($lobby, false);
         }
 
-        $game = $this->entityManager->find(Game::class, (int) $connection->lastInsertId())
+        $game = $this->entityManager->find(Game::class, $gameId)
             ?? throw new LogicException('The new lobby game was not found after the insert.');
 
         return new OpenLobby($game, true);
