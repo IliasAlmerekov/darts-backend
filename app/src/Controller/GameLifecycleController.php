@@ -28,8 +28,8 @@ use App\Service\Game\GameServiceInterface;
 use App\Service\Game\GameSettingsServiceInterface;
 use App\Service\Game\GameStartServiceInterface;
 use App\Service\Game\RematchStartServiceInterface;
+use App\Service\Persistence\RetryingTransactionInterface;
 use App\Service\Security\GameAccessServiceInterface;
-use Doctrine\ORM\EntityManagerInterface;
 use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity as AttributeMapEntity;
@@ -122,7 +122,7 @@ final class GameLifecycleController extends AbstractController
      * @param GameRoomServiceInterface     $gameRoomService
      * @param GameSettingsServiceInterface $gameSettingsService
      * @param GameServiceInterface         $gameService
-     * @param EntityManagerInterface       $entityManager
+     * @param RetryingTransactionInterface $transaction
      * @param GameSettingsRequest          $dto
      *
      * @return mixed
@@ -142,9 +142,9 @@ final class GameLifecycleController extends AbstractController
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht.')]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
     #[Route('/api/game/settings', name: 'app_game_settings_create', methods: ['POST'], format: 'json')]
-    public function createSettings(GameRoomServiceInterface $gameRoomService, GameSettingsServiceInterface $gameSettingsService, GameServiceInterface $gameService, EntityManagerInterface $entityManager, #[MapRequestPayload] GameSettingsRequest $dto): mixed
+    public function createSettings(GameRoomServiceInterface $gameRoomService, GameSettingsServiceInterface $gameSettingsService, GameServiceInterface $gameService, RetryingTransactionInterface $transaction, #[MapRequestPayload] GameSettingsRequest $dto): mixed
     {
-        return $entityManager->wrapInTransaction(function () use ($gameRoomService, $gameSettingsService, $gameService, $dto): mixed {
+        return $transaction->run(function () use ($gameRoomService, $gameSettingsService, $gameService, $dto): mixed {
             $game = $gameRoomService->openRoom();
 
             $gameSettingsService->updateSettings($game, $dto);

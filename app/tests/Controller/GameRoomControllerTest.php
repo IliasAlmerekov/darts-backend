@@ -14,7 +14,9 @@ use App\Service\Player\PlayerManagementServiceInterface;
 use App\Service\Player\GuestPlayerServiceInterface;
 use App\Service\Game\RematchServiceInterface;
 use App\Service\Sse\SseStreamServiceInterface;
+use App\Service\Persistence\RetryingTransaction;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\Persistence\ManagerRegistry;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -53,7 +55,7 @@ class GameRoomControllerTest extends TestCase
             $this->rematchService,
             $this->guestPlayerService,
             $this->sseStreamService,
-            $this->entityManager,
+            new RetryingTransaction($this->entityManager, $this->createStub(ManagerRegistry::class)),
         );
 
         // Container für AbstractController-Methoden

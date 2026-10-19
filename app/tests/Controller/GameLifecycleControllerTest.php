@@ -33,7 +33,9 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
+use App\Service\Persistence\RetryingTransaction;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -120,7 +122,7 @@ final class GameLifecycleControllerTest extends TestCase
             ->method('wrapInTransaction')
             ->willReturnCallback(static fn(callable $func) => $func());
 
-        $response = $this->controller->createSettings($roomService, $settingsService, $gameService, $entityManager, $dto);
+        $response = $this->controller->createSettings($roomService, $settingsService, $gameService, new RetryingTransaction($entityManager, $this->createStub(ManagerRegistry::class)), $dto);
 
         $this->assertInstanceOf(GameResponseDto::class, $response);
     }

@@ -24,10 +24,10 @@ use App\Http\Attribute\ApiResponse;
 use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Game\GameSettingsServiceInterface;
 use App\Service\Game\RematchServiceInterface;
+use App\Service\Persistence\RetryingTransactionInterface;
 use App\Service\Player\GuestPlayerServiceInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
 use App\Service\Sse\SseStreamServiceInterface;
-use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
 use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
@@ -54,7 +54,7 @@ final class GameRoomController extends AbstractController
      * @param RematchServiceInterface          $rematchService
      * @param GuestPlayerServiceInterface      $guestPlayerService
      * @param SseStreamServiceInterface        $sseStreamService
-     * @param EntityManagerInterface           $entityManager
+     * @param RetryingTransactionInterface     $transaction
      *
      * @return void
      */
@@ -65,7 +65,7 @@ final class GameRoomController extends AbstractController
         private readonly RematchServiceInterface $rematchService,
         private readonly GuestPlayerServiceInterface $guestPlayerService,
         private readonly SseStreamServiceInterface $sseStreamService,
-        private readonly EntityManagerInterface $entityManager,
+        private readonly RetryingTransactionInterface $transaction,
     ) {
     }
 
@@ -104,7 +104,7 @@ final class GameRoomController extends AbstractController
     #[Route(path: '/api/room/create', name: 'room_create', methods: ['POST'], format: 'json')]
     public function roomCreateApi(#[MapRequestPayload] RoomCreateRequest $dto): array
     {
-        return $this->entityManager->wrapInTransaction(function () use ($dto): array {
+        return $this->transaction->run(function () use ($dto): array {
             $includePlayerIds = null !== $dto->playerIds && [] !== $dto->playerIds
                 ? $dto->playerIds
                 : null;

@@ -12,6 +12,7 @@ namespace App\Service\Game;
 use App\Entity\Invitation;
 use App\Repository\InvitationRepositoryInterface;
 use App\Service\Game\GameRoomServiceInterface;
+use App\Service\Persistence\RetryingTransactionInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -37,10 +38,11 @@ final readonly class RematchService implements RematchServiceInterface
      * @param UrlGeneratorInterface            $urlGenerator
      * @param GameAccessServiceInterface       $gameAccessService
      * @param OpenLobbyServiceInterface        $openLobbyService
+     * @param RetryingTransactionInterface     $transaction
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
-    public function __construct(private GameRoomServiceInterface $gameRoomService, private PlayerManagementServiceInterface $playerManagementService, private InvitationRepositoryInterface $invitationRepository, private EntityManagerInterface $entityManager, private UrlGeneratorInterface $urlGenerator, private GameAccessServiceInterface $gameAccessService, private OpenLobbyServiceInterface $openLobbyService)
+    public function __construct(private GameRoomServiceInterface $gameRoomService, private PlayerManagementServiceInterface $playerManagementService, private InvitationRepositoryInterface $invitationRepository, private EntityManagerInterface $entityManager, private UrlGeneratorInterface $urlGenerator, private GameAccessServiceInterface $gameAccessService, private OpenLobbyServiceInterface $openLobbyService, private RetryingTransactionInterface $transaction)
     {
     }
 
@@ -61,8 +63,9 @@ final readonly class RematchService implements RematchServiceInterface
         $this->gameAccessService->assertPlayerInGameOrAdmin($oldGame);
 
         // One transaction: the lobby row stays locked until the seats are in, so concurrent
-        // rematches into the same lobby cannot seat a player twice.
-        return $this->entityManager->wrapInTransaction(function () use ($oldGame, $oldGameId): array {
+        // rematches into the same lobby cannot seat a player twice. A retry after a deadlock
+        // detaches $oldGame, so the transaction only reads its fields.
+        return $this->transaction->run(function () use ($oldGame, $oldGameId): array {
             $lobby = $this->openLobbyService->findOrCreate();
             $lobbyGame = $lobby->game;
             $lobbyGame->setStartScore($oldGame->getStartScore());
