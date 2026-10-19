@@ -253,9 +253,11 @@ final class GameLifecycleController extends AbstractController
     /**
      * Reopens a finished game and returns current state.
      *
-     * @param Game                       $game
-     * @param GameReopenServiceInterface $gameReopenService
-     * @param GameServiceInterface       $gameService
+     * @param Game                         $game
+     * @param GameReopenServiceInterface   $gameReopenService
+     * @param GameServiceInterface         $gameService
+     * @param GameRepositoryInterface      $gameRepository
+     * @param RetryingTransactionInterface $transaction
      *
      * @return mixed
      */
@@ -268,11 +270,18 @@ final class GameLifecycleController extends AbstractController
     #[ApiResponse]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
     #[Route('/api/game/{gameId}/reopen', name: 'app_game_reopen', methods: ['PATCH'], format: 'json')]
-    public function reopen(#[AttributeMapEntity(id: 'gameId')] Game $game, GameReopenServiceInterface $gameReopenService, GameServiceInterface $gameService): mixed
+    public function reopen(#[AttributeMapEntity(id: 'gameId')] Game $game, GameReopenServiceInterface $gameReopenService, GameServiceInterface $gameService, GameRepositoryInterface $gameRepository, RetryingTransactionInterface $transaction): mixed
     {
-        $gameReopenService->reopen($game);
+        $gameId = $game->getGameId() ?? throw new GameNotFoundException();
+        $reopened = $transaction->run(static function () use ($gameRepository, $gameReopenService, $gameId): Game {
+            // A retry follows resetManager(), which detaches the game the route resolved.
+            $game = $gameRepository->findOneByGameId($gameId) ?? throw new GameNotFoundException();
+            $gameReopenService->reopen($game);
 
-        return $gameService->createGameDto($game);
+            return $game;
+        });
+
+        return $gameService->createGameDto($reopened);
     }
 
     /**

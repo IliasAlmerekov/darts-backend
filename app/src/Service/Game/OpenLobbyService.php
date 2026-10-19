@@ -19,7 +19,7 @@ use LogicException;
 use Override;
 
 /**
- * Keeps at most one game in the lobby (ADR 0003).
+ * Keeps at most one game in the lobby (ADR 0003). Opening it aborts every started game (ADR 0004).
  *
  * The unique index uniq_game_open_lobby enforces the rule. When two requests both find no
  * lobby, both insert one and the index rejects the later insert; that request then returns
@@ -45,6 +45,9 @@ final readonly class OpenLobbyService implements OpenLobbyServiceInterface
     #[Override]
     public function findOrCreate(): OpenLobby
     {
+        // The tablet runs one game at a time, so opening a lobby ends the game it left (ADR 0004).
+        $this->gameRepository->abortStartedGames();
+
         for ($attempt = 1; $attempt <= self::MAX_ATTEMPTS; $attempt++) {
             $found = $this->reuse($this->gameRepository->findOpenLobby());
             if (null !== $found) {

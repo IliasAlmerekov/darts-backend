@@ -110,6 +110,17 @@ interface GameRepositoryInterface
     public function insertLobby(): int;
 
     /**
+     * Sets every started game except $exceptGameId to aborted in one bulk update (ADR 0004).
+     * The update bypasses the EntityManager, so loaded Game entities keep their old status.
+     * Must be called inside the request's transaction.
+     *
+     * @param int|null $exceptGameId
+     *
+     * @return void
+     */
+    public function abortStartedGames(?int $exceptGameId = null): void;
+
+    /**
      * @return int|null
      */
     /** @psalm-suppress PossiblyUnusedMethod */

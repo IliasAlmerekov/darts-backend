@@ -223,6 +223,29 @@ SQL,
     }
 
     /**
+     * @param int|null $exceptGameId
+     *
+     * @return void
+     */
+    #[\Override]
+    public function abortStartedGames(?int $exceptGameId = null): void
+    {
+        $queryBuilder = $this->createQueryBuilder('g')
+            ->update()
+            ->set('g.status', ':aborted')
+            ->andWhere('g.status = :started')
+            ->setParameter('aborted', GameStatus::Aborted)
+            ->setParameter('started', GameStatus::Started);
+        if (null !== $exceptGameId) {
+            $queryBuilder
+                ->andWhere('g.gameId <> :exceptGameId')
+                ->setParameter('exceptGameId', $exceptGameId);
+        }
+
+        $queryBuilder->getQuery()->execute();
+    }
+
+    /**
      * @return int|null
      */
     #[\Override]

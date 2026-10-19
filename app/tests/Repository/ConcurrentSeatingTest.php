@@ -23,7 +23,8 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
- * Seats and invitations committed by another request after this request's snapshot must still count.
+ * Seats, invitations and started games committed by another request after this request's
+ * snapshot must still count.
  *
  * Two real connections to a scratch database: "request" runs the code under test inside a
  * transaction whose REPEATABLE READ snapshot is already taken, "other" commits a row in
@@ -144,6 +145,43 @@ final class ConcurrentSeatingTest extends KernelTestCase
 
         self::assertSame(501, $game->getStartScore());
         self::assertCount(2, $game->getGamePlayers());
+    }
+
+    public function testAbortStartedGamesAbortsAGameStartedAfterTheSnapshot(): void
+    {
+        $abandoned = $this->insertGame('started');
+        $finished = $this->insertGame('finished');
+        $lobby = $this->insertGame('lobby');
+        $registry = $this->createMock(ManagerRegistry::class);
+        $registry->method('getManagerForClass')->willReturn($this->entityManager);
+        $gameRepository = new GameRepository($registry);
+
+        $this->request->beginTransaction();
+        $this->takeSnapshot();
+        // Another request starts a game and commits while this one runs.
+        $startedLater = $this->insertGame('started');
+        $gameRepository->abortStartedGames($lobby);
+        $this->request->commit();
+
+        self::assertSame(
+            [[$abandoned, 'aborted'], [$finished, 'finished'], [$lobby, 'lobby'], [$startedLater, 'aborted']],
+            $this->other->fetchAllNumeric('SELECT game_id, status FROM game ORDER BY game_id'),
+        );
+    }
+
+    public function testAbortStartedGamesKeepsTheExceptedGameStarted(): void
+    {
+        $other = $this->insertGame('started');
+        $kept = $this->insertGame('started');
+        $registry = $this->createMock(ManagerRegistry::class);
+        $registry->method('getManagerForClass')->willReturn($this->entityManager);
+
+        (new GameRepository($registry))->abortStartedGames($kept);
+
+        self::assertSame(
+            [[$other, 'aborted'], [$kept, 'started']],
+            $this->other->fetchAllNumeric('SELECT game_id, status FROM game ORDER BY game_id'),
+        );
     }
 
     /**

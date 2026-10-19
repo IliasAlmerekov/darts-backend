@@ -9,6 +9,7 @@ use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Exception\Game\GameReopenNotAllowedException;
+use App\Repository\GameRepositoryInterface;
 use App\Service\Game\GameReopenService;
 use App\Service\Security\GameAccessServiceInterface;
 use DateTimeImmutable;
@@ -49,7 +50,7 @@ final class GameReopenServiceTest extends TestCase
             ->with($game)
             ->willReturn(new User());
 
-        $service = new GameReopenService($entityManager, $access);
+        $service = new GameReopenService($entityManager, $access, $this->createStub(GameRepositoryInterface::class));
 
         $service->reopen($game);
 
@@ -74,7 +75,7 @@ final class GameReopenServiceTest extends TestCase
             ->with($game)
             ->willReturn(new User());
 
-        $service = new GameReopenService($entityManager, $access);
+        $service = new GameReopenService($entityManager, $access, $this->createStub(GameRepositoryInterface::class));
 
         $service->reopen($game);
 
@@ -95,7 +96,7 @@ final class GameReopenServiceTest extends TestCase
             ->with($game)
             ->willReturn(new User());
 
-        $service = new GameReopenService($entityManager, $access);
+        $service = new GameReopenService($entityManager, $access, $this->createStub(GameRepositoryInterface::class));
 
         $this->expectException(GameReopenNotAllowedException::class);
         $service->reopen($game);
