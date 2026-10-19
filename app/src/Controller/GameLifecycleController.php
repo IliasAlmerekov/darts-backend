@@ -87,6 +87,7 @@ final class GameLifecycleController extends AbstractController
      *
         * @param int                          $gameId
      * @param RematchStartServiceInterface $rematchStartService
+     * @param RetryingTransactionInterface $transaction
         * @param StartGameRequest             $dto
      *
      * @return Game
@@ -109,9 +110,9 @@ final class GameLifecycleController extends AbstractController
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht.')]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
     #[Route('/api/game/{gameId}/rematch/start', name: 'app_game_rematch_start', methods: ['POST'], format: 'json')]
-    public function createAndStartRematch(int $gameId, RematchStartServiceInterface $rematchStartService, #[MapRequestPayload] StartGameRequest $dto): Game
+    public function createAndStartRematch(int $gameId, RematchStartServiceInterface $rematchStartService, RetryingTransactionInterface $transaction, #[MapRequestPayload] StartGameRequest $dto): Game
     {
-        return $rematchStartService->createAndStart($gameId, $dto);
+        return $transaction->run(static fn (): Game => $rematchStartService->createAndStart($gameId, $dto));
     }
 
     /**

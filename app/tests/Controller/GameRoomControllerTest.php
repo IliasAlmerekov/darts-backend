@@ -136,6 +136,9 @@ class GameRoomControllerTest extends TestCase
             ->method('createRematch')
             ->with($gameId)
             ->willReturn($expectedResult);
+        $this->entityManager->expects($this->once())
+            ->method('wrapInTransaction')
+            ->willReturnCallback(static fn (callable $operation): mixed => $operation());
 
         $response = $this->controller->rematch($gameId);
 

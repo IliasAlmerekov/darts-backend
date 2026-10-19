@@ -98,8 +98,13 @@ final class GameLifecycleControllerTest extends TestCase
             ->method('createAndStart')
             ->with($gameId, $dto)
             ->willReturn($game);
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects($this->once())
+            ->method('wrapInTransaction')
+            ->willReturnCallback(static fn (callable $operation): mixed => $operation());
+        $transaction = new RetryingTransaction($entityManager, $this->createStub(ManagerRegistry::class));
 
-        $response = $this->controller->createAndStartRematch($gameId, $rematchStartService, $dto);
+        $response = $this->controller->createAndStartRematch($gameId, $rematchStartService, $transaction, $dto);
 
         $this->assertSame($game, $response);
     }

@@ -359,7 +359,7 @@ final class GameRoomController extends AbstractController
     #[Route(path: '/api/room/{id}/rematch', name: 'room_rematch', methods: ['POST'])]
     public function rematch(int $id): array
     {
-        $result = $this->rematchService->createRematch($id);
+        $result = $this->transaction->run(fn (): array => $this->rematchService->createRematch($id));
 
         if (!($result['success'] ?? false)) {
             $result['status'] = Response::HTTP_NOT_FOUND;

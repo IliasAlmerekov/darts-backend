@@ -14,6 +14,8 @@ interface RematchServiceInterface
     /**
      * Create a rematch from an existing game.
     * Creates a new game, copies players from the old game, and returns only rematch-related data.
+     * Must be called inside a transaction: the lobby row stays locked until it ends, so
+     * concurrent rematches into the same lobby cannot add a participant twice.
      *
      * @param int $oldGameId The ID of the game to rematch
      *

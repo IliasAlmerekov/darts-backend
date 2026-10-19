@@ -15,9 +15,7 @@ use App\Service\Game\OpenLobbyServiceInterface;
 use App\Service\Game\RematchService;
 use App\Service\Player\PlayerManagementService;
 use App\Service\Security\GameAccessServiceInterface;
-use App\Service\Persistence\RetryingTransaction;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\Persistence\ManagerRegistry;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -49,7 +47,6 @@ final class RematchServiceTest extends TestCase
             $urlGenerator,
             $access,
             $openLobbyService,
-            new RetryingTransaction($entityManager, $this->createStub(ManagerRegistry::class)),
         );
 
         $result = $service->createRematch(42);
@@ -74,9 +71,6 @@ final class RematchServiceTest extends TestCase
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::atLeastOnce())->method('flush');
-        $entityManager->expects(self::once())
-            ->method('wrapInTransaction')
-            ->willReturnCallback(static fn (callable $callback): mixed => $callback());
 
         $playerManagementService = new PlayerManagementService($gamePlayersRepository, $entityManager);
         $access = $this->createMock(GameAccessServiceInterface::class);
@@ -102,7 +96,6 @@ final class RematchServiceTest extends TestCase
             $urlGenerator,
             $access,
             $openLobbyService,
-            new RetryingTransaction($entityManager, $this->createStub(ManagerRegistry::class)),
         );
 
         $result = $service->createRematch(42);
