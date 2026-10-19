@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Registration;
 
+use App\Dto\RegistrationRequest;
+use App\Exception\Registration\RegistrationAccountExistsException;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -12,14 +14,15 @@ use Symfony\Component\HttpFoundation\Response;
 interface RegistrationServiceInterface
 {
     /**
-     * Registers a player from submitted data and logs them in.
+     * Registers a player from a validated request and logs them in.
      *
-     * On success the response is the login success response with status 201. On a validation
-     * failure nothing is saved and the result carries the field errors.
+     * On success the response is the login success response with status 201.
      *
-     * @param array<string, mixed> $data
+     * @param RegistrationRequest $request
      *
-     * @return Response|array{success:false,message:string,status:int,errors:array<string,array<int,string>>}
+     * @return Response
+     *
+     * @throws RegistrationAccountExistsException when the email or the username is taken; nobody is logged in
      */
-    public function register(array $data): Response|array;
+    public function register(RegistrationRequest $request): Response;
 }

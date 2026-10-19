@@ -9,16 +9,14 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Exception\Registration\RegistrationRateLimitedException;
-use App\Exception\Request\InvalidJsonBodyException;
+use App\Dto\RegistrationRequest;
 use App\Http\Attribute\ApiResponse;
 use App\Service\Registration\RegistrationServiceInterface;
 use Nelmio\ApiDocBundle\Attribute\Security;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
@@ -27,27 +25,21 @@ use Symfony\Component\Routing\Attribute\Route;
 #[OA\Tag(name: 'Registration')]
 final class RegistrationController extends AbstractController
 {
+    public const string ROUTE = 'app_register';
+
     /**
      * Registers a player from JSON payload and logs them in.
      *
-     * @param Request                      $request
-     * @param RegistrationServiceInterface $registrationService
-     * @param RateLimiterFactoryInterface  $registrationLimiter
+     * RegistrationRateLimitSubscriber counts the request before the payload is mapped, and
+     * RegistrationErrorSubscriber renders mapping and validation failures.
      *
-     * @return Response|array<array-key, mixed>
+     * @param RegistrationRequest          $payload
+     * @param RegistrationServiceInterface $registrationService
+     *
+     * @return Response
+     *
+     * @psalm-suppress PossiblyUnusedMethod Symfony route entry point
      */
-    #[OA\RequestBody(
-        required: true,
-        content: new OA\JsonContent(
-            type: 'object',
-            required: ['username', 'email', 'plainPassword'],
-            properties: [
-                new OA\Property(property: 'username', type: 'string', example: 'alice'),
-                new OA\Property(property: 'email', type: 'string', format: 'email', example: 'alice@example.com'),
-                new OA\Property(property: 'plainPassword', type: 'string', format: 'password', minLength: 8, example: 'secret123'),
-            ]
-        )
-    )]
     #[OA\Response(
         response: Response::HTTP_CREATED,
         description: 'Registrierung erfolgreich. Der Spieler ist angemeldet, der Body entspricht `/api/login/success`. Mit einer Einladung in der Session tritt er dem Spiel bei, die Einladung wird verbraucht.',
@@ -75,7 +67,7 @@ final class RegistrationController extends AbstractController
     )]
     #[OA\Response(
         response: Response::HTTP_BAD_REQUEST,
-        description: 'Validierungsfehler.',
+        description: 'Validierungsfehler: `errors` nennt je Feld (`email`, `username`, `plainPassword`) die Meldungen. Ein Body, der kein JSON ist, antwortet mit `REQUEST_INVALID_JSON_BODY`.',
         content: new OA\JsonContent(
             type: 'object',
             required: ['success', 'message'],
@@ -87,6 +79,19 @@ final class RegistrationController extends AbstractController
                     type: 'object',
                     additionalProperties: new OA\AdditionalProperties(type: 'array', items: new OA\Items(type: 'string'))
                 ),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: Response::HTTP_CONFLICT,
+        description: 'E-Mail-Adresse oder Benutzername gehören schon zu einem Konto. Die Antwort nennt nicht, welches Feld betroffen ist. Es wird kein Konto angelegt und niemand angemeldet.',
+        content: new OA\JsonContent(
+            type: 'object',
+            required: ['success', 'error', 'message'],
+            properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: false),
+                new OA\Property(property: 'error', type: 'string', example: 'REGISTRATION_ACCOUNT_EXISTS'),
+                new OA\Property(property: 'message', type: 'string', example: 'Ein Konto mit diesen Daten existiert bereits.'),
             ]
         )
     )]
@@ -108,23 +113,12 @@ final class RegistrationController extends AbstractController
     )]
     #[Security(name: null)]
     #[ApiResponse]
-    #[Route('/api/register', name: 'app_register', methods: ['POST'], format: 'json')]
+    #[Route('/api/register', name: self::ROUTE, methods: ['POST'], format: 'json')]
     public function register(
-        Request $request,
+        #[MapRequestPayload(acceptFormat: 'json', validationFailedStatusCode: Response::HTTP_BAD_REQUEST)]
+        RegistrationRequest $payload,
         RegistrationServiceInterface $registrationService,
-        RateLimiterFactoryInterface $registrationLimiter,
-    ): Response|array {
-        // Before any registration work: every request counts, whatever its outcome.
-        $rateLimit = $registrationLimiter->create($request->getClientIp() ?? 'unknown')->consume();
-        if (!$rateLimit->isAccepted()) {
-            throw new RegistrationRateLimitedException($rateLimit->getRetryAfter());
-        }
-
-        $data = json_decode($request->getContent(), true);
-        if (JSON_ERROR_NONE !== json_last_error() || !is_array($data)) {
-            throw new InvalidJsonBodyException();
-        }
-
-        return $registrationService->register($data);
+    ): Response {
+        return $registrationService->register($payload);
     }
 }

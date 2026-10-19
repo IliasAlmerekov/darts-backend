@@ -4,18 +4,17 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Registration;
 
+use App\Dto\RegistrationRequest;
 use App\Entity\User;
-use App\Form\RegistrationFormType;
+use App\Exception\Registration\RegistrationAccountExistsException;
 use App\Service\Registration\RegistrationService;
+use Doctrine\DBAL\Driver\Exception as DriverException;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Component\Form\FormError;
-use Symfony\Component\Form\FormErrorIterator;
-use Symfony\Component\Form\FormFactoryInterface;
-use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -24,7 +23,6 @@ use Symfony\Component\Security\Http\Authenticator\Passport\Badge\RememberMeBadge
 #[AllowMockObjectsWithoutExpectations]
 final class RegistrationServiceTest extends TestCase
 {
-    private FormFactoryInterface&MockObject $formFactory;
     private UserPasswordHasherInterface&MockObject $passwordHasher;
     private EntityManagerInterface&MockObject $entityManager;
     private Security&MockObject $security;
@@ -32,84 +30,22 @@ final class RegistrationServiceTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->formFactory = $this->createMock(FormFactoryInterface::class);
         $this->passwordHasher = $this->createMock(UserPasswordHasherInterface::class);
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
         $this->security = $this->createMock(Security::class);
 
         $this->service = new RegistrationService(
-            $this->formFactory,
             $this->passwordHasher,
             $this->entityManager,
             $this->security,
         );
     }
 
-    public function testRegisterReturnsErrorsWhenFormInvalid(): void
+    public function testRegisterCreatesUserAndLogsThemIn(): void
     {
-        $data = ['username' => 'john'];
-        $form = $this->createMock(FormInterface::class);
-        $field = $this->createMock(FormInterface::class);
-        $field->method('getName')->willReturn('username');
-
-        $error = new FormError('invalid username');
-        $error->setOrigin($field);
-        $errors = new FormErrorIterator($form, [$error]);
-
-        $form->expects(self::once())->method('submit')->with($data);
-        $form->method('isSubmitted')->willReturn(true);
-        $form->method('isValid')->willReturn(false);
-        $form->method('getErrors')->with(true)->willReturn($errors);
-
-        $this->formFactory
-            ->expects(self::once())
-            ->method('create')
-            ->with(RegistrationFormType::class, self::isInstanceOf(User::class))
-            ->willReturn($form);
-
-        $this->security->expects(self::never())->method('login');
-
-        $result = $this->service->register($data);
-
-        self::assertIsArray($result);
-        self::assertFalse($result['success']);
-        self::assertSame(Response::HTTP_BAD_REQUEST, $result['status']);
-        self::assertArrayHasKey('errors', $result);
-        self::assertSame(['invalid username'], $result['errors']['username']);
-    }
-
-    public function testRegisterCreatesUserAndLogsThemInWhenFormValid(): void
-    {
-        $data = [
-            'username' => 'alice',
-            'email' => 'alice@test.dev',
-            'plainPassword' => 'secret',
-        ];
-
-        $form = $this->createMock(FormInterface::class);
-        $plainPasswordField = $this->createMock(FormInterface::class);
-        $plainPasswordField->method('getData')->willReturn('secret');
-        $usernameField = $this->createMock(FormInterface::class);
-        $usernameField->method('getData')->willReturn('alice');
-        $emailField = $this->createMock(FormInterface::class);
-        $emailField->method('getData')->willReturn('alice@test.dev');
-
-        $form->expects(self::once())->method('submit')->with($data);
-        $form->method('isSubmitted')->willReturn(true);
-        $form->method('isValid')->willReturn(true);
-        $form->method('get')->willReturnMap([
-            ['plainPassword', $plainPasswordField],
-            ['username', $usernameField],
-            ['email', $emailField],
-        ]);
+        $request = $this->request('alice', 'alice@test.dev', 'secret12');
 
         $persistedUser = null;
-        $this->formFactory
-            ->expects(self::once())
-            ->method('create')
-            ->with(RegistrationFormType::class, self::isInstanceOf(User::class))
-            ->willReturn($form);
-
         $this->passwordHasher
             ->expects(self::once())
             ->method('hashPassword')
@@ -143,45 +79,53 @@ final class RegistrationServiceTest extends TestCase
             )
             ->willReturn($loginResponse);
 
-        $result = $this->service->register($data);
+        $result = $this->service->register($request);
 
         self::assertSame($loginResponse, $result);
         self::assertSame(Response::HTTP_CREATED, $loginResponse->getStatusCode());
         self::assertInstanceOf(User::class, $persistedUser);
         self::assertSame('alice', $persistedUser->getUsername());
         self::assertSame('alice@test.dev', $persistedUser->getEmail());
-        self::assertSame('hashed_secret', $persistedUser->getPassword());
+        self::assertSame('hashed_secret12', $persistedUser->getPassword());
         self::assertContains('ROLE_PLAYER', $persistedUser->getRoles());
     }
 
     public function testRegisterKeepsAFailedLoginStatus(): void
     {
-        $this->givenValidForm(['username' => 'bob', 'email' => 'bob@test.dev', 'plainPassword' => 'secret']);
+        $this->passwordHasher->method('hashPassword')->willReturn('hashed');
         $loginResponse = new JsonResponse(['success' => false, 'redirect' => '/start'], Response::HTTP_BAD_REQUEST);
         $this->security->method('login')->willReturn($loginResponse);
 
-        $result = $this->service->register(['username' => 'bob', 'email' => 'bob@test.dev', 'plainPassword' => 'secret']);
+        $result = $this->service->register($this->request('bob', 'bob@test.dev', 'secret12'));
 
         self::assertSame($loginResponse, $result);
         self::assertSame(Response::HTTP_BAD_REQUEST, $loginResponse->getStatusCode());
     }
 
-    /**
-     * @param array{username: string, email: string, plainPassword: string} $data
-     */
-    private function givenValidForm(array $data): void
+    public function testUniqueIndexViolationOnFlushBecomesAccountExistsWithoutLogin(): void
     {
-        $form = $this->createMock(FormInterface::class);
-        $form->method('isSubmitted')->willReturn(true);
-        $form->method('isValid')->willReturn(true);
-        $fields = [];
-        foreach ($data as $name => $value) {
-            $field = $this->createMock(FormInterface::class);
-            $field->method('getData')->willReturn($value);
-            $fields[] = [$name, $field];
-        }
-        $form->method('get')->willReturnMap($fields);
-        $this->formFactory->method('create')->willReturn($form);
         $this->passwordHasher->method('hashPassword')->willReturn('hashed');
+        $violation = new UniqueConstraintViolationException($this->createStub(DriverException::class), null);
+        $this->entityManager->method('flush')->willThrowException($violation);
+        $this->security->expects(self::never())->method('login');
+
+        try {
+            $this->service->register($this->request('carol', 'carol@test.dev', 'secret12'));
+            self::fail('Expected RegistrationAccountExistsException.');
+        } catch (RegistrationAccountExistsException $exception) {
+            self::assertSame(Response::HTTP_CONFLICT, $exception->getStatusCode());
+            self::assertSame('REGISTRATION_ACCOUNT_EXISTS', $exception->getErrorCode());
+            self::assertSame('Ein Konto mit diesen Daten existiert bereits.', $exception->getMessage());
+        }
+    }
+
+    private function request(string $username, string $email, string $plainPassword): RegistrationRequest
+    {
+        $request = new RegistrationRequest();
+        $request->username = $username;
+        $request->email = $email;
+        $request->plainPassword = $plainPassword;
+
+        return $request;
     }
 }
