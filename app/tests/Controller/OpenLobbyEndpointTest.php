@@ -229,6 +229,28 @@ final class OpenLobbyEndpointTest extends WebTestCase
         self::assertSame([$vanya->getId(), $bob->getId(), $anna->getId()], $this->seatedPlayerIds($reloaded));
     }
 
+    public function testRematchStartLeavesOutPositionsOfPlayersTheFullLobbySkipped(): void
+    {
+        $lobbyPlayers = array_map(fn (int $index): User => $this->createPlayer('lobby'.$index), range(1, 9));
+        $bob = $this->createPlayer('bob');
+        $vanya = $this->createPlayer('vanya');
+        $finished = $this->createGame(GameStatus::Finished, [$bob, $vanya]);
+        $lobby = $this->createGame(GameStatus::Lobby, $lobbyPlayers);
+
+        $this->postJson(
+            sprintf('/api/game/%d/rematch/start', $finished->getGameId()),
+            ['playerPositions' => [(int) $vanya->getId(), (int) $bob->getId()]],
+        );
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        $reloaded = $this->reload($lobby);
+        self::assertSame(GameStatus::Started, $reloaded->getStatus());
+        self::assertSame(
+            [$bob->getId(), ...array_map(static fn (User $player): ?int => $player->getId(), $lobbyPlayers)],
+            $this->seatedPlayerIds($reloaded),
+        );
+    }
+
     public function testRematchStartWithoutOpenLobbyCreatesAndStartsOne(): void
     {
         $bob = $this->createPlayer('bob');

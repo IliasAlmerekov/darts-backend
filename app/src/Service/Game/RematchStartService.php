@@ -68,7 +68,8 @@ final readonly class RematchStartService implements RematchStartServiceInterface
 
     /**
      * The client sends positions for the old game's players, but a reused lobby can hold more
-     * participants (ADR 0003). They follow the sent order, in their lobby order.
+     * participants (ADR 0003). They follow the sent order, in their lobby order. Positions of
+     * players the full lobby skipped are dropped.
      *
      * @param Game             $lobby
      * @param StartGameRequest $dto
@@ -83,10 +84,17 @@ final readonly class RematchStartService implements RematchStartServiceInterface
 
         $seats = $lobby->getGamePlayers()->toArray();
         usort($seats, static fn (GamePlayers $a, GamePlayers $b): int => $a->getPosition() <=> $b->getPosition());
-        $positions = $dto->playerPositions;
+        $seatedIds = [];
         foreach ($seats as $seat) {
             $playerId = $seat->getPlayer()?->getId();
-            if (null !== $playerId && !in_array($playerId, $positions, true)) {
+            if (null !== $playerId) {
+                $seatedIds[] = $playerId;
+            }
+        }
+        // A full lobby skips some of the old game's players; their positions go too.
+        $positions = array_values(array_intersect($dto->playerPositions, $seatedIds));
+        foreach ($seatedIds as $playerId) {
+            if (!in_array($playerId, $positions, true)) {
                 $positions[] = $playerId;
             }
         }

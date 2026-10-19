@@ -18,8 +18,10 @@ use App\Dto\StartGameRequest;
 use App\Entity\Game;
 use App\Exception\ApiExceptionInterface;
 use App\Exception\Game\GameIdMissingException;
+use App\Exception\Game\GameNotFoundException;
 use App\EventSubscriber\ApiViewSubscriber;
 use App\Http\Attribute\ApiResponse;
+use App\Repository\GameRepositoryInterface;
 use App\Service\Game\GameAbortServiceInterface;
 use App\Service\Game\GameFinishServiceInterface;
 use App\Service\Game\GameReopenServiceInterface;
@@ -52,6 +54,7 @@ final class GameLifecycleController extends AbstractController
      * @param Game                         $game
      * @param GameStartServiceInterface    $gameStartService
      * @param GameServiceInterface         $gameService
+     * @param GameRepositoryInterface      $gameRepository
      * @param RetryingTransactionInterface $transaction
      * @param Request                      $request
      * @param StartGameRequest             $dto
@@ -72,15 +75,22 @@ final class GameLifecycleController extends AbstractController
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht.')]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
     #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'], format: 'json')]
-    public function start(#[AttributeMapEntity(id: 'gameId')] Game $game, GameStartServiceInterface $gameStartService, GameServiceInterface $gameService, RetryingTransactionInterface $transaction, Request $request, #[MapRequestPayload] StartGameRequest $dto): Game
+    public function start(#[AttributeMapEntity(id: 'gameId')] Game $game, GameStartServiceInterface $gameStartService, GameServiceInterface $gameService, GameRepositoryInterface $gameRepository, RetryingTransactionInterface $transaction, Request $request, #[MapRequestPayload] StartGameRequest $dto): Game
     {
-        $transaction->run(static fn () => $gameStartService->start($game, $dto));
+        $gameId = $game->getGameId() ?? throw new GameNotFoundException();
+        $started = $transaction->run(static function () use ($gameRepository, $gameStartService, $gameId, $dto): Game {
+            // A retry follows resetManager(), which detaches the game the route resolved.
+            $game = $gameRepository->findOneByGameId($gameId) ?? throw new GameNotFoundException();
+            $gameStartService->start($game, $dto);
+
+            return $game;
+        });
         $request->attributes->set(
             ApiViewSubscriber::RESPONSE_HEADERS_REQUEST_ATTRIBUTE,
-            $this->createStateVersionHeaders($gameService->buildStateVersion($game)),
+            $this->createStateVersionHeaders($gameService->buildStateVersion($started)),
         );
 
-        return $game;
+        return $started;
     }
 
     /**
