@@ -49,7 +49,7 @@ The screen on a player's phone after they join a room and before the admin start
 _Avoid_: Joined page, lobby
 
 **Current game**:
-The game a player takes part in right now. A player has at most one; joining another game replaces it.
+The game a player takes part in right now. A player has at most one; joining another game replaces it. A game stops being anyone's current game once the tablet opens a lobby or starts another game.
 _Avoid_: active game
 
 **Profile**:

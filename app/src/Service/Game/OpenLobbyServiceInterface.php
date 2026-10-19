@@ -16,8 +16,9 @@ interface OpenLobbyServiceInterface
 {
     /**
      * Returns the game in the lobby. Creates it when no game is in the lobby, and returns the
-     * other request's lobby when that request created one first. Must be called inside a
-     * transaction: the lobby row stays locked until it ends.
+     * other request's lobby when that request created one first. Either way it aborts every
+     * started game first (ADR 0004). Must be called inside a transaction: the lobby row stays
+     * locked until it ends.
      *
      * @return OpenLobby
      */

@@ -319,13 +319,14 @@ final class GameLifecycleControllerTest extends TestCase
     public function testReopenReturnsGameState(): void
     {
         $game = $this->createMock(Game::class);
+        $game->method('getGameId')->willReturn(7);
         $reopenService = $this->createMock(GameReopenServiceInterface::class);
         $reopenService->expects($this->once())->method('reopen')->with($game);
 
         $gameService = $this->createMock(GameServiceInterface::class);
         $gameService->method('createGameDto')->willReturn($this->dummyGameDto());
 
-        $response = $this->controller->reopen($game, $reopenService, $gameService);
+        $response = $this->controller->reopen($game, $reopenService, $gameService, $this->gameRepositoryFinding($game), $this->runningTransaction());
 
         $this->assertInstanceOf(GameResponseDto::class, $response);
     }

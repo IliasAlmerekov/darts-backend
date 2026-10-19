@@ -65,6 +65,8 @@ final readonly class GameStartService implements GameStartServiceInterface
             throw new GameStartNotAllowedException($status);
         }
         $this->guardPlayerCount($game, $dto);
+        // The tablet runs one game at a time (ADR 0004).
+        $this->gameRepository->abortStartedGames($game->getGameId());
         $game->setStatus(GameStatus::Started);
         if (null !== $dto->startScore) {
             $game->setStartScore($dto->startScore);

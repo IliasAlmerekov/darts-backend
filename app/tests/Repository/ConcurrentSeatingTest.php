@@ -16,6 +16,7 @@ use App\Repository\InvitationRepository;
 use App\Service\Player\PlayerManagementService;
 use App\Tests\Support\ScratchDatabase;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Exception\LockWaitTimeoutException;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
@@ -23,7 +24,8 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
- * Seats and invitations committed by another request after this request's snapshot must still count.
+ * Seats, invitations and started games committed by another request after this request's
+ * snapshot must still count.
  *
  * Two real connections to a scratch database: "request" runs the code under test inside a
  * transaction whose REPEATABLE READ snapshot is already taken, "other" commits a row in
@@ -54,9 +56,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         /** @var EntityManagerInterface $testEntityManager */
         $testEntityManager = static::getContainer()->get(EntityManagerInterface::class);
         $this->entityManager = new EntityManager($this->request, $testEntityManager->getConfiguration());
-        $registry = $this->createMock(ManagerRegistry::class);
-        $registry->method('getManagerForClass')->willReturn($this->entityManager);
-        $this->gamePlayersRepository = new GamePlayersRepository($registry);
+        $this->gamePlayersRepository = new GamePlayersRepository($this->registry());
     }
 
     protected function tearDown(): void
@@ -107,9 +107,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
     public function testFindOneByGameIdForShareSeesAnInvitationCommittedAfterTheSnapshot(): void
     {
         $lobby = $this->insertGame('lobby');
-        $registry = $this->createMock(ManagerRegistry::class);
-        $registry->method('getManagerForClass')->willReturn($this->entityManager);
-        $invitationRepository = new InvitationRepository($registry);
+        $invitationRepository = new InvitationRepository($this->registry());
 
         $this->request->beginTransaction();
         $this->takeSnapshot();
@@ -127,9 +125,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $anna = $this->insertUser('anna');
         $lobby = $this->insertGame('lobby');
         $this->insertSeat($lobby, $bob, 1);
-        $registry = $this->createMock(ManagerRegistry::class);
-        $registry->method('getManagerForClass')->willReturn($this->entityManager);
-        $gameRepository = new GameRepository($registry);
+        $gameRepository = new GameRepository($this->registry());
 
         $this->request->beginTransaction();
         $game = $this->entityManager->find(Game::class, $lobby);
@@ -144,6 +140,84 @@ final class ConcurrentSeatingTest extends KernelTestCase
 
         self::assertSame(501, $game->getStartScore());
         self::assertCount(2, $game->getGamePlayers());
+    }
+
+    public function testAbortStartedGamesAbortsAGameStartedAfterTheSnapshot(): void
+    {
+        $abandoned = $this->insertGame('started');
+        $finished = $this->insertGame('finished');
+        $lobby = $this->insertGame('lobby');
+        $gameRepository = new GameRepository($this->registry());
+
+        $this->request->beginTransaction();
+        $this->takeSnapshot();
+        // Another request starts a game and commits while this one runs.
+        $startedLater = $this->insertGame('started');
+        $gameRepository->abortStartedGames($lobby);
+        $this->request->commit();
+
+        self::assertSame(
+            [[$abandoned, 'aborted'], [$finished, 'finished'], [$lobby, 'lobby'], [$startedLater, 'aborted']],
+            $this->other->fetchAllNumeric('SELECT game_id, status FROM game ORDER BY game_id'),
+        );
+    }
+
+    public function testAbortStartedGamesWaitsForAParallelStartAndAbortsItOnRetry(): void
+    {
+        $first = $this->insertGame('lobby');
+        $second = $this->insertGame('finished');
+        $gameRepository = new GameRepository($this->registry());
+
+        // Another request aborts the started games, starts the first game and has not committed.
+        $this->other->beginTransaction();
+        $this->other->executeStatement("UPDATE game SET status = 'aborted' WHERE status = 'started' AND game_id <> ?", [$first]);
+        $this->other->update('game', ['status' => 'started'], ['game_id' => $first]);
+
+        // This request reopens the second game in parallel, so its bulk update has to wait.
+        $this->request->executeStatement('SET SESSION innodb_lock_wait_timeout = 1');
+        $this->request->beginTransaction();
+        try {
+            $gameRepository->abortStartedGames($second);
+            self::fail('The bulk update did not wait for the parallel start.');
+        } catch (LockWaitTimeoutException) {
+            $this->request->rollBack();
+        }
+        $this->other->commit();
+
+        // RetryingTransaction runs the request again, which now aborts the committed game.
+        $this->request->beginTransaction();
+        $gameRepository->abortStartedGames($second);
+        $this->request->update('game', ['status' => 'started'], ['game_id' => $second]);
+        $this->request->commit();
+
+        self::assertSame(
+            [[$first, 'aborted'], [$second, 'started']],
+            $this->other->fetchAllNumeric('SELECT game_id, status FROM game ORDER BY game_id'),
+        );
+    }
+
+    public function testAbortStartedGamesKeepsTheExceptedGameStarted(): void
+    {
+        $other = $this->insertGame('started');
+        $kept = $this->insertGame('started');
+
+        (new GameRepository($this->registry()))->abortStartedGames($kept);
+
+        self::assertSame(
+            [[$other, 'aborted'], [$kept, 'started']],
+            $this->other->fetchAllNumeric('SELECT game_id, status FROM game ORDER BY game_id'),
+        );
+    }
+
+    /**
+     * Repositories built on it run their queries through the "request" connection.
+     */
+    private function registry(): ManagerRegistry
+    {
+        $registry = $this->createMock(ManagerRegistry::class);
+        $registry->method('getManagerForClass')->willReturn($this->entityManager);
+
+        return $registry;
     }
 
     /**
