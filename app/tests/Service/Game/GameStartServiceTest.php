@@ -11,6 +11,7 @@ use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Exception\Game\GameMustHaveValidPlayerCountException;
 use App\Exception\Game\GameStartNotAllowedException;
+use App\Repository\GameRepositoryInterface;
 use App\Repository\RoundRepositoryInterface;
 use App\Service\Game\GameSetupService;
 use App\Service\Game\GameStartService;
@@ -43,7 +44,7 @@ final class GameStartServiceTest extends TestCase
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects(self::once())->method('flush');
 
-        $service = new GameStartService($setupService, $em, $this->createAccessService(), $this->createRoundRepository(false));
+        $service = new GameStartService($setupService, $em, $this->createAccessService(), $this->createRoundRepository(false), $this->createStub(GameRepositoryInterface::class));
         $service->start($game, $dto);
 
         self::assertSame(GameStatus::Started, $game->getStatus());
@@ -66,7 +67,7 @@ final class GameStartServiceTest extends TestCase
         $setupService = new GameSetupService();
         $em = $this->createMock(EntityManagerInterface::class);
 
-        $service = new GameStartService($setupService, $em, $this->createAccessService(), $this->createRoundRepository(false));
+        $service = new GameStartService($setupService, $em, $this->createAccessService(), $this->createRoundRepository(false), $this->createStub(GameRepositoryInterface::class));
 
         $this->expectException(GameMustHaveValidPlayerCountException::class);
         $service->start($game, new StartGameRequest());
@@ -83,7 +84,7 @@ final class GameStartServiceTest extends TestCase
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects(self::never())->method('flush');
 
-        $service = new GameStartService($setupService, $em, $this->createAccessService(), $this->createRoundRepository(false));
+        $service = new GameStartService($setupService, $em, $this->createAccessService(), $this->createRoundRepository(false), $this->createStub(GameRepositoryInterface::class));
 
         $this->expectException(GameStartNotAllowedException::class);
         $service->start($game, new StartGameRequest());
@@ -100,7 +101,7 @@ final class GameStartServiceTest extends TestCase
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects(self::never())->method('flush');
 
-        $service = new GameStartService($setupService, $em, $this->createAccessService(), $this->createRoundRepository(false));
+        $service = new GameStartService($setupService, $em, $this->createAccessService(), $this->createRoundRepository(false), $this->createStub(GameRepositoryInterface::class));
 
         $this->expectException(GameStartNotAllowedException::class);
         $service->start($game, new StartGameRequest());
@@ -124,7 +125,7 @@ final class GameStartServiceTest extends TestCase
         $em->expects(self::once())->method('flush');
 
         $roundRepository = $this->createRoundRepositoryForGame(42, true);
-        $service = new GameStartService($setupService, $em, $this->createAccessService(), $roundRepository);
+        $service = new GameStartService($setupService, $em, $this->createAccessService(), $roundRepository, $this->createStub(GameRepositoryInterface::class));
         $service->start($game, $dto);
 
         self::assertSame(GameStatus::Started, $game->getStatus());
@@ -148,7 +149,7 @@ final class GameStartServiceTest extends TestCase
         $em->expects(self::once())->method('flush');
 
         $roundRepository = $this->createRoundRepositoryForGame(43, false);
-        $service = new GameStartService($setupService, $em, $this->createAccessService(), $roundRepository);
+        $service = new GameStartService($setupService, $em, $this->createAccessService(), $roundRepository, $this->createStub(GameRepositoryInterface::class));
         $service->start($game, $dto);
 
         self::assertSame(GameStatus::Started, $game->getStatus());
@@ -173,7 +174,7 @@ final class GameStartServiceTest extends TestCase
         $em->expects(self::once())->method('flush');
 
         $roundRepository = $this->createRoundRepositoryNeverCalled();
-        $service = new GameStartService($setupService, $em, $this->createAccessService(), $roundRepository);
+        $service = new GameStartService($setupService, $em, $this->createAccessService(), $roundRepository, $this->createStub(GameRepositoryInterface::class));
         $service->start($game, $dto);
 
         self::assertSame(GameStatus::Started, $game->getStatus());

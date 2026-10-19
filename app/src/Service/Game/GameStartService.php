@@ -16,6 +16,7 @@ use App\Exception\Game\GameMustHaveValidPlayerCountException;
 use App\Exception\Game\GameStartNotAllowedException;
 use App\Exception\Game\PlayerPositionsCountMismatchException;
 use App\Enum\GameStatus;
+use App\Repository\GameRepositoryInterface;
 use App\Repository\RoundRepositoryInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use DateTime;
@@ -35,12 +36,14 @@ final readonly class GameStartService implements GameStartServiceInterface
      * @param EntityManagerInterface     $entityManager
      * @param GameAccessServiceInterface $gameAccessService
      * @param RoundRepositoryInterface   $roundRepository
+     * @param GameRepositoryInterface    $gameRepository
      */
     public function __construct(
         private GameSetupService $gameSetupService,
         private EntityManagerInterface $entityManager,
         private GameAccessServiceInterface $gameAccessService,
-        private RoundRepositoryInterface $roundRepository
+        private RoundRepositoryInterface $roundRepository,
+        private GameRepositoryInterface $gameRepository,
     ) {
     }
 
@@ -53,6 +56,9 @@ final readonly class GameStartService implements GameStartServiceInterface
     #[Override]
     public function start(Game $game, StartGameRequest $dto): void
     {
+        // The request may hold the game from before a room create or join committed; start
+        // from the locked, current game and seats.
+        $this->gameRepository->refreshWithSeatsForUpdate($game);
         $this->gameAccessService->assertPlayerInGameOrAdmin($game);
         $status = $game->getStatus();
         if (GameStatus::Lobby !== $status) {

@@ -49,11 +49,12 @@ final class GameLifecycleController extends AbstractController
     /**
      * Starts a game with provided settings.
      *
-     * @param Game                      $game
-     * @param GameStartServiceInterface $gameStartService
-     * @param GameServiceInterface      $gameService
-     * @param Request                   $request
-     * @param StartGameRequest          $dto
+     * @param Game                         $game
+     * @param GameStartServiceInterface    $gameStartService
+     * @param GameServiceInterface         $gameService
+     * @param RetryingTransactionInterface $transaction
+     * @param Request                      $request
+     * @param StartGameRequest             $dto
      *
      * @return Game
      *
@@ -71,9 +72,9 @@ final class GameLifecycleController extends AbstractController
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht.')]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
     #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'], format: 'json')]
-    public function start(#[AttributeMapEntity(id: 'gameId')] Game $game, GameStartServiceInterface $gameStartService, GameServiceInterface $gameService, Request $request, #[MapRequestPayload] StartGameRequest $dto): Game
+    public function start(#[AttributeMapEntity(id: 'gameId')] Game $game, GameStartServiceInterface $gameStartService, GameServiceInterface $gameService, RetryingTransactionInterface $transaction, Request $request, #[MapRequestPayload] StartGameRequest $dto): Game
     {
-        $gameStartService->start($game, $dto);
+        $transaction->run(static fn () => $gameStartService->start($game, $dto));
         $request->attributes->set(
             ApiViewSubscriber::RESPONSE_HEADERS_REQUEST_ATTRIBUTE,
             $this->createStateVersionHeaders($gameService->buildStateVersion($game)),

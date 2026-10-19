@@ -220,11 +220,11 @@ final class InvitationServiceTest extends TestCase
             ->method('find')
             ->with(50)
             ->willReturn($game);
-        $this->gamePlayersRepository
+        $this->seatParticipants($game, 4);
+        $this->gameRepository
             ->expects(self::once())
-            ->method('count')
-            ->with(['game' => 50])
-            ->willReturn(4);
+            ->method('refreshWithSeatsForUpdate')
+            ->with($game);
 
         $removedKeys = [];
         $session->expects(self::exactly(2))
@@ -323,11 +323,11 @@ final class InvitationServiceTest extends TestCase
             ->method('find')
             ->with(61)
             ->willReturn($game);
-        $this->gamePlayersRepository
+        $this->seatParticipants($game, 10);
+        $this->gameRepository
             ->expects(self::once())
-            ->method('count')
-            ->with(['game' => 61])
-            ->willReturn(10);
+            ->method('refreshWithSeatsForUpdate')
+            ->with($game);
         $this->gamePlayersRepository
             ->expects(self::once())
             ->method('isPlayerInGameForShare')
@@ -375,5 +375,12 @@ final class InvitationServiceTest extends TestCase
         $ref->setValue($user, $id);
 
         return $user;
+    }
+
+    private function seatParticipants(Game $game, int $count): void
+    {
+        for ($position = 1; $position <= $count; $position++) {
+            $game->addGamePlayer((new GamePlayers())->setPosition($position));
+        }
     }
 }

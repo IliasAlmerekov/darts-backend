@@ -9,7 +9,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
+use App\Entity\Game;
 use App\Repository\GamePlayersRepository;
+use App\Repository\GameRepository;
 use App\Repository\InvitationRepository;
 use App\Service\Player\PlayerManagementService;
 use App\Tests\Support\ScratchDatabase;
@@ -117,6 +119,31 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $this->request->commit();
 
         self::assertSame($lobby, $invitation?->getGameId());
+    }
+
+    public function testRefreshWithSeatsForUpdateSeesTheGameAndSeatsCommittedAfterTheSnapshot(): void
+    {
+        $bob = $this->insertUser('bob');
+        $anna = $this->insertUser('anna');
+        $lobby = $this->insertGame('lobby');
+        $this->insertSeat($lobby, $bob, 1);
+        $registry = $this->createMock(ManagerRegistry::class);
+        $registry->method('getManagerForClass')->willReturn($this->entityManager);
+        $gameRepository = new GameRepository($registry);
+
+        $this->request->beginTransaction();
+        $game = $this->entityManager->find(Game::class, $lobby);
+        self::assertInstanceOf(Game::class, $game);
+        self::assertCount(1, $game->getGamePlayers());
+        // A room create changes the settings and a join adds Anna, both committed while this
+        // request waits for the lock.
+        $this->other->update('game', ['start_score' => 501], ['game_id' => $lobby]);
+        $this->insertSeat($lobby, $anna, 2);
+        $gameRepository->refreshWithSeatsForUpdate($game);
+        $this->request->commit();
+
+        self::assertSame(501, $game->getStartScore());
+        self::assertCount(2, $game->getGamePlayers());
     }
 
     /**

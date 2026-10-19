@@ -65,7 +65,7 @@ final class GameLifecycleControllerTest extends TestCase
             ->willReturn('state-v1');
         $request = new Request();
 
-        $response = $this->controller->start($game, $startService, $gameService, $request, $dto);
+        $response = $this->controller->start($game, $startService, $gameService, $this->runningTransaction(), $request, $dto);
 
         $this->assertSame($game, $response);
         $this->assertSame([
@@ -85,7 +85,7 @@ final class GameLifecycleControllerTest extends TestCase
         $request = new Request();
 
         $this->expectException(GameMustHaveValidPlayerCountException::class);
-        $this->controller->start($game, $startService, $gameService, $request, $dto);
+        $this->controller->start($game, $startService, $gameService, $this->runningTransaction(), $request, $dto);
     }
 
     public function testCreateAndStartRematchReturnsStartedGame(): void
@@ -570,5 +570,13 @@ final class GameLifecycleControllerTest extends TestCase
                 ),
             ],
         );
+    }
+
+    private function runningTransaction(): RetryingTransaction
+    {
+        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $operation): mixed => $operation());
+
+        return new RetryingTransaction($entityManager, $this->createStub(ManagerRegistry::class));
     }
 }

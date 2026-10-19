@@ -71,6 +71,18 @@ interface GameRepositoryInterface
     public function findOneByGameIdForUpdate(int $gameId): ?Game;
 
     /**
+     * Locks the game row and its seats until the transaction ends, then reloads the game and
+     * its seat collection. Unlike the entity a request already holds, the reloaded state
+     * includes what other transactions committed while this one waited for the lock.
+     * Must be called inside an open transaction.
+     *
+     * @param Game $game
+     *
+     * @return void
+     */
+    public function refreshWithSeatsForUpdate(Game $game): void;
+
+    /**
      * Returns the game in the lobby; at most one exists (ADR 0003).
      *
      * @return Game|null

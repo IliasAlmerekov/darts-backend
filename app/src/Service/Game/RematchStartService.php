@@ -8,6 +8,7 @@ use App\Dto\StartGameRequest;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Exception\Game\GameNotFoundException;
+use App\Repository\GameRepositoryInterface;
 use LogicException;
 use Override;
 
@@ -22,6 +23,7 @@ final readonly class RematchStartService implements RematchStartServiceInterface
      * @param RematchServiceInterface   $rematchService
      * @param GameRoomServiceInterface  $gameRoomService
      * @param GameStartServiceInterface $gameStartService
+     * @param GameRepositoryInterface   $gameRepository
      *
      * @return void
      */
@@ -29,6 +31,7 @@ final readonly class RematchStartService implements RematchStartServiceInterface
         private RematchServiceInterface $rematchService,
         private GameRoomServiceInterface $gameRoomService,
         private GameStartServiceInterface $gameStartService,
+        private GameRepositoryInterface $gameRepository,
     ) {
     }
 
@@ -56,6 +59,8 @@ final readonly class RematchStartService implements RematchStartServiceInterface
             throw new LogicException(sprintf('Rematch game %d was not found after creation.', $newGameId));
         }
 
+        // The seat collection must include participants who joined while the rematch waited.
+        $this->gameRepository->refreshWithSeatsForUpdate($newGame);
         $this->gameStartService->start($newGame, $this->withLobbyParticipants($newGame, $dto));
 
         return $newGame;

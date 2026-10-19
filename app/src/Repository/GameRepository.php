@@ -15,6 +15,7 @@ use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -161,6 +162,25 @@ SQL,
             ->getQuery()
             ->setLockMode(LockMode::PESSIMISTIC_WRITE)
             ->getOneOrNullResult();
+    }
+
+    /**
+     * @param Game $game
+     *
+     * @return void
+     */
+    #[\Override]
+    public function refreshWithSeatsForUpdate(Game $game): void
+    {
+        $this->createQueryBuilder('g')
+            ->addSelect('seat')
+            ->leftJoin('g.gamePlayers', 'seat')
+            ->andWhere('g.gameId = :gameId')
+            ->setParameter('gameId', $game->getGameId())
+            ->getQuery()
+            ->setLockMode(LockMode::PESSIMISTIC_WRITE)
+            ->setHint(Query::HINT_REFRESH, true)
+            ->getResult();
     }
 
     /**
