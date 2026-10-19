@@ -16,6 +16,7 @@ use App\Repository\InvitationRepository;
 use App\Service\Player\PlayerManagementService;
 use App\Tests\Support\ScratchDatabase;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Exception\LockWaitTimeoutException;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
@@ -165,6 +166,42 @@ final class ConcurrentSeatingTest extends KernelTestCase
 
         self::assertSame(
             [[$abandoned, 'aborted'], [$finished, 'finished'], [$lobby, 'lobby'], [$startedLater, 'aborted']],
+            $this->other->fetchAllNumeric('SELECT game_id, status FROM game ORDER BY game_id'),
+        );
+    }
+
+    public function testAbortStartedGamesWaitsForAParallelStartAndAbortsItOnRetry(): void
+    {
+        $first = $this->insertGame('lobby');
+        $second = $this->insertGame('finished');
+        $registry = $this->createMock(ManagerRegistry::class);
+        $registry->method('getManagerForClass')->willReturn($this->entityManager);
+        $gameRepository = new GameRepository($registry);
+
+        // Another request aborts the started games, starts the first game and has not committed.
+        $this->other->beginTransaction();
+        $this->other->executeStatement("UPDATE game SET status = 'aborted' WHERE status = 'started' AND game_id <> ?", [$first]);
+        $this->other->update('game', ['status' => 'started'], ['game_id' => $first]);
+
+        // This request reopens the second game in parallel, so its bulk update has to wait.
+        $this->request->executeStatement('SET SESSION innodb_lock_wait_timeout = 1');
+        $this->request->beginTransaction();
+        try {
+            $gameRepository->abortStartedGames($second);
+            self::fail('The bulk update did not wait for the parallel start.');
+        } catch (LockWaitTimeoutException) {
+            $this->request->rollBack();
+        }
+        $this->other->commit();
+
+        // RetryingTransaction runs the request again, which now aborts the committed game.
+        $this->request->beginTransaction();
+        $gameRepository->abortStartedGames($second);
+        $this->request->update('game', ['status' => 'started'], ['game_id' => $second]);
+        $this->request->commit();
+
+        self::assertSame(
+            [[$first, 'aborted'], [$second, 'started']],
             $this->other->fetchAllNumeric('SELECT game_id, status FROM game ORDER BY game_id'),
         );
     }
