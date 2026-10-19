@@ -109,7 +109,7 @@ final readonly class GameStartService implements GameStartServiceInterface
     private function guardPlayerCount(Game $game, StartGameRequest $dto): void
     {
         $count = $game->getGamePlayers()->count();
-        if ($count < 2 || $count > 10) {
+        if ($count < 2 || $count > Game::MAX_PARTICIPANTS) {
             throw new GameMustHaveValidPlayerCountException();
         }
 

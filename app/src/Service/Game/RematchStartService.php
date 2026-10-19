@@ -6,6 +6,7 @@ namespace App\Service\Game;
 
 use App\Dto\StartGameRequest;
 use App\Entity\Game;
+use App\Entity\GamePlayers;
 use App\Exception\Game\GameNotFoundException;
 use LogicException;
 use Override;
@@ -55,8 +56,36 @@ final readonly class RematchStartService implements RematchStartServiceInterface
             throw new LogicException(sprintf('Rematch game %d was not found after creation.', $newGameId));
         }
 
-        $this->gameStartService->start($newGame, $dto);
+        $this->gameStartService->start($newGame, $this->withLobbyParticipants($newGame, $dto));
 
         return $newGame;
+    }
+
+    /**
+     * The client sends positions for the old game's players, but a reused lobby can hold more
+     * participants (ADR 0003). They follow the sent order, in their lobby order.
+     *
+     * @param Game             $lobby
+     * @param StartGameRequest $dto
+     *
+     * @return StartGameRequest
+     */
+    private function withLobbyParticipants(Game $lobby, StartGameRequest $dto): StartGameRequest
+    {
+        if (null === $dto->playerPositions) {
+            return $dto;
+        }
+
+        $seats = $lobby->getGamePlayers()->toArray();
+        usort($seats, static fn (GamePlayers $a, GamePlayers $b): int => $a->getPosition() <=> $b->getPosition());
+        $positions = $dto->playerPositions;
+        foreach ($seats as $seat) {
+            $playerId = $seat->getPlayer()?->getId();
+            if (null !== $playerId && !in_array($playerId, $positions, true)) {
+                $positions[] = $playerId;
+            }
+        }
+
+        return $dto->withPlayerPositions($positions);
     }
 }

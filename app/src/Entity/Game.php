@@ -23,6 +23,9 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\UniqueConstraint(name: 'uniq_game_open_lobby', columns: ['open_lobby'])]
 class Game
 {
+    /** The most participants a game can have. */
+    public const int MAX_PARTICIPANTS = 10;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]

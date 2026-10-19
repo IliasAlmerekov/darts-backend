@@ -193,6 +193,42 @@ final class OpenLobbyEndpointTest extends WebTestCase
         self::assertTrue($reloaded->isDoubleOut());
     }
 
+    public function testRematchStopsAddingPlayersWhenTheLobbyIsFull(): void
+    {
+        $lobbyPlayers = array_map(fn (int $index): User => $this->createPlayer('lobby'.$index), range(1, 9));
+        $bob = $this->createPlayer('bob');
+        $vanya = $this->createPlayer('vanya');
+        $finished = $this->createGame(GameStatus::Finished, [$bob, $vanya]);
+        $lobby = $this->createGame(GameStatus::Lobby, $lobbyPlayers);
+
+        $this->postJson(sprintf('/api/room/%d/rematch', $finished->getGameId()));
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        self::assertSame(
+            [...array_map(static fn (User $player): ?int => $player->getId(), $lobbyPlayers), $bob->getId()],
+            $this->seatedPlayerIds($this->reload($lobby)),
+        );
+    }
+
+    public function testRematchStartPlacesLobbyParticipantsMissingFromThePositionsLast(): void
+    {
+        $bob = $this->createPlayer('bob');
+        $vanya = $this->createPlayer('vanya');
+        $anna = $this->createPlayer('anna');
+        $finished = $this->createGame(GameStatus::Finished, [$bob, $vanya]);
+        $lobby = $this->createGame(GameStatus::Lobby, [$anna]);
+
+        $this->postJson(
+            sprintf('/api/game/%d/rematch/start', $finished->getGameId()),
+            ['playerPositions' => [(int) $vanya->getId(), (int) $bob->getId()]],
+        );
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        $reloaded = $this->reload($lobby);
+        self::assertSame(GameStatus::Started, $reloaded->getStatus());
+        self::assertSame([$vanya->getId(), $bob->getId(), $anna->getId()], $this->seatedPlayerIds($reloaded));
+    }
+
     public function testRematchStartWithoutOpenLobbyCreatesAndStartsOne(): void
     {
         $bob = $this->createPlayer('bob');

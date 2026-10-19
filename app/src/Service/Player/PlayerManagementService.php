@@ -159,7 +159,9 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
         $lastPosition = 0;
         // A plain read inside the caller's transaction could miss seats another request
         // committed after the snapshot, and seat those players twice.
-        foreach ($this->gamePlayersRepository->findByGameIdForShare($toGameId) as $seat) {
+        $seats = $this->gamePlayersRepository->findByGameIdForShare($toGameId);
+        $seatCount = count($seats);
+        foreach ($seats as $seat) {
             $playerId = $seat->getPlayer()?->getId();
             if (null !== $playerId) {
                 $seatedPlayerIds[$playerId] = true;
@@ -169,6 +171,9 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
 
         $hasAddedPlayers = false;
         foreach ($this->gamePlayersRepository->findByGameId($fromGameId) as $oldSeat) {
+            if ($seatCount >= Game::MAX_PARTICIPANTS) {
+                break;
+            }
             $player = $oldSeat->getPlayer();
             $playerId = $player?->getId();
             if (null === $player || null === $playerId || isset($seatedPlayerIds[$playerId])) {
@@ -178,6 +183,7 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
             $lastPosition++;
             $this->createGamePlayer($toGameId, $player, $lastPosition);
             $seatedPlayerIds[$playerId] = true;
+            $seatCount++;
             $hasAddedPlayers = true;
         }
 

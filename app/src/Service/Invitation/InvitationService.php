@@ -40,8 +40,6 @@ use Throwable;
  */
 final readonly class InvitationService implements InvitationServiceInterface
 {
-    private const int MAX_GAME_PLAYERS = 10;
-
     /**
      * @param InvitationRepositoryInterface    $invitationRepository
      * @param GamePlayersRepositoryInterface   $gamePlayersRepository
@@ -261,8 +259,8 @@ final readonly class InvitationService implements InvitationServiceInterface
         }
 
         $playersCount = $this->gamePlayersRepository->count(['game' => $gameId]);
-        if ($playersCount >= self::MAX_GAME_PLAYERS) {
-            throw new GameRoomFullException(self::MAX_GAME_PLAYERS);
+        if ($playersCount >= Game::MAX_PARTICIPANTS) {
+            throw new GameRoomFullException(Game::MAX_PARTICIPANTS);
         }
     }
 }
