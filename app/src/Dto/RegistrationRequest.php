@@ -15,15 +15,17 @@ use Symfony\Component\Validator\Constraints as Assert;
 /**
  * Payload DTO for registering a player.
  *
- * Email and username are validated trimmed, and the password as sent, like the text and
- * password fields of the registration form this DTO replaced.
+ * Email and username are validated and saved without surrounding whitespace. The password
+ * is validated and hashed exactly as sent. A missing field stays uninitialized, which the
+ * validator reads as null, so it fails NotBlank. The properties have no default value
+ * because Nelmio then skips the Length limits in the API docs.
  */
 final class RegistrationRequest
 {
     #[OA\Property(format: 'email', example: 'alice@example.com')]
     #[Assert\NotBlank(message: 'Please enter an email address', normalizer: 'trim')]
     #[Assert\Email(message: 'Please enter a valid email address', normalizer: 'trim')]
-    public ?string $email = null;
+    public string $email;
 
     #[OA\Property(example: 'alice')]
     #[Assert\Sequentially([
@@ -36,7 +38,7 @@ final class RegistrationRequest
             normalizer: 'trim',
         ),
     ])]
-    public ?string $username = null;
+    public string $username;
 
     #[OA\Property(format: 'password', example: 'secret123')]
     #[Assert\Sequentially([
@@ -47,5 +49,5 @@ final class RegistrationRequest
             minMessage: 'Your password should be at least {{ limit }} characters long.',
         ),
     ])]
-    public ?string $plainPassword = null;
+    public string $plainPassword;
 }

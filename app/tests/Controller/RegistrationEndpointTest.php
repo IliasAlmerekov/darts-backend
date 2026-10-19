@@ -226,7 +226,7 @@ final class RegistrationEndpointTest extends WebTestCase
         self::assertFalse($payload['success']);
         self::assertSame('Registrierung fehlgeschlagen. Bitte überprüfe deine Eingaben.', $payload['message']);
         self::assertArrayNotHasKey('status', $payload);
-        self::assertSame(['username'], array_keys($payload['errors']));
+        self::assertSame(['username' => ['This value should be of type string.']], $payload['errors']);
         self::assertNull(static::getContainer()->get(UserRepository::class)->findOneBy(['email' => $body['email']]));
     }
 
@@ -277,6 +277,16 @@ final class RegistrationEndpointTest extends WebTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST, (string) $client->getResponse()->getContent());
         $payload = json_decode((string) $client->getResponse()->getContent(), true, flags: JSON_THROW_ON_ERROR);
         self::assertSame(['success' => false, 'error' => 'REQUEST_INVALID_JSON_BODY', 'message' => 'Ungültiger JSON-Body. Bitte überprüfe das Datenformat.'], $payload);
+    }
+
+    public function testNonJsonContentTypeAnswers415NotAJsonError(): void
+    {
+        $client = static::createClient();
+
+        $client->request(Request::METHOD_POST, '/api/register', [], [], ['CONTENT_TYPE' => 'text/plain'], json_encode($this->validBody(), JSON_THROW_ON_ERROR));
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNSUPPORTED_MEDIA_TYPE, (string) $client->getResponse()->getContent());
+        self::assertStringNotContainsString('REQUEST_INVALID_JSON_BODY', (string) $client->getResponse()->getContent());
     }
 
     /**

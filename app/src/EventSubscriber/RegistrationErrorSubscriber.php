@@ -16,17 +16,16 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
-use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
-use Symfony\Component\HttpKernel\Exception\UnsupportedMediaTypeHttpException;
 use Symfony\Component\HttpKernel\KernelEvents;
+use Symfony\Component\Serializer\Exception\NotEncodableValueException;
 use Symfony\Component\Validator\Exception\ValidationFailedException;
 
 /**
  * Renders the registration payload failures in the registration error format.
  *
- * Invalid fields answer 400 with the field errors, as the registration form did. A body
- * that is not JSON answers like InvalidJsonBodyException. Other DTO endpoints keep the
- * default 422 handling.
+ * Invalid fields answer 400 with the field errors per field. A body that cannot be decoded
+ * as JSON answers like InvalidJsonBodyException. Other DTO endpoints keep the default 422
+ * handling.
  *
  * @psalm-suppress UnusedClass Registered via Symfony service container autoconfiguration
  */
@@ -52,12 +51,11 @@ final class RegistrationErrorSubscriber implements EventSubscriberInterface
      */
     public function onKernelException(ExceptionEvent $event): void
     {
-        if (RegistrationController::ROUTE !== $event->getRequest()->attributes->get('_route')) {
+        if (!$event->isMainRequest() || RegistrationController::ROUTE !== $event->getRequest()->attributes->get('_route')) {
             return;
         }
 
-        $exception = $event->getThrowable();
-        $previous = $exception->getPrevious();
+        $previous = $event->getThrowable()->getPrevious();
         if ($previous instanceof ValidationFailedException) {
             $event->setResponse(new JsonResponse(
                 [
@@ -71,7 +69,8 @@ final class RegistrationErrorSubscriber implements EventSubscriberInterface
             return;
         }
 
-        if ($exception instanceof BadRequestHttpException || $exception instanceof UnsupportedMediaTypeHttpException) {
+        // The payload resolver wraps a body it cannot decode in a 400.
+        if ($previous instanceof NotEncodableValueException) {
             $event->setThrowable(new InvalidJsonBodyException());
         }
     }

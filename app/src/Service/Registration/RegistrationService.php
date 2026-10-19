@@ -47,9 +47,9 @@ final readonly class RegistrationService implements RegistrationServiceInterface
     public function register(RegistrationRequest $request): Response
     {
         $user = new User();
-        $user->setUsername(trim((string) $request->username));
-        $user->setEmail(trim((string) $request->email));
-        $user->setPassword($this->passwordHasher->hashPassword($user, (string) $request->plainPassword));
+        $user->setUsername(trim($request->username));
+        $user->setEmail(trim($request->email));
+        $user->setPassword($this->passwordHasher->hashPassword($user, $request->plainPassword));
         $user->setRoles(['ROLE_PLAYER']);
 
         // The unique indexes on email and username are the only duplicate check, so two

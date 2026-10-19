@@ -67,12 +67,13 @@ final class RegistrationController extends AbstractController
     )]
     #[OA\Response(
         response: Response::HTTP_BAD_REQUEST,
-        description: 'Validierungsfehler: `errors` nennt je Feld (`email`, `username`, `plainPassword`) die Meldungen. Ein Body, der kein JSON ist, antwortet mit `REQUEST_INVALID_JSON_BODY`.',
+        description: 'Validierungsfehler: `errors` nennt je Feld (`email`, `username`, `plainPassword`) die Meldungen. Ein Body, der kein gültiges JSON ist, antwortet stattdessen mit `error: REQUEST_INVALID_JSON_BODY`.',
         content: new OA\JsonContent(
             type: 'object',
             required: ['success', 'message'],
             properties: [
                 new OA\Property(property: 'success', type: 'boolean', example: false),
+                new OA\Property(property: 'error', type: 'string', example: 'REQUEST_INVALID_JSON_BODY', description: 'Nur wenn der Body kein gültiges JSON ist.'),
                 new OA\Property(property: 'message', type: 'string'),
                 new OA\Property(
                     property: 'errors',
