@@ -97,7 +97,9 @@ final readonly class RematchService implements RematchServiceInterface
      */
     private function createInvitation(int $gameId): string
     {
-        $invitation = $this->invitationRepository->findOneBy(['gameId' => $gameId]);
+        // A plain read would use the snapshot taken before the lobby lock and miss the
+        // invitation of a rematch that committed while this one waited.
+        $invitation = $this->invitationRepository->findOneByGameIdForShare($gameId);
         if (null === $invitation) {
             $uuid = Uuid::v4();
             $invitation = new Invitation();

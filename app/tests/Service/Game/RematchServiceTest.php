@@ -89,7 +89,7 @@ final class RematchServiceTest extends TestCase
         $gameRoomService = new GameRoomService($gameRepository, $gamePlayersRepository, $playerManagementService, $access, $this->createMock(OpenLobbyServiceInterface::class));
 
         $invitationRepository = $this->createMock(InvitationRepositoryInterface::class);
-        $invitationRepository->method('findOneBy')->willReturn(null);
+        $invitationRepository->method('findOneByGameIdForShare')->willReturn(null);
 
         $urlGenerator = $this->createMock(UrlGeneratorInterface::class);
         $urlGenerator->method('generate')->willReturn('/join/uuid');

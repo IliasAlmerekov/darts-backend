@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace App\Tests\Repository;
 
 use App\Repository\GamePlayersRepository;
+use App\Repository\InvitationRepository;
 use App\Service\Player\PlayerManagementService;
 use App\Tests\Support\ScratchDatabase;
 use Doctrine\DBAL\Connection;
@@ -20,11 +21,11 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
- * Seats committed by another request after this request's snapshot must still count.
+ * Seats and invitations committed by another request after this request's snapshot must still count.
  *
  * Two real connections to a scratch database: "request" runs the code under test inside a
- * transaction whose REPEATABLE READ snapshot is already taken, "other" commits a seat in
- * between. A plain read in "request" would miss that seat and seat the player twice.
+ * transaction whose REPEATABLE READ snapshot is already taken, "other" commits a row in
+ * between. A plain read in "request" would miss that row and insert a second one.
  */
 #[AllowMockObjectsWithoutExpectations]
 final class ConcurrentSeatingTest extends KernelTestCase
@@ -99,6 +100,23 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $this->request->commit();
 
         self::assertTrue($seated);
+    }
+
+    public function testFindOneByGameIdForShareSeesAnInvitationCommittedAfterTheSnapshot(): void
+    {
+        $lobby = $this->insertGame('lobby');
+        $registry = $this->createMock(ManagerRegistry::class);
+        $registry->method('getManagerForClass')->willReturn($this->entityManager);
+        $invitationRepository = new InvitationRepository($registry);
+
+        $this->request->beginTransaction();
+        $this->takeSnapshot();
+        // Another rematch into the same lobby creates its invitation and commits.
+        $this->other->insert('invitation', ['uuid' => '0192f0c4-7d3e-7a6b-9c1d-2e3f4a5b6c7d', 'game_id' => $lobby]);
+        $invitation = $invitationRepository->findOneByGameIdForShare($lobby);
+        $this->request->commit();
+
+        self::assertSame($lobby, $invitation?->getGameId());
     }
 
     /**
