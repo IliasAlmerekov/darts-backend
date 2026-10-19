@@ -28,8 +28,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Uid\Uuid;
 
 /**
- * Posts to /api/register through the real kernel, form, and validator, so a constraint
- * that throws while the form is built shows up as a failing status code.
+ * Posts to /api/register through the real kernel, payload resolver, and validator, so a
+ * constraint that throws while the payload is validated shows up as a failing status code.
  *
  * A successful registration logs the player in and answers like a login would (#81).
  */
@@ -216,6 +216,171 @@ final class RegistrationEndpointTest extends WebTestCase
         self::assertSame(['Your password should be at least 8 characters long.'], $rejected['errors']['plainPassword'] ?? null);
     }
 
+    public function testWrongTypedFieldReturnsFieldError(): void
+    {
+        $client = static::createClient();
+        $body = ['username' => 123] + $this->validBody();
+
+        $payload = $this->postRegistration($client, $body, Response::HTTP_BAD_REQUEST);
+
+        self::assertFalse($payload['success']);
+        self::assertSame('Registrierung fehlgeschlagen. Bitte überprüfe deine Eingaben.', $payload['message']);
+        self::assertArrayNotHasKey('status', $payload);
+        self::assertSame(['username' => ['This value should be of type string.']], $payload['errors']);
+        self::assertNull(static::getContainer()->get(UserRepository::class)->findOneBy(['email' => $body['email']]));
+    }
+
+    public function testUnknownFieldsAreIgnored(): void
+    {
+        $client = static::createClient();
+
+        $this->postRegistration($client, ['_csrf_token' => 'token', 'agreeTerms' => true] + $this->validBody(), Response::HTTP_CREATED);
+    }
+
+    public function testEmailAndUsernameAreSavedTrimmed(): void
+    {
+        $client = static::createClient();
+        $body = $this->validBody();
+
+        $this->postRegistration($client, ['email' => ' '.$body['email'].' ', 'username' => ' '.$body['username'].' '] + $body, Response::HTTP_CREATED);
+
+        $user = static::getContainer()->get(UserRepository::class)->findOneBy(['email' => $body['email']]);
+        self::assertInstanceOf(User::class, $user);
+        self::assertSame($body['username'], $user->getUsername());
+    }
+
+    public function testBlankUsernameReportsOnlyTheMissingValue(): void
+    {
+        $client = static::createClient();
+
+        $payload = $this->postRegistration($client, ['username' => '   '] + $this->validBody(), Response::HTTP_BAD_REQUEST);
+
+        self::assertSame(['username' => ['Please enter a username']], $payload['errors']);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function malformedBodies(): iterable
+    {
+        yield 'broken JSON' => ['{"email":'];
+        yield 'empty body' => [''];
+    }
+
+    #[DataProvider('malformedBodies')]
+    public function testMalformedJsonReturnsInvalidJsonBodyError(string $content): void
+    {
+        $client = static::createClient();
+
+        $client->request(Request::METHOD_POST, '/api/register', [], [], ['CONTENT_TYPE' => 'application/json'], $content);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST, (string) $client->getResponse()->getContent());
+        $payload = json_decode((string) $client->getResponse()->getContent(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertSame(['success' => false, 'error' => 'REQUEST_INVALID_JSON_BODY', 'message' => 'Ungültiger JSON-Body. Bitte überprüfe das Datenformat.'], $payload);
+    }
+
+    /**
+     * @return iterable<string, array{array<string, string>}>
+     */
+    public static function nonJsonContentTypes(): iterable
+    {
+        yield 'text/plain' => [['CONTENT_TYPE' => 'text/plain']];
+        yield 'no Content-Type' => [[]];
+    }
+
+    /**
+     * @param array<string, string> $server
+     */
+    #[DataProvider('nonJsonContentTypes')]
+    public function testNonJsonContentTypeAnswers415NotAJsonError(array $server): void
+    {
+        $client = static::createClient();
+        $body = $this->validBody();
+
+        $client->request(Request::METHOD_POST, '/api/register', [], [], $server, json_encode($body, JSON_THROW_ON_ERROR));
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNSUPPORTED_MEDIA_TYPE, (string) $client->getResponse()->getContent());
+        self::assertStringNotContainsString('REQUEST_INVALID_JSON_BODY', (string) $client->getResponse()->getContent());
+        self::assertNull(static::getContainer()->get(UserRepository::class)->findOneBy(['email' => $body['email']]));
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function nonObjectJsonBodies(): iterable
+    {
+        yield 'string' => ['"alice"'];
+        yield 'number' => ['123'];
+        yield 'list' => ['[1,2]'];
+    }
+
+    #[DataProvider('nonObjectJsonBodies')]
+    public function testJsonThatIsNotAnObjectReportsEveryFieldAsMissing(string $content): void
+    {
+        $client = static::createClient();
+
+        $client->request(Request::METHOD_POST, '/api/register', [], [], ['CONTENT_TYPE' => 'application/json'], $content);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST, (string) $client->getResponse()->getContent());
+        $payload = json_decode((string) $client->getResponse()->getContent(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertSame(
+            [
+                'email' => ['Please enter an email address'],
+                'username' => ['Please enter a username'],
+                'plainPassword' => ['Please enter a password'],
+            ],
+            $payload['errors'],
+        );
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function takenFields(): iterable
+    {
+        yield 'email' => ['email'];
+        yield 'username' => ['username'];
+    }
+
+    #[DataProvider('takenFields')]
+    public function testTakenEmailOrUsernameAnswers409AndLogsNobodyIn(string $takenField): void
+    {
+        $client = static::createClient();
+        $existing = $this->validBody();
+        $this->postRegistration($client, $existing, Response::HTTP_CREATED);
+        $client->request(Request::METHOD_POST, '/api/logout');
+        $client->getCookieJar()->clear();
+        $body = [$takenField => $existing[$takenField]] + $this->validBody();
+
+        $payload = $this->postRegistration($client, $body, Response::HTTP_CONFLICT);
+
+        self::assertSame(
+            ['success' => false, 'error' => 'REGISTRATION_ACCOUNT_EXISTS', 'message' => 'Ein Konto mit diesen Daten existiert bereits.'],
+            $payload,
+        );
+        self::assertNull($client->getCookieJar()->get(self::REMEMBER_COOKIE));
+        $client->request(Request::METHOD_GET, '/api/login/success');
+        $loginPayload = json_decode((string) $client->getResponse()->getContent(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertFalse($loginPayload['success']);
+    }
+
+    public function testInvalidAndMalformedRequestsCountAgainstTheLimit(): void
+    {
+        $client = static::createClient();
+        $client->disableReboot();
+        $server = ['CONTENT_TYPE' => 'application/json', 'REMOTE_ADDR' => '203.0.113.10'];
+
+        for ($i = 1; $i <= 20; ++$i) {
+            $content = 0 === $i % 2 ? '{"email":' : json_encode(['email' => 'not-an-email'], JSON_THROW_ON_ERROR);
+            $client->request(Request::METHOD_POST, '/api/register', [], [], $server, $content);
+            self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST, 'Request '.$i);
+        }
+
+        $client->request(Request::METHOD_POST, '/api/register', [], [], $server, json_encode($this->validBody(), JSON_THROW_ON_ERROR));
+
+        self::assertResponseStatusCodeSame(Response::HTTP_TOO_MANY_REQUESTS);
+    }
+
     public function testTwentyFirstRegistrationFromOneIpAnswers429AndCreatesNoUser(): void
     {
         $client = static::createClient();
@@ -394,7 +559,7 @@ final class RegistrationEndpointTest extends WebTestCase
     /**
      * Asserts the status before decoding, so a 500 error page fails on the status, not on the JSON.
      *
-     * @param array<string, string> $body
+     * @param array<string, mixed> $body
      *
      * @return array<array-key, mixed>
      */

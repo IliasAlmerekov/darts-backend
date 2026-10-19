@@ -34,6 +34,7 @@ enum ErrorCode: string
     case RequestConflictingSettingKeys = 'REQUEST_CONFLICTING_SETTING_KEYS';
     case RequestPlayerIdRequired = 'REQUEST_PLAYER_ID_REQUIRED';
     case RegistrationRateLimited = 'REGISTRATION_RATE_LIMITED';
+    case RegistrationAccountExists = 'REGISTRATION_ACCOUNT_EXISTS';
     case SecurityUserNotAuthenticated = 'SECURITY_USER_NOT_AUTHENTICATED';
     case SecurityAccessDenied = 'SECURITY_ACCESS_DENIED';
 }

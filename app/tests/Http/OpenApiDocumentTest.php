@@ -91,13 +91,17 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertSame([], $offences, 'Responses documenting a body "status" that the API moves into the HTTP code.');
     }
 
-    public function testEveryRequestPayloadOperationDocuments422(): void
+    /**
+     * Most payloads fail validation with 422; registration keeps its 400 (#52).
+     */
+    public function testEveryRequestPayloadOperationDocumentsItsValidationStatus(): void
     {
         $offences = [];
         foreach ($this->operations() as [$path, $method, $operation]) {
             $route = $this->routeFor($path, $method);
-            if (null !== $route && $this->bindsRequestPayload($route['controller']) && !isset($operation['responses']['422'])) {
-                $offences[] = strtoupper($method).' '.$path;
+            $status = null !== $route ? $this->payloadValidationStatus($route['controller']) : null;
+            if (null !== $status && !isset($operation['responses'][(string) $status])) {
+                $offences[] = sprintf('%s %s (%d)', strtoupper($method), $path, $status);
             }
         }
 
@@ -134,11 +138,29 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertArrayNotHasKey('default', $paths['/api/logout']['post']['responses']);
     }
 
-    public function testRegisterDocumentsTheEightCharacterPasswordMinimum(): void
+    public function testRegisterDocumentsTheRequestDtoAndTheEightCharacterPasswordMinimum(): void
     {
-        $body = $this->document()['paths']['/api/register']['post']['requestBody']['content']['application/json']['schema'];
+        $document = $this->document();
+        $ref = $document['paths']['/api/register']['post']['requestBody']['content']['application/json']['schema']['$ref'];
 
+        self::assertSame('#/components/schemas/RegistrationRequest', $ref);
+        $body = $document['components']['schemas']['RegistrationRequest'];
+        self::assertEqualsCanonicalizing(['email', 'username', 'plainPassword'], $body['required']);
         self::assertSame(8, $body['properties']['plainPassword']['minLength']);
+    }
+
+    public function testRegisterDocumentsTheUnsupportedMediaType(): void
+    {
+        self::assertArrayHasKey('415', $this->document()['paths']['/api/register']['post']['responses']);
+    }
+
+    public function testRegisterDocumentsTheAccountExistsConflict(): void
+    {
+        $conflict = $this->document()['paths']['/api/register']['post']['responses']['409'];
+        $schema = $conflict['content']['application/json']['schema'];
+
+        self::assertSame(['success', 'error', 'message'], $schema['required']);
+        self::assertSame('REGISTRATION_ACCOUNT_EXISTS', $schema['properties']['error']['example']);
     }
 
     public function testRegisterDocumentsTheLoginSuccessBodyAndTheRememberMeCookie(): void
@@ -272,19 +294,23 @@ final class OpenApiDocumentTest extends WebTestCase
         return null;
     }
 
-    private function bindsRequestPayload(string $controller): bool
+    /**
+     * Returns the status a #[MapRequestPayload] argument fails validation with, or null
+     * when the action binds no request payload.
+     */
+    private function payloadValidationStatus(string $controller): ?int
     {
         if (!str_contains($controller, '::')) {
-            return false;
+            return null;
         }
 
         [$class, $action] = explode('::', $controller, 2);
         foreach ((new ReflectionMethod($class, $action))->getParameters() as $parameter) {
-            if ([] !== $parameter->getAttributes(MapRequestPayload::class)) {
-                return true;
+            foreach ($parameter->getAttributes(MapRequestPayload::class) as $attribute) {
+                return $attribute->newInstance()->validationFailedStatusCode;
             }
         }
 
-        return false;
+        return null;
     }
 }

@@ -25,11 +25,6 @@
       <code><![CDATA[InvitationController]]></code>
     </UnusedClass>
   </file>
-  <file src="src/Controller/RegistrationController.php">
-    <UnusedClass>
-      <code><![CDATA[RegistrationController]]></code>
-    </UnusedClass>
-  </file>
   <file src="src/Dto/GameFinishDto.php">
     <PossiblyUnusedMethod>
       <code><![CDATA[fromArray]]></code>
