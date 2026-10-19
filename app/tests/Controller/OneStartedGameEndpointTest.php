@@ -167,6 +167,31 @@ final class OneStartedGameEndpointTest extends WebTestCase
         self::assertSame(GameStatus::Started, $this->statusOf($reopened));
     }
 
+    public function testUndoingTheLastThrowOfAFinishedGameAbortsTheOtherStartedGame(): void
+    {
+        $bob = $this->createPlayer('bob');
+        $vanya = $this->createPlayer('vanya');
+        $finished = $this->createGame(GameStatus::Started, [$bob, $vanya]);
+        $finished->setStartScore(20)->setRound(1);
+        foreach ($finished->getGamePlayers() as $seat) {
+            $seat->setScore(20);
+        }
+        $this->entityManager->flush();
+        $throwUri = sprintf('/api/game/%d/throw/delta', $finished->getGameId());
+        $this->postJson($throwUri, ['playerId' => (int) $bob->getId(), 'value' => 20]);
+        self::assertResponseIsSuccessful((string) $this->client->getResponse()->getContent());
+        self::assertSame(GameStatus::Finished, $this->statusOf($finished));
+        $vanya = $this->entityManager->find(User::class, $vanya->getId());
+        self::assertInstanceOf(User::class, $vanya);
+        $started = $this->createGame(GameStatus::Started, [$vanya]);
+
+        $this->requestJson(Request::METHOD_DELETE, $throwUri);
+
+        self::assertResponseIsSuccessful((string) $this->client->getResponse()->getContent());
+        self::assertSame(GameStatus::Started, $this->statusOf($finished));
+        self::assertSame(GameStatus::Aborted, $this->statusOf($started));
+    }
+
     /**
      * The tablet closed during game A. P joins the next lobby B and the admin removes P from B.
      */

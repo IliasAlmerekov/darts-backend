@@ -333,6 +333,8 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         // Wenn der letzte Wurf in einem finished Game rückgängig gemacht wird,
         // muss das Spiel wieder fortsetzbar sein.
         if (GameStatus::Finished === $game->getStatus()) {
+            // The tablet runs one game at a time (ADR 0004).
+            $this->gameRepository->abortStartedGames($gameId);
             $game->setStatus(GameStatus::Started);
             $game->setFinishedAt(null);
         }
