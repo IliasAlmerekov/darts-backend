@@ -206,6 +206,23 @@ final class OpenLobbyEndpointTest extends WebTestCase
         self::assertSame($gameCount + 1, $this->countGames());
     }
 
+    public function testDeprecatedSettingsCreateWithOpenLobbyReturnsItWithTheNewSettings(): void
+    {
+        $bob = $this->createPlayer('bob');
+        $lobby = $this->createGame(GameStatus::Lobby, [$bob]);
+        $gameCount = $this->countGames();
+
+        $response = $this->postJson('/api/game/settings', ['startScore' => 501, 'doubleOut' => true]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        self::assertSame($lobby->getGameId(), $response['id']);
+        self::assertSame($gameCount, $this->countGames());
+        $reloaded = $this->reload($lobby);
+        self::assertSame(501, $reloaded->getStartScore());
+        self::assertTrue($reloaded->isDoubleOut());
+        self::assertSame([$bob->getId()], $this->seatedPlayerIds($reloaded));
+    }
+
     private function createPlayer(string $label): User
     {
         $player = TestUserFactory::create($this->entityManager, self::USER_PREFIX, $label, ['ROLE_PLAYER']);
