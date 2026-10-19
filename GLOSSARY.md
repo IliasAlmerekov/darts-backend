@@ -22,6 +22,10 @@ _Avoid_: Anonymous player, offline player
 A player or guest who holds a place in a specific game at the moment of the request. Someone who left the room is no longer a participant.
 _Avoid_: Member, joined player
 
+**Seat**:
+The record that makes a player or guest a participant of one game, with their position in the turn order. A participant has exactly one seat per game.
+_Avoid_: Game player
+
 **Username**:
 The name a player picks when registering. It is unique across the whole app, and a guest has none.
 _Avoid_: Login name, handle; "username" for a guest's name
