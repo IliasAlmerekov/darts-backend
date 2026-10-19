@@ -67,7 +67,7 @@ final class RegistrationController extends AbstractController
     )]
     #[OA\Response(
         response: Response::HTTP_BAD_REQUEST,
-        description: 'Validierungsfehler: `errors` nennt je Feld (`email`, `username`, `plainPassword`) die Meldungen. Ein Body, der kein gültiges JSON ist, antwortet stattdessen mit `error: REQUEST_INVALID_JSON_BODY`.',
+        description: 'Validierungsfehler.',
         content: new OA\JsonContent(
             type: 'object',
             required: ['success', 'message'],
@@ -93,6 +93,19 @@ final class RegistrationController extends AbstractController
                 new OA\Property(property: 'success', type: 'boolean', example: false),
                 new OA\Property(property: 'error', type: 'string', example: 'REGISTRATION_ACCOUNT_EXISTS'),
                 new OA\Property(property: 'message', type: 'string', example: 'Ein Konto mit diesen Daten existiert bereits.'),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: Response::HTTP_UNSUPPORTED_MEDIA_TYPE,
+        description: 'Der Request hat keinen JSON-Content-Type (`application/json`).',
+        content: new OA\JsonContent(
+            type: 'object',
+            required: ['success', 'error', 'message'],
+            properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: false),
+                new OA\Property(property: 'error', type: 'string', example: 'HTTP_ERROR'),
+                new OA\Property(property: 'message', type: 'string', example: 'Unsupported Media Type'),
             ]
         )
     )]

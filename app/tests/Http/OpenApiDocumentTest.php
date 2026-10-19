@@ -149,6 +149,11 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertSame(8, $body['properties']['plainPassword']['minLength']);
     }
 
+    public function testRegisterDocumentsTheUnsupportedMediaType(): void
+    {
+        self::assertArrayHasKey('415', $this->document()['paths']['/api/register']['post']['responses']);
+    }
+
     public function testRegisterDocumentsTheAccountExistsConflict(): void
     {
         $conflict = $this->document()['paths']['/api/register']['post']['responses']['409'];

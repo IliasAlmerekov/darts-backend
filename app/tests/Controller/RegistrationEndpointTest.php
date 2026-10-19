@@ -28,8 +28,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Uid\Uuid;
 
 /**
- * Posts to /api/register through the real kernel, form, and validator, so a constraint
- * that throws while the form is built shows up as a failing status code.
+ * Posts to /api/register through the real kernel, payload resolver, and validator, so a
+ * constraint that throws while the payload is validated shows up as a failing status code.
  *
  * A successful registration logs the player in and answers like a login would (#81).
  */
@@ -279,14 +279,58 @@ final class RegistrationEndpointTest extends WebTestCase
         self::assertSame(['success' => false, 'error' => 'REQUEST_INVALID_JSON_BODY', 'message' => 'Ungültiger JSON-Body. Bitte überprüfe das Datenformat.'], $payload);
     }
 
-    public function testNonJsonContentTypeAnswers415NotAJsonError(): void
+    /**
+     * @return iterable<string, array{array<string, string>}>
+     */
+    public static function nonJsonContentTypes(): iterable
+    {
+        yield 'text/plain' => [['CONTENT_TYPE' => 'text/plain']];
+        yield 'no Content-Type' => [[]];
+    }
+
+    /**
+     * @param array<string, string> $server
+     */
+    #[DataProvider('nonJsonContentTypes')]
+    public function testNonJsonContentTypeAnswers415NotAJsonError(array $server): void
     {
         $client = static::createClient();
+        $body = $this->validBody();
 
-        $client->request(Request::METHOD_POST, '/api/register', [], [], ['CONTENT_TYPE' => 'text/plain'], json_encode($this->validBody(), JSON_THROW_ON_ERROR));
+        $client->request(Request::METHOD_POST, '/api/register', [], [], $server, json_encode($body, JSON_THROW_ON_ERROR));
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNSUPPORTED_MEDIA_TYPE, (string) $client->getResponse()->getContent());
         self::assertStringNotContainsString('REQUEST_INVALID_JSON_BODY', (string) $client->getResponse()->getContent());
+        self::assertNull(static::getContainer()->get(UserRepository::class)->findOneBy(['email' => $body['email']]));
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function nonObjectJsonBodies(): iterable
+    {
+        yield 'string' => ['"alice"'];
+        yield 'number' => ['123'];
+        yield 'list' => ['[1,2]'];
+    }
+
+    #[DataProvider('nonObjectJsonBodies')]
+    public function testJsonThatIsNotAnObjectReportsEveryFieldAsMissing(string $content): void
+    {
+        $client = static::createClient();
+
+        $client->request(Request::METHOD_POST, '/api/register', [], [], ['CONTENT_TYPE' => 'application/json'], $content);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST, (string) $client->getResponse()->getContent());
+        $payload = json_decode((string) $client->getResponse()->getContent(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertSame(
+            [
+                'email' => ['Please enter an email address'],
+                'username' => ['Please enter a username'],
+                'plainPassword' => ['Please enter a password'],
+            ],
+            $payload['errors'],
+        );
     }
 
     /**
