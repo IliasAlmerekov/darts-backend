@@ -179,7 +179,7 @@ final class OpenLobbyEndpointTest extends WebTestCase
         $anna = $this->createPlayer('anna');
         $finished = $this->createGame(GameStatus::Finished, [$bob, $vanya]);
         $finished->setStartScore(501)->setDoubleOut(true);
-        $lobby = $this->createGame(GameStatus::Lobby, [$bob, $vanya, $anna]);
+        $lobby = $this->createGame(GameStatus::Lobby, [$bob, $anna]);
         $gameCount = $this->countGames();
 
         $this->postJson(sprintf('/api/game/%d/rematch/start', $finished->getGameId()));
@@ -188,7 +188,7 @@ final class OpenLobbyEndpointTest extends WebTestCase
         self::assertSame($gameCount, $this->countGames());
         $reloaded = $this->reload($lobby);
         self::assertSame(GameStatus::Started, $reloaded->getStatus());
-        self::assertSame([$bob->getId(), $vanya->getId(), $anna->getId()], $this->seatedPlayerIds($reloaded));
+        self::assertSame([$bob->getId(), $anna->getId(), $vanya->getId()], $this->seatedPlayerIds($reloaded));
         self::assertSame(501, $reloaded->getStartScore());
         self::assertTrue($reloaded->isDoubleOut());
     }
