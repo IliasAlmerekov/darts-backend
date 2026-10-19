@@ -11,8 +11,10 @@ namespace App\Repository;
 
 use App\Entity\GamePlayers;
 use App\Enum\GameStatus;
+use Doctrine\DBAL\LockMode;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -87,6 +89,29 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
     }
 
     /**
+     * @param int $gameId
+     * @param int $playerId
+     *
+     * @return bool
+     */
+    #[\Override]
+    public function isPlayerInGameForShare(int $gameId, int $playerId): bool
+    {
+        $seats = $this->createQueryBuilder('gp')
+            ->select('gp.gamePlayerId')
+            ->andWhere('gp.game = :gameId')
+            ->andWhere('gp.player = :playerId')
+            ->setParameter('gameId', $gameId)
+            ->setParameter('playerId', $playerId)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->setLockMode(LockMode::PESSIMISTIC_READ)
+            ->getScalarResult();
+
+        return [] !== $seats;
+    }
+
+    /**
      * @return GamePlayers[]
      *
      * @param int $gameId
@@ -94,14 +119,24 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
     #[\Override]
     public function findByGameId(int $gameId): array
     {
-        return $this->createQueryBuilder('gp')
+        return $this->createSeatsQueryBuilder($gameId)
             ->addSelect('player')
             ->innerJoin('gp.player', 'player')
-            ->andWhere('gp.game = :gameId')
-            ->setParameter('gameId', $gameId)
-            ->orderBy('gp.position', 'ASC')
-            ->addOrderBy('gp.gamePlayerId', 'ASC')
             ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * @return GamePlayers[]
+     *
+     * @param int $gameId
+     */
+    #[\Override]
+    public function findByGameIdForShare(int $gameId): array
+    {
+        return $this->createSeatsQueryBuilder($gameId)
+            ->getQuery()
+            ->setLockMode(LockMode::PESSIMISTIC_READ)
             ->getResult();
     }
 
@@ -299,4 +334,20 @@ SQL,
     //            ->getOneOrNullResult()
     //        ;
     //    }
+
+    /**
+     * The game's seats in seat order.
+     *
+     * @param int $gameId
+     *
+     * @return QueryBuilder
+     */
+    private function createSeatsQueryBuilder(int $gameId): QueryBuilder
+    {
+        return $this->createQueryBuilder('gp')
+            ->andWhere('gp.game = :gameId')
+            ->setParameter('gameId', $gameId)
+            ->orderBy('gp.position', 'ASC')
+            ->addOrderBy('gp.gamePlayerId', 'ASC');
+    }
 }

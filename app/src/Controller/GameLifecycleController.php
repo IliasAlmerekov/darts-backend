@@ -18,8 +18,10 @@ use App\Dto\StartGameRequest;
 use App\Entity\Game;
 use App\Exception\ApiExceptionInterface;
 use App\Exception\Game\GameIdMissingException;
+use App\Exception\Game\GameNotFoundException;
 use App\EventSubscriber\ApiViewSubscriber;
 use App\Http\Attribute\ApiResponse;
+use App\Repository\GameRepositoryInterface;
 use App\Service\Game\GameAbortServiceInterface;
 use App\Service\Game\GameFinishServiceInterface;
 use App\Service\Game\GameReopenServiceInterface;
@@ -28,8 +30,8 @@ use App\Service\Game\GameServiceInterface;
 use App\Service\Game\GameSettingsServiceInterface;
 use App\Service\Game\GameStartServiceInterface;
 use App\Service\Game\RematchStartServiceInterface;
+use App\Service\Persistence\RetryingTransactionInterface;
 use App\Service\Security\GameAccessServiceInterface;
-use Doctrine\ORM\EntityManagerInterface;
 use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity as AttributeMapEntity;
@@ -49,11 +51,13 @@ final class GameLifecycleController extends AbstractController
     /**
      * Starts a game with provided settings.
      *
-     * @param Game                      $game
-     * @param GameStartServiceInterface $gameStartService
-     * @param GameServiceInterface      $gameService
-     * @param Request                   $request
-     * @param StartGameRequest          $dto
+     * @param Game                         $game
+     * @param GameStartServiceInterface    $gameStartService
+     * @param GameServiceInterface         $gameService
+     * @param GameRepositoryInterface      $gameRepository
+     * @param RetryingTransactionInterface $transaction
+     * @param Request                      $request
+     * @param StartGameRequest             $dto
      *
      * @return Game
      *
@@ -71,33 +75,45 @@ final class GameLifecycleController extends AbstractController
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht.')]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
     #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'], format: 'json')]
-    public function start(#[AttributeMapEntity(id: 'gameId')] Game $game, GameStartServiceInterface $gameStartService, GameServiceInterface $gameService, Request $request, #[MapRequestPayload] StartGameRequest $dto): Game
+    public function start(#[AttributeMapEntity(id: 'gameId')] Game $game, GameStartServiceInterface $gameStartService, GameServiceInterface $gameService, GameRepositoryInterface $gameRepository, RetryingTransactionInterface $transaction, Request $request, #[MapRequestPayload] StartGameRequest $dto): Game
     {
-        $gameStartService->start($game, $dto);
+        $gameId = $game->getGameId() ?? throw new GameNotFoundException();
+        $started = $transaction->run(static function () use ($gameRepository, $gameStartService, $gameId, $dto): Game {
+            // A retry follows resetManager(), which detaches the game the route resolved.
+            $game = $gameRepository->findOneByGameId($gameId) ?? throw new GameNotFoundException();
+            $gameStartService->start($game, $dto);
+
+            return $game;
+        });
         $request->attributes->set(
             ApiViewSubscriber::RESPONSE_HEADERS_REQUEST_ATTRIBUTE,
-            $this->createStateVersionHeaders($gameService->buildStateVersion($game)),
+            $this->createStateVersionHeaders($gameService->buildStateVersion($started)),
         );
 
-        return $game;
+        return $started;
     }
 
     /**
-     * Creates a rematch from a finished game and starts it immediately.
+     * Starts the open lobby, or a new one, as a rematch of a finished game.
      *
         * @param int                          $gameId
      * @param RematchStartServiceInterface $rematchStartService
+     * @param RetryingTransactionInterface $transaction
         * @param StartGameRequest             $dto
      *
      * @return Game
      *
      * @throws ApiExceptionInterface
      */
+    #[OA\Post(
+        summary: 'Rematch in der offenen Lobby oder in einer neuen Lobby direkt starten',
+        description: 'Wie `POST /api/room/{id}/rematch`, danach wird das Spiel gestartet. Es ist höchstens ein Spiel in der Lobby. Ist ein Spiel in der Lobby, startet dieses Spiel mit seinen Spielern und den fehlenden Spielern des alten Spiels; sonst wird eine neue Lobby angelegt und gestartet.'
+    )]
     #[OA\Parameter(name: 'gameId', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
     #[OA\RequestBody(required: true, content: new OA\JsonContent(ref: new Model(type: StartGameRequest::class)))]
     #[OA\Response(
         response: Response::HTTP_CREATED,
-        description: 'Rematch-Spiel wurde erstellt, mit Spielern befüllt und direkt gestartet.',
+        description: 'Die offene Lobby oder eine neue Lobby wurde mit den Spielern befüllt und gestartet.',
         content: new OA\JsonContent(ref: new Model(type: Game::class, groups: ['game:read']))
     )]
     #[ApiResponse(status: Response::HTTP_CREATED, groups: ['game:read'])]
@@ -105,9 +121,9 @@ final class GameLifecycleController extends AbstractController
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht.')]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
     #[Route('/api/game/{gameId}/rematch/start', name: 'app_game_rematch_start', methods: ['POST'], format: 'json')]
-    public function createAndStartRematch(int $gameId, RematchStartServiceInterface $rematchStartService, #[MapRequestPayload] StartGameRequest $dto): Game
+    public function createAndStartRematch(int $gameId, RematchStartServiceInterface $rematchStartService, RetryingTransactionInterface $transaction, #[MapRequestPayload] StartGameRequest $dto): Game
     {
-        return $rematchStartService->createAndStart($gameId, $dto);
+        return $transaction->run(static fn (): Game => $rematchStartService->createAndStart($gameId, $dto));
     }
 
     /**
@@ -118,30 +134,30 @@ final class GameLifecycleController extends AbstractController
      * @param GameRoomServiceInterface     $gameRoomService
      * @param GameSettingsServiceInterface $gameSettingsService
      * @param GameServiceInterface         $gameService
-     * @param EntityManagerInterface       $entityManager
+     * @param RetryingTransactionInterface $transaction
      * @param GameSettingsRequest          $dto
      *
      * @return mixed
      */
     #[OA\Post(
         summary: 'Legacy-Endpoint für Spielanlage mit vollständigem Spielzustand',
-        description: 'Deprecated. Verwenden Sie stattdessen `POST /api/room/create`, danach `PATCH /api/game/{gameId}/settings` und `GET /api/game/{gameId}/settings` für den kompakten Settings-Flow.',
+        description: 'Deprecated. Ist ein Spiel in der Lobby, liefert der Endpoint dieses Spiel und überschreibt seine Einstellungen; sonst legt er eine neue Lobby an. Verwenden Sie stattdessen `POST /api/room/create`, danach `PATCH /api/game/{gameId}/settings` und `GET /api/game/{gameId}/settings` für den kompakten Settings-Flow.',
         deprecated: true
     )]
     #[OA\RequestBody(required: true, content: new OA\JsonContent(ref: new Model(type: GameSettingsRequest::class)))]
     #[OA\Response(
         response: Response::HTTP_CREATED,
-        description: 'Deprecated: erstellt ein Spiel und liefert weiterhin den vollständigen Spielzustand zurück.',
+        description: 'Deprecated: liefert die offene Lobby oder eine neue Lobby mit vollständigem Spielzustand zurück.',
         content: new OA\JsonContent(ref: new Model(type: GameResponseDto::class))
     )]
     #[ApiResponse(status: Response::HTTP_CREATED)]
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht.')]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
     #[Route('/api/game/settings', name: 'app_game_settings_create', methods: ['POST'], format: 'json')]
-    public function createSettings(GameRoomServiceInterface $gameRoomService, GameSettingsServiceInterface $gameSettingsService, GameServiceInterface $gameService, EntityManagerInterface $entityManager, #[MapRequestPayload] GameSettingsRequest $dto): mixed
+    public function createSettings(GameRoomServiceInterface $gameRoomService, GameSettingsServiceInterface $gameSettingsService, GameServiceInterface $gameService, RetryingTransactionInterface $transaction, #[MapRequestPayload] GameSettingsRequest $dto): mixed
     {
-        return $entityManager->wrapInTransaction(function () use ($gameRoomService, $gameSettingsService, $gameService, $dto): mixed {
-            $game = $gameRoomService->createGame();
+        return $transaction->run(function () use ($gameRoomService, $gameSettingsService, $gameService, $dto): mixed {
+            $game = $gameRoomService->openRoom();
 
             $gameSettingsService->updateSettings($game, $dto);
 

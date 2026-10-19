@@ -15,6 +15,7 @@ interface RematchStartServiceInterface
 {
     /**
      * Creates a rematch from the given game and starts it with the provided settings.
+     * Must be called inside a transaction, so the lobby stays locked until it has started.
      *
      * @param int              $oldGameId
      * @param StartGameRequest $dto

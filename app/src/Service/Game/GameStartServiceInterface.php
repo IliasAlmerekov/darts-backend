@@ -16,6 +16,8 @@ interface GameStartServiceInterface
     /**
      * Start a game with the given settings.
      *
+     * Must be called inside a transaction: it locks the game and its seats until it ends.
+     *
      * @param Game             $game The game to start
      * @param StartGameRequest $dto  Game start configuration
      *

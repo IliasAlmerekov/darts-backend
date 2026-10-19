@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Game;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\QueryBuilder;
 
@@ -68,6 +69,45 @@ interface GameRepositoryInterface
      * @return Game|null
      */
     public function findOneByGameIdForUpdate(int $gameId): ?Game;
+
+    /**
+     * Locks the game row and its seats until the transaction ends, then reloads the game and
+     * its seat collection. Unlike the entity a request already holds, the reloaded state
+     * includes what other transactions committed while this one waited for the lock.
+     * Must be called inside an open transaction.
+     *
+     * @param Game $game
+     *
+     * @return void
+     */
+    public function refreshWithSeatsForUpdate(Game $game): void;
+
+    /**
+     * Returns the game in the lobby; at most one exists (ADR 0003).
+     *
+     * @return Game|null
+     */
+    public function findOpenLobby(): ?Game;
+
+    /**
+     * Returns the game in the lobby and acquires a shared lock (FOR SHARE). Unlike a plain
+     * read inside a transaction, the locking read also sees rows committed after the
+     * transaction's snapshot was taken. Must be called inside a transaction.
+     *
+     * @return Game|null
+     */
+    public function findOpenLobbyForShare(): ?Game;
+
+    /**
+     * Inserts a game in the lobby through DBAL and returns its id. The insert bypasses the
+     * EntityManager, because a failed flush would close it, and callers still need it after
+     * the open lobby index rejects the insert.
+     *
+     * @return int
+     *
+     * @throws UniqueConstraintViolationException When a game is already in the lobby
+     */
+    public function insertLobby(): int;
 
     /**
      * @return int|null

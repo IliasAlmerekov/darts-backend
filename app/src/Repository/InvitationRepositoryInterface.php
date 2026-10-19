@@ -30,4 +30,15 @@ interface InvitationRepositoryInterface
      * @return Invitation|object|null
      */
     public function findOneBy(array $criteria, ?array $orderBy = null): ?object;
+
+    /**
+     * Returns the game's invitation with a shared lock. Unlike a plain read inside a
+     * transaction, it sees an invitation another transaction committed after this one's
+     * snapshot.
+     *
+     * @param int $gameId
+     *
+     * @return Invitation|null
+     */
+    public function findOneByGameIdForShare(int $gameId): ?Invitation;
 }

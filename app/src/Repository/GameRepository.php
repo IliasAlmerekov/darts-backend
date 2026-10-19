@@ -7,12 +7,16 @@ namespace App\Repository;
 use App\Entity\Game;
 use App\Enum\GameStatus;
 use App\Util\SqlResultValueAccessor;
+use DateTime;
 use DateTimeImmutable;
 use DateTimeInterface;
 use Doctrine\DBAL\LockMode;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\Query;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -161,6 +165,64 @@ SQL,
     }
 
     /**
+     * @param Game $game
+     *
+     * @return void
+     */
+    #[\Override]
+    public function refreshWithSeatsForUpdate(Game $game): void
+    {
+        $this->createQueryBuilder('g')
+            ->addSelect('seat')
+            ->leftJoin('g.gamePlayers', 'seat')
+            ->andWhere('g.gameId = :gameId')
+            ->setParameter('gameId', $game->getGameId())
+            ->getQuery()
+            ->setLockMode(LockMode::PESSIMISTIC_WRITE)
+            ->setHint(Query::HINT_REFRESH, true)
+            ->getResult();
+    }
+
+    /**
+     * @return Game|null
+     */
+    #[\Override]
+    public function findOpenLobby(): ?Game
+    {
+        return $this->createOpenLobbyQueryBuilder()
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
+     * @return Game|null
+     */
+    #[\Override]
+    public function findOpenLobbyForShare(): ?Game
+    {
+        return $this->createOpenLobbyQueryBuilder()
+            ->getQuery()
+            ->setLockMode(LockMode::PESSIMISTIC_READ)
+            ->getOneOrNullResult();
+    }
+
+    /**
+     * @return int
+     */
+    #[\Override]
+    public function insertLobby(): int
+    {
+        $connection = $this->getEntityManager()->getConnection();
+        $connection->insert(
+            'game',
+            ['date' => new DateTime(), 'status' => GameStatus::Lobby->value],
+            ['date' => Types::DATE_MUTABLE],
+        );
+
+        return (int) $connection->lastInsertId();
+    }
+
+    /**
      * @return int|null
      */
     #[\Override]
@@ -273,5 +335,16 @@ SQL,
         } catch (\Exception) {
             return null;
         }
+    }
+
+    /**
+     * Matches on the generated open_lobby column, so MySQL reads its unique index.
+     *
+     * @return QueryBuilder
+     */
+    private function createOpenLobbyQueryBuilder(): QueryBuilder
+    {
+        return $this->createQueryBuilder('g')
+            ->andWhere('g.openLobby = true');
     }
 }

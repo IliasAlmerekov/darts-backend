@@ -51,7 +51,7 @@ final class GameRepositoryTest extends KernelTestCase
     public function testFindHighestGameId(): void
     {
         $first = $this->createGame(GameStatus::Lobby);
-        $second = $this->createGame(GameStatus::Lobby);
+        $second = $this->createGame(GameStatus::Started);
         $this->entityManager->flush();
 
         $highest = $this->repository->findHighestGameId();

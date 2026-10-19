@@ -109,43 +109,43 @@ final class PlayerCurrentGameEndpointTest extends WebTestCase
         self::assertSame(['gameId' => $lobbyId, 'status' => 'lobby'], $this->getCurrentGame($client));
     }
 
-    public function testMostRecentlyJoinedGameWinsOverOlderLobby(): void
+    public function testMostRecentlyJoinedGameWinsOverOlderStartedGame(): void
     {
         $client = static::createClient();
         $player = $this->createUser('player', 'ROLE_PLAYER');
-        $this->createGame(GameStatus::Lobby, $player);
-        $rematchId = $this->createGame(GameStatus::Lobby, $player);
+        $this->createGame(GameStatus::Started, $player);
+        $newerId = $this->createGame(GameStatus::Started, $player);
         $client->loginUser($player);
 
-        self::assertSame(['gameId' => $rematchId, 'status' => 'lobby'], $this->getCurrentGame($client));
+        self::assertSame(['gameId' => $newerId, 'status' => 'started'], $this->getCurrentGame($client));
     }
 
     public function testJoinOrderWinsOverGameCreationOrder(): void
     {
         $client = static::createClient();
         $player = $this->createUser('player', 'ROLE_PLAYER');
-        $olderGame = $this->createEmptyGame(GameStatus::Lobby);
-        $newerGame = $this->createEmptyGame(GameStatus::Lobby);
+        $olderGame = $this->createEmptyGame(GameStatus::Started);
+        $newerGame = $this->createEmptyGame(GameStatus::Started);
         $this->seatPlayer($newerGame, $player);
         $this->seatPlayer($olderGame, $player);
         $client->loginUser($player);
 
-        self::assertSame(['gameId' => $olderGame->getGameId(), 'status' => 'lobby'], $this->getCurrentGame($client));
+        self::assertSame(['gameId' => $olderGame->getGameId(), 'status' => 'started'], $this->getCurrentGame($client));
     }
 
-    public function testStartedGameJoinedAfterLobbyWinsAndLobbyAfterStartedWins(): void
+    public function testLobbyJoinedAfterStartedWinsAndStartedJoinedAfterLobbyWins(): void
     {
         $client = static::createClient();
         $player = $this->createUser('player', 'ROLE_PLAYER');
-        $this->createGame(GameStatus::Lobby, $player);
-        $startedId = $this->createGame(GameStatus::Started, $player);
+        $this->createGame(GameStatus::Started, $player);
+        $lobbyId = $this->createGame(GameStatus::Lobby, $player);
         $client->loginUser($player);
 
-        self::assertSame(['gameId' => $startedId, 'status' => 'started'], $this->getCurrentGame($client));
-
-        $lobbyId = $this->createGame(GameStatus::Lobby, $player);
-
         self::assertSame(['gameId' => $lobbyId, 'status' => 'lobby'], $this->getCurrentGame($client));
+
+        $startedId = $this->createGame(GameStatus::Started, $player);
+
+        self::assertSame(['gameId' => $startedId, 'status' => 'started'], $this->getCurrentGame($client));
     }
 
     public function testPlayerCopiedIntoRematchLobbyGetsTheRematch(): void

@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Entity\Invitation;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\LockMode;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -23,6 +24,25 @@ final class InvitationRepository extends ServiceEntityRepository implements Invi
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Invitation::class);
+    }
+
+    /**
+     * @param int $gameId
+     *
+     * @return Invitation|null
+     */
+    #[\Override]
+    public function findOneByGameIdForShare(int $gameId): ?Invitation
+    {
+        /** @var Invitation|null $invitation */
+        $invitation = $this->createQueryBuilder('i')
+            ->andWhere('i.gameId = :gameId')
+            ->setParameter('gameId', $gameId)
+            ->getQuery()
+            ->setLockMode(LockMode::PESSIMISTIC_READ)
+            ->getOneOrNullResult();
+
+        return $invitation;
     }
 
     //    /**

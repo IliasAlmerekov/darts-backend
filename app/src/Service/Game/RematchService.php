@@ -10,20 +10,20 @@ declare(strict_types=1);
 namespace App\Service\Game;
 
 use App\Entity\Invitation;
-use App\Enum\GameStatus;
 use App\Repository\InvitationRepositoryInterface;
 use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
+use LogicException;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Uid\Uuid;
 use Override;
 
 /**
  * Service to handle rematches.
- * This class is responsible for creating a new game and copying players from the old game.
+ * Returns the open lobby, or a new one, with the old game's players and settings (ADR 0003).
  *
  * @psalm-suppress UnusedClass Reason: service is auto-wired and used via interface.
  */
@@ -36,10 +36,11 @@ final readonly class RematchService implements RematchServiceInterface
      * @param EntityManagerInterface           $entityManager
      * @param UrlGeneratorInterface            $urlGenerator
      * @param GameAccessServiceInterface       $gameAccessService
+     * @param OpenLobbyServiceInterface        $openLobbyService
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
-    public function __construct(private GameRoomServiceInterface $gameRoomService, private PlayerManagementServiceInterface $playerManagementService, private InvitationRepositoryInterface $invitationRepository, private EntityManagerInterface $entityManager, private UrlGeneratorInterface $urlGenerator, private GameAccessServiceInterface $gameAccessService)
+    public function __construct(private GameRoomServiceInterface $gameRoomService, private PlayerManagementServiceInterface $playerManagementService, private InvitationRepositoryInterface $invitationRepository, private EntityManagerInterface $entityManager, private UrlGeneratorInterface $urlGenerator, private GameAccessServiceInterface $gameAccessService, private OpenLobbyServiceInterface $openLobbyService)
     {
     }
 
@@ -59,27 +60,26 @@ final readonly class RematchService implements RematchServiceInterface
         }
         $this->gameAccessService->assertPlayerInGameOrAdmin($oldGame);
 
-        $newGame = $this->gameRoomService->createGame();
-        $newGame->setStatus(GameStatus::Lobby);
-        $newGame->setRound(null);
-        $newGame->setStartScore($oldGame->getStartScore());
-        $newGame->setDoubleOut($oldGame->isDoubleOut());
-        $newGame->setTripleOut($oldGame->isTripleOut());
-        if (null !== $oldGame->getType()) {
-            $newGame->setType((int) $oldGame->getType());
-        }
-        $newGameId = $newGame->getGameId();
-        if (null === $newGameId) {
-            return ['success' => false, 'message' => 'Failed to create new game'];
-        }
+        $lobby = $this->openLobbyService->findOrCreate();
+        $lobbyGame = $lobby->game;
+        $lobbyGame->setStartScore($oldGame->getStartScore());
+        $lobbyGame->setDoubleOut($oldGame->isDoubleOut());
+        $lobbyGame->setTripleOut($oldGame->isTripleOut());
+        $lobbyGame->setType($oldGame->getType());
+        $this->entityManager->flush();
+        $lobbyGameId = $lobbyGame->getGameId() ?? throw new LogicException('The lobby game has no id.');
 
-        $this->playerManagementService->copyPlayers($oldGameId, $newGameId);
-        $invitationLink = $this->createInvitation($newGameId);
+        if ($lobby->created) {
+            $this->playerManagementService->copyPlayers($oldGameId, $lobbyGameId);
+        } else {
+            // Players who joined the open lobby keep their seats.
+            $this->playerManagementService->appendMissingPlayers($oldGameId, $lobbyGameId);
+        }
 
         return [
             'success' => true,
-            'gameId' => $newGameId,
-            'invitationLink' => $invitationLink,
+            'gameId' => $lobbyGameId,
+            'invitationLink' => $this->createInvitation($lobbyGameId),
         ];
     }
 
@@ -90,7 +90,9 @@ final readonly class RematchService implements RematchServiceInterface
      */
     private function createInvitation(int $gameId): string
     {
-        $invitation = $this->invitationRepository->findOneBy(['gameId' => $gameId]);
+        // A plain read would use the snapshot taken before the lobby lock and miss the
+        // invitation of a rematch that committed while this one waited.
+        $invitation = $this->invitationRepository->findOneByGameIdForShare($gameId);
         if (null === $invitation) {
             $uuid = Uuid::v4();
             $invitation = new Invitation();

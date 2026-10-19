@@ -143,6 +143,56 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     }
 
     /**
+     * Seat every player of one game who is missing from another, after the players already there.
+     *
+     * @param int $fromGameId
+     * @param int $toGameId
+     *
+     * @throws ORMException
+     *
+     * @return void
+     */
+    #[Override]
+    public function appendMissingPlayers(int $fromGameId, int $toGameId): void
+    {
+        $seatedPlayerIds = [];
+        $lastPosition = 0;
+        // A plain read inside the caller's transaction could miss seats another request
+        // committed after the snapshot, and seat those players twice.
+        $seats = $this->gamePlayersRepository->findByGameIdForShare($toGameId);
+        $seatCount = count($seats);
+        foreach ($seats as $seat) {
+            $playerId = $seat->getPlayer()?->getId();
+            if (null !== $playerId) {
+                $seatedPlayerIds[$playerId] = true;
+            }
+            $lastPosition = max($lastPosition, $seat->getPosition() ?? 0);
+        }
+
+        $hasAddedPlayers = false;
+        foreach ($this->gamePlayersRepository->findByGameId($fromGameId) as $oldSeat) {
+            if ($seatCount >= Game::MAX_PARTICIPANTS) {
+                break;
+            }
+            $player = $oldSeat->getPlayer();
+            $playerId = $player?->getId();
+            if (null === $player || null === $playerId || isset($seatedPlayerIds[$playerId])) {
+                continue;
+            }
+
+            $lastPosition++;
+            $this->createGamePlayer($toGameId, $player, $lastPosition);
+            $seatedPlayerIds[$playerId] = true;
+            $seatCount++;
+            $hasAddedPlayers = true;
+        }
+
+        if (true === $hasAddedPlayers) {
+            $this->entityManager->flush();
+        }
+    }
+
+    /**
      * @param int                                           $gameId
      * @param list<array{playerId:int, position:int}>|array $positions
      *

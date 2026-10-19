@@ -12,6 +12,7 @@ use Doctrine\ORM\Mapping as ORM;
  * This class represents the association between a Game and its Players.
  */
 #[ORM\Entity(repositoryClass: GamePlayersRepository::class)]
+#[ORM\UniqueConstraint(name: 'uniq_game_players_game_player', columns: ['game_id', 'player_id'])]
 class GamePlayers
 {
     #[ORM\Id]

@@ -20,8 +20,12 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: GameRepository::class)]
 #[ORM\Table(name: 'game')]
 #[ORM\Index(name: 'idx_game_status_game_id', columns: ['status', 'game_id'])]
+#[ORM\UniqueConstraint(name: 'uniq_game_open_lobby', columns: ['open_lobby'])]
 class Game
 {
+    /** The most participants a game can have. */
+    public const int MAX_PARTICIPANTS = 10;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -48,6 +52,23 @@ class Game
     #[ORM\Column(enumType: GameStatus::class, options: ['default' => GameStatus::Lobby->value])]
     private GameStatus $status = GameStatus::Lobby;
 
+    /**
+     * TRUE while the game is in the lobby, NULL otherwise. MySQL computes the value; the unique
+     * index on it allows at most one game in the lobby, because MySQL has no partial indexes.
+     *
+     * @psalm-suppress UnusedProperty Reason: exists only so the schema tools know the column.
+     */
+    #[ORM\Column(
+        name: 'open_lobby',
+        type: Types::BOOLEAN,
+        nullable: true,
+        insertable: false,
+        updatable: false,
+        columnDefinition: "TINYINT GENERATED ALWAYS AS (IF(status = 'lobby', 1, NULL)) VIRTUAL",
+        generated: 'ALWAYS',
+    )]
+    private ?bool $openLobby = null;
+
     #[ORM\OneToMany(
         targetEntity: GamePlayers::class,
         mappedBy: 'game',
@@ -70,6 +91,8 @@ class Game
     private ?DateTimeImmutable $finishedAt = null;
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod Reason: lobbies are inserted through DBAL (ADR 0003); only tests construct games.
+     *
      * @return void
      */
     public function __construct()
@@ -87,11 +110,11 @@ class Game
     }
 
     /**
-     * @param int $type
+     * @param int|null $type
      *
      * @return static
      */
-    public function setType(int $type): static
+    public function setType(?int $type): static
     {
         $this->type = $type;
 
@@ -132,6 +155,8 @@ class Game
      * @param DateTime $date
      *
      * @return static
+     *
+     * @psalm-suppress PossiblyUnusedMethod Reason: lobbies are inserted through DBAL (ADR 0003); only tests set the date.
      */
     public function setDate(DateTime $date): static
     {

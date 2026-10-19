@@ -6,7 +6,9 @@ namespace App\Service\Game;
 
 use App\Dto\StartGameRequest;
 use App\Entity\Game;
+use App\Entity\GamePlayers;
 use App\Exception\Game\GameNotFoundException;
+use App\Repository\GameRepositoryInterface;
 use LogicException;
 use Override;
 
@@ -21,6 +23,7 @@ final readonly class RematchStartService implements RematchStartServiceInterface
      * @param RematchServiceInterface   $rematchService
      * @param GameRoomServiceInterface  $gameRoomService
      * @param GameStartServiceInterface $gameStartService
+     * @param GameRepositoryInterface   $gameRepository
      *
      * @return void
      */
@@ -28,6 +31,7 @@ final readonly class RematchStartService implements RematchStartServiceInterface
         private RematchServiceInterface $rematchService,
         private GameRoomServiceInterface $gameRoomService,
         private GameStartServiceInterface $gameStartService,
+        private GameRepositoryInterface $gameRepository,
     ) {
     }
 
@@ -55,8 +59,46 @@ final readonly class RematchStartService implements RematchStartServiceInterface
             throw new LogicException(sprintf('Rematch game %d was not found after creation.', $newGameId));
         }
 
-        $this->gameStartService->start($newGame, $dto);
+        // The seat collection must include participants who joined while the rematch waited.
+        $this->gameRepository->refreshWithSeatsForUpdate($newGame);
+        $this->gameStartService->start($newGame, $this->withLobbyParticipants($newGame, $dto));
 
         return $newGame;
+    }
+
+    /**
+     * The client sends positions for the old game's players, but a reused lobby can hold more
+     * participants (ADR 0003). They follow the sent order, in their lobby order. Positions of
+     * players the full lobby skipped are dropped.
+     *
+     * @param Game             $lobby
+     * @param StartGameRequest $dto
+     *
+     * @return StartGameRequest
+     */
+    private function withLobbyParticipants(Game $lobby, StartGameRequest $dto): StartGameRequest
+    {
+        if (null === $dto->playerPositions) {
+            return $dto;
+        }
+
+        $seats = $lobby->getGamePlayers()->toArray();
+        usort($seats, static fn (GamePlayers $a, GamePlayers $b): int => $a->getPosition() <=> $b->getPosition());
+        $seatedIds = [];
+        foreach ($seats as $seat) {
+            $playerId = $seat->getPlayer()?->getId();
+            if (null !== $playerId) {
+                $seatedIds[] = $playerId;
+            }
+        }
+        // A full lobby skips some of the old game's players; their positions go too.
+        $positions = array_values(array_intersect($dto->playerPositions, $seatedIds));
+        foreach ($seatedIds as $playerId) {
+            if (!in_array($playerId, $positions, true)) {
+                $positions[] = $playerId;
+            }
+        }
+
+        return $dto->withPlayerPositions($positions);
     }
 }

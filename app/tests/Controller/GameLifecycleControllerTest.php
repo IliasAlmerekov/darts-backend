@@ -33,7 +33,12 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
+use App\Repository\GameRepositoryInterface;
+use App\Service\Persistence\RetryingTransaction;
+use Doctrine\DBAL\Driver\PDO\Exception as PdoDriverException;
+use Doctrine\DBAL\Exception\DeadlockException;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -53,6 +58,7 @@ final class GameLifecycleControllerTest extends TestCase
     public function testStartSuccess(): void
     {
         $game = $this->createMock(Game::class);
+        $game->method('getGameId')->willReturn(7);
         $dto = new StartGameRequest();
         $startService = $this->createMock(GameStartServiceInterface::class);
         $startService->expects($this->once())->method('start')->with($game, $dto);
@@ -63,7 +69,7 @@ final class GameLifecycleControllerTest extends TestCase
             ->willReturn('state-v1');
         $request = new Request();
 
-        $response = $this->controller->start($game, $startService, $gameService, $request, $dto);
+        $response = $this->controller->start($game, $startService, $gameService, $this->gameRepositoryFinding($game), $this->runningTransaction(), $request, $dto);
 
         $this->assertSame($game, $response);
         $this->assertSame([
@@ -76,6 +82,7 @@ final class GameLifecycleControllerTest extends TestCase
     public function testStartReturnsBadRequestOnError(): void
     {
         $game = $this->createMock(Game::class);
+        $game->method('getGameId')->willReturn(7);
         $dto = new StartGameRequest();
         $startService = $this->createMock(GameStartServiceInterface::class);
         $startService->method('start')->willThrowException(new GameMustHaveValidPlayerCountException());
@@ -83,7 +90,34 @@ final class GameLifecycleControllerTest extends TestCase
         $request = new Request();
 
         $this->expectException(GameMustHaveValidPlayerCountException::class);
-        $this->controller->start($game, $startService, $gameService, $request, $dto);
+        $this->controller->start($game, $startService, $gameService, $this->gameRepositoryFinding($game), $this->runningTransaction(), $request, $dto);
+    }
+
+    public function testStartRetriedAfterADeadlockStartsTheReloadedGame(): void
+    {
+        $routeGame = $this->createMock(Game::class);
+        $routeGame->method('getGameId')->willReturn(7);
+        $reloadedGame = $this->createMock(Game::class);
+        $gameRepository = $this->createMock(GameRepositoryInterface::class);
+        $gameRepository->method('findOneByGameId')->with(7)->willReturnOnConsecutiveCalls($routeGame, $reloadedGame);
+        $deadlock = new DeadlockException(PdoDriverException::new(new \PDOException('Deadlock found when trying to get lock')), null);
+        $startService = $this->createMock(GameStartServiceInterface::class);
+        $startService->expects($this->exactly(2))
+            ->method('start')
+            ->willReturnCallback(static function (Game $game) use ($routeGame, $deadlock): void {
+                if ($game === $routeGame) {
+                    throw $deadlock;
+                }
+            });
+        $gameService = $this->createMock(GameServiceInterface::class);
+        $gameService->expects($this->once())->method('buildStateVersion')->with($reloadedGame)->willReturn('state-v2');
+        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $operation): mixed => $operation());
+        $transaction = new RetryingTransaction($entityManager, $this->createStub(ManagerRegistry::class));
+
+        $response = $this->controller->start($routeGame, $startService, $gameService, $gameRepository, $transaction, new Request(), new StartGameRequest());
+
+        $this->assertSame($reloadedGame, $response);
     }
 
     public function testCreateAndStartRematchReturnsStartedGame(): void
@@ -96,8 +130,13 @@ final class GameLifecycleControllerTest extends TestCase
             ->method('createAndStart')
             ->with($gameId, $dto)
             ->willReturn($game);
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects($this->once())
+            ->method('wrapInTransaction')
+            ->willReturnCallback(static fn (callable $operation): mixed => $operation());
+        $transaction = new RetryingTransaction($entityManager, $this->createStub(ManagerRegistry::class));
 
-        $response = $this->controller->createAndStartRematch($gameId, $rematchStartService, $dto);
+        $response = $this->controller->createAndStartRematch($gameId, $rematchStartService, $transaction, $dto);
 
         $this->assertSame($game, $response);
     }
@@ -108,7 +147,7 @@ final class GameLifecycleControllerTest extends TestCase
         $game = $this->createMock(Game::class);
 
         $roomService = $this->createMock(GameRoomServiceInterface::class);
-        $roomService->method('createGame')->willReturn($game);
+        $roomService->method('openRoom')->willReturn($game);
 
         $settingsService = $this->createMock(GameSettingsServiceInterface::class);
         $settingsService->expects($this->once())->method('updateSettings')->with($game, $dto);
@@ -120,7 +159,7 @@ final class GameLifecycleControllerTest extends TestCase
             ->method('wrapInTransaction')
             ->willReturnCallback(static fn(callable $func) => $func());
 
-        $response = $this->controller->createSettings($roomService, $settingsService, $gameService, $entityManager, $dto);
+        $response = $this->controller->createSettings($roomService, $settingsService, $gameService, new RetryingTransaction($entityManager, $this->createStub(ManagerRegistry::class)), $dto);
 
         $this->assertInstanceOf(GameResponseDto::class, $response);
     }
@@ -563,5 +602,21 @@ final class GameLifecycleControllerTest extends TestCase
                 ),
             ],
         );
+    }
+
+    private function gameRepositoryFinding(Game $game): GameRepositoryInterface
+    {
+        $gameRepository = $this->createStub(GameRepositoryInterface::class);
+        $gameRepository->method('findOneByGameId')->willReturn($game);
+
+        return $gameRepository;
+    }
+
+    private function runningTransaction(): RetryingTransaction
+    {
+        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $operation): mixed => $operation());
+
+        return new RetryingTransaction($entityManager, $this->createStub(ManagerRegistry::class));
     }
 }

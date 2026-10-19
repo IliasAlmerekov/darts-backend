@@ -7,6 +7,7 @@ namespace App\Tests\Service;
 use App\Dto\StartGameRequest;
 use App\Entity\Game;
 use App\Exception\Game\GameNotFoundException;
+use App\Repository\GameRepositoryInterface;
 use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Game\GameStartServiceInterface;
 use App\Service\Game\RematchServiceInterface;
@@ -34,6 +35,7 @@ final class RematchStartServiceTest extends TestCase
             $this->rematchService,
             $this->gameRoomService,
             $this->gameStartService,
+            $this->createStub(GameRepositoryInterface::class),
         );
     }
 

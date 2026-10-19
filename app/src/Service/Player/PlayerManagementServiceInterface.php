@@ -74,6 +74,21 @@ interface PlayerManagementServiceInterface
     public function copyPlayers(int $fromGameId, int $toGameId, ?array $playerIds = null): void;
 
     /**
+     * Seat every player of the source game who is missing from the target game. They take
+     * the positions after the players already in the target game, in their source order.
+     * Once the target game has Game::MAX_PARTICIPANTS seats, the rest are skipped.
+     * Must be called inside a transaction, because it reads the target seats with a lock.
+     *
+     * @param int $fromGameId Source game ID
+     * @param int $toGameId   Target game ID
+     *
+     * @throws ORMException
+     *
+     * @return void
+     */
+    public function appendMissingPlayers(int $fromGameId, int $toGameId): void;
+
+    /**
      * Update player positions for a game.
      *
      * @param int                                           $gameId

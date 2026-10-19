@@ -40,8 +40,6 @@ use Throwable;
  */
 final readonly class InvitationService implements InvitationServiceInterface
 {
-    private const int MAX_GAME_PLAYERS = 10;
-
     /**
      * @param InvitationRepositoryInterface    $invitationRepository
      * @param GamePlayersRepositoryInterface   $gamePlayersRepository
@@ -216,11 +214,11 @@ final readonly class InvitationService implements InvitationServiceInterface
                 throw new GameNotFoundException();
             }
 
-            if ($this->entityManager->contains($game)) {
-                $this->entityManager->lock($game, LockMode::PESSIMISTIC_WRITE);
-            }
+            // find() above took the snapshot. A rematch or start that committed while this
+            // request waited for the lock is visible only to the reload and the locking reads.
+            $this->gameRepository->refreshWithSeatsForUpdate($game);
 
-            if (false === $this->gamePlayersRepository->isPlayerInGame($gameId, $userId)) {
+            if (false === $this->gamePlayersRepository->isPlayerInGameForShare($gameId, $userId)) {
                 $this->assertGameJoinableForGame($game);
                 $this->playerManagementService->addPlayer($gameId, $userId);
             }
@@ -258,9 +256,8 @@ final readonly class InvitationService implements InvitationServiceInterface
             throw new GameJoinNotAllowedException($status);
         }
 
-        $playersCount = $this->gamePlayersRepository->count(['game' => $gameId]);
-        if ($playersCount >= self::MAX_GAME_PLAYERS) {
-            throw new GameRoomFullException(self::MAX_GAME_PLAYERS);
+        if ($game->getGamePlayers()->count() >= Game::MAX_PARTICIPANTS) {
+            throw new GameRoomFullException(Game::MAX_PARTICIPANTS);
         }
     }
 }

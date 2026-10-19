@@ -24,10 +24,10 @@ use App\Http\Attribute\ApiResponse;
 use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Game\GameSettingsServiceInterface;
 use App\Service\Game\RematchServiceInterface;
+use App\Service\Persistence\RetryingTransactionInterface;
 use App\Service\Player\GuestPlayerServiceInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
 use App\Service\Sse\SseStreamServiceInterface;
-use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
 use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
@@ -54,7 +54,7 @@ final class GameRoomController extends AbstractController
      * @param RematchServiceInterface          $rematchService
      * @param GuestPlayerServiceInterface      $guestPlayerService
      * @param SseStreamServiceInterface        $sseStreamService
-     * @param EntityManagerInterface           $entityManager
+     * @param RetryingTransactionInterface     $transaction
      *
      * @return void
      */
@@ -65,12 +65,12 @@ final class GameRoomController extends AbstractController
         private readonly RematchServiceInterface $rematchService,
         private readonly GuestPlayerServiceInterface $guestPlayerService,
         private readonly SseStreamServiceInterface $sseStreamService,
-        private readonly EntityManagerInterface $entityManager,
+        private readonly RetryingTransactionInterface $transaction,
     ) {
     }
 
     /**
-     * Creates a game with optional preselected players.
+     * Returns the open lobby, or creates one with optional preselected players.
      *
      * @param RoomCreateRequest $dto
      *
@@ -78,13 +78,17 @@ final class GameRoomController extends AbstractController
      *
      * @throws ORMException
      */
+    #[OA\Post(
+        summary: 'Spielraum erstellen oder die offene Lobby zurückgeben',
+        description: 'Es ist höchstens ein Spiel in der Lobby. Ist ein Spiel in der Lobby, liefert der Endpoint dessen `gameId` und legt kein Spiel an. Die Lobby übernimmt `startScore`, `doubleOut` und `tripleOut` aus dem Request und behält ihre Spieler; `previousGameId`, `playerIds` und `excludePlayerIds` werden dann ignoriert. Ohne offene Lobby wird eine neue Lobby angelegt.'
+    )]
     #[OA\RequestBody(
         required: false,
         content: new OA\JsonContent(ref: new Model(type: RoomCreateRequest::class))
     )]
     #[OA\Response(
         response: Response::HTTP_OK,
-        description: 'Spielraum wurde erfolgreich erstellt (oder wiederverwendet).',
+        description: 'Die offene Lobby wurde zurückgegeben oder eine neue Lobby angelegt.',
         content: new OA\JsonContent(
             required: ['success', 'gameId'],
             properties: [
@@ -100,7 +104,7 @@ final class GameRoomController extends AbstractController
     #[Route(path: '/api/room/create', name: 'room_create', methods: ['POST'], format: 'json')]
     public function roomCreateApi(#[MapRequestPayload] RoomCreateRequest $dto): array
     {
-        return $this->entityManager->wrapInTransaction(function () use ($dto): array {
+        return $this->transaction->run(function () use ($dto): array {
             $includePlayerIds = null !== $dto->playerIds && [] !== $dto->playerIds
                 ? $dto->playerIds
                 : null;
@@ -108,7 +112,7 @@ final class GameRoomController extends AbstractController
                 ? $dto->excludePlayerIds
                 : null;
 
-            $game = $this->gameRoomService->createGameWithPreviousPlayers(
+            $game = $this->gameRoomService->openRoom(
                 $dto->previousGameId,
                 $includePlayerIds,
                 $excludePlayerIds,
@@ -322,7 +326,7 @@ final class GameRoomController extends AbstractController
     }
 
     /**
-     * Creates a rematch for a finished game.
+     * Returns the open lobby, or a new one, with the players and settings of a finished game.
      *
      * @param int $id
      *
@@ -330,10 +334,14 @@ final class GameRoomController extends AbstractController
      *
      * @throws ORMException
      */
+    #[OA\Post(
+        summary: 'Rematch in der offenen Lobby oder in einer neuen Lobby',
+        description: 'Es ist höchstens ein Spiel in der Lobby. Ist ein Spiel in der Lobby, liefert der Endpoint dessen `gameId`: Spieler des alten Spiels, die noch fehlen, kommen hinter die vorhandenen Spieler, und Startpunktzahl, Double Out, Triple Out und Typ werden aus dem alten Spiel übernommen. Spieler, die der Lobby beigetreten sind, bleiben. Ohne offene Lobby wird eine neue Lobby mit den Spielern des alten Spiels angelegt.'
+    )]
     #[OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
     #[OA\Response(
         response: Response::HTTP_CREATED,
-        description: 'Rematch-Spiel wurde erstellt.',
+        description: 'Die offene Lobby wurde zurückgegeben oder eine neue Lobby angelegt.',
         content: new OA\JsonContent(
             required: ['success'],
             properties: [
@@ -351,7 +359,7 @@ final class GameRoomController extends AbstractController
     #[Route(path: '/api/room/{id}/rematch', name: 'room_rematch', methods: ['POST'])]
     public function rematch(int $id): array
     {
-        $result = $this->rematchService->createRematch($id);
+        $result = $this->transaction->run(fn (): array => $this->rematchService->createRematch($id));
 
         if (!($result['success'] ?? false)) {
             $result['status'] = Response::HTTP_NOT_FOUND;
