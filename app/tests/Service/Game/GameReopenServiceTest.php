@@ -50,7 +50,11 @@ final class GameReopenServiceTest extends TestCase
             ->with($game)
             ->willReturn(new User());
 
-        $service = new GameReopenService($entityManager, $access, $this->createStub(GameRepositoryInterface::class));
+        $gameRepository = $this->createMock(GameRepositoryInterface::class);
+        $gameRepository->expects(self::once())->method('refreshWithSeatsForUpdate')->with($game);
+        $gameRepository->expects(self::once())->method('abortStartedGames')->with($game->getGameId());
+
+        $service = new GameReopenService($entityManager, $access, $gameRepository);
 
         $service->reopen($game);
 
@@ -75,7 +79,10 @@ final class GameReopenServiceTest extends TestCase
             ->with($game)
             ->willReturn(new User());
 
-        $service = new GameReopenService($entityManager, $access, $this->createStub(GameRepositoryInterface::class));
+        $gameRepository = $this->createMock(GameRepositoryInterface::class);
+        $gameRepository->expects(self::never())->method('abortStartedGames');
+
+        $service = new GameReopenService($entityManager, $access, $gameRepository);
 
         $service->reopen($game);
 

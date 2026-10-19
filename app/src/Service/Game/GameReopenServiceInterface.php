@@ -13,7 +13,9 @@ use App\Exception\ApiExceptionInterface;
 interface GameReopenServiceInterface
 {
     /**
-     * Reopen a finished game and move it back to started state.
+     * Reopen a finished game and move it back to started state. Aborts every other started
+     * game (ADR 0004). Must be called inside a transaction: it locks the game and its seats
+     * until it ends.
      *
      * @param Game $game
      *
