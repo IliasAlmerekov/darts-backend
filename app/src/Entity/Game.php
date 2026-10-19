@@ -88,6 +88,8 @@ class Game
     private ?DateTimeImmutable $finishedAt = null;
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod Reason: lobbies are inserted through DBAL (ADR 0003); only tests construct games.
+     *
      * @return void
      */
     public function __construct()
@@ -150,6 +152,8 @@ class Game
      * @param DateTime $date
      *
      * @return static
+     *
+     * @psalm-suppress PossiblyUnusedMethod Reason: lobbies are inserted through DBAL (ADR 0003); only tests set the date.
      */
     public function setDate(DateTime $date): static
     {
