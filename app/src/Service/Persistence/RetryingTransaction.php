@@ -16,9 +16,9 @@ use Doctrine\Persistence\ManagerRegistry;
 use Override;
 
 /**
- * Closes the deadlock left in ADR 0003: two requests that lost the lobby insert race both hold a
- * shared lock on the lobby row and both ask for an exclusive one. MySQL rolls one back, and the
- * second attempt finds the lobby the other request committed.
+ * Runs an operation in a transaction, and once more in a new transaction when MySQL rolls the
+ * first one back for a deadlock or a lock wait timeout. Room create and rematch use it for the
+ * deadlock described in ADR 0003.
  *
  * @psalm-suppress UnusedClass Reason: service is auto-wired and used via interface.
  */

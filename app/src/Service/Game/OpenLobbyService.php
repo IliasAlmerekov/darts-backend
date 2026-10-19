@@ -46,9 +46,9 @@ final readonly class OpenLobbyService implements OpenLobbyServiceInterface
     public function findOrCreate(): OpenLobby
     {
         for ($attempt = 1; $attempt <= self::MAX_ATTEMPTS; $attempt++) {
-            $lobby = $this->gameRepository->findOpenLobby();
-            if (null !== $lobby && $this->lock($lobby)) {
-                return new OpenLobby($lobby, false);
+            $found = $this->reuse($this->gameRepository->findOpenLobby());
+            if (null !== $found) {
+                return $found;
             }
 
             try {
@@ -59,15 +59,27 @@ final readonly class OpenLobbyService implements OpenLobbyServiceInterface
                 return new OpenLobby($game, true);
             } catch (UniqueConstraintViolationException) {
                 // A plain read inside a transaction would not see the other request's lobby.
-                $lobby = $this->gameRepository->findOpenLobbyForShare();
-                if (null !== $lobby && $this->lock($lobby)) {
-                    return new OpenLobby($lobby, false);
+                $found = $this->reuse($this->gameRepository->findOpenLobbyForShare());
+                if (null !== $found) {
+                    return $found;
                 }
                 // That lobby started before this request locked it; look again.
             }
         }
 
         throw new LogicException(sprintf('No game stayed in the lobby over %d attempts.', self::MAX_ATTEMPTS));
+    }
+
+    /**
+     * Returns the found lobby once it is locked, or null when there is none or it started first.
+     *
+     * @param Game|null $lobby
+     *
+     * @return OpenLobby|null
+     */
+    private function reuse(?Game $lobby): ?OpenLobby
+    {
+        return null !== $lobby && $this->lock($lobby) ? new OpenLobby($lobby, false) : null;
     }
 
     /**
