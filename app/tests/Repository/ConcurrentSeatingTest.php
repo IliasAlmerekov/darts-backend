@@ -56,9 +56,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         /** @var EntityManagerInterface $testEntityManager */
         $testEntityManager = static::getContainer()->get(EntityManagerInterface::class);
         $this->entityManager = new EntityManager($this->request, $testEntityManager->getConfiguration());
-        $registry = $this->createMock(ManagerRegistry::class);
-        $registry->method('getManagerForClass')->willReturn($this->entityManager);
-        $this->gamePlayersRepository = new GamePlayersRepository($registry);
+        $this->gamePlayersRepository = new GamePlayersRepository($this->registry());
     }
 
     protected function tearDown(): void
@@ -109,9 +107,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
     public function testFindOneByGameIdForShareSeesAnInvitationCommittedAfterTheSnapshot(): void
     {
         $lobby = $this->insertGame('lobby');
-        $registry = $this->createMock(ManagerRegistry::class);
-        $registry->method('getManagerForClass')->willReturn($this->entityManager);
-        $invitationRepository = new InvitationRepository($registry);
+        $invitationRepository = new InvitationRepository($this->registry());
 
         $this->request->beginTransaction();
         $this->takeSnapshot();
@@ -129,9 +125,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $anna = $this->insertUser('anna');
         $lobby = $this->insertGame('lobby');
         $this->insertSeat($lobby, $bob, 1);
-        $registry = $this->createMock(ManagerRegistry::class);
-        $registry->method('getManagerForClass')->willReturn($this->entityManager);
-        $gameRepository = new GameRepository($registry);
+        $gameRepository = new GameRepository($this->registry());
 
         $this->request->beginTransaction();
         $game = $this->entityManager->find(Game::class, $lobby);
@@ -153,9 +147,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $abandoned = $this->insertGame('started');
         $finished = $this->insertGame('finished');
         $lobby = $this->insertGame('lobby');
-        $registry = $this->createMock(ManagerRegistry::class);
-        $registry->method('getManagerForClass')->willReturn($this->entityManager);
-        $gameRepository = new GameRepository($registry);
+        $gameRepository = new GameRepository($this->registry());
 
         $this->request->beginTransaction();
         $this->takeSnapshot();
@@ -174,9 +166,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
     {
         $first = $this->insertGame('lobby');
         $second = $this->insertGame('finished');
-        $registry = $this->createMock(ManagerRegistry::class);
-        $registry->method('getManagerForClass')->willReturn($this->entityManager);
-        $gameRepository = new GameRepository($registry);
+        $gameRepository = new GameRepository($this->registry());
 
         // Another request aborts the started games, starts the first game and has not committed.
         $this->other->beginTransaction();
@@ -210,15 +200,24 @@ final class ConcurrentSeatingTest extends KernelTestCase
     {
         $other = $this->insertGame('started');
         $kept = $this->insertGame('started');
-        $registry = $this->createMock(ManagerRegistry::class);
-        $registry->method('getManagerForClass')->willReturn($this->entityManager);
 
-        (new GameRepository($registry))->abortStartedGames($kept);
+        (new GameRepository($this->registry()))->abortStartedGames($kept);
 
         self::assertSame(
             [[$other, 'aborted'], [$kept, 'started']],
             $this->other->fetchAllNumeric('SELECT game_id, status FROM game ORDER BY game_id'),
         );
+    }
+
+    /**
+     * Repositories built on it run their queries through the "request" connection.
+     */
+    private function registry(): ManagerRegistry
+    {
+        $registry = $this->createMock(ManagerRegistry::class);
+        $registry->method('getManagerForClass')->willReturn($this->entityManager);
+
+        return $registry;
     }
 
     /**

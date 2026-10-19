@@ -14,7 +14,7 @@ use App\Exception\ApiExceptionInterface;
 interface GameStartServiceInterface
 {
     /**
-     * Start a game with the given settings.
+     * Start a game with the given settings. Aborts every other started game (ADR 0004).
      *
      * Must be called inside a transaction: it locks the game and its seats until it ends.
      *
