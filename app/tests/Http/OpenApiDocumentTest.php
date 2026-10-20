@@ -205,10 +205,15 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertSame(['gameId' => 12, 'status' => 'lobby'], $examples['lobby']['value']);
         self::assertSame(['gameId' => null, 'status' => null], $examples['none']['value']);
 
-        $properties = $document['components']['schemas']['CurrentGameResponseDto']['properties'];
+        $schema = $document['components']['schemas']['CurrentGameResponseDto'];
+        self::assertSame(['gameId', 'status'], $schema['required'] ?? null);
+        $properties = $schema['properties'];
         self::assertSame(['gameId', 'status'], array_keys($properties));
+        self::assertSame('integer', $properties['gameId']['type']);
         self::assertTrue($properties['gameId']['nullable'] ?? in_array('null', (array) ($properties['gameId']['type'] ?? []), true));
+        self::assertSame('string', $properties['status']['type']);
         self::assertTrue($properties['status']['nullable'] ?? in_array('null', (array) ($properties['status']['type'] ?? []), true));
+        self::assertSame(['lobby', 'started', null], $properties['status']['enum'] ?? null);
     }
 
     public function testProfileDocumentsResponseSchemaAnd401And403(): void
