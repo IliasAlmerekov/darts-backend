@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Game;
+use DateTimeImmutable;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\QueryBuilder;
@@ -140,4 +141,15 @@ interface GameRepositoryInterface
      * @return Game[]
      */
     public function findFinished(int $limit, int $offset): array;
+
+    /**
+     * The player's finished games, newest first by finishedAt, or by date when a game has no
+     * finishedAt.
+     *
+     * @param int $playerId
+     * @param int $limit
+     *
+     * @return list<array{gameId:int,finishedAt:DateTimeImmutable|null}>
+     */
+    public function findRecentFinishedForPlayer(int $playerId, int $limit): array;
 }

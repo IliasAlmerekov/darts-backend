@@ -211,6 +211,37 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertTrue($properties['status']['nullable'] ?? in_array('null', (array) ($properties['status']['type'] ?? []), true));
     }
 
+    public function testProfileDocumentsResponseSchemaAnd401And403(): void
+    {
+        $document = $this->document();
+
+        $operation = $document['paths']['/api/player/profile']['get'];
+        self::assertSame(['Player'], $operation['tags']);
+        foreach (['200', '401', '403'] as $status) {
+            self::assertArrayHasKey($status, $operation['responses'], $status);
+        }
+        self::assertSame(
+            '#/components/schemas/PlayerProfileResponseDto',
+            $operation['responses']['200']['content']['application/json']['schema']['$ref']
+        );
+
+        $schemas = $document['components']['schemas'];
+        self::assertSame(['stats', 'recentGames'], array_keys($schemas['PlayerProfileResponseDto']['properties']));
+        self::assertSame(['gamesPlayed', 'scoreAverage'], array_keys($schemas['PlayerProfileStatsDto']['properties']));
+        self::assertSame(
+            ['gameId', 'finishedAt', 'placement', 'roundAverage', 'participantsCount', 'participants'],
+            array_keys($schemas['PlayerProfileGameDto']['properties'])
+        );
+        self::assertSame(
+            '#/components/schemas/PlayerProfileParticipantDto',
+            $schemas['PlayerProfileGameDto']['properties']['participants']['items']['$ref']
+        );
+        self::assertSame(
+            ['playerId', 'displayName', 'placement', 'isSelf'],
+            array_keys($schemas['PlayerProfileParticipantDto']['properties'])
+        );
+    }
+
     public function testStartGameRequestDocumentsOnlyCamelCaseSettingKeys(): void
     {
         $properties = array_keys($this->document()['components']['schemas']['StartGameRequest']['properties']);

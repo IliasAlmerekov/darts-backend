@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Game;
+use App\Entity\GamePlayers;
 use App\Enum\GameStatus;
 use App\Util\SqlResultValueAccessor;
 use DateTime;
@@ -290,6 +291,35 @@ SQL,
             ->setMaxResults($limit)
             ->getQuery()
             ->getResult();
+    }
+
+    /**
+     * @param int $playerId
+     * @param int $limit
+     *
+     * @return list<array{gameId:int,finishedAt:DateTimeImmutable|null}>
+     */
+    #[\Override]
+    public function findRecentFinishedForPlayer(int $playerId, int $limit): array
+    {
+        /** @var list<array{gameId:int|string,finishedAt:DateTimeImmutable|null}> $rows */
+        $rows = $this->createQueryBuilder('g')
+            ->select('g.gameId AS gameId', 'g.finishedAt AS finishedAt', 'COALESCE(g.finishedAt, g.date) AS HIDDEN sortedAt')
+            ->innerJoin(GamePlayers::class, 'gp', 'WITH', 'gp.game = g')
+            ->andWhere('gp.player = :playerId')
+            ->andWhere('g.status = :status')
+            ->setParameter('playerId', $playerId)
+            ->setParameter('status', GameStatus::Finished)
+            ->orderBy('sortedAt', 'DESC')
+            ->addOrderBy('g.gameId', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getArrayResult();
+
+        return array_map(
+            static fn(array $row): array => ['gameId' => (int) $row['gameId'], 'finishedAt' => $row['finishedAt']],
+            $rows
+        );
     }
 
     /**

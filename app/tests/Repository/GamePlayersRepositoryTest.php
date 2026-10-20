@@ -215,6 +215,27 @@ final class GamePlayersRepositoryTest extends KernelTestCase
         self::assertSame(20, $notFinished->getScore());
     }
 
+    public function testFindByGameIdsGroupsSeatsPerGameInSeatOrder(): void
+    {
+        $first = $this->createGame();
+        $second = $this->createGame();
+        $untouched = $this->createGame();
+        $alice = $this->createUser('by-ids-alice');
+        $bob = $this->createUser('by-ids-bob');
+        $bobFirst = $this->persistGamePlayer($first, $bob, position: 1);
+        $aliceFirst = $this->persistGamePlayer($first, $alice, position: 2);
+        $aliceSecond = $this->persistGamePlayer($second, $alice, position: 1);
+        $this->persistGamePlayer($untouched, $bob, position: 1);
+        $this->entityManager->flush();
+
+        $seats = $this->repository->findByGameIds([(int) $first->getGameId(), (int) $second->getGameId()]);
+
+        self::assertSame([(int) $first->getGameId(), (int) $second->getGameId()], array_keys($seats));
+        self::assertSame([$bobFirst, $aliceFirst], $seats[(int) $first->getGameId()]);
+        self::assertSame([$aliceSecond], $seats[(int) $second->getGameId()]);
+        self::assertSame([], $this->repository->findByGameIds([]));
+    }
+
     private function createGame(): Game
     {
         $game = (new Game())

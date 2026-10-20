@@ -104,6 +104,7 @@ final class ApiAccessMatrixTest extends WebTestCase
             self::entry('process_invitation', Request::METHOD_POST, self::ACCESS_PLAYER, expected: Response::HTTP_BAD_REQUEST),
 
             self::entry('app_player_current_game', Request::METHOD_GET, self::ACCESS_PLAYER, expected: Response::HTTP_OK),
+            self::entry('app_player_profile', Request::METHOD_GET, self::ACCESS_PLAYER, expected: Response::HTTP_OK),
 
             // Admin: invitations
             self::entry('create_invitation', Request::METHOD_POST, self::ACCESS_ADMIN, $room, expected: Response::HTTP_OK),

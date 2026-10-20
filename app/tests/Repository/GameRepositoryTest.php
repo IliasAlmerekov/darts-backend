@@ -160,6 +160,33 @@ final class GameRepositoryTest extends KernelTestCase
         self::assertSame($summary->winnerRoundsPlayed, $overview[0]['winnerRounds']);
     }
 
+    public function testFindRecentFinishedForPlayerKeepsOwnFinishedGamesNewestFirst(): void
+    {
+        $player = $this->createUser('recent-player');
+        $other = $this->createUser('recent-other');
+        $older = $this->createGame(GameStatus::Finished)->setFinishedAt(new \DateTimeImmutable('2026-10-01 10:00:00'));
+        $newer = $this->createGame(GameStatus::Finished)->setFinishedAt(new \DateTimeImmutable('2026-10-03 10:00:00'));
+        $undated = $this->createGame(GameStatus::Finished, new \DateTime('2026-10-02'));
+        $notJoined = $this->createGame(GameStatus::Finished)->setFinishedAt(new \DateTimeImmutable('2026-10-04 10:00:00'));
+        $started = $this->createGame(GameStatus::Started);
+        $aborted = $this->createGame(GameStatus::Aborted);
+        foreach ([$older, $newer, $undated, $started, $aborted] as $game) {
+            $this->createGamePlayer($game, $player, 1, 0);
+        }
+        $this->createGamePlayer($notJoined, $other, 1, 0);
+        $this->entityManager->flush();
+
+        $rows = $this->repository->findRecentFinishedForPlayer((int) $player->getId(), 10);
+
+        self::assertSame(
+            [$newer->getGameId(), $undated->getGameId(), $older->getGameId()],
+            array_column($rows, 'gameId')
+        );
+        self::assertSame('2026-10-03 10:00:00', $rows[0]['finishedAt']?->format('Y-m-d H:i:s'));
+        self::assertNull($rows[1]['finishedAt']);
+        self::assertSame([$newer->getGameId()], array_column($this->repository->findRecentFinishedForPlayer((int) $player->getId(), 1), 'gameId'));
+    }
+
     private function createGame(GameStatus $status, ?\DateTime $date = null): Game
     {
         $game = (new Game())

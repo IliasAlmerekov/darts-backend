@@ -39,6 +39,13 @@ interface RoundRepositoryInterface
     public function countFinishedRounds(int $gameId): int;
 
     /**
+     * @param list<int> $gameIds
+     *
+     * @return array<int, int> finished rounds per game id; games without one are missing
+     */
+    public function countFinishedRoundsByGameIds(array $gameIds): array;
+
+    /**
      * @param int $gameId
      *
      * @return bool

@@ -11,7 +11,7 @@ The single account logged in on the shared tablet. Every game action happens und
 _Avoid_: Host, moderator, operator
 
 **Player**:
-A person who registered once from their own phone after scanning an invitation. A player sees only their own profile, games, and statistics, never another player's.
+A person who registered once from their own phone after scanning an invitation. A player sees only their own profile and statistics, never another player's. In a game they took part in, they also see every participant's display name and placement.
 _Avoid_: User (for this meaning), member
 
 **Guest**:
@@ -53,8 +53,12 @@ The game a player takes part in right now. A player has at most one; joining ano
 _Avoid_: active game
 
 **Profile**:
-The page a player lands on when they open the app without an invitation and without a current game. It shows their own recent games and statistics.
+The page a player lands on when they open the app without an invitation and without a current game. It shows their own recent finished games and statistics.
 _Avoid_: Dashboard, home page
+
+**Placement**:
+A participant's rank in a finished game. The winner has placement 1.
+_Avoid_: Position (the seat order before the game starts), rank
 
 **Remembered login**:
 A player's phone that stays signed in for 7 days after the player's last visit, so the player skips the login form. A new visit restarts the 7 days.

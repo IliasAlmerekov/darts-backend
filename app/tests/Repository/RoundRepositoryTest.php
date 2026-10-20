@@ -56,6 +56,29 @@ final class RoundRepositoryTest extends KernelTestCase
         self::assertTrue($this->repository->existsForGame($game->getGameId()));
     }
 
+    public function testCountFinishedRoundsByGameIdsMatchesCountFinishedRoundsPerGame(): void
+    {
+        $first = $this->createGame();
+        $second = $this->createGame();
+        $withoutFinished = $this->createGame();
+        $this->createRound($first, roundNumber: 1, finished: true);
+        $this->createRound($first, roundNumber: 2, finished: true);
+        $this->createRound($first, roundNumber: 3, finished: false);
+        $this->createRound($second, roundNumber: 1, finished: true);
+        $this->createRound($withoutFinished, roundNumber: 1, finished: false);
+        $this->entityManager->flush();
+
+        $counts = $this->repository->countFinishedRoundsByGameIds([
+            (int) $first->getGameId(),
+            (int) $second->getGameId(),
+            (int) $withoutFinished->getGameId(),
+        ]);
+        ksort($counts);
+
+        self::assertSame([(int) $first->getGameId() => 2, (int) $second->getGameId() => 1], $counts);
+        self::assertSame([], $this->repository->countFinishedRoundsByGameIds([]));
+    }
+
     private function createGame(): Game
     {
         $game = (new Game())
