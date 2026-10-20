@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Dto\ParticipantTotalsDto;
 use App\Entity\RoundThrows;
 use Doctrine\ORM\QueryBuilder;
 
@@ -137,7 +138,7 @@ interface RoundThrowsRepositoryInterface
     /**
      * @param list<int> $gameIds
      *
-     * @return array<int, array<int, array{lastRound:int,roundsPlayed:int,totalScore:float}>> per game id, then player id
+     * @return array<int, array<int, ParticipantTotalsDto>> per game id, then player id
      */
     public function getParticipantTotalsForGames(array $gameIds): array;
 

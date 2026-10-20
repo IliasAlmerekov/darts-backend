@@ -138,6 +138,27 @@ final class PlayerProfileEndpointTest extends WebTestCase
         self::assertSame([$own->getGameId()], array_column($recentGames, 'gameId'));
     }
 
+    /**
+     * Per the issue, recentGames lists every finished game with a seat, while stats count only
+     * games with a finished round, as the admin list does. The two can differ.
+     */
+    public function testFinishedGameWithoutOwnThrowAppearsButIsNotCountedInStats(): void
+    {
+        $client = static::createClient();
+        $player = $this->createUser('player', 'ROLE_PLAYER');
+        $other = $this->createUser('other', 'ROLE_PLAYER');
+        $game = $this->createGame(GameStatus::Finished, [$player, $other]);
+        $this->recordRound($game, 1, [[$other, [60]]]);
+        $this->settle($game, new DateTimeImmutable(), [[$other, 1, 0], [$player, 2, 301]]);
+        $client->loginUser($player);
+
+        $profile = $this->getProfile($client);
+
+        self::assertSame(['gamesPlayed' => 0, 'scoreAverage' => null], $profile['stats']);
+        self::assertSame([$game->getGameId()], array_column($profile['recentGames'], 'gameId'));
+        self::assertSame(0.0, $profile['recentGames'][0]['roundAverage']);
+    }
+
     public function testReturnsTheTenNewestFinishedGamesNewestFirstByFinishedAtOrDate(): void
     {
         $client = static::createClient();

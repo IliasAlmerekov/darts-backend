@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Service\Player;
 
+use App\Dto\ParticipantTotalsDto;
 use App\Dto\PlayerProfileGameDto;
 use App\Dto\PlayerProfileParticipantDto;
 use App\Dto\PlayerProfileResponseDto;
@@ -126,10 +127,10 @@ final readonly class PlayerProfileService implements PlayerProfileServiceInterfa
     /**
      * The player's round average in one game, computed like the game summary does.
      *
-     * @param GamePlayers                                                        $ownSeat
-     * @param int                                                                $playerId
-     * @param int                                                                $finishedRounds
-     * @param array<int, array{lastRound:int,roundsPlayed:int,totalScore:float}> $totals         per player id
+     * @param GamePlayers                      $ownSeat
+     * @param int                              $playerId
+     * @param int                              $finishedRounds
+     * @param array<int, ParticipantTotalsDto> $totals         per player id
      *
      * @return float
      */
@@ -137,14 +138,15 @@ final readonly class PlayerProfileService implements PlayerProfileServiceInterfa
     {
         $maxRoundNumber = ParticipantResult::maxRoundNumber(
             $finishedRounds,
-            array_map(static fn(array $total): int => $total['lastRound'], $totals)
+            array_map(static fn(ParticipantTotalsDto $total): int => $total->lastRound, $totals)
         );
+        $ownTotals = $totals[$playerId] ?? null;
         $roundsPlayed = ParticipantResult::roundsPlayed(
             $ownSeat->getScore(),
-            $totals[$playerId]['roundsPlayed'] ?? null,
+            $ownTotals?->roundsPlayed,
             $maxRoundNumber
         );
 
-        return ParticipantResult::roundAverage($totals[$playerId]['totalScore'] ?? 0.0, $roundsPlayed);
+        return ParticipantResult::roundAverage($ownTotals->totalScore ?? 0.0, $roundsPlayed);
     }
 }

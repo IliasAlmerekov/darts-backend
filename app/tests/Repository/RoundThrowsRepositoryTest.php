@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
+use App\Dto\ParticipantTotalsDto;
 use App\Entity\Game;
 use App\Entity\Round;
 use App\Entity\RoundThrows;
@@ -450,16 +451,13 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
 
         $totals = $this->repo->getParticipantTotalsForGames([$firstId, $secondId]);
 
-        self::assertSame(
-            ['lastRound' => 2, 'roundsPlayed' => 2, 'totalScore' => 60.0],
-            $totals[$firstId][(int) $alice->getId()]
-        );
-        self::assertSame(['lastRound' => 1, 'roundsPlayed' => 1, 'totalScore' => 5.0], $totals[$firstId][(int) $bob->getId()]);
-        self::assertSame(['lastRound' => 1, 'roundsPlayed' => 1, 'totalScore' => 7.0], $totals[$secondId][(int) $alice->getId()]);
+        self::assertEquals(new ParticipantTotalsDto(2, 2, 60.0), $totals[$firstId][(int) $alice->getId()]);
+        self::assertEquals(new ParticipantTotalsDto(1, 1, 5.0), $totals[$firstId][(int) $bob->getId()]);
+        self::assertEquals(new ParticipantTotalsDto(1, 1, 7.0), $totals[$secondId][(int) $alice->getId()]);
         foreach ([$firstId, $secondId] as $gameId) {
-            self::assertSame($this->repo->getLastRoundNumberForGame($gameId), array_map(static fn(array $t): int => $t['lastRound'], $totals[$gameId]));
-            self::assertSame($this->repo->getRoundsPlayedForGame($gameId), array_map(static fn(array $t): int => $t['roundsPlayed'], $totals[$gameId]));
-            self::assertSame($this->repo->getTotalScoreForGame($gameId), array_map(static fn(array $t): float => $t['totalScore'], $totals[$gameId]));
+            self::assertSame($this->repo->getLastRoundNumberForGame($gameId), array_map(static fn(ParticipantTotalsDto $t): int => $t->lastRound, $totals[$gameId]));
+            self::assertSame($this->repo->getRoundsPlayedForGame($gameId), array_map(static fn(ParticipantTotalsDto $t): int => $t->roundsPlayed, $totals[$gameId]));
+            self::assertSame($this->repo->getTotalScoreForGame($gameId), array_map(static fn(ParticipantTotalsDto $t): float => $t->totalScore, $totals[$gameId]));
         }
         self::assertSame([], $this->repo->getParticipantTotalsForGames([]));
     }

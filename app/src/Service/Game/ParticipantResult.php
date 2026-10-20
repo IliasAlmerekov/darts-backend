@@ -27,21 +27,21 @@ final class ParticipantResult
      */
     public static function compareByPlacement(GamePlayers $a, GamePlayers $b): int
     {
-        $posA = $a->getPosition();
-        $posB = $b->getPosition();
-        if (null === $posA && null === $posB) {
+        $placementA = $a->getPosition();
+        $placementB = $b->getPosition();
+        if (null === $placementA && null === $placementB) {
             return ($a->getScore() ?? PHP_INT_MAX) <=> ($b->getScore() ?? PHP_INT_MAX);
         }
 
-        if (null === $posA) {
+        if (null === $placementA) {
             return 1;
         }
 
-        if (null === $posB) {
+        if (null === $placementB) {
             return -1;
         }
 
-        return $posA <=> $posB;
+        return $placementA <=> $placementB;
     }
 
     /**

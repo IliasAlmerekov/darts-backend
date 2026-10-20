@@ -136,4 +136,39 @@ final class GameStatisticsServiceTest extends TestCase
         self::assertSame(8, $result[1]->gamesPlayed);
         self::assertSame(37.5, $result[1]->scoreAverage);
     }
+
+    public function testGetPlayerStatsForPlayerMapsThePlayersRowLikeTheList(): void
+    {
+        $this->roundThrowsRepository
+            ->expects(self::once())
+            ->method('getPlayerStatisticsForPlayer')
+            ->with(1)
+            ->willReturn([
+                'playerId' => 1,
+                'username' => 'alice',
+                'gamesPlayed' => '5',
+                'totalValue' => '150.0',
+                'roundsFinished' => '10',
+                'scoreAverage' => '15.0',
+            ]);
+
+        $result = $this->service->getPlayerStatsForPlayer(1);
+
+        self::assertNotNull($result);
+        self::assertSame(1, $result->playerId);
+        self::assertSame('alice', $result->name);
+        self::assertSame(5, $result->gamesPlayed);
+        self::assertSame(15.0, $result->scoreAverage);
+    }
+
+    public function testGetPlayerStatsForPlayerIsNullWithoutAFinishedRound(): void
+    {
+        $this->roundThrowsRepository
+            ->expects(self::once())
+            ->method('getPlayerStatisticsForPlayer')
+            ->with(1)
+            ->willReturn(null);
+
+        self::assertNull($this->service->getPlayerStatsForPlayer(1));
+    }
 }

@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Dto\ParticipantTotalsDto;
 use App\Enum\GameStatus;
 use App\Entity\Round;
 use App\Entity\GamePlayers;
@@ -365,7 +366,7 @@ SQL,
      *
      * @param list<int> $gameIds
      *
-     * @return array<int, array<int, array{lastRound:int,roundsPlayed:int,totalScore:float}>> per game id, then player id
+     * @return array<int, array<int, ParticipantTotalsDto>> per game id, then player id
      */
     #[\Override]
     public function getParticipantTotalsForGames(array $gameIds): array
@@ -392,11 +393,11 @@ SQL,
 
         $map = [];
         foreach ($rows as $row) {
-            $map[(int) $row['gameId']][(int) $row['playerId']] = [
-                'lastRound' => (int) $row['lastRound'],
-                'roundsPlayed' => (int) $row['roundsPlayed'],
-                'totalScore' => (float) $row['totalValue'],
-            ];
+            $map[(int) $row['gameId']][(int) $row['playerId']] = new ParticipantTotalsDto(
+                lastRound: (int) $row['lastRound'],
+                roundsPlayed: (int) $row['roundsPlayed'],
+                totalScore: (float) $row['totalValue'],
+            );
         }
 
         return $map;
@@ -422,15 +423,7 @@ SQL,
     #[\Override]
     public function getPlayerStatistics(int $limit, int $offset, string $sortField = 'average', string $direction = 'DESC'): array
     {
-        $orderColumn = 'gamesPlayed' === $sortField ? 'gamesPlayed' : 'scoreAverage';
-        $direction = 'ASC' === strtoupper($direction) ? 'ASC' : 'DESC';
-
-        return $this->fetchPlayerStatistics(
-            '',
-            sprintf('ORDER BY %s %s LIMIT :limit OFFSET :offset', $orderColumn, $direction),
-            ['limit' => $limit, 'offset' => $offset],
-            ['limit' => ParameterType::INTEGER, 'offset' => ParameterType::INTEGER],
-        );
+        return $this->fetchPlayerStatistics(null, $limit, $offset, $sortField, $direction);
     }
 
     /**
@@ -451,14 +444,7 @@ SQL,
     #[\Override]
     public function getPlayerStatisticsForPlayer(int $playerId): ?array
     {
-        $rows = $this->fetchPlayerStatistics(
-            'AND rt.player_id = :playerId',
-            '',
-            ['playerId' => $playerId],
-            ['playerId' => ParameterType::INTEGER],
-        );
-
-        return $rows[0] ?? null;
+        return $this->fetchPlayerStatistics($playerId)[0] ?? null;
     }
 
     /**
@@ -486,10 +472,11 @@ SQL,
      * Aggregates finished rounds of finished games per registered player. Both public
      * statistics reads share this query, so the admin list and a player's Profile agree.
      *
-     * @param string                       $playerFilter extra condition on `rt`, or ''
-     * @param string                       $tail         ORDER BY / LIMIT clause, or ''
-     * @param array<string, int>           $parameters
-     * @param array<string, ParameterType> $types
+     * @param int|null $playerId  only this player's row, or every player's
+     * @param int|null $limit     page size, or every row
+     * @param int      $offset
+     * @param string   $sortField 'gamesPlayed', or the score average
+     * @param string   $direction
      *
      * @return array<int, array{
      *     playerId:int,
@@ -500,8 +487,30 @@ SQL,
      *     scoreAverage:string|null
      * }>
      */
-    private function fetchPlayerStatistics(string $playerFilter, string $tail, array $parameters, array $types): array
-    {
+    private function fetchPlayerStatistics(
+        ?int $playerId,
+        ?int $limit = null,
+        int $offset = 0,
+        string $sortField = 'average',
+        string $direction = 'DESC',
+    ): array {
+        $orderColumn = 'gamesPlayed' === $sortField ? 'gamesPlayed' : 'scoreAverage';
+        $direction = 'ASC' === strtoupper($direction) ? 'ASC' : 'DESC';
+        $parameters = ['status' => GameStatus::Finished->value];
+        $types = ['status' => ParameterType::STRING];
+        $playerFilter = '';
+        if (null !== $playerId) {
+            $playerFilter = 'AND rt.player_id = :playerId';
+            $parameters['playerId'] = $playerId;
+            $types['playerId'] = ParameterType::INTEGER;
+        }
+        $page = '';
+        if (null !== $limit) {
+            $page = 'LIMIT :limit OFFSET :offset';
+            $parameters += ['limit' => $limit, 'offset' => $offset];
+            $types += ['limit' => ParameterType::INTEGER, 'offset' => ParameterType::INTEGER];
+        }
+
         $connection = $this->getEntityManager()->getConnection();
         $roundTable = $connection->getDatabasePlatform()->quoteSingleIdentifier('round');
         $userTable = $connection->getDatabasePlatform()->quoteSingleIdentifier('user');
@@ -535,12 +544,15 @@ FROM (
     GROUP BY rt.player_id, u.display_name, rt.game_id, rt.round_id
 ) player_rounds
 GROUP BY player_rounds.playerId, player_rounds.username
+ORDER BY %s %s
 %s
 SQL,
             $roundTable,
             $userTable,
             $playerFilter,
-            $tail,
+            $orderColumn,
+            $direction,
+            $page,
         );
 
         /** @var array<int, array{
@@ -552,11 +564,7 @@ SQL,
          *     scoreAverage:string|null
          * }> $rows
          */
-        $rows = $connection->fetchAllAssociative(
-            $sql,
-            ['status' => GameStatus::Finished->value] + $parameters,
-            ['status' => ParameterType::STRING] + $types,
-        );
+        $rows = $connection->fetchAllAssociative($sql, $parameters, $types);
 
         return $rows;
     }
