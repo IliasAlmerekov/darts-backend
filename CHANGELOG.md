@@ -17,6 +17,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 
 ### Geändert
 - **API-Doku**: Das OpenAPI-Schema `CurrentGameResponseDto` von `GET /api/player/current-game` markiert `gameId` und `status` als Pflichtfelder und beschränkt `status` auf `lobby`, `started` oder `null`; die Antwort selbst bleibt gleich (#123)
+- **Agenten**: `AGENTS.md` schätzt jede Aufgabe vor der ersten Änderung ein. Eine kleine Aufgabe geht direkt zu Branch, einem fehlschlagenden Test und der Änderung; eine große läuft über `/grill-with-docs`, einen Plan aus Teilaufgaben mit Akzeptanzkriterien, den Skill `tdd` pro Teilaufgabe und `code-review` gegen `main`. `code-review` behandelt die Scope-Regeln als Repo-Standard, und das Verbot von Agenten-Hinweisen hat Vorrang vor dem Hinweis des Skills `triage` (#124)
 - **CI**: Die GitLab-Pipeline läuft nur noch für Merge Requests, `main` und Tags, prüft das Schema mit `doctrine:schema:validate` und bricht überholte Pipelines ab (#120)
 - **Agenten**: `AGENTS.md` beschreibt den Ablauf ohne Worktrees, einen schnellen Testlauf, den Fehlervertrag, Migrationen, Test-Helfer und eine Scope-Regel (#120)
 - **GameLifecycleController**: Methode `finished` in zwei separate Methoden aufgeteilt: `finish` (POST zum Beenden des Spiels) und `finished` (GET zum Anzeigen der Endergebnisse ohne Statusänderung).
