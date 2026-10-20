@@ -6,6 +6,18 @@ stages:
 #  - publish
 #  - deploy
 
+# Same triggers as the GitHub CI: merge requests, the default branch, and release tags.
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+    - when: never
+
+default:
+  # A newer pipeline on the same ref cancels this one.
+  interruptible: true
+
 variables:
   SONAR_HOST_URL: "http://gallenstein.deepblue:9000"
   GRAFANA_API_URI: "http://grafana.deepblue:3000" # set this in Gitlab CI/CD variables
@@ -92,6 +104,7 @@ build:php:
 test:php:
   image: ${HARBOR_REGISTRY}/library/php:${PHP_VERSION}-pcov
   stage: test
+  timeout: 20m
   services:
     - name: mysql:8.0
       alias: mysql
@@ -108,6 +121,7 @@ test:php:
     - until php -r 'new PDO("mysql:host=mysql;port=3306", "root", "root123");' >/dev/null 2>&1; do sleep 1; done
     - php -d memory_limit=-1 bin/console doctrine:database:create --env=test --if-not-exists
     - php -d memory_limit=-1 bin/console doctrine:migrations:migrate --env=test --no-interaction
+    - php -d memory_limit=-1 bin/console doctrine:schema:validate --env=test
     - php -d memory_limit=-1 vendor/bin/phpunit --coverage-text  --coverage-clover build/phpunit.coverage.xml --coverage-cobertura build/phpunit.coverage.cobertura.xml --log-junit build/phpunit.xml
   needs:
     - job: build:php
@@ -178,6 +192,8 @@ test:static-analysis:
 docker:build:php:
   stage: build-docker
   image: ${CI_DEPENDENCY_PROXY_DIRECT_GROUP_IMAGE_PREFIX}/docker:${DOCKER_VERSION}
+  # Never cancel a half-pushed image.
+  interruptible: false
   tags:
     - docker
   before_script: *docker_login
@@ -197,6 +213,8 @@ docker:build:php:
 docker:build:nginx:
   stage: build-docker
   image: ${CI_DEPENDENCY_PROXY_DIRECT_GROUP_IMAGE_PREFIX}/docker:${DOCKER_VERSION}
+  # Never cancel a half-pushed image.
+  interruptible: false
   tags:
     - docker
   before_script: *docker_login

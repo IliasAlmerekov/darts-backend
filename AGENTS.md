@@ -5,94 +5,144 @@ invitations, registration, security. The application root is `app/`
 (`src/`, `tests/`, `config/`, `migrations/`). The frontend lives in a separate
 repository and consumes this API.
 
+## Domain
+
+Before changing game, lobby, or login behaviour, read `GLOSSARY.md` and the ADRs in
+`docs/adr/` that touch the area. They record rules the code enforces, such as one open
+lobby and one started game. Game logic lives in `app/src/Service/Game/`, one service per
+use case behind an interface.
+
+## Scope
+
+Solve the whole task with the least new code. Before the first edit, list every place the
+change must reach: callers, tests, fixtures, config, serializer groups, API docs. That list
+is the scope; features nobody asked for are outside it, named in one line in the report.
+
+Reach for the first option that works: no code at all, then a helper or service already in
+`app/src`, then Symfony or PHP built-ins, then an installed package, then new code.
+
+- Add no abstraction, interface, option, or "for later" code the task does not need.
+  Deletion beats addition.
+- A bug fix greps every caller of the function it touches and fixes the root cause once,
+  in the shared code.
+- Moved or merged code keeps its validation and error handling.
+- Between options of equal size, take the one correct on edge cases.
+- A known shortcut gets a comment: `shortcut: <the limit>, <when to upgrade>`.
+- Validation at trust boundaries, error handling that prevents data loss, and security
+  are never cut.
+
+The final report lists each verification command with its pass or fail status, names every
+check you skipped, and ends with what you did not check and the risk left.
+
 ## Conventions
 
-Match the neighbouring code; these are the conventions it follows:
+Match the neighbouring code. PHPCS and Psalm enforce style and types; these are the
+conventions no tool checks:
 
-- `declare(strict_types=1);` in every PHP file, right after the proprietary license
-  header where the surrounding files carry one.
-- PSR-12, `app/.editorconfig`, `app/phpcs.xml.dist`.
-- Thin controllers, business logic in services, persistence in repositories.
-- `final` classes, explicit types, constructor injection.
-- `#[\Override]` on overriding methods, and Yoda comparisons, where nearby code uses them.
+- Every PHP file, migrations included, starts with the proprietary license header and
+  `declare(strict_types=1);`.
 - Controller input binds through `#[MapRequestPayload]` / `#[MapQueryParameter]` into DTOs
-  validated with Symfony Validator attributes, never into Doctrine entities.
+  in `app/src/Dto/`, validated with Symfony Validator attributes. Entities stay out of
+  request binding.
+- An error the client should see is an exception that extends
+  `App\Exception\ApiHttpException` (or implements `ApiExceptionInterface` and Symfony's
+  `HttpExceptionInterface`) with a code from `ErrorCode`. `App\Security\ErrorController`
+  renders its code, message, and status, and hides other exceptions behind a generic body.
 - Optional `UserInterface` methods are guarded with `method_exists(...)` unless the code
   already depends on `App\Entity\User`.
 - `FormErrorIterator` is iterable directly, without `getIterator()`.
 - Frontend URLs and redirects come from configuration such as `FRONTEND_URL`.
-- Errors map to the correct HTTP status; clients never see internal exception details.
 
 ## API contract
 
-Response shape is a contract with the frontend. When a response changes, check serializer
-groups and the Nelmio API docs in the same change.
+Response shape is a contract with the frontend, which lives next to this repo in
+`../dartsapp`. Before changing a route or a response, grep its path in `../dartsapp/src`
+and list the consumers in the PR. Serializer groups and the Nelmio API docs change in the
+same commit as the response. The frontend validates responses against a dump of those docs,
+`../dartsapp/docs/backend-api-contract.json`, so a changed response also gets a frontend
+issue to refresh that dump.
 
 ## Doctrine
 
-Every schema change ships with a migration in `app/migrations`. Bind query parameters.
-Watch for N+1 queries and lazy loading in loops.
+Every schema change ships with a migration in `app/migrations`. Generate it against the
+dev database, then add the license header and review the SQL:
+
+```bash
+docker compose exec -T -w /var/www/html php php bin/console doctrine:migrations:diff
+```
+
+Bind query parameters. Watch for N+1 queries and lazy loading in loops.
 
 ## Tests
 
-Every behaviour change gets a test: unit for pure logic, integration for services and
-repositories, functional for HTTP endpoints. The test DB uses DAMA Doctrine Test Bundle.
+Every behaviour change gets a test, however small; only changes that leave behaviour
+untouched (a rename, docs, formatting) go without one. Unit tests cover pure logic,
+integration tests cover services and repositories, and functional tests cover HTTP
+endpoints (`app/tests/Controller/`). DAMA Doctrine Test
+Bundle wraps the whole run in one transaction that rolls back. Helpers in
+`app/tests/Support/`:
+
+- `TestUserFactory::create()` persists a throwaway user for functional tests.
+- `ScratchDatabase` gives a test its own MySQL database outside the DAMA transaction, for
+  DDL or a second connection that must commit.
+
+While you work, run only the tests you touch, from the repo root:
+
+```bash
+docker compose exec -T -w /var/www/html php php vendor/bin/phpunit --filter <TestClass>
+```
+
+Run the full verification below once, before the commit.
 
 ## Verification
 
-Run checks in Docker from the repository root, to match `.gitlab-ci.yml`. Host-local
-`php`, `composer`, or `vendor/bin/*` runs only when the user accepts the deviation.
+The checks mirror `.github/workflows/ci.yml`, the gate on every PR; `.gitlab-ci.yml` runs
+the same set. Run them in Docker from the repository root. Host-local `php`, `composer`,
+or `vendor/bin/*` runs only when the user accepts the deviation.
 
 Locally backend and frontend run as one Compose stack, the project `darts`: nginx on :8001,
-php, mysql, and the frontend on :5173. Both repos' compose files carry `name: darts`, so every
-`docker compose` command below joins that stack; start the whole stack with
-`docker compose up -d` in the workspace folder that holds both repos. `docker compose up` run
-from a worktree recreates the php container on that worktree's `app/`; run
-`docker compose up -d` in the workspace folder afterwards to point it back at the main checkout.
+php, mysql, and the frontend on :5173. Start it with `docker compose up -d` in the
+workspace folder that holds both repos. The php container mounts this checkout's `app/`.
 
-`app/.env.test` uses the default MySQL root password from `docker-compose.yaml`.
-`scripts/check-test-db-env.sh` fails when the two differ. Run it on the host, because the
-php container mounts only `app/`. If you set `MYSQL_ROOT_PASSWORD`, or your `mysql_data`
-volume was created before commit 7ee392b (root password `root123`), put the matching
-`DATABASE_URL` in `app/.env.test.local`, or recreate the volume with `docker compose down -v`,
-which deletes the local database.
-
-`scripts/check-image-eol.sh`, also run on the host, fails when a shell script, a Dockerfile,
-or a file under `app/docker/` lacks `eol=lf` in `.gitattributes` or is committed with CRLF.
+The two `scripts/` checks run on the host, because the container mounts only `app/`.
+`check-test-db-env.sh` fails when `app/.env.test` and `docker-compose.yaml` disagree on the
+MySQL root password; put the matching `DATABASE_URL` in `app/.env.test.local` to fix it.
+`check-image-eol.sh` fails when a shell script, a Dockerfile, or a file under `app/docker/`
+lacks `eol=lf` in `.gitattributes` or is committed with CRLF.
 
 ```bash
 sh scripts/check-test-db-env.sh
 sh scripts/check-image-eol.sh
 docker compose up -d php mysql
-docker compose exec -T php sh -lc 'cd /var/www/html && composer install --no-interaction'
-docker compose exec -T php sh -lc 'cd /var/www/html && mkdir -p build'
-docker compose exec -T php sh -lc 'cd /var/www/html && php -d memory_limit=-1 vendor/bin/phpcs'
-docker compose exec -T php sh -lc 'cd /var/www/html && php vendor/bin/psalm --show-info=false --report=build/psalm-quality-report.json'
-docker compose exec -T php sh -lc 'cd /var/www/html && php bin/console lint:yaml -v --ansi --env=test config'
-docker compose exec -T php sh -lc 'cd /var/www/html && php -d memory_limit=-1 bin/console cache:clear --env=test'
-docker compose exec -T php sh -lc 'cd /var/www/html && php -d memory_limit=-1 bin/console doctrine:database:create --env=test --if-not-exists'
-docker compose exec -T php sh -lc 'cd /var/www/html && php -d memory_limit=-1 bin/console doctrine:migrations:migrate --env=test --no-interaction'
-docker compose exec -T php sh -lc 'cd /var/www/html && php -d memory_limit=-1 bin/console doctrine:schema:validate --env=test'
-docker compose exec -T php sh -lc 'cd /var/www/html && XDEBUG_MODE=coverage php -d memory_limit=-1 vendor/bin/phpunit --coverage-text --coverage-clover build/phpunit.coverage.xml --coverage-cobertura build/phpunit.coverage.cobertura.xml --log-junit build/phpunit.xml'
+x() { docker compose exec -T -w /var/www/html php "$@"; }
+x composer install --no-interaction
+x composer audit
+x mkdir -p build
+x php -d memory_limit=-1 vendor/bin/phpcs
+x php vendor/bin/psalm --show-info=false --report=build/psalm-quality-report.json
+x php bin/console lint:yaml -v --ansi --env=test config
+x php -d memory_limit=-1 bin/console cache:clear --env=test
+x php -d memory_limit=-1 bin/console doctrine:database:create --env=test --if-not-exists
+x php -d memory_limit=-1 bin/console doctrine:migrations:migrate --env=test --no-interaction
+x php -d memory_limit=-1 bin/console doctrine:schema:validate --env=test
+x php -d memory_limit=-1 vendor/bin/phpunit
 ```
 
-A green result comes from fixing the code. Never change the Psalm, PHPCS, or PHPUnit
-configs to hide a failure; a deliberate config change, such as excluding the slow
-`benchmark` group from the default PHPUnit run, ships with its reason in the commit and a
-test that pins it. In the final report, list each command run with its pass or fail status, and name
-any check you skipped.
+A green result comes from fixing the code. The Psalm, PHPCS, and PHPUnit configs and
+`app/psalm-baseline.xml` change only on purpose: the baseline only shrinks, and a
+deliberate config change, such as excluding the slow `benchmark` group from the default
+PHPUnit run, ships with its reason in the commit and a test that pins it.
 
 ## Branches
 
-Each issue gets its own branch, cut from the latest `main`. Before the first edit, run
-`git switch main && git pull --ff-only`, then `git switch -c <type>/<issue>-<topic>`.
-`main` tracks the `github` remote; `origin` is the GitLab mirror, so pull and push through
-`github`. `main` changes only through a pull request.
+Each issue gets its own branch in this checkout, cut from the latest `main`; work happens
+here, without worktrees. Before the first edit, run
+`git switch main && git pull --ff-only github main`, then
+`git switch -c <type>/<issue>-<topic>`. `main` tracks the `github` remote; `origin` is the
+GitLab mirror, so pull and push through `github`. `main` changes only through a pull request.
 
-Once the PR is open, clean up after the work and keep only the branch: remove the issue's
-worktree (`git worktree remove <path>`, then `git worktree prune`), delete the scratch files
-the work created (PR and comment body files, temp scripts, logs), and stop the processes it
-started.
+Once the PR is open, delete the scratch files the work created (PR and comment body files,
+temp scripts, logs) and stop the processes it started.
 
 ## Commits and pull requests
 
@@ -104,7 +154,7 @@ Every PR body is the filled `.github/pull_request_template.md`, whoever opens th
 
 1. Copy the template to a file, fill it in, and pass it with `gh pr create --body-file <file>`.
 2. Keep four parts, in this order:
-   - `Closes #N`. Write `No issue: <reason>` instead only when `CONTRIBUTING.md` allows a PR without an issue.
+   - `Closes #N`.
    - What changed and why, in 1 or 2 sentences.
    - `Evidence:` bullets, each a command and its result, or a test that failed before the fix and passes after.
    - `Confidence:` high, medium, or low, plus one sentence on the risk left.
@@ -113,6 +163,10 @@ Every PR body is the filled `.github/pull_request_template.md`, whoever opens th
 The diff already shows files and changes, so the body carries only the four parts. Session
 notes, verification detail, follow-ups, and benchmarks go in a comment on the issue. Close the
 issue once its acceptance criteria are met and that comment carries the verification.
+
+Every PR adds its change to `CHANGELOG.md` under `## [Unreleased]`, in German, in the group
+it fits (Hinzugefügt, Geändert, Entfernt, Behoben, Sicherheit, Tests), as
+`- **Bereich**: Änderung (#N)`.
 
 Commits, PR titles and bodies, and issue comments carry the human author only: no
 `Co-Authored-By` trailer and no Claude or agent footer.

@@ -15,6 +15,8 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **CSRF-Tokens-Endpunkt**: Neuer Endpunkt `/api/csrf` in `SecurityController`, der CSRF-Tokens für Authentifizierungsflüsse bereitstellt.
 
 ### Geändert
+- **CI**: Die GitLab-Pipeline läuft nur noch für Merge Requests, `main` und Tags, prüft das Schema mit `doctrine:schema:validate` und bricht überholte Pipelines ab (#120)
+- **Agenten**: `AGENTS.md` beschreibt den Ablauf ohne Worktrees, einen schnellen Testlauf, den Fehlervertrag, Migrationen, Test-Helfer und eine Scope-Regel (#120)
 - **GameLifecycleController**: Methode `finished` in zwei separate Methoden aufgeteilt: `finish` (POST zum Beenden des Spiels) und `finished` (GET zum Anzeigen der Endergebnisse ohne Statusänderung).
 - **InvitationController**: `processInvitation` nun explizit auf POST-Methoden beschränkt.
 - **RegistrationController**: `_csrf_token` als erforderliches Feld in der Registrierungs-API hinzugefügt.
