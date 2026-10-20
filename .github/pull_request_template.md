@@ -1,7 +1,5 @@
 Closes #
 
-<!-- No issue? Write "No issue: <reason>" instead, only when CONTRIBUTING.md allows it. -->
-
 <!-- What changed and why, in 1 or 2 sentences. -->
 
 Evidence:
