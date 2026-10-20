@@ -430,6 +430,61 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
         self::assertSame('2', (string) $rows[0]['gamesPlayed']);
     }
 
+    public function testGetParticipantTotalsForGamesMatchesThePerGameAggregates(): void
+    {
+        $first = $this->createGame(GameStatus::Finished);
+        $second = $this->createGame(GameStatus::Finished);
+        $first1 = $this->createRound($first, 1, finished: true);
+        $first2 = $this->createRound($first, 2, finished: true);
+        $second1 = $this->createRound($second, 1, finished: true);
+        $alice = $this->createUser('totals-alice');
+        $bob = $this->createUser('totals-bob');
+        $this->createThrow($first, $first1, $alice, 1, 20, 281);
+        $this->createThrow($first, $first1, $alice, 2, 40, 241);
+        $this->createThrow($first, $first2, $alice, 1, 60, 241, isBust: true);
+        $this->createThrow($first, $first1, $bob, 1, 5, 296);
+        $this->createThrow($second, $second1, $alice, 1, 7, 294);
+        $this->em->flush();
+        $firstId = (int) $first->getGameId();
+        $secondId = (int) $second->getGameId();
+
+        $totals = $this->repo->getParticipantTotalsForGames([$firstId, $secondId]);
+
+        self::assertSame(
+            ['lastRound' => 2, 'roundsPlayed' => 2, 'totalScore' => 60.0],
+            $totals[$firstId][(int) $alice->getId()]
+        );
+        self::assertSame(['lastRound' => 1, 'roundsPlayed' => 1, 'totalScore' => 5.0], $totals[$firstId][(int) $bob->getId()]);
+        self::assertSame(['lastRound' => 1, 'roundsPlayed' => 1, 'totalScore' => 7.0], $totals[$secondId][(int) $alice->getId()]);
+        foreach ([$firstId, $secondId] as $gameId) {
+            self::assertSame($this->repo->getLastRoundNumberForGame($gameId), array_map(static fn(array $t): int => $t['lastRound'], $totals[$gameId]));
+            self::assertSame($this->repo->getRoundsPlayedForGame($gameId), array_map(static fn(array $t): int => $t['roundsPlayed'], $totals[$gameId]));
+            self::assertSame($this->repo->getTotalScoreForGame($gameId), array_map(static fn(array $t): float => $t['totalScore'], $totals[$gameId]));
+        }
+        self::assertSame([], $this->repo->getParticipantTotalsForGames([]));
+    }
+
+    public function testGetPlayerStatisticsForPlayerReturnsThatPlayersListRow(): void
+    {
+        $game = $this->createGame(GameStatus::Finished);
+        $round = $this->createRound($game, 1, finished: true);
+        $alice = $this->createUser('single-stats-alice');
+        $bob = $this->createUser('single-stats-bob');
+        $nobody = $this->createUser('single-stats-nobody');
+        $this->createThrow($game, $round, $alice, 1, 30, 271);
+        $this->createThrow($game, $round, $bob, 1, 12, 289);
+        $this->em->flush();
+
+        $listRows = array_values(array_filter(
+            $this->repo->getPlayerStatistics(100, 0),
+            static fn(array $row): bool => (int) $row['playerId'] === $alice->getId()
+        ));
+
+        self::assertSame($listRows[0], $this->repo->getPlayerStatisticsForPlayer((int) $alice->getId()));
+        self::assertSame('30.0000', $listRows[0]['scoreAverage']);
+        self::assertNull($this->repo->getPlayerStatisticsForPlayer((int) $nobody->getId()));
+    }
+
     private function createGame(GameStatus $status): Game
     {
         $game = (new Game())

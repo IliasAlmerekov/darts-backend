@@ -22,4 +22,14 @@ interface GameStatisticsServiceInterface
      * @return PlayerStatsDto[]
      */
     public function getPlayerStats(int $limit, int $offset, string $sortField, string $sortDirection): array;
+
+    /**
+     * The same statistics row as getPlayerStats() for one player, or null when the player
+     * has no finished round in a finished game.
+     *
+     * @param int $playerId
+     *
+     * @return PlayerStatsDto|null
+     */
+    public function getPlayerStatsForPlayer(int $playerId): ?PlayerStatsDto;
 }

@@ -127,6 +127,38 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
     }
 
     /**
+     * @param list<int> $gameIds
+     *
+     * @return array<int, list<GamePlayers>> seats per game id, in seat order
+     */
+    #[\Override]
+    public function findByGameIds(array $gameIds): array
+    {
+        if ([] === $gameIds) {
+            return [];
+        }
+
+        /** @var list<GamePlayers> $seats */
+        $seats = $this->createQueryBuilder('gp')
+            ->addSelect('game', 'player')
+            ->innerJoin('gp.game', 'game')
+            ->innerJoin('gp.player', 'player')
+            ->andWhere('gp.game IN (:gameIds)')
+            ->setParameter('gameIds', $gameIds)
+            ->orderBy('gp.position', 'ASC')
+            ->addOrderBy('gp.gamePlayerId', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        $seatsByGameId = [];
+        foreach ($seats as $seat) {
+            $seatsByGameId[(int) $seat->getGame()?->getGameId()][] = $seat;
+        }
+
+        return $seatsByGameId;
+    }
+
+    /**
      * @return GamePlayers[]
      *
      * @param int $gameId

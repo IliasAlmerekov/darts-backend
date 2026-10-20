@@ -106,51 +106,29 @@ final readonly class GameFinishService implements GameFinishServiceInterface
     #[\Override]
     public function buildFinishedPlayersList(int $gameId, ?int $finishedRounds = null, ?array $roundsPlayedMap = null, ?array $totalScoresMap = null): array
     {
-        $lastRoundsMap = $this->roundThrowsRepository->getLastRoundNumberForGame($gameId);
-        $maxRoundNumber = $finishedRounds;
-        if ([] !== $lastRoundsMap) {
-            $maxRoundNumber = max($maxRoundNumber, max($lastRoundsMap));
-        }
+        $maxRoundNumber = ParticipantResult::maxRoundNumber(
+            $finishedRounds,
+            $this->roundThrowsRepository->getLastRoundNumberForGame($gameId)
+        );
         $roundsPlayedMap ??= $this->roundThrowsRepository->getRoundsPlayedForGame($gameId);
         $totalScoresMap ??= $this->roundThrowsRepository->getTotalScoreForGame($gameId);
         $players = $this->gamePlayersRepository->findByGameId($gameId);
-        usort($players, static function (GamePlayers $a, GamePlayers $b): int {
-            $posA = $a->getPosition();
-            $posB = $b->getPosition();
-            if (null === $posA && null === $posB) {
-                return ($a->getScore() ?? PHP_INT_MAX) <=> ($b->getScore() ?? PHP_INT_MAX);
-            }
-
-            if (null === $posA) {
-                return 1;
-            }
-
-            if (null === $posB) {
-                return -1;
-            }
-
-            return $posA <=> $posB;
-        });
+        usort($players, ParticipantResult::compareByPlacement(...));
         $result = [];
         foreach ($players as $player) {
             $user = $player->getPlayer();
             $playerId = $user?->getId();
-            $score = $player->getScore();
             $playerRounds = null !== $playerId && array_key_exists($playerId, $roundsPlayedMap)
                 ? $roundsPlayedMap[$playerId]
                 : null;
-            if (null !== $score && 0 === $score) {
-                $roundsPlayed = $playerRounds ?? 0;
-            } else {
-                $roundsPlayed = $maxRoundNumber;
-            }
+            $roundsPlayed = ParticipantResult::roundsPlayed($player->getScore(), $playerRounds, $maxRoundNumber);
             $totalScore = null !== $playerId
                 ? ($totalScoresMap[$playerId] ?? 0.0)
                 : 0.0;
-            $roundAverage = $roundsPlayed > 0 ? (float) $totalScore / (float) $roundsPlayed : 0.0;
+            $roundAverage = ParticipantResult::roundAverage((float) $totalScore, $roundsPlayed);
             $result[] = [
                 'playerId' => $playerId,
-                'username' => $this->resolveGamePlayerDisplayName($player),
+                'username' => ParticipantResult::displayName($player),
                 'position' => $player->getPosition(),
                 'roundsPlayed' => $roundsPlayed,
                 'roundAverage' => $roundAverage,
@@ -189,29 +167,6 @@ final readonly class GameFinishService implements GameFinishServiceInterface
                 $player->setIsWinner($player === $winnerPlayer);
             }
         }
-    }
-
-    /**
-     * @param GamePlayers $player
-     *
-     * @return string|null
-     */
-    private function resolveGamePlayerDisplayName(GamePlayers $player): ?string
-    {
-        $user = $player->getPlayer();
-        if (null === $user) {
-            return null;
-        }
-
-        $baseName = $player->getDisplayNameSnapshot();
-        if (null === $baseName || '' === trim($baseName)) {
-            $baseName = $user->getDisplayNameRaw() ?? $user->getUsername();
-        }
-        if (null === $baseName || '' === trim($baseName)) {
-            return null;
-        }
-
-        return $baseName;
     }
 
     /**

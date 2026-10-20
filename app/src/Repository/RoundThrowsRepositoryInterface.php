@@ -135,6 +135,13 @@ interface RoundThrowsRepositoryInterface
     public function getLastRoundNumberForGame(int $gameId): array;
 
     /**
+     * @param list<int> $gameIds
+     *
+     * @return array<int, array<int, array{lastRound:int,roundsPlayed:int,totalScore:float}>> per game id, then player id
+     */
+    public function getParticipantTotalsForGames(array $gameIds): array;
+
+    /**
      * @param int    $limit
      * @param int    $offset
      * @param string $sortField
@@ -150,6 +157,20 @@ interface RoundThrowsRepositoryInterface
      * }>
      */
     public function getPlayerStatistics(int $limit, int $offset, string $sortField = 'average', string $direction = 'DESC'): array;
+
+    /**
+     * @param int $playerId
+     *
+     * @return array{
+     *     playerId:int,
+     *     username:string,
+     *     gamesPlayed:string,
+     *     totalValue:string,
+     *     roundsFinished:string,
+     *     scoreAverage:string|null
+     * }|null
+     */
+    public function getPlayerStatisticsForPlayer(int $playerId): ?array;
 
     /**
      * @return int

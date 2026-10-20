@@ -47,10 +47,8 @@
   </file>
   <file src="src/Dto/PlayerStatsDto.php">
     <PossiblyUnusedProperty>
-      <code><![CDATA[$gamesPlayed]]></code>
       <code><![CDATA[$name]]></code>
       <code><![CDATA[$playerId]]></code>
-      <code><![CDATA[$scoreAverage]]></code>
     </PossiblyUnusedProperty>
   </file>
   <file src="src/Dto/ThrowRequest.php">

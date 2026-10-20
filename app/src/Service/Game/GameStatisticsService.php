@@ -34,20 +34,41 @@ final readonly class GameStatisticsService implements GameStatisticsServiceInter
     {
         $rows = $this->roundThrowsRepository->getPlayerStatistics($limit, $offset, $sortField, $sortDirection);
 
-        return array_map(static function (array $row): PlayerStatsDto {
-            $playerId = self::resolveIntValue($row, ['playerId', 0]);
-            $username = self::resolveStringValue($row, ['username', 'name', 1]);
-            $gamesPlayed = self::resolveIntValue($row, ['gamesPlayed', 2]);
-            $rounds = self::resolveIntValue($row, ['roundsFinished', 4]);
-            $average = self::resolveAverage($row, $rounds);
+        return array_map(self::createPlayerStatsDto(...), $rows);
+    }
 
-            return new PlayerStatsDto(
-                $playerId,
-                $username,
-                $gamesPlayed,
-                $average
-            );
-        }, $rows);
+    /**
+     * @param int $playerId
+     *
+     * @return PlayerStatsDto|null
+     */
+    #[Override]
+    public function getPlayerStatsForPlayer(int $playerId): ?PlayerStatsDto
+    {
+        $row = $this->roundThrowsRepository->getPlayerStatisticsForPlayer($playerId);
+
+        return null !== $row ? self::createPlayerStatsDto($row) : null;
+    }
+
+    /**
+     * @param array<array-key, mixed> $row
+     *
+     * @return PlayerStatsDto
+     */
+    private static function createPlayerStatsDto(array $row): PlayerStatsDto
+    {
+        $playerId = self::resolveIntValue($row, ['playerId', 0]);
+        $username = self::resolveStringValue($row, ['username', 'name', 1]);
+        $gamesPlayed = self::resolveIntValue($row, ['gamesPlayed', 2]);
+        $rounds = self::resolveIntValue($row, ['roundsFinished', 4]);
+        $average = self::resolveAverage($row, $rounds);
+
+        return new PlayerStatsDto(
+            $playerId,
+            $username,
+            $gamesPlayed,
+            $average
+        );
     }
 
     /**

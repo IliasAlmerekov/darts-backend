@@ -358,6 +358,50 @@ SQL,
 
         return $map;
     }
+
+    /**
+     * getLastRoundNumberForGame(), getRoundsPlayedForGame() and getTotalScoreForGame() for
+     * several games in one query.
+     *
+     * @param list<int> $gameIds
+     *
+     * @return array<int, array<int, array{lastRound:int,roundsPlayed:int,totalScore:float}>> per game id, then player id
+     */
+    #[\Override]
+    public function getParticipantTotalsForGames(array $gameIds): array
+    {
+        if ([] === $gameIds) {
+            return [];
+        }
+
+        /** @var list<array{gameId:int|string,playerId:int|string,lastRound:int|string,roundsPlayed:int|string,totalValue:int|string|null}> $rows */
+        $rows = $this->createQueryBuilder('rt')
+            ->select(
+                'IDENTITY(rt.game) AS gameId',
+                'IDENTITY(rt.player) AS playerId',
+                'MAX(r.roundNumber) AS lastRound',
+                'COUNT(DISTINCT r.roundNumber) AS roundsPlayed',
+                'SUM(CASE WHEN rt.isBust = TRUE THEN 0 ELSE rt.value END) AS totalValue'
+            )
+            ->innerJoin('rt.round', 'r')
+            ->andWhere('rt.game IN (:gameIds)')
+            ->setParameter('gameIds', $gameIds)
+            ->groupBy('gameId', 'playerId')
+            ->getQuery()
+            ->getArrayResult();
+
+        $map = [];
+        foreach ($rows as $row) {
+            $map[(int) $row['gameId']][(int) $row['playerId']] = [
+                'lastRound' => (int) $row['lastRound'],
+                'roundsPlayed' => (int) $row['roundsPlayed'],
+                'totalScore' => (float) $row['totalValue'],
+            ];
+        }
+
+        return $map;
+    }
+
     /**
      * Aggregated player statistics over finished games and finished rounds.
      *
@@ -380,6 +424,84 @@ SQL,
     {
         $orderColumn = 'gamesPlayed' === $sortField ? 'gamesPlayed' : 'scoreAverage';
         $direction = 'ASC' === strtoupper($direction) ? 'ASC' : 'DESC';
+
+        return $this->fetchPlayerStatistics(
+            '',
+            sprintf('ORDER BY %s %s LIMIT :limit OFFSET :offset', $orderColumn, $direction),
+            ['limit' => $limit, 'offset' => $offset],
+            ['limit' => ParameterType::INTEGER, 'offset' => ParameterType::INTEGER],
+        );
+    }
+
+    /**
+     * The getPlayerStatistics() row of one player, or null when the player has no finished
+     * round in a finished game.
+     *
+     * @param int $playerId
+     *
+     * @return array{
+     *     playerId:int,
+     *     username:string,
+     *     gamesPlayed:string,
+     *     totalValue:string,
+     *     roundsFinished:string,
+     *     scoreAverage:string|null
+     * }|null
+     */
+    #[\Override]
+    public function getPlayerStatisticsForPlayer(int $playerId): ?array
+    {
+        $rows = $this->fetchPlayerStatistics(
+            'AND rt.player_id = :playerId',
+            '',
+            ['playerId' => $playerId],
+            ['playerId' => ParameterType::INTEGER],
+        );
+
+        return $rows[0] ?? null;
+    }
+
+    /**
+     * Counts distinct players who have finished rounds in finished games.
+     *
+     * @return int
+     */
+    #[\Override]
+    public function countPlayersWithFinishedRounds(): int
+    {
+        return (int) $this->createQueryBuilder('rt')
+            ->select('COUNT(DISTINCT u.id)')
+            ->innerJoin('rt.player', 'u')
+            ->innerJoin('rt.game', 'g')
+            ->innerJoin('rt.round', 'r')
+            ->andWhere('g.status = :status')
+            ->andWhere('u.isGuest = false')
+            ->andWhere('r.finishedAt IS NOT NULL')
+            ->setParameter('status', GameStatus::Finished)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
+     * Aggregates finished rounds of finished games per registered player. Both public
+     * statistics reads share this query, so the admin list and a player's Profile agree.
+     *
+     * @param string                       $playerFilter extra condition on `rt`, or ''
+     * @param string                       $tail         ORDER BY / LIMIT clause, or ''
+     * @param array<string, int>           $parameters
+     * @param array<string, ParameterType> $types
+     *
+     * @return array<int, array{
+     *     playerId:int,
+     *     username:string,
+     *     gamesPlayed:string,
+     *     totalValue:string,
+     *     roundsFinished:string,
+     *     scoreAverage:string|null
+     * }>
+     */
+    private function fetchPlayerStatistics(string $playerFilter, string $tail, array $parameters, array $types): array
+    {
         $connection = $this->getEntityManager()->getConnection();
         $roundTable = $connection->getDatabasePlatform()->quoteSingleIdentifier('round');
         $userTable = $connection->getDatabasePlatform()->quoteSingleIdentifier('user');
@@ -409,16 +531,16 @@ FROM (
     WHERE g.status = :status
       AND u.is_guest = FALSE
       AND r.finished_at IS NOT NULL
+      %s
     GROUP BY rt.player_id, u.display_name, rt.game_id, rt.round_id
 ) player_rounds
 GROUP BY player_rounds.playerId, player_rounds.username
-ORDER BY %s %s
-LIMIT :limit OFFSET :offset
+%s
 SQL,
             $roundTable,
             $userTable,
-            $orderColumn,
-            $direction,
+            $playerFilter,
+            $tail,
         );
 
         /** @var array<int, array{
@@ -432,40 +554,11 @@ SQL,
          */
         $rows = $connection->fetchAllAssociative(
             $sql,
-            [
-                'status' => GameStatus::Finished->value,
-                'limit' => $limit,
-                'offset' => $offset,
-            ],
-            [
-                'status' => ParameterType::STRING,
-                'limit' => ParameterType::INTEGER,
-                'offset' => ParameterType::INTEGER,
-            ],
+            ['status' => GameStatus::Finished->value] + $parameters,
+            ['status' => ParameterType::STRING] + $types,
         );
 
         return $rows;
-    }
-
-    /**
-     * Counts distinct players who have finished rounds in finished games.
-     *
-     * @return int
-     */
-    #[\Override]
-    public function countPlayersWithFinishedRounds(): int
-    {
-        return (int) $this->createQueryBuilder('rt')
-            ->select('COUNT(DISTINCT u.id)')
-            ->innerJoin('rt.player', 'u')
-            ->innerJoin('rt.game', 'g')
-            ->innerJoin('rt.round', 'r')
-            ->andWhere('g.status = :status')
-            ->andWhere('u.isGuest = false')
-            ->andWhere('r.finishedAt IS NOT NULL')
-            ->setParameter('status', GameStatus::Finished)
-            ->getQuery()
-            ->getSingleScalarResult();
     }
 
     /**

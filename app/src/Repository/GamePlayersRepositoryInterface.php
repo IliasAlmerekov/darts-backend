@@ -129,4 +129,13 @@ interface GamePlayersRepositoryInterface
      * @return array{gameId:int,status:GameStatus}|null
      */
     public function findCurrentGameForPlayer(int $playerId): ?array;
+
+    /**
+     * Loads the seats of several games with their players in one query.
+     *
+     * @param list<int> $gameIds
+     *
+     * @return array<int, list<GamePlayers>> seats per game id, in seat order
+     */
+    public function findByGameIds(array $gameIds): array;
 }
