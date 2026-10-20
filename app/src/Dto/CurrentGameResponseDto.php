@@ -27,7 +27,7 @@ final class CurrentGameResponseDto
      */
     public function __construct(
         public ?int $gameId,
-        #[OA\Property(type: 'string', nullable: true, enum: [GameStatus::Lobby->value, GameStatus::Started->value])]
+        #[OA\Property(type: 'string', nullable: true, enum: [GameStatus::Lobby->value, GameStatus::Started->value, null])]
         public ?string $status,
     ) {
     }
