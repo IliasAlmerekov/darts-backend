@@ -70,19 +70,17 @@ final class PlayerProfileServiceTest extends TestCase
         $finishedAt = new DateTimeImmutable('2026-10-18T17:42:00+00:00');
         $this->gameStatisticsService
             ->method('getPlayerStatsForPlayer')
-            ->with(self::PLAYER_ID)
             ->willReturn(new PlayerStatsDto(self::PLAYER_ID, 'ilias', 4, 37.5));
         $this->gameRepository
             ->method('findRecentFinishedForPlayer')
-            ->with(self::PLAYER_ID, 10)
             ->willReturn([['gameId' => 42, 'finishedAt' => $finishedAt]]);
-        $this->gamePlayersRepository->method('findByGameIds')->with([42])->willReturn([42 => [
+        $this->gamePlayersRepository->method('findByGameIds')->willReturn([42 => [
             $this->createSeat($player, 2, 40),
             $this->createSeat($tom, 3, 100),
             $this->createSeat($mia, 1, 0),
         ]]);
-        $this->roundRepository->method('countFinishedRoundsByGameIds')->with([42])->willReturn([42 => 2]);
-        $this->roundThrowsRepository->method('getParticipantTotalsForGames')->with([42])->willReturn([42 => [
+        $this->roundRepository->method('countFinishedRoundsByGameIds')->willReturn([42 => 2]);
+        $this->roundThrowsRepository->method('getParticipantTotalsForGames')->willReturn([42 => [
             self::PLAYER_ID => new ParticipantTotalsDto(lastRound: 2, roundsPlayed: 2, totalScore: 90.0),
             2 => new ParticipantTotalsDto(lastRound: 2, roundsPlayed: 2, totalScore: 301.0),
             3 => new ParticipantTotalsDto(lastRound: 1, roundsPlayed: 1, totalScore: 10.0),

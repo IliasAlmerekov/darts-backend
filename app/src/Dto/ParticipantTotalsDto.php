@@ -16,9 +16,9 @@ namespace App\Dto;
 final readonly class ParticipantTotalsDto
 {
     /**
-     * @param int   $lastRound
-     * @param int   $roundsPlayed
-     * @param float $totalScore
+     * @param int   $lastRound    the highest round number they threw in
+     * @param int   $roundsPlayed the number of rounds they threw in
+     * @param float $totalScore   the sum of their throws, busts counted as 0
      */
     public function __construct(
         public int $lastRound,

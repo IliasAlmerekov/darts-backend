@@ -147,6 +147,6 @@ final readonly class PlayerProfileService implements PlayerProfileServiceInterfa
             $maxRoundNumber
         );
 
-        return ParticipantResult::roundAverage($ownTotals->totalScore ?? 0.0, $roundsPlayed);
+        return ParticipantResult::roundAverage($ownTotals?->totalScore ?? 0.0, $roundsPlayed);
     }
 }
