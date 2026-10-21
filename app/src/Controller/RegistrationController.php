@@ -57,7 +57,7 @@ final class RegistrationController extends AbstractController
                 new OA\Property(property: 'success', type: 'boolean', example: true),
                 new OA\Property(property: 'roles', type: 'array', items: new OA\Items(type: 'string'), example: ['ROLE_PLAYER']),
                 new OA\Property(property: 'id', type: 'integer', example: 1),
-                new OA\Property(property: 'email', type: 'string', example: 'alice@example.com'),
+                new OA\Property(property: 'email', type: 'string', example: 'alice@db-n.com'),
                 new OA\Property(property: 'username', type: 'string', example: 'alice'),
                 new OA\Property(property: 'redirect', type: 'string', example: 'http://localhost:5173/playerprofile', description: 'Mit beigetretener Einladung: `/joined`. Sonst, auch bei `invitationError`: `/playerprofile`.'),
                 new OA\Property(property: 'gameId', type: 'integer', example: 42, description: 'Nur mit Einladung: ID des beigetretenen Spiels.'),
@@ -67,7 +67,7 @@ final class RegistrationController extends AbstractController
     )]
     #[OA\Response(
         response: Response::HTTP_BAD_REQUEST,
-        description: 'Validierungsfehler.',
+        description: 'Validierungsfehler. Eine E-Mail-Adresse außerhalb der Domain `db-n.com` ergibt eine Meldung unter `errors.email`.',
         content: new OA\JsonContent(
             type: 'object',
             required: ['success', 'message'],

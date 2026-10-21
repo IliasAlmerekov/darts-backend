@@ -43,7 +43,7 @@ final class RegistrationServiceTest extends TestCase
 
     public function testRegisterCreatesUserAndLogsThemIn(): void
     {
-        $request = $this->request('alice', 'alice@test.dev', 'secret12');
+        $request = $this->request('alice', 'alice@db-n.com', 'secret12');
 
         $persistedUser = null;
         $this->passwordHasher
@@ -85,7 +85,7 @@ final class RegistrationServiceTest extends TestCase
         self::assertSame(Response::HTTP_CREATED, $loginResponse->getStatusCode());
         self::assertInstanceOf(User::class, $persistedUser);
         self::assertSame('alice', $persistedUser->getUsername());
-        self::assertSame('alice@test.dev', $persistedUser->getEmail());
+        self::assertSame('alice@db-n.com', $persistedUser->getEmail());
         self::assertSame('hashed_secret12', $persistedUser->getPassword());
         self::assertContains('ROLE_PLAYER', $persistedUser->getRoles());
     }
@@ -96,7 +96,7 @@ final class RegistrationServiceTest extends TestCase
         $loginResponse = new JsonResponse(['success' => false, 'redirect' => '/start'], Response::HTTP_BAD_REQUEST);
         $this->security->method('login')->willReturn($loginResponse);
 
-        $result = $this->service->register($this->request('bob', 'bob@test.dev', 'secret12'));
+        $result = $this->service->register($this->request('bob', 'bob@db-n.com', 'secret12'));
 
         self::assertSame($loginResponse, $result);
         self::assertSame(Response::HTTP_BAD_REQUEST, $loginResponse->getStatusCode());
@@ -110,7 +110,7 @@ final class RegistrationServiceTest extends TestCase
         $this->security->expects(self::never())->method('login');
 
         try {
-            $this->service->register($this->request('carol', 'carol@test.dev', 'secret12'));
+            $this->service->register($this->request('carol', 'carol@db-n.com', 'secret12'));
             self::fail('Expected RegistrationAccountExistsException.');
         } catch (RegistrationAccountExistsException $exception) {
             self::assertSame(Response::HTTP_CONFLICT, $exception->getStatusCode());

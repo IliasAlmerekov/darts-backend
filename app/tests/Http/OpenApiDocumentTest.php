@@ -148,6 +148,18 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertSame(6, $body['properties']['plainPassword']['minLength']);
     }
 
+    public function testRegisterDocumentsTheCompanyEmailDomain(): void
+    {
+        $document = $this->document();
+        $email = $document['components']['schemas']['RegistrationRequest']['properties']['email'];
+        $responses = $document['paths']['/api/register']['post']['responses'];
+
+        self::assertStringContainsString('`db-n.com`', $email['description']);
+        self::assertSame('alice@db-n.com', $email['example']);
+        self::assertStringContainsString('`db-n.com`', $responses['400']['description']);
+        self::assertSame('alice@db-n.com', $responses['201']['content']['application/json']['schema']['properties']['email']['example']);
+    }
+
     public function testRegisterDocumentsTheUnsupportedMediaType(): void
     {
         self::assertArrayHasKey('415', $this->document()['paths']['/api/register']['post']['responses']);

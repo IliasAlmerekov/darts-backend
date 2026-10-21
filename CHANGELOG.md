@@ -19,6 +19,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **CSRF-Tokens-Endpunkt**: Neuer Endpunkt `/api/csrf` in `SecurityController`, der CSRF-Tokens für Authentifizierungsflüsse bereitstellt.
 
 ### Geändert
+- **Registrierung**: `POST /api/register` nimmt nur noch E-Mail-Adressen der Domain `db-n.com` an, ohne Beachtung der Groß- und Kleinschreibung. Andere Domains und Subdomains beantwortet die API mit 400 und `errors.email`; bestehende Konten und der Login bleiben unverändert. Die OpenAPI-Doku nennt die Regel (#129)
 - **Registrierung**: `POST /api/register` nimmt Passwörter ab 6 statt ab 8 Zeichen an; ein kürzeres beantwortet die API mit 400 und `errors.plainPassword`. Die OpenAPI-Doku nennt `minLength: 6` (#130)
 - **API-Doku**: Das OpenAPI-Schema `CurrentGameResponseDto` von `GET /api/player/current-game` markiert `gameId` und `status` als Pflichtfelder und beschränkt `status` auf `lobby`, `started` oder `null`; die Antwort selbst bleibt gleich (#123)
 - **Agenten**: `AGENTS.md` schätzt jede Aufgabe vor der ersten Änderung ein. Eine kleine Aufgabe geht direkt zu Branch, einem fehlschlagenden Test und der Änderung; eine große läuft über `/grill-with-docs`, einen Plan aus Teilaufgaben mit Akzeptanzkriterien, den Skill `tdd` pro Teilaufgabe und `code-review` gegen `main`. `code-review` behandelt die Scope-Regeln als Repo-Standard, und das Verbot von Agenten-Hinweisen hat Vorrang vor dem Hinweis des Skills `triage` (#124)
