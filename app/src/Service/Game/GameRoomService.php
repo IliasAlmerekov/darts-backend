@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace App\Service\Game;
 
 use App\Entity\Game;
+use App\Exception\Game\GameRoomFullException;
 use App\Exception\Game\PlayerNotFoundException;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\GamePlayersRepositoryInterface;
@@ -46,6 +47,7 @@ final readonly class GameRoomService implements GameRoomServiceInterface
      *
      * @throws ORMException
      * @throws PlayerNotFoundException When an included player id belongs to no user
+     * @throws GameRoomFullException   When a new lobby would seat more than Game::MAX_PARTICIPANTS players
      */
     #[Override]
     public function openRoom(?array $includePlayerIds = null, ?array $excludePlayerIds = null): Game
@@ -62,6 +64,9 @@ final readonly class GameRoomService implements GameRoomServiceInterface
             if (null !== $excludePlayerIds) {
                 $excludeSet = array_fill_keys($excludePlayerIds, true);
                 $ids = array_values(array_filter($ids, static fn(int $pid): bool => !isset($excludeSet[$pid])));
+            }
+            if (count($ids) > Game::MAX_PARTICIPANTS) {
+                throw new GameRoomFullException(Game::MAX_PARTICIPANTS);
             }
 
             $players = [];

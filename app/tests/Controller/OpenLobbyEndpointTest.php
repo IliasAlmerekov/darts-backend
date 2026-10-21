@@ -129,6 +129,40 @@ final class OpenLobbyEndpointTest extends WebTestCase
         self::assertSame($gameCount, $this->countGames());
     }
 
+    public function testRoomCreateWithOpenLobbyIgnoresMorePlayersThanAGameSeats(): void
+    {
+        $lobby = $this->createGame(GameStatus::Lobby, []);
+
+        $response = $this->postJson('/api/room/create', ['playerIds' => $this->createPlayerIds(Game::MAX_PARTICIPANTS + 1)]);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['success' => true, 'gameId' => $lobby->getGameId()], $response);
+        self::assertSame([], $this->seatedPlayerIds($this->reload($lobby)));
+    }
+
+    public function testRoomCreateWithMorePlayersThanAGameSeatsIsRejectedAndOpensNoLobby(): void
+    {
+        $gameCount = $this->countGames();
+
+        $response = $this->postJson('/api/room/create', ['playerIds' => $this->createPlayerIds(Game::MAX_PARTICIPANTS + 1)]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CONFLICT);
+        self::assertSame('GAME_ROOM_FULL', $response['error'] ?? null);
+        self::assertSame($gameCount, $this->countGames());
+    }
+
+    public function testRoomCreateCountsTheSeatLimitAfterExcludingPlayers(): void
+    {
+        $playerIds = $this->createPlayerIds(Game::MAX_PARTICIPANTS + 1);
+
+        $response = $this->postJson('/api/room/create', ['playerIds' => $playerIds, 'excludePlayerIds' => [$playerIds[0]]]);
+
+        self::assertResponseIsSuccessful();
+        $created = $this->entityManager->find(Game::class, $response['gameId']);
+        self::assertInstanceOf(Game::class, $created);
+        self::assertSame(array_slice($playerIds, 1), $this->seatedPlayerIds($created));
+    }
+
     public function testRematchWithOpenLobbyReturnsItWithMissingPlayersAndOldSettings(): void
     {
         $bob = $this->createPlayer('bob');
@@ -322,6 +356,14 @@ final class OpenLobbyEndpointTest extends WebTestCase
         self::assertSame(501, $reloaded->getStartScore());
         self::assertTrue($reloaded->isDoubleOut());
         self::assertSame([$bob->getId()], $this->seatedPlayerIds($reloaded));
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function createPlayerIds(int $count): array
+    {
+        return array_map(fn (int $index): int => (int) $this->createPlayer('seat'.$index)->getId(), range(1, $count));
     }
 
     private function createPlayer(string $label): User
