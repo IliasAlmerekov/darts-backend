@@ -220,7 +220,7 @@ final class PlayerManagementServiceTest extends TestCase
         self::assertSame([$result], $game->getGamePlayers()->toArray());
     }
 
-    public function testCopyPlayersCopiesOnlyFilteredPlayers(): void
+    public function testCopyPlayersCopiesEveryPlayerAndFillsMissingPositions(): void
     {
         $sourcePlayer1 = (new GamePlayers())->setPlayer($this->userWithId(1, 'alpha', 'Alpha'))->setPosition(2);
         $sourcePlayer2 = (new GamePlayers())->setPlayer($this->userWithId(2, 'beta'));
@@ -235,7 +235,7 @@ final class PlayerManagementServiceTest extends TestCase
         $persistedGamePlayers = [];
         $targetGame = (new Game())->setGameId(20);
         $this->entityManager
-            ->expects(self::exactly(2))
+            ->expects(self::exactly(3))
             ->method('getReference')
             ->willReturnCallback(function (string $class, int $id) use ($targetGame) {
                 if ($class === Game::class && 20 === $id) {
@@ -245,7 +245,7 @@ final class PlayerManagementServiceTest extends TestCase
             });
 
         $this->entityManager
-            ->expects(self::exactly(2))
+            ->expects(self::exactly(3))
             ->method('persist')
             ->with(self::callback(function (GamePlayers $gp) use (&$persistedGamePlayers): bool {
                 $persistedGamePlayers[] = $gp;
@@ -254,11 +254,11 @@ final class PlayerManagementServiceTest extends TestCase
             }));
         $this->entityManager->expects(self::once())->method('flush');
 
-        $this->service->copyPlayers(fromGameId: 10, toGameId: 20, playerIds: [1, 3]);
+        $this->service->copyPlayers(fromGameId: 10, toGameId: 20);
 
-        self::assertCount(2, $persistedGamePlayers);
-        self::assertSame([2, 5], array_map(static fn (GamePlayers $gamePlayer): ?int => $gamePlayer->getPosition(), $persistedGamePlayers));
-        self::assertSame(['Alpha', 'gamma'], array_map(static fn (GamePlayers $gamePlayer): ?string => $gamePlayer->getDisplayNameSnapshot(), $persistedGamePlayers));
+        self::assertCount(3, $persistedGamePlayers);
+        self::assertSame([2, 3, 5], array_map(static fn (GamePlayers $gamePlayer): ?int => $gamePlayer->getPosition(), $persistedGamePlayers));
+        self::assertSame(['Alpha', 'beta', 'gamma'], array_map(static fn (GamePlayers $gamePlayer): ?string => $gamePlayer->getDisplayNameSnapshot(), $persistedGamePlayers));
         self::assertSame($persistedGamePlayers, $targetGame->getGamePlayers()->toArray());
     }
 

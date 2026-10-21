@@ -10,8 +10,11 @@ declare(strict_types=1);
 namespace App\Service\Game;
 
 use App\Entity\Game;
+use App\Exception\Game\GameRoomFullException;
+use App\Exception\Game\PlayerNotFoundException;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\GamePlayersRepositoryInterface;
+use App\Repository\UserRepositoryInterface;
 use App\Service\Player\PlayerManagementService;
 use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\Exception\ORMException;
@@ -28,24 +31,26 @@ final readonly class GameRoomService implements GameRoomServiceInterface
      * @param PlayerManagementService        $playerManagementService
      * @param GameAccessServiceInterface     $gameAccessService
      * @param OpenLobbyServiceInterface      $openLobbyService
+     * @param UserRepositoryInterface        $userRepository
      */
-    public function __construct(private GameRepositoryInterface $gameRepository, private GamePlayersRepositoryInterface $gamePlayersRepository, private PlayerManagementService $playerManagementService, private GameAccessServiceInterface $gameAccessService, private OpenLobbyServiceInterface $openLobbyService)
+    public function __construct(private GameRepositoryInterface $gameRepository, private GamePlayersRepositoryInterface $gamePlayersRepository, private PlayerManagementService $playerManagementService, private GameAccessServiceInterface $gameAccessService, private OpenLobbyServiceInterface $openLobbyService, private UserRepositoryInterface $userRepository)
     {
     }
 
     /**
      * Returns the open lobby unchanged when one exists; the arguments then change nothing.
      *
-     * @param int|null       $previousGameId
      * @param list<int>|null $includePlayerIds Explicit list of players to place into the new game
      * @param list<int>|null $excludePlayerIds Players to omit from the include list
      *
      * @return Game
      *
      * @throws ORMException
+     * @throws PlayerNotFoundException When an included player id belongs to no user
+     * @throws GameRoomFullException   When a new lobby would seat more than Game::MAX_PARTICIPANTS players
      */
     #[Override]
-    public function openRoom(?int $previousGameId = null, ?array $includePlayerIds = null, ?array $excludePlayerIds = null): Game
+    public function openRoom(?array $includePlayerIds = null, ?array $excludePlayerIds = null): Game
     {
         $this->gameAccessService->requireAuthenticatedUser();
         $lobby = $this->openLobbyService->findOrCreate();
@@ -60,17 +65,17 @@ final readonly class GameRoomService implements GameRoomServiceInterface
                 $excludeSet = array_fill_keys($excludePlayerIds, true);
                 $ids = array_values(array_filter($ids, static fn(int $pid): bool => !isset($excludeSet[$pid])));
             }
+            if (count($ids) > Game::MAX_PARTICIPANTS) {
+                throw new GameRoomFullException(Game::MAX_PARTICIPANTS);
+            }
 
-            if (null !== $previousGameId) {
-                $previousGame = $this->findGameById($previousGameId);
-                if (null !== $previousGame) {
-                    $this->gameAccessService->assertPlayerInGameOrAdmin($previousGame);
-                    $this->playerManagementService->copyPlayers($previousGameId, (int) $game->getGameId(), $ids);
-                }
-            } else {
-                foreach ($ids as $playerId) {
-                    $this->playerManagementService->addPlayer((int) $game->getGameId(), $playerId);
-                }
+            $players = [];
+            foreach ($this->userRepository->findByIds($ids) as $player) {
+                $players[(int) $player->getId()] = $player;
+            }
+            foreach ($ids as $playerId) {
+                $player = $players[$playerId] ?? throw new PlayerNotFoundException();
+                $this->playerManagementService->addPlayerEntity((int) $game->getGameId(), $player);
             }
         }
 

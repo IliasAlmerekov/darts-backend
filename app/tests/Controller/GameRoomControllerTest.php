@@ -73,7 +73,7 @@ class GameRoomControllerTest extends TestCase
 
         $this->gameRoomService->expects($this->once())
             ->method('openRoom')
-            ->with(null, null, null)
+            ->with(null, null)
             ->willReturn($gameMock);
         $this->gameSettingsService->expects($this->never())->method('applySettings');
         $this->entityManager->expects($this->once())
@@ -96,7 +96,7 @@ class GameRoomControllerTest extends TestCase
 
         $this->gameRoomService->expects($this->once())
             ->method('openRoom')
-            ->with(12, [1, 2], [2])
+            ->with([1, 2], [2])
             ->willReturn($gameMock);
         $this->gameSettingsService->expects($this->once())
             ->method('applySettings')

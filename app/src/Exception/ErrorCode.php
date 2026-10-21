@@ -30,6 +30,7 @@ enum ErrorCode: string
     case GameReopenNotAllowed = 'GAME_REOPEN_NOT_ALLOWED';
     case GameNotNewest = 'GAME_NOT_NEWEST';
     case GameThrowNotAllowed = 'GAME_THROW_NOT_ALLOWED';
+    case PlayerNotFound = 'PLAYER_NOT_FOUND';
     case GameIdMissing = 'GAME_ID_MISSING';
     case RequestInvalidJsonBody = 'REQUEST_INVALID_JSON_BODY';
     case RequestConflictingSettingKeys = 'REQUEST_CONFLICTING_SETTING_KEYS';

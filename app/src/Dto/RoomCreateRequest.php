@@ -9,10 +9,13 @@ declare(strict_types=1);
 
 namespace App\Dto;
 
+use OpenApi\Attributes as OA;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * Payload DTO for creating a room via API.
+ *
+ * @psalm-suppress PossiblyUnusedProperty The server ignores previousGameId; it stays for the request contract
  */
 final class RoomCreateRequest
 {
@@ -27,7 +30,8 @@ final class RoomCreateRequest
      * @psalm-suppress PossiblyUnusedMethod
      */
     public function __construct(
-        #[Assert\Positive]
+        // shortcut: kept only because the current frontend still sends it; remove it once the frontend stops (#133).
+        #[OA\Property(description: 'Veraltet und ignoriert. Der Server übernimmt keine Spieler aus diesem Spiel.', deprecated: true)]
         public ?int $previousGameId = null,
         /**
          * @var list<int>|null

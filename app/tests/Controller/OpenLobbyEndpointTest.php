@@ -92,6 +92,77 @@ final class OpenLobbyEndpointTest extends WebTestCase
         self::assertSame([$bob->getId(), $vanya->getId()], $this->seatedPlayerIds($created));
     }
 
+    /**
+     * A typed summary URL can point the frontend at an older game, so the server ignores
+     * previousGameId and seats the requested players as they come (#133).
+     */
+    public function testRoomCreateIgnoresPreviousGameIdAndSeatsTheRequestedPlayers(): void
+    {
+        $bob = $this->createPlayer('bob');
+        $vanya = $this->createPlayer('vanya');
+        $anna = $this->createPlayer('anna');
+        $older = $this->createGame(GameStatus::Finished, [$anna, $bob]);
+        $this->createGame(GameStatus::Finished, [$vanya]);
+
+        $response = $this->postJson('/api/room/create', [
+            'previousGameId' => $older->getGameId(),
+            'playerIds' => [(int) $vanya->getId(), (int) $bob->getId(), (int) $anna->getId()],
+            'excludePlayerIds' => [(int) $anna->getId()],
+        ]);
+
+        self::assertResponseIsSuccessful();
+        $created = $this->entityManager->find(Game::class, $response['gameId']);
+        self::assertInstanceOf(Game::class, $created);
+        self::assertSame([$vanya->getId(), $bob->getId()], $this->seatedPlayerIds($created));
+    }
+
+    public function testRoomCreateWithAnUnknownPlayerIsRejectedAndOpensNoLobby(): void
+    {
+        $bob = $this->createPlayer('bob');
+        $unknownId = (int) $this->entityManager->getConnection()->fetchOne('SELECT COALESCE(MAX(id), 0) + 1000 FROM `user`');
+        $gameCount = $this->countGames();
+
+        $response = $this->postJson('/api/room/create', ['playerIds' => [(int) $bob->getId(), $unknownId]]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
+        self::assertSame('PLAYER_NOT_FOUND', $response['error'] ?? null);
+        self::assertSame($gameCount, $this->countGames());
+    }
+
+    public function testRoomCreateWithOpenLobbyIgnoresMorePlayersThanAGameSeats(): void
+    {
+        $lobby = $this->createGame(GameStatus::Lobby, []);
+
+        $response = $this->postJson('/api/room/create', ['playerIds' => $this->createPlayerIds(Game::MAX_PARTICIPANTS + 1)]);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['success' => true, 'gameId' => $lobby->getGameId()], $response);
+        self::assertSame([], $this->seatedPlayerIds($this->reload($lobby)));
+    }
+
+    public function testRoomCreateWithMorePlayersThanAGameSeatsIsRejectedAndOpensNoLobby(): void
+    {
+        $gameCount = $this->countGames();
+
+        $response = $this->postJson('/api/room/create', ['playerIds' => $this->createPlayerIds(Game::MAX_PARTICIPANTS + 1)]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CONFLICT);
+        self::assertSame('GAME_ROOM_FULL', $response['error'] ?? null);
+        self::assertSame($gameCount, $this->countGames());
+    }
+
+    public function testRoomCreateCountsTheSeatLimitAfterExcludingPlayers(): void
+    {
+        $playerIds = $this->createPlayerIds(Game::MAX_PARTICIPANTS + 1);
+
+        $response = $this->postJson('/api/room/create', ['playerIds' => $playerIds, 'excludePlayerIds' => [$playerIds[0]]]);
+
+        self::assertResponseIsSuccessful();
+        $created = $this->entityManager->find(Game::class, $response['gameId']);
+        self::assertInstanceOf(Game::class, $created);
+        self::assertSame(array_slice($playerIds, 1), $this->seatedPlayerIds($created));
+    }
+
     public function testRematchWithOpenLobbyReturnsItWithMissingPlayersAndOldSettings(): void
     {
         $bob = $this->createPlayer('bob');
@@ -285,6 +356,14 @@ final class OpenLobbyEndpointTest extends WebTestCase
         self::assertSame(501, $reloaded->getStartScore());
         self::assertTrue($reloaded->isDoubleOut());
         self::assertSame([$bob->getId()], $this->seatedPlayerIds($reloaded));
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function createPlayerIds(int $count): array
+    {
+        return array_map(fn (int $index): int => (int) $this->createPlayer('seat'.$index)->getId(), range(1, $count));
     }
 
     private function createPlayer(string $label): User

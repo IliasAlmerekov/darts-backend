@@ -36,14 +36,13 @@ final class RoomCreateRequestValidationTest extends TestCase
         self::assertCount(0, $violations);
     }
 
-    public function testRejectsInvalidPreviousGameId(): void
+    public function testAcceptsAnyPreviousGameIdBecauseTheServerIgnoresIt(): void
     {
         $dto = new RoomCreateRequest(previousGameId: 0);
 
         $violations = $this->validator->validate($dto);
 
-        self::assertGreaterThan(0, $violations->count());
-        self::assertTrue($this->hasPropertyPath($violations, 'previousGameId'));
+        self::assertCount(0, $violations);
     }
 
     public function testRejectsInvalidPlayerLists(): void

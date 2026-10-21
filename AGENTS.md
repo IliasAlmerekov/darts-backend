@@ -19,7 +19,8 @@ change must reach: callers, tests, fixtures, config, serializer groups, API docs
 is the scope; features nobody asked for are outside it, named in one line in the report.
 
 Reach for the first option that works: no code at all, then a helper or service already in
-`app/src`, then Symfony or PHP built-ins, then an installed package, then new code.
+`app/src`, then Symfony or PHP built-ins, then an installed package, then one line a reader
+gets at a glance, then new code.
 
 - Add no abstraction, interface, option, or "for later" code the task does not need.
   Deletion beats addition.
@@ -68,6 +69,8 @@ conventions no tool checks:
 - Optional `UserInterface` methods are guarded with `method_exists(...)` unless the code
   already depends on `App\Entity\User`.
 - `FormErrorIterator` is iterable directly, without `getIterator()`.
+- A `@psalm-suppress` for a promoted constructor property goes in the class docblock, with
+  its reason; Psalm 6 skips it on the property and on the constructor.
 - Frontend URLs and redirects come from configuration such as `FRONTEND_URL`.
 
 ## API contract
@@ -127,6 +130,10 @@ MySQL root password; put the matching `DATABASE_URL` in `app/.env.test.local` to
 `check-image-eol.sh` fails when a shell script, a Dockerfile, or a file under `app/docker/`
 lacks `eol=lf` in `.gitattributes` or is committed with CRLF.
 
+Psalm runs with `--no-cache` because CI starts cold: a warm local cache keeps
+cross-file findings such as `PossiblyUnusedProperty` stale, so a change that removes the
+last read of a property or method passes locally and fails CI.
+
 ```bash
 sh scripts/check-test-db-env.sh
 sh scripts/check-image-eol.sh
@@ -136,7 +143,7 @@ x composer install --no-interaction
 x composer audit
 x mkdir -p build
 x php -d memory_limit=-1 vendor/bin/phpcs
-x php vendor/bin/psalm --show-info=false --report=build/psalm-quality-report.json
+x php vendor/bin/psalm --no-cache --show-info=false --report=build/psalm-quality-report.json
 x php bin/console lint:yaml -v --ansi --env=test config
 x php -d memory_limit=-1 bin/console cache:clear --env=test
 x php -d memory_limit=-1 bin/console doctrine:database:create --env=test --if-not-exists

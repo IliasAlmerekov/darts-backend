@@ -10,6 +10,7 @@ use App\Enum\GameStatus;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\InvitationRepositoryInterface;
+use App\Repository\UserRepositoryInterface;
 use App\Service\Game\GameRoomService;
 use App\Service\Game\NewestGameGuard;
 use App\Service\Game\OpenLobby;
@@ -37,7 +38,7 @@ final class RematchServiceTest extends TestCase
         $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
         $openLobbyService = $this->createMock(OpenLobbyServiceInterface::class);
         $openLobbyService->expects(self::never())->method('findOrCreate');
-        $gameRoomService = new GameRoomService($gameRepository, $gamePlayersRepository, $playerManagementService, $access, $this->createMock(OpenLobbyServiceInterface::class));
+        $gameRoomService = new GameRoomService($gameRepository, $gamePlayersRepository, $playerManagementService, $access, $this->createMock(OpenLobbyServiceInterface::class), $this->createMock(UserRepositoryInterface::class));
         $invitationRepository = $this->createMock(InvitationRepositoryInterface::class);
         $urlGenerator = $this->createMock(UrlGeneratorInterface::class);
 
@@ -85,7 +86,7 @@ final class RematchServiceTest extends TestCase
         $this->setPrivateProperty($newLobby, 'gameId', 100);
         $openLobbyService = $this->createMock(OpenLobbyServiceInterface::class);
         $openLobbyService->method('findOrCreate')->willReturn(new OpenLobby($newLobby, true));
-        $gameRoomService = new GameRoomService($gameRepository, $gamePlayersRepository, $playerManagementService, $access, $this->createMock(OpenLobbyServiceInterface::class));
+        $gameRoomService = new GameRoomService($gameRepository, $gamePlayersRepository, $playerManagementService, $access, $this->createMock(OpenLobbyServiceInterface::class), $this->createMock(UserRepositoryInterface::class));
 
         $invitationRepository = $this->createMock(InvitationRepositoryInterface::class);
         $invitationRepository->method('findOneByGameIdForShare')->willReturn(null);
