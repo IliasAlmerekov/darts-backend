@@ -262,46 +262,50 @@ SQL,
     }
 
     /**
-     * @return array{gameId:int,status:GameStatus}|null
+     * @return array{tabletGame:array{gameId:int,status:GameStatus}|null,lastFinishedGameId:int|null}
      */
     #[\Override]
-    public function findTabletGame(): ?array
+    public function findTabletGameAndLastFinishedGameId(): array
     {
-        /** @var array{gameId:int|string,status:GameStatus}|null $row */
-        $row = $this->createQueryBuilder('g')
-            ->select('g.gameId AS gameId', 'g.status AS status')
-            ->andWhere('g.status IN (:statuses)')
-            ->setParameter('statuses', [GameStatus::Lobby, GameStatus::Started])
-            ->orderBy('g.gameId', 'DESC')
-            ->setMaxResults(1)
-            ->getQuery()
-            ->getOneOrNullResult();
+        $row = $this->getEntityManager()->getConnection()->fetchAssociative(
+            <<<'SQL'
+SELECT
+    tablet.game_id AS tabletGameId,
+    tablet.status AS tabletStatus,
+    finished.game_id AS lastFinishedGameId
+FROM (SELECT 1) AS anchor
+LEFT JOIN (
+    SELECT g.game_id, g.status
+    FROM game g
+    WHERE g.status IN (:lobby, :started)
+    ORDER BY g.game_id DESC
+    LIMIT 1
+) AS tablet ON TRUE
+LEFT JOIN (
+    SELECT g.game_id
+    FROM game g
+    WHERE g.status = :finished
+    ORDER BY g.finished_at DESC, g.game_id DESC
+    LIMIT 1
+) AS finished ON TRUE
+SQL,
+            [
+                'lobby' => GameStatus::Lobby->value,
+                'started' => GameStatus::Started->value,
+                'finished' => GameStatus::Finished->value,
+            ],
+        );
 
-        if (null === $row) {
-            return null;
-        }
+        $tabletGameId = $row['tabletGameId'] ?? null;
+        $tabletStatus = $row['tabletStatus'] ?? null;
+        $lastFinishedGameId = $row['lastFinishedGameId'] ?? null;
 
-        return ['gameId' => (int) $row['gameId'], 'status' => $row['status']];
-    }
-
-    /**
-     * @return int|null
-     */
-    #[\Override]
-    public function findLastFinishedGameId(): ?int
-    {
-        /** @var int|string|null $gameId */
-        $gameId = $this->createQueryBuilder('g')
-            ->select('g.gameId')
-            ->andWhere('g.status = :status')
-            ->setParameter('status', GameStatus::Finished)
-            ->orderBy('g.finishedAt', 'DESC')
-            ->addOrderBy('g.gameId', 'DESC')
-            ->setMaxResults(1)
-            ->getQuery()
-            ->getOneOrNullResult(Query::HYDRATE_SINGLE_SCALAR);
-
-        return null === $gameId ? null : (int) $gameId;
+        return [
+            'tabletGame' => null !== $tabletGameId && is_string($tabletStatus)
+                ? ['gameId' => (int) $tabletGameId, 'status' => GameStatus::from($tabletStatus)]
+                : null,
+            'lastFinishedGameId' => null !== $lastFinishedGameId ? (int) $lastFinishedGameId : null,
+        ];
     }
 
     /**

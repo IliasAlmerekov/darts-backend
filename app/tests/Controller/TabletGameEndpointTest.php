@@ -13,6 +13,7 @@ use App\Entity\Game;
 use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Tests\Support\TestUserFactory;
+use Doctrine\Bundle\DoctrineBundle\DataCollector\DoctrineDataCollector;
 use DateTime;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
@@ -120,6 +121,35 @@ final class TabletGameEndpointTest extends WebTestCase
         $this->createGame(GameStatus::Finished);
 
         self::assertSame(['game' => null, 'lastFinishedGameId' => $finishedId], $this->getTabletGame($client));
+    }
+
+    /**
+     * Two queries could see a game finish in between and report it as started and as the last
+     * finished game at once. One statement reads both from one snapshot. DAMA runs every test
+     * in one transaction, so the race itself cannot be replayed here; the test pins the single
+     * statement instead.
+     */
+    public function testReadsTheTabletGameAndTheLastFinishedGameInOneStatement(): void
+    {
+        $client = $this->createAdminClientWithoutTabletOrFinishedGames();
+        $this->createGame(GameStatus::Started);
+        // The first request reboots the kernel, so the profile below holds only its own queries.
+        $this->getTabletGame($client);
+        $client->enableProfiler();
+
+        $this->getTabletGame($client);
+
+        $profile = $client->getProfile();
+        self::assertNotFalse($profile);
+        /** @var DoctrineDataCollector $collector */
+        $collector = $profile->getCollector('db');
+        /** @var list<array{sql:string}> $queries */
+        $queries = $collector->getQueries()['default'] ?? [];
+        $gameReads = array_filter(
+            $queries,
+            static fn (array $query): bool => 1 === preg_match('/\\bFROM game\\b/i', $query['sql']),
+        );
+        self::assertCount(1, $gameReads, implode("\n", array_column($queries, 'sql')));
     }
 
     public function testAnonymousGets401(): void

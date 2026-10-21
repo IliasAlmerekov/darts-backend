@@ -132,20 +132,17 @@ interface GameRepositoryInterface
     public function findHighestGameId(): ?int;
 
     /**
-     * Returns the tablet game: the game in the lobby or started. ADR 0003 and ADR 0004 allow at
-     * most one; when more match, the one with the greatest game id wins.
+     * Returns the tablet game and the id of the last finished game.
      *
-     * @return array{gameId:int,status:GameStatus}|null
-     */
-    public function findTabletGame(): ?array;
-
-    /**
-     * Returns the id of the finished game with the latest finishedAt, or null when no game is
-     * finished. A reopened game that finishes again counts by its new finishedAt.
+     * The tablet game is the game in the lobby or started. ADR 0003 and ADR 0004 allow at most
+     * one; when more match, the one with the greatest game id wins. The last finished game is the
+     * finished game with the latest finishedAt, so a reopened game that finishes again counts by
+     * its new finishedAt. One statement reads both from one snapshot: two queries could see a game
+     * finish in between and report it as the tablet game and as the last finished game at once.
      *
-     * @return int|null
+     * @return array{tabletGame:array{gameId:int,status:GameStatus}|null,lastFinishedGameId:int|null}
      */
-    public function findLastFinishedGameId(): ?int;
+    public function findTabletGameAndLastFinishedGameId(): array;
 
     /**
      * @return int
