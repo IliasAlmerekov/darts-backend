@@ -39,7 +39,6 @@ final class OpenApiDocumentTest extends WebTestCase
         'app_games_finished',
         'app_game_state',
         'app_game_abort',
-        'room_create',
         'room_rematch',
         'app_game_throw',
         'app_game_throw_delta',
@@ -275,6 +274,14 @@ final class OpenApiDocumentTest extends WebTestCase
         foreach (['/api/room/create', '/api/room/{id}/rematch', '/api/game/{gameId}/rematch/start'] as $path) {
             self::assertStringContainsString('höchstens ein Spiel in der Lobby', $paths[$path]['post']['description'] ?? '', $path);
         }
+    }
+
+    public function testRoomCreateDocumentsPreviousGameIdAsDeprecated(): void
+    {
+        $previousGameId = $this->document()['components']['schemas']['RoomCreateRequest']['properties']['previousGameId'];
+
+        self::assertTrue($previousGameId['deprecated'] ?? false);
+        self::assertStringContainsString('ignoriert', $previousGameId['description'] ?? '');
     }
 
     /**

@@ -92,6 +92,43 @@ final class OpenLobbyEndpointTest extends WebTestCase
         self::assertSame([$bob->getId(), $vanya->getId()], $this->seatedPlayerIds($created));
     }
 
+    /**
+     * A typed summary URL can point the frontend at an older game, so the server ignores
+     * previousGameId and seats the requested players as they come (#133).
+     */
+    public function testRoomCreateIgnoresPreviousGameIdAndSeatsTheRequestedPlayers(): void
+    {
+        $bob = $this->createPlayer('bob');
+        $vanya = $this->createPlayer('vanya');
+        $anna = $this->createPlayer('anna');
+        $older = $this->createGame(GameStatus::Finished, [$anna, $bob]);
+        $this->createGame(GameStatus::Finished, [$vanya]);
+
+        $response = $this->postJson('/api/room/create', [
+            'previousGameId' => $older->getGameId(),
+            'playerIds' => [(int) $vanya->getId(), (int) $bob->getId(), (int) $anna->getId()],
+            'excludePlayerIds' => [(int) $anna->getId()],
+        ]);
+
+        self::assertResponseIsSuccessful();
+        $created = $this->entityManager->find(Game::class, $response['gameId']);
+        self::assertInstanceOf(Game::class, $created);
+        self::assertSame([$vanya->getId(), $bob->getId()], $this->seatedPlayerIds($created));
+    }
+
+    public function testRoomCreateWithOnlyPreviousGameIdOpensAnEmptyLobby(): void
+    {
+        $bob = $this->createPlayer('bob');
+        $finished = $this->createGame(GameStatus::Finished, [$bob]);
+
+        $response = $this->postJson('/api/room/create', ['previousGameId' => $finished->getGameId()]);
+
+        self::assertResponseIsSuccessful();
+        $created = $this->entityManager->find(Game::class, $response['gameId']);
+        self::assertInstanceOf(Game::class, $created);
+        self::assertSame([], $this->seatedPlayerIds($created));
+    }
+
     public function testRematchWithOpenLobbyReturnsItWithMissingPlayersAndOldSettings(): void
     {
         $bob = $this->createPlayer('bob');

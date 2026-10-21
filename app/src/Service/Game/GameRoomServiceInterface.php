@@ -18,10 +18,9 @@ use Doctrine\ORM\Exception\ORMException;
 interface GameRoomServiceInterface
 {
     /**
-     * Return the game in the lobby. Only when this call creates it, place players from a
-     * previous game or from the include list into it.
+     * Return the game in the lobby. Only when this call creates it, place the players from
+     * the include list into it.
      *
-     * @param int|null       $previousGameId   ID of the previous game to copy players from
      * @param list<int>|null $includePlayerIds Explicit list of players to place into the new game
      * @param list<int>|null $excludePlayerIds Players to omit from the include list
      *
@@ -29,7 +28,7 @@ interface GameRoomServiceInterface
      *
      * @throws ORMException
      */
-    public function openRoom(?int $previousGameId = null, ?array $includePlayerIds = null, ?array $excludePlayerIds = null): Game;
+    public function openRoom(?array $includePlayerIds = null, ?array $excludePlayerIds = null): Game;
 
     /**
      * Find a game by its ID.

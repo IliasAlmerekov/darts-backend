@@ -99,21 +99,19 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     }
 
     /**
-     * Copy players from one game to another. If a filter list is provided, only those players are copied.
+     * Copy every player from one game to another.
      *
-     * @param int            $fromGameId
-     * @param int            $toGameId
-     * @param list<int>|null $playerIds
+     * @param int $fromGameId
+     * @param int $toGameId
      *
      * @throws ORMException
      *
      * @return void
      */
     #[Override]
-    public function copyPlayers(int $fromGameId, int $toGameId, ?array $playerIds = null): void
+    public function copyPlayers(int $fromGameId, int $toGameId): void
     {
         $oldGamePlayers = $this->gamePlayersRepository->findByGameId($fromGameId);
-        $filter = $playerIds;
         $orderIndex = 0;
         $hasCopiedPlayers = false;
         foreach ($oldGamePlayers as $oldGamePlayer) {
@@ -122,8 +120,7 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
                 continue;
             }
 
-            $playerId = $player->getId();
-            if (null !== $playerId && (null === $filter || in_array($playerId, $filter, true))) {
+            if (null !== $player->getId()) {
                 $position = $oldGamePlayer->getPosition();
                 if (!is_int($position)) {
                     $orderIndex++;

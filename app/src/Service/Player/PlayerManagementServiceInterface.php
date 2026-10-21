@@ -60,18 +60,16 @@ interface PlayerManagementServiceInterface
     public function addPlayerEntity(int $gameId, User $player, ?int $position = null, bool $flush = true): GamePlayers;
 
     /**
-     * Copy players from one game to another.
-     * If a filter list is provided, only those players are copied.
+     * Copy every player from one game to another.
      *
-     * @param int            $fromGameId Source game ID
-     * @param int            $toGameId   Target game ID
-     * @param list<int>|null $playerIds  Optional list of player IDs to copy (null = copy all)
+     * @param int $fromGameId Source game ID
+     * @param int $toGameId   Target game ID
      *
      * @throws ORMException
      *
      * @return void
      */
-    public function copyPlayers(int $fromGameId, int $toGameId, ?array $playerIds = null): void;
+    public function copyPlayers(int $fromGameId, int $toGameId): void;
 
     /**
      * Seat every player of the source game who is missing from the target game. They take

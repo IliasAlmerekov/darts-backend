@@ -80,7 +80,7 @@ final class GameRoomController extends AbstractController
      */
     #[OA\Post(
         summary: 'Spielraum erstellen oder die offene Lobby zurückgeben',
-        description: 'Es ist höchstens ein Spiel in der Lobby. Ist ein Spiel in der Lobby, liefert der Endpoint dessen `gameId` und legt kein Spiel an. Die Lobby übernimmt `startScore`, `doubleOut` und `tripleOut` aus dem Request und behält ihre Spieler; `previousGameId`, `playerIds` und `excludePlayerIds` werden dann ignoriert. Ohne offene Lobby wird eine neue Lobby angelegt.'
+        description: 'Es ist höchstens ein Spiel in der Lobby. Ist ein Spiel in der Lobby, liefert der Endpoint dessen `gameId` und legt kein Spiel an. Die Lobby übernimmt `startScore`, `doubleOut` und `tripleOut` aus dem Request und behält ihre Spieler; `playerIds` und `excludePlayerIds` werden dann ignoriert. Ohne offene Lobby wird eine neue Lobby mit den Spielern aus `playerIds` ohne `excludePlayerIds` angelegt. `previousGameId` ist veraltet und wird immer ignoriert.'
     )]
     #[OA\RequestBody(
         required: false,
@@ -100,7 +100,7 @@ final class GameRoomController extends AbstractController
     )]
     #[ApiResponse]
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht.')]
-    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
+    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Angemeldet ohne `ROLE_ADMIN` (z. B. ein Spieler).')]
     #[Route(path: '/api/room/create', name: 'room_create', methods: ['POST'], format: 'json')]
     public function roomCreateApi(#[MapRequestPayload] RoomCreateRequest $dto): array
     {
@@ -112,11 +112,7 @@ final class GameRoomController extends AbstractController
                 ? $dto->excludePlayerIds
                 : null;
 
-            $game = $this->gameRoomService->openRoom(
-                $dto->previousGameId,
-                $includePlayerIds,
-                $excludePlayerIds,
-            );
+            $game = $this->gameRoomService->openRoom($includePlayerIds, $excludePlayerIds);
 
             $settingsRequest = $this->createGameSettingsRequest($dto);
             if (null !== $settingsRequest) {

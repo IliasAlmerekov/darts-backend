@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace App\Tests\Service;
 
 use App\Entity\Game;
-use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
@@ -83,47 +82,15 @@ final class GameRoomServiceTest extends TestCase
 
         $service = $this->createService();
 
-        $game = $service->openRoom(10, [1, 2, 3], [2]);
+        $game = $service->openRoom([1, 2, 3], [2]);
 
         self::assertSame($this->lobbyGame, $game);
     }
 
     /**
-     * @throws ReflectionException
      * @throws ORMException
      */
-    public function testOpenRoomCopiesPlayersIntoANewLobby(): void
-    {
-        $previousGame = new Game();
-        $this->setPrivateProperty($previousGame, 'gameId', 10);
-
-        $this->gameRepository->method('find')
-            ->with(10)
-            ->willReturn($previousGame);
-
-        $this->gamePlayersRepository->method('findByGameId')
-            ->with(10)
-            ->willReturn([
-                $this->createGamePlayerWithUserId(1),
-                $this->createGamePlayerWithUserId(2),
-                $this->createGamePlayerWithUserId(3),
-            ]);
-
-        $this->entityManager->expects(self::atLeast(1))->method('persist');
-        $this->entityManager->expects(self::atLeast(1))->method('flush');
-
-        $this->openLobbyService->method('findOrCreate')->willReturn(new OpenLobby($this->lobbyGame, true));
-        $service = $this->createService();
-
-        $game = $service->openRoom(10, [1, 2, 3], [2]);
-
-        self::assertInstanceOf(DateTime::class, $game->getDate());
-    }
-
-    /**
-     * @throws ORMException
-     */
-    public function testOpenRoomAddsPlayersToANewLobbyWhenNoPreviousGame(): void
+    public function testOpenRoomAddsPlayersToANewLobby(): void
     {
         $this->entityManager->expects(self::atLeast(1))->method('persist');
         $this->entityManager->expects(self::atLeast(1))->method('flush');
@@ -131,7 +98,7 @@ final class GameRoomServiceTest extends TestCase
         $this->openLobbyService->method('findOrCreate')->willReturn(new OpenLobby($this->lobbyGame, true));
         $service = $this->createService();
 
-        $game = $service->openRoom(null, [1, 2, 3], [2]);
+        $game = $service->openRoom([1, 2, 3], [2]);
 
         self::assertInstanceOf(DateTime::class, $game->getDate());
     }
@@ -195,19 +162,5 @@ final class GameRoomServiceTest extends TestCase
             $this->gameAccessService,
             $this->openLobbyService,
         );
-    }
-
-    /**
-     * @throws ReflectionException
-     */
-    private function createGamePlayerWithUserId(int $userId): GamePlayers
-    {
-        $user = new User();
-        $this->setPrivateProperty($user, 'id', $userId);
-
-        $gamePlayer = new GamePlayers();
-        $gamePlayer->setPlayer($user);
-
-        return $gamePlayer;
     }
 }

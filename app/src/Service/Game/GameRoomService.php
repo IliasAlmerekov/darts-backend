@@ -36,7 +36,6 @@ final readonly class GameRoomService implements GameRoomServiceInterface
     /**
      * Returns the open lobby unchanged when one exists; the arguments then change nothing.
      *
-     * @param int|null       $previousGameId
      * @param list<int>|null $includePlayerIds Explicit list of players to place into the new game
      * @param list<int>|null $excludePlayerIds Players to omit from the include list
      *
@@ -45,7 +44,7 @@ final readonly class GameRoomService implements GameRoomServiceInterface
      * @throws ORMException
      */
     #[Override]
-    public function openRoom(?int $previousGameId = null, ?array $includePlayerIds = null, ?array $excludePlayerIds = null): Game
+    public function openRoom(?array $includePlayerIds = null, ?array $excludePlayerIds = null): Game
     {
         $this->gameAccessService->requireAuthenticatedUser();
         $lobby = $this->openLobbyService->findOrCreate();
@@ -61,16 +60,8 @@ final readonly class GameRoomService implements GameRoomServiceInterface
                 $ids = array_values(array_filter($ids, static fn(int $pid): bool => !isset($excludeSet[$pid])));
             }
 
-            if (null !== $previousGameId) {
-                $previousGame = $this->findGameById($previousGameId);
-                if (null !== $previousGame) {
-                    $this->gameAccessService->assertPlayerInGameOrAdmin($previousGame);
-                    $this->playerManagementService->copyPlayers($previousGameId, (int) $game->getGameId(), $ids);
-                }
-            } else {
-                foreach ($ids as $playerId) {
-                    $this->playerManagementService->addPlayer((int) $game->getGameId(), $playerId);
-                }
+            foreach ($ids as $playerId) {
+                $this->playerManagementService->addPlayer((int) $game->getGameId(), $playerId);
             }
         }
 
