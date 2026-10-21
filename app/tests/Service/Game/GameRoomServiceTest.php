@@ -10,7 +10,9 @@ declare(strict_types=1);
 namespace App\Tests\Service;
 
 use App\Entity\Game;
+use App\Entity\GamePlayers;
 use App\Entity\User;
+use App\Exception\Game\PlayerNotFoundException;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\UserRepositoryInterface;
@@ -100,17 +102,42 @@ final class GameRoomServiceTest extends TestCase
     /**
      * @throws ORMException
      */
-    public function testOpenRoomAddsPlayersToANewLobby(): void
+    public function testOpenRoomSeatsTheRequestedPlayersInOrderWithoutTheExcludedOnes(): void
     {
-        $this->entityManager->expects(self::atLeast(1))->method('persist');
+        $seatedPlayerIds = [];
+        $this->entityManager->method('persist')
+            ->willReturnCallback(static function (object $entity) use (&$seatedPlayerIds): void {
+                if ($entity instanceof GamePlayers) {
+                    $seatedPlayerIds[] = $entity->getPlayer()?->getId();
+                }
+            });
         $this->entityManager->expects(self::atLeast(1))->method('flush');
 
         $this->openLobbyService->method('findOrCreate')->willReturn(new OpenLobby($this->lobbyGame, true));
         $service = $this->createService();
 
-        $game = $service->openRoom([1, 2, 3], [2]);
+        $game = $service->openRoom([3, 2, 1], [2]);
 
-        self::assertInstanceOf(DateTime::class, $game->getDate());
+        self::assertSame($this->lobbyGame, $game);
+        self::assertSame([3, 1], $seatedPlayerIds);
+    }
+
+    /**
+     * @throws ORMException
+     */
+    public function testOpenRoomRejectsAnUnknownPlayer(): void
+    {
+        $this->userRepository = $this->createMock(UserRepositoryInterface::class);
+        $knownPlayer = new User();
+        $this->setPrivateProperty($knownPlayer, 'id', 1);
+        $this->userRepository->method('findByIds')->willReturn([$knownPlayer]);
+
+        $this->openLobbyService->method('findOrCreate')->willReturn(new OpenLobby($this->lobbyGame, true));
+        $service = $this->createService();
+
+        $this->expectException(PlayerNotFoundException::class);
+
+        $service->openRoom([1, 404]);
     }
 
     public function testFindGameByIdReturnsGame(): void
