@@ -28,6 +28,7 @@ enum ErrorCode: string
     case GameJoinNotAllowed = 'GAME_JOIN_NOT_ALLOWED';
     case GameNotFinished = 'GAME_NOT_FINISHED';
     case GameReopenNotAllowed = 'GAME_REOPEN_NOT_ALLOWED';
+    case GameNotNewest = 'GAME_NOT_NEWEST';
     case GameThrowNotAllowed = 'GAME_THROW_NOT_ALLOWED';
     case GameIdMissing = 'GAME_ID_MISSING';
     case RequestInvalidJsonBody = 'REQUEST_INVALID_JSON_BODY';

@@ -120,6 +120,7 @@ final class GameLifecycleController extends AbstractController
     #[OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Ein Setting wurde in camelCase und in Kleinschreibung mit unterschiedlichen Werten gesendet (`REQUEST_CONFLICTING_SETTING_KEYS`).')]
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht.')]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
+    #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Das alte Spiel ist nicht das neueste Spiel, oder es ist weder beendet noch abgebrochen (`GAME_NOT_NEWEST`). Eine offene Lobby ist immer das neueste Spiel.')]
     #[Route('/api/game/{gameId}/rematch/start', name: 'app_game_rematch_start', methods: ['POST'], format: 'json')]
     public function createAndStartRematch(int $gameId, RematchStartServiceInterface $rematchStartService, RetryingTransactionInterface $transaction, #[MapRequestPayload] StartGameRequest $dto): Game
     {
@@ -264,11 +265,12 @@ final class GameLifecycleController extends AbstractController
     #[OA\Parameter(name: 'gameId', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
     #[OA\Response(
         response: Response::HTTP_OK,
-        description: 'Spiel wurde wieder geöffnet und befindet sich erneut im started-Status.',
+        description: 'Spiel wurde wieder geöffnet und befindet sich erneut im started-Status. Ein bereits gestartetes Spiel bleibt unverändert.',
         content: new OA\JsonContent(ref: new Model(type: GameResponseDto::class))
     )]
     #[ApiResponse]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
+    #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Das Spiel ist weder beendet noch gestartet (`GAME_REOPEN_NOT_ALLOWED`), oder es ist beendet, aber nicht das neueste Spiel (`GAME_NOT_NEWEST`).')]
     #[Route('/api/game/{gameId}/reopen', name: 'app_game_reopen', methods: ['PATCH'], format: 'json')]
     public function reopen(#[AttributeMapEntity(id: 'gameId')] Game $game, GameReopenServiceInterface $gameReopenService, GameServiceInterface $gameService, GameRepositoryInterface $gameRepository, RetryingTransactionInterface $transaction): mixed
     {

@@ -116,7 +116,7 @@ final class ApiAccessMatrixTest extends WebTestCase
             self::entry('room_update_player_positions', Request::METHOD_POST, self::ACCESS_ADMIN, $room, payload: ['positions' => [['playerId' => self::TOKEN_PARTICIPANT_ID, 'position' => 2], ['playerId' => self::TOKEN_OPPONENT_ID, 'position' => 1]]], expected: Response::HTTP_OK),
             // Missing game, see the method comment: the exception is the honest 404 here.
             self::entry('room_stream', Request::METHOD_GET, self::ACCESS_ADMIN, ['id' => self::FIXTURE_MISSING_GAME], expected: Response::HTTP_NOT_FOUND),
-            self::entry('room_rematch', Request::METHOD_POST, self::ACCESS_ADMIN, $room, expected: Response::HTTP_CREATED),
+            self::entry('room_rematch', Request::METHOD_POST, self::ACCESS_ADMIN, $room, state: self::STATE_FINISHED, expected: Response::HTTP_CREATED),
 
             // Admin: game lifecycle
             self::entry('app_game_state', Request::METHOD_GET, self::ACCESS_ADMIN, $game, expected: Response::HTTP_OK),

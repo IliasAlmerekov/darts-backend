@@ -11,6 +11,7 @@ use App\Enum\GameStatus;
 use App\Exception\Game\GameReopenNotAllowedException;
 use App\Repository\GameRepositoryInterface;
 use App\Service\Game\GameReopenService;
+use App\Service\Game\NewestGameGuard;
 use App\Service\Security\GameAccessServiceInterface;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
@@ -35,6 +36,7 @@ final class GameReopenServiceTest extends TestCase
             ->setIsWinner(false);
 
         $game = (new Game())
+            ->setGameId(7)
             ->setStatus(GameStatus::Finished)
             ->setFinishedAt(new DateTimeImmutable())
             ->setWinner($winner)
@@ -53,8 +55,9 @@ final class GameReopenServiceTest extends TestCase
         $gameRepository = $this->createMock(GameRepositoryInterface::class);
         $gameRepository->expects(self::once())->method('refreshWithSeatsForUpdate')->with($game);
         $gameRepository->expects(self::once())->method('abortStartedGames')->with($game->getGameId());
+        $gameRepository->method('findHighestGameId')->willReturn(7);
 
-        $service = new GameReopenService($entityManager, $access, $gameRepository);
+        $service = new GameReopenService($entityManager, $access, $gameRepository, new NewestGameGuard($gameRepository));
 
         $service->reopen($game);
 
@@ -82,7 +85,7 @@ final class GameReopenServiceTest extends TestCase
         $gameRepository = $this->createMock(GameRepositoryInterface::class);
         $gameRepository->expects(self::never())->method('abortStartedGames');
 
-        $service = new GameReopenService($entityManager, $access, $gameRepository);
+        $service = new GameReopenService($entityManager, $access, $gameRepository, new NewestGameGuard($gameRepository));
 
         $service->reopen($game);
 
@@ -103,7 +106,8 @@ final class GameReopenServiceTest extends TestCase
             ->with($game)
             ->willReturn(new User());
 
-        $service = new GameReopenService($entityManager, $access, $this->createStub(GameRepositoryInterface::class));
+        $gameRepository = $this->createStub(GameRepositoryInterface::class);
+        $service = new GameReopenService($entityManager, $access, $gameRepository, new NewestGameGuard($gameRepository));
 
         $this->expectException(GameReopenNotAllowedException::class);
         $service->reopen($game);

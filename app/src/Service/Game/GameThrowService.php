@@ -32,7 +32,6 @@ use App\Service\Security\GameAccessServiceInterface;
 use DateTime;
 use DateTimeImmutable;
 use DateTimeInterface;
-use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Override;
 
@@ -51,6 +50,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      * @param EntityManagerInterface         $entityManager
      * @param GameAccessServiceInterface     $gameAccessService
      * @param GameRepositoryInterface        $gameRepository
+     * @param NewestGameGuardInterface       $newestGameGuard
      * @param ActivePlayerResolverInterface  $activePlayerResolver
      *
      * @psalm-suppress PossiblyUnusedMethod
@@ -62,6 +62,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         private EntityManagerInterface $entityManager,
         private GameAccessServiceInterface $gameAccessService,
         private GameRepositoryInterface $gameRepository,
+        private NewestGameGuardInterface $newestGameGuard,
         private ?ActivePlayerResolverInterface $activePlayerResolver = null,
     ) {
     }
@@ -77,7 +78,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
     {
         return $this->entityManager->wrapInTransaction(function () use ($game, $dto): ThrowRecordingResultDto {
             if ($this->entityManager->contains($game)) {
-                $this->entityManager->lock($game, LockMode::PESSIMISTIC_WRITE);
+                $this->gameRepository->refreshWithSeatsForUpdate($game);
             }
 
             return $this->recordThrowUnlocked($game, $dto);
@@ -115,7 +116,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
 
         $undoneThrow = $this->entityManager->wrapInTransaction(function () use ($game): ?ThrowDeltaDto {
             if ($this->entityManager->contains($game)) {
-                $this->entityManager->lock($game, LockMode::PESSIMISTIC_WRITE);
+                $this->gameRepository->refreshWithSeatsForUpdate($game);
             }
 
             return $this->undoLastThrowUnlocked($game);
@@ -300,6 +301,11 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         $lastThrow = $this->roundThrowsRepository->findEntityLatestForGame($gameId);
         if (!$lastThrow) {
             return null;
+        }
+
+        // Undo in a finished game makes it started again and aborts the other started games.
+        if (GameStatus::Finished === $game->getStatus()) {
+            $this->newestGameGuard->assertNewest($game, [GameStatus::Finished]);
         }
 
         $undoneThrow = $this->createThrowDeltaFromEntity($lastThrow);

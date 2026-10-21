@@ -9,11 +9,23 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
+use App\Dto\ThrowRequest;
 use App\Entity\Game;
+use App\Entity\User;
+use App\Exception\Game\GameNotNewestException;
+use App\Exception\Game\GameThrowNotAllowedException;
 use App\Repository\GamePlayersRepository;
 use App\Repository\GameRepository;
 use App\Repository\InvitationRepository;
+use App\Repository\RoundRepository;
+use App\Repository\RoundThrowsRepository;
+use App\Service\Game\GameRoomService;
+use App\Service\Game\GameThrowService;
+use App\Service\Game\NewestGameGuard;
+use App\Service\Game\OpenLobbyService;
+use App\Service\Game\RematchService;
 use App\Service\Player\PlayerManagementService;
+use App\Service\Security\GameAccessServiceInterface;
 use App\Tests\Support\ScratchDatabase;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception\LockWaitTimeoutException;
@@ -22,6 +34,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 /**
  * Seats, invitations and started games committed by another request after this request's
@@ -142,6 +155,44 @@ final class ConcurrentSeatingTest extends KernelTestCase
         self::assertCount(2, $game->getGamePlayers());
     }
 
+    public function testRematchRejectsAGameReopenedAfterTheSnapshot(): void
+    {
+        $finished = $this->insertGame('finished');
+        $gameRepository = new GameRepository($this->registry());
+        $playerManagementService = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager);
+        $access = $this->createMock(GameAccessServiceInterface::class);
+        $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+        $openLobbyService = new OpenLobbyService($gameRepository, $this->entityManager);
+        $service = new RematchService(
+            new GameRoomService($gameRepository, $this->gamePlayersRepository, $playerManagementService, $access, $openLobbyService),
+            $playerManagementService,
+            new InvitationRepository($this->registry()),
+            $this->entityManager,
+            $this->createMock(UrlGeneratorInterface::class),
+            $access,
+            $openLobbyService,
+            new NewestGameGuard($gameRepository),
+            $gameRepository,
+        );
+
+        $this->request->beginTransaction();
+        $this->takeSnapshot();
+        // A reopen of the finished game commits while the rematch waits for the game's lock.
+        $this->other->update('game', ['status' => 'started'], ['game_id' => $finished]);
+        try {
+            $service->createRematch($finished);
+            self::fail('The rematch used the status from before the reopen.');
+        } catch (GameNotNewestException) {
+            $this->request->rollBack();
+        }
+
+        // The reopened game keeps playing, and no lobby was opened.
+        self::assertSame(
+            [[$finished, 'started']],
+            $this->other->fetchAllNumeric('SELECT game_id, status FROM game ORDER BY game_id'),
+        );
+    }
+
     public function testAbortStartedGamesAbortsAGameStartedAfterTheSnapshot(): void
     {
         $abandoned = $this->insertGame('started');
@@ -196,6 +247,93 @@ final class ConcurrentSeatingTest extends KernelTestCase
         );
     }
 
+    public function testFindHighestGameIdBlocksANewGameUntilCommit(): void
+    {
+        $finished = $this->insertGame('finished');
+        $gameRepository = new GameRepository($this->registry());
+
+        // The newest-game guard read the highest id and has not committed.
+        $this->request->beginTransaction();
+        self::assertSame($finished, $gameRepository->findHighestGameId());
+
+        // A "Back to start" in parallel has to wait, or the guard's answer is stale at commit.
+        $this->other->executeStatement('SET SESSION innodb_lock_wait_timeout = 1');
+        try {
+            $this->insertGame('lobby');
+            self::fail('A new game was inserted while the guard held the highest id.');
+        } catch (LockWaitTimeoutException) {
+        }
+        $this->request->commit();
+
+        self::assertSame(
+            [[$finished, 'finished']],
+            $this->other->fetchAllNumeric('SELECT game_id, status FROM game ORDER BY game_id'),
+        );
+    }
+
+    public function testRecordThrowRejectsAGameWonAfterItWasLoaded(): void
+    {
+        [$game, , $bob] = $this->startGameWithOneThrow();
+        $loaded = $this->entityManager->find(Game::class, $game);
+        self::assertInstanceOf(Game::class, $loaded);
+        // The winning throw commits after this request loaded the game.
+        $this->commitWinningThrow($game, $bob);
+        $throw = new ThrowRequest();
+        $throw->playerId = $bob;
+        $throw->value = 20;
+
+        try {
+            $this->throwService()->recordThrow($loaded, $throw);
+            self::fail('The throw used the status from before the winning throw.');
+        } catch (GameThrowNotAllowedException) {
+        }
+
+        self::assertSame(2, (int) $this->other->fetchOne('SELECT COUNT(*) FROM round_throws WHERE game_id = ?', [$game]));
+    }
+
+    public function testUndoReopensAGameWonAfterItWasLoaded(): void
+    {
+        [$game, $firstThrow, $bob] = $this->startGameWithOneThrow();
+        $loaded = $this->entityManager->find(Game::class, $game);
+        self::assertInstanceOf(Game::class, $loaded);
+        self::assertCount(1, $loaded->getGamePlayers());
+        // The winning throw commits after this request loaded the game.
+        $this->commitWinningThrow($game, $bob);
+
+        $this->throwService()->undoLastThrow($loaded);
+
+        self::assertSame(
+            [['started', null, null]],
+            $this->other->fetchAllNumeric('SELECT status, winner_id, finished_at FROM game WHERE game_id = ?', [$game]),
+        );
+        self::assertSame([[20, 0]], $this->other->fetchAllNumeric('SELECT score, is_winner FROM game_players WHERE game_id = ?', [$game]));
+        self::assertSame([$firstThrow], $this->other->fetchFirstColumn('SELECT throw_id FROM round_throws WHERE game_id = ?', [$game]));
+    }
+
+    public function testUndoRejectsAGameWonAfterItWasLoadedWhenANewerGameExists(): void
+    {
+        [$game, , $bob] = $this->startGameWithOneThrow();
+        $loaded = $this->entityManager->find(Game::class, $game);
+        self::assertInstanceOf(Game::class, $loaded);
+        self::assertCount(1, $loaded->getGamePlayers());
+        // The winning throw and a "Back to start" commit after this request loaded the game.
+        $this->commitWinningThrow($game, $bob);
+        $lobby = $this->insertGame('lobby');
+
+        try {
+            $this->throwService()->undoLastThrow($loaded);
+            self::fail('The undo used the status from before the winning throw.');
+        } catch (GameNotNewestException) {
+        }
+
+        // The won game keeps its winner and its winning throw.
+        self::assertSame(
+            [[$game, 'finished', $bob], [$lobby, 'lobby', null]],
+            $this->other->fetchAllNumeric('SELECT game_id, status, winner_id FROM game ORDER BY game_id'),
+        );
+        self::assertSame(2, (int) $this->other->fetchOne('SELECT COUNT(*) FROM round_throws WHERE game_id = ?', [$game]));
+    }
+
     public function testAbortStartedGamesKeepsTheExceptedGameStarted(): void
     {
         $other = $this->insertGame('started');
@@ -244,6 +382,69 @@ final class ConcurrentSeatingTest extends KernelTestCase
     private function insertGame(string $status): int
     {
         $this->other->insert('game', ['date' => '2026-10-01', 'status' => $status]);
+
+        return (int) $this->other->lastInsertId();
+    }
+
+    private function throwService(): GameThrowService
+    {
+        $gameRepository = new GameRepository($this->registry());
+        $access = $this->createMock(GameAccessServiceInterface::class);
+        $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+
+        return new GameThrowService(
+            $this->gamePlayersRepository,
+            new RoundRepository($this->registry()),
+            new RoundThrowsRepository($this->registry()),
+            $this->entityManager,
+            $access,
+            $gameRepository,
+            new NewestGameGuard($gameRepository),
+        );
+    }
+
+    /**
+     * Bob is on 20 after his first throw in round 1.
+     *
+     * @return array{int, int, int} the game, the first throw and Bob
+     */
+    private function startGameWithOneThrow(): array
+    {
+        $bob = $this->insertUser('bob');
+        $game = $this->insertGame('started');
+        $this->other->update('game', ['round' => 1], ['game_id' => $game]);
+        $this->insertSeat($game, $bob, 1);
+        $this->other->update('game_players', ['score' => 20], ['game_id' => $game]);
+        $this->other->insert('round', ['game_id' => $game, 'round_number' => 1]);
+
+        return [$game, $this->insertThrow($game, $bob, 1, 20), $bob];
+    }
+
+    /**
+     * Bob checks out from 20 and wins.
+     */
+    private function commitWinningThrow(int $gameId, int $bob): void
+    {
+        $this->insertThrow($gameId, $bob, 2, 0);
+        $this->other->update('game_players', ['score' => 0, 'is_winner' => 1], ['game_id' => $gameId]);
+        $this->other->update(
+            'game',
+            ['status' => 'finished', 'winner_id' => $bob, 'finished_at' => '2026-10-01 20:00:00'],
+            ['game_id' => $gameId],
+        );
+    }
+
+    private function insertThrow(int $gameId, int $playerId, int $throwNumber, int $remainingScore): int
+    {
+        $this->other->insert('round_throws', [
+            'game_id' => $gameId,
+            'round_id' => $this->other->fetchOne('SELECT round_id FROM round WHERE game_id = ?', [$gameId]),
+            'player_id' => $playerId,
+            'throw_number' => $throwNumber,
+            'value' => 20,
+            'score' => $remainingScore,
+            'timestamp' => '2026-10-01 20:00:00',
+        ]);
 
         return (int) $this->other->lastInsertId();
     }

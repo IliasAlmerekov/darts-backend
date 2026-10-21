@@ -31,6 +31,8 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **Verschiedene Services**: Integration von `GameAccessService` in `GameAbortService`, `GameFinishService`, `GameRoomService`, `GameSettingsService`, `GameStartService`, `GameThrowService`, `RematchService` und `InvitationService` für Zugriffskontrollen vor Spielaktionen.
 
 ### Behoben
+- **Spiel**: Undo eines beendeten Spiels, Reopen, Rematch und Rematch-Start wirken nur noch auf das neueste Spiel und antworten sonst mit 409 `GAME_NOT_NEWEST`, damit ein altes Spiel das laufende Spiel nicht abbricht. Rematch und Rematch-Start nehmen ein beendetes oder abgebrochenes Spiel an (ADR 0005) (#131)
+- **Spiel**: Wurf und Undo laden das Spiel nach der Sperre neu. Ein parallel committeter Siegwurf wird so nicht mehr übersehen: Ein Undo öffnet das Spiel korrekt wieder statt nur den Siegwurf zu löschen, und ein weiterer Wurf in das beendete Spiel wird abgelehnt (#131)
 - **Sicherheitslücken**: Zugriffsprüfungen hinzugefügt, um unbefugten Zugriff auf Spielaktionen zu verhindern (z. B. nur Spieler oder Administratoren können Spiele ändern).
 
 ### Tests

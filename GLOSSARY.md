@@ -52,6 +52,14 @@ _Avoid_: Joined page, lobby
 The game a player takes part in right now. A player has at most one; joining another game replaces it. A game stops being anyone's current game once the tablet opens a lobby or starts another game.
 _Avoid_: active game
 
+**Tablet game**:
+The one game on the tablet that is in the lobby or started. A finished or aborted game is never the tablet game.
+_Avoid_: Current game (for the tablet's game), active game
+
+**Newest game**:
+The game with the greatest game id, whatever its status. Undo into play, reopen and rematch act only on the newest game, so an older game never aborts the tablet game (ADR 0005).
+_Avoid_: Latest game, last game
+
 **Profile**:
 The page a player lands on when they open the app without an invitation and without a current game. It shows their own recent finished games and statistics.
 _Avoid_: Dashboard, home page

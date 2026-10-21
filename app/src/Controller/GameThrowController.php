@@ -128,6 +128,7 @@ final class GameThrowController extends AbstractController
     #[ApiResponse]
     #[OA\Delete(deprecated: true)]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
+    #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Der letzte Wurf hat das Spiel beendet, und das Spiel ist nicht das neueste Spiel (`GAME_NOT_NEWEST`). Das Rückgängigmachen würde das laufende Spiel abbrechen.')]
     #[Route('/api/game/{gameId}/throw', name: 'app_game_throw_undo', methods: ['DELETE'], format: 'json')]
     public function undoThrow(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameServiceInterface $gameService): JsonResponse
     {
@@ -158,6 +159,7 @@ final class GameThrowController extends AbstractController
     )]
     #[ApiResponse]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
+    #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Der letzte Wurf hat das Spiel beendet, und das Spiel ist nicht das neueste Spiel (`GAME_NOT_NEWEST`). Das Rückgängigmachen würde das laufende Spiel abbrechen.')]
     #[Route('/api/game/{gameId}/throw/delta', name: 'app_game_throw_undo_delta', methods: ['DELETE'], format: 'json')]
     public function undoThrowDelta(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameDeltaServiceInterface $gameDeltaService): UndoAckDto
     {
