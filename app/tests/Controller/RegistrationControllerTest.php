@@ -21,7 +21,7 @@ final class RegistrationControllerTest extends TestCase
     {
         $payload = new RegistrationRequest();
         $payload->username = 'new';
-        $payload->email = 'new@example.com';
+        $payload->email = 'new@db-n.com';
         $payload->plainPassword = 'password';
 
         $loginResponse = new JsonResponse(['success' => true], Response::HTTP_CREATED);
