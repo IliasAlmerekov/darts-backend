@@ -57,14 +57,15 @@ final class PlayerProfileServiceTest extends TestCase
         $gamePlayersRepository->expects(self::never())->method('findByGameIds');
 
         self::assertEquals(
-            new PlayerProfileResponseDto(new PlayerProfileStatsDto(0, null), []),
-            $this->createService($gamePlayersRepository)->getProfile(self::PLAYER_ID)
+            new PlayerProfileResponseDto(new PlayerProfileStatsDto(0, null), [], null),
+            $this->createService($gamePlayersRepository)->getProfile($this->createUser(self::PLAYER_ID, 'ilias'))
         );
     }
 
     public function testFinishedGameCarriesOwnResultAndParticipantsByPlacement(): void
     {
-        $player = $this->createUser(self::PLAYER_ID, 'ilias');
+        $player = $this->createUser(self::PLAYER_ID, 'ilias')
+            ->setRegisteredAt(new DateTimeImmutable('2026-03-02T08:15:00+00:00'));
         $mia = $this->createUser(2, 'mia');
         $tom = $this->createUser(3, 'tom')->setIsGuest(true);
         $finishedAt = new DateTimeImmutable('2026-10-18T17:42:00+00:00');
@@ -100,9 +101,10 @@ final class PlayerProfileServiceTest extends TestCase
                         new PlayerProfileParticipantDto(playerId: self::PLAYER_ID, displayName: 'ilias', placement: 2, isSelf: true),
                         new PlayerProfileParticipantDto(playerId: null, displayName: 'tom', placement: 3, isSelf: false),
                     ],
-                )]
+                )],
+                registeredAt: '2026-03-02T08:15:00+00:00',
             ),
-            $this->service->getProfile(self::PLAYER_ID)
+            $this->service->getProfile($player)
         );
     }
 
@@ -114,7 +116,7 @@ final class PlayerProfileServiceTest extends TestCase
         $this->roundRepository->method('countFinishedRoundsByGameIds')->willReturn([]);
         $this->roundThrowsRepository->method('getParticipantTotalsForGames')->willReturn([]);
 
-        $game = $this->service->getProfile(self::PLAYER_ID)->recentGames[0];
+        $game = $this->service->getProfile($player)->recentGames[0];
 
         self::assertNull($game->finishedAt);
         self::assertSame(0.0, $game->roundAverage);

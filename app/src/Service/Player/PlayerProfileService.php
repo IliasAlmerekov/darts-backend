@@ -15,6 +15,7 @@ use App\Dto\PlayerProfileParticipantDto;
 use App\Dto\PlayerProfileResponseDto;
 use App\Dto\PlayerProfileStatsDto;
 use App\Entity\GamePlayers;
+use App\Entity\User;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\RoundRepositoryInterface;
@@ -51,13 +52,14 @@ final readonly class PlayerProfileService implements PlayerProfileServiceInterfa
     }
 
     /**
-     * @param int $playerId
+     * @param User $player
      *
      * @return PlayerProfileResponseDto
      */
     #[Override]
-    public function getProfile(int $playerId): PlayerProfileResponseDto
+    public function getProfile(User $player): PlayerProfileResponseDto
     {
+        $playerId = (int) $player->getId();
         $stats = $this->gameStatisticsService->getPlayerStatsForPlayer($playerId);
 
         return new PlayerProfileResponseDto(
@@ -66,6 +68,7 @@ final readonly class PlayerProfileService implements PlayerProfileServiceInterfa
                 scoreAverage: $stats?->scoreAverage,
             ),
             recentGames: $this->buildRecentGames($playerId),
+            registeredAt: $player->getRegisteredAt()?->format(DateTimeInterface::ATOM),
         );
     }
 

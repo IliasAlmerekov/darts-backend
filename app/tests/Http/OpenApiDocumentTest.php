@@ -242,7 +242,10 @@ final class OpenApiDocumentTest extends WebTestCase
         );
 
         $schemas = $document['components']['schemas'];
-        self::assertSame(['stats', 'recentGames'], array_keys($schemas['PlayerProfileResponseDto']['properties']));
+        self::assertSame(['stats', 'recentGames', 'registeredAt'], array_keys($schemas['PlayerProfileResponseDto']['properties']));
+        $registeredAt = $schemas['PlayerProfileResponseDto']['properties']['registeredAt'];
+        self::assertSame('string', $registeredAt['type']);
+        self::assertTrue($registeredAt['nullable'] ?? in_array('null', (array) ($registeredAt['type'] ?? []), true));
         self::assertSame(['gamesPlayed', 'scoreAverage'], array_keys($schemas['PlayerProfileStatsDto']['properties']));
         self::assertSame(
             ['gameId', 'finishedAt', 'placement', 'roundAverage', 'participantsCount', 'participants'],

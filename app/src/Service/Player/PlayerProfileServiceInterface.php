@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace App\Service\Player;
 
 use App\Dto\PlayerProfileResponseDto;
+use App\Entity\User;
 
 /**
  * Builds a player's own Profile.
@@ -17,9 +18,9 @@ use App\Dto\PlayerProfileResponseDto;
 interface PlayerProfileServiceInterface
 {
     /**
-     * @param int $playerId
+     * @param User $player a persisted player
      *
      * @return PlayerProfileResponseDto
      */
-    public function getProfile(int $playerId): PlayerProfileResponseDto;
+    public function getProfile(User $player): PlayerProfileResponseDto;
 }

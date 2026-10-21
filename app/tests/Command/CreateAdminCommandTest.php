@@ -166,6 +166,7 @@ final class CreateAdminCommandTest extends KernelTestCase
         self::assertSame('admin', $admin->getDisplayNameRaw());
         self::assertSame(['ROLE_ADMIN'], $admin->getStoredRoles());
         self::assertFalse($admin->isGuest());
+        self::assertNull($admin->getRegisteredAt());
         self::assertNotSame(self::PASSWORD, $admin->getPassword());
 
         $hasher = static::getContainer()->get(UserPasswordHasherInterface::class);

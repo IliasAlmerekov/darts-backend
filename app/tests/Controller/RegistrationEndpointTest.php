@@ -18,6 +18,8 @@ use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\UserRepository;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
+use DateTimeImmutable;
+use DateTimeInterface;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -49,6 +51,23 @@ final class RegistrationEndpointTest extends WebTestCase
         $user = static::getContainer()->get(UserRepository::class)->findOneBy(['email' => $body['email']]);
         self::assertInstanceOf(User::class, $user);
         self::assertContains('ROLE_PLAYER', $user->getRoles());
+    }
+
+    public function testRegistrationStoresTheRegistrationDateShownInTheProfile(): void
+    {
+        $client = static::createClient();
+        $before = new DateTimeImmutable('-1 second');
+
+        $this->postRegistration($client, $this->validBody(), Response::HTTP_CREATED);
+
+        $client->request(Request::METHOD_GET, '/api/player/profile');
+        self::assertResponseStatusCodeSame(Response::HTTP_OK);
+        $profile = json_decode((string) $client->getResponse()->getContent(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertIsString($profile['registeredAt']);
+        $registeredAt = DateTimeImmutable::createFromFormat(DateTimeInterface::ATOM, $profile['registeredAt']);
+        self::assertInstanceOf(DateTimeImmutable::class, $registeredAt);
+        self::assertGreaterThanOrEqual($before, $registeredAt);
+        self::assertLessThanOrEqual(new DateTimeImmutable('+1 second'), $registeredAt);
     }
 
     public function testRegistrationLogsTheNewPlayerIn(): void
