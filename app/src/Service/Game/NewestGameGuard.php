@@ -13,12 +13,14 @@ use App\Entity\Game;
 use App\Enum\GameStatus;
 use App\Exception\Game\GameNotNewestException;
 use App\Repository\GameRepositoryInterface;
+use Override;
 
 /**
- * Lets undo, reopen and rematch, which abort the other started games (ADR 0004), act only on
- * the newest game, so an older game never aborts the game in progress (ADR 0005).
+ * Reads the newest game id with a shared lock and compares it with the target game.
+ *
+ * @psalm-suppress UnusedClass Reason: service is auto-wired by the container and used through DI.
  */
-final readonly class NewestGameGuard
+final readonly class NewestGameGuard implements NewestGameGuardInterface
 {
     /**
      * @param GameRepositoryInterface $gameRepository
@@ -30,8 +32,6 @@ final readonly class NewestGameGuard
     }
 
     /**
-     * Must be called inside the request's transaction, before anything is written.
-     *
      * @param Game             $game
      * @param list<GameStatus> $allowedStatuses
      *
@@ -39,6 +39,7 @@ final readonly class NewestGameGuard
      *
      * @throws GameNotNewestException
      */
+    #[Override]
     public function assertNewest(Game $game, array $allowedStatuses): void
     {
         if (!in_array($game->getStatus(), $allowedStatuses, true)

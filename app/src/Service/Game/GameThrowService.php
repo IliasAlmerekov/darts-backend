@@ -51,7 +51,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      * @param EntityManagerInterface         $entityManager
      * @param GameAccessServiceInterface     $gameAccessService
      * @param GameRepositoryInterface        $gameRepository
-     * @param NewestGameGuard                $newestGameGuard
+     * @param NewestGameGuardInterface       $newestGameGuard
      * @param ActivePlayerResolverInterface  $activePlayerResolver
      *
      * @psalm-suppress PossiblyUnusedMethod
@@ -63,7 +63,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         private EntityManagerInterface $entityManager,
         private GameAccessServiceInterface $gameAccessService,
         private GameRepositoryInterface $gameRepository,
-        private NewestGameGuard $newestGameGuard,
+        private NewestGameGuardInterface $newestGameGuard,
         private ?ActivePlayerResolverInterface $activePlayerResolver = null,
     ) {
     }

@@ -29,9 +29,9 @@ final readonly class GameReopenService implements GameReopenServiceInterface
      * @param EntityManagerInterface     $entityManager
      * @param GameAccessServiceInterface $gameAccessService
      * @param GameRepositoryInterface    $gameRepository
-     * @param NewestGameGuard            $newestGameGuard
+     * @param NewestGameGuardInterface   $newestGameGuard
      */
-    public function __construct(private EntityManagerInterface $entityManager, private GameAccessServiceInterface $gameAccessService, private GameRepositoryInterface $gameRepository, private NewestGameGuard $newestGameGuard)
+    public function __construct(private EntityManagerInterface $entityManager, private GameAccessServiceInterface $gameAccessService, private GameRepositoryInterface $gameRepository, private NewestGameGuardInterface $newestGameGuard)
     {
     }
 

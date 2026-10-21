@@ -38,11 +38,11 @@ final readonly class RematchService implements RematchServiceInterface
      * @param UrlGeneratorInterface            $urlGenerator
      * @param GameAccessServiceInterface       $gameAccessService
      * @param OpenLobbyServiceInterface        $openLobbyService
-     * @param NewestGameGuard                  $newestGameGuard
+     * @param NewestGameGuardInterface         $newestGameGuard
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
-    public function __construct(private GameRoomServiceInterface $gameRoomService, private PlayerManagementServiceInterface $playerManagementService, private InvitationRepositoryInterface $invitationRepository, private EntityManagerInterface $entityManager, private UrlGeneratorInterface $urlGenerator, private GameAccessServiceInterface $gameAccessService, private OpenLobbyServiceInterface $openLobbyService, private NewestGameGuard $newestGameGuard)
+    public function __construct(private GameRoomServiceInterface $gameRoomService, private PlayerManagementServiceInterface $playerManagementService, private InvitationRepositoryInterface $invitationRepository, private EntityManagerInterface $entityManager, private UrlGeneratorInterface $urlGenerator, private GameAccessServiceInterface $gameAccessService, private OpenLobbyServiceInterface $openLobbyService, private NewestGameGuardInterface $newestGameGuard)
     {
     }
 
