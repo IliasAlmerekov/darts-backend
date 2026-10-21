@@ -116,17 +116,17 @@ final class OpenLobbyEndpointTest extends WebTestCase
         self::assertSame([$vanya->getId(), $bob->getId()], $this->seatedPlayerIds($created));
     }
 
-    public function testRoomCreateWithOnlyPreviousGameIdOpensAnEmptyLobby(): void
+    public function testRoomCreateWithAnUnknownPlayerIsRejectedAndOpensNoLobby(): void
     {
         $bob = $this->createPlayer('bob');
-        $finished = $this->createGame(GameStatus::Finished, [$bob]);
+        $unknownId = (int) $this->entityManager->getConnection()->fetchOne('SELECT COALESCE(MAX(id), 0) + 1000 FROM `user`');
+        $gameCount = $this->countGames();
 
-        $response = $this->postJson('/api/room/create', ['previousGameId' => $finished->getGameId()]);
+        $response = $this->postJson('/api/room/create', ['playerIds' => [(int) $bob->getId(), $unknownId]]);
 
-        self::assertResponseIsSuccessful();
-        $created = $this->entityManager->find(Game::class, $response['gameId']);
-        self::assertInstanceOf(Game::class, $created);
-        self::assertSame([], $this->seatedPlayerIds($created));
+        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
+        self::assertSame('PLAYER_NOT_FOUND', $response['error'] ?? null);
+        self::assertSame($gameCount, $this->countGames());
     }
 
     public function testRematchWithOpenLobbyReturnsItWithMissingPlayersAndOldSettings(): void

@@ -10,8 +10,10 @@ declare(strict_types=1);
 namespace App\Service\Game;
 
 use App\Entity\Game;
+use App\Exception\Game\PlayerNotFoundException;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\GamePlayersRepositoryInterface;
+use App\Repository\UserRepositoryInterface;
 use App\Service\Player\PlayerManagementService;
 use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\Exception\ORMException;
@@ -28,8 +30,9 @@ final readonly class GameRoomService implements GameRoomServiceInterface
      * @param PlayerManagementService        $playerManagementService
      * @param GameAccessServiceInterface     $gameAccessService
      * @param OpenLobbyServiceInterface      $openLobbyService
+     * @param UserRepositoryInterface        $userRepository
      */
-    public function __construct(private GameRepositoryInterface $gameRepository, private GamePlayersRepositoryInterface $gamePlayersRepository, private PlayerManagementService $playerManagementService, private GameAccessServiceInterface $gameAccessService, private OpenLobbyServiceInterface $openLobbyService)
+    public function __construct(private GameRepositoryInterface $gameRepository, private GamePlayersRepositoryInterface $gamePlayersRepository, private PlayerManagementService $playerManagementService, private GameAccessServiceInterface $gameAccessService, private OpenLobbyServiceInterface $openLobbyService, private UserRepositoryInterface $userRepository)
     {
     }
 
@@ -42,6 +45,7 @@ final readonly class GameRoomService implements GameRoomServiceInterface
      * @return Game
      *
      * @throws ORMException
+     * @throws PlayerNotFoundException When an included player id belongs to no user
      */
     #[Override]
     public function openRoom(?array $includePlayerIds = null, ?array $excludePlayerIds = null): Game
@@ -60,8 +64,13 @@ final readonly class GameRoomService implements GameRoomServiceInterface
                 $ids = array_values(array_filter($ids, static fn(int $pid): bool => !isset($excludeSet[$pid])));
             }
 
+            $players = [];
+            foreach ($this->userRepository->findByIds($ids) as $player) {
+                $players[(int) $player->getId()] = $player;
+            }
             foreach ($ids as $playerId) {
-                $this->playerManagementService->addPlayer((int) $game->getGameId(), $playerId);
+                $player = $players[$playerId] ?? throw new PlayerNotFoundException();
+                $this->playerManagementService->addPlayerEntity((int) $game->getGameId(), $player);
             }
         }
 

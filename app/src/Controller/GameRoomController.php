@@ -101,6 +101,7 @@ final class GameRoomController extends AbstractController
     #[ApiResponse]
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht.')]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Angemeldet ohne `ROLE_ADMIN` (z. B. ein Spieler).')]
+    #[OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Eine ID in `playerIds` gehört zu keinem Benutzer (`PLAYER_NOT_FOUND`). Es wird keine Lobby angelegt.')]
     #[Route(path: '/api/room/create', name: 'room_create', methods: ['POST'], format: 'json')]
     public function roomCreateApi(#[MapRequestPayload] RoomCreateRequest $dto): array
     {

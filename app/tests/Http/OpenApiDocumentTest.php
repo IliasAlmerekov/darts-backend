@@ -276,6 +276,13 @@ final class OpenApiDocumentTest extends WebTestCase
         }
     }
 
+    public function testRoomCreateDocuments404ForAnUnknownPlayer(): void
+    {
+        $responses = $this->document()['paths']['/api/room/create']['post']['responses'];
+
+        self::assertStringContainsString('PLAYER_NOT_FOUND', $responses['404']['description'] ?? '');
+    }
+
     public function testRoomCreateDocumentsPreviousGameIdAsDeprecated(): void
     {
         $previousGameId = $this->document()['components']['schemas']['RoomCreateRequest']['properties']['previousGameId'];

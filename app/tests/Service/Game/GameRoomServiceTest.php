@@ -13,6 +13,7 @@ use App\Entity\Game;
 use App\Entity\User;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
+use App\Repository\UserRepositoryInterface;
 use App\Service\Game\GameRoomService;
 use App\Service\Game\OpenLobby;
 use App\Service\Game\OpenLobbyServiceInterface;
@@ -36,6 +37,7 @@ final class GameRoomServiceTest extends TestCase
     private PlayerManagementService $playerManagementService;
     private GameAccessServiceInterface $gameAccessService;
     private OpenLobbyServiceInterface&MockObject $openLobbyService;
+    private UserRepositoryInterface&MockObject $userRepository;
     private Game $lobbyGame;
 
     protected function setUp(): void
@@ -69,6 +71,14 @@ final class GameRoomServiceTest extends TestCase
         $this->gameAccessService->method('assertPlayerInGameOrAdmin')->willReturn(new User());
         $this->lobbyGame = (new Game())->setGameId(99)->setDate(new DateTime());
         $this->openLobbyService = $this->createMock(OpenLobbyServiceInterface::class);
+        $this->userRepository = $this->createMock(UserRepositoryInterface::class);
+        $this->userRepository->method('findByIds')
+            ->willReturnCallback(fn (array $ids): array => array_map(function (int $id): User {
+                $user = new User();
+                $this->setPrivateProperty($user, 'id', $id);
+
+                return $user;
+            }, $ids));
     }
 
     /**
@@ -161,6 +171,7 @@ final class GameRoomServiceTest extends TestCase
             $this->playerManagementService,
             $this->gameAccessService,
             $this->openLobbyService,
+            $this->userRepository,
         );
     }
 }

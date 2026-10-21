@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Dto;
 
+use App\Entity\Game;
 use OpenApi\Attributes as OA;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -32,12 +33,12 @@ final class RoomCreateRequest
     public function __construct(
         // shortcut: kept only because the current frontend still sends it; remove it once the frontend stops (#133).
         #[OA\Property(description: 'Veraltet und ignoriert. Der Server übernimmt keine Spieler aus diesem Spiel.', deprecated: true)]
-        #[Assert\Positive]
         public ?int $previousGameId = null,
         /**
          * @var list<int>|null
          */
         #[Assert\Type('array')]
+        #[Assert\Count(max: Game::MAX_PARTICIPANTS)]
         #[Assert\All([
             new Assert\Type('integer'),
             new Assert\Positive(),

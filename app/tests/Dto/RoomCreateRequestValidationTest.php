@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Dto;
 
 use App\Dto\RoomCreateRequest;
+use App\Entity\Game;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Validator\Validation;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -36,14 +37,13 @@ final class RoomCreateRequestValidationTest extends TestCase
         self::assertCount(0, $violations);
     }
 
-    public function testRejectsInvalidPreviousGameId(): void
+    public function testAcceptsAnyPreviousGameIdBecauseTheServerIgnoresIt(): void
     {
         $dto = new RoomCreateRequest(previousGameId: 0);
 
         $violations = $this->validator->validate($dto);
 
-        self::assertGreaterThan(0, $violations->count());
-        self::assertTrue($this->hasPropertyPath($violations, 'previousGameId'));
+        self::assertCount(0, $violations);
     }
 
     public function testRejectsInvalidPlayerLists(): void
@@ -59,6 +59,15 @@ final class RoomCreateRequestValidationTest extends TestCase
         self::assertGreaterThan(0, $violations->count());
         self::assertTrue($this->hasPropertyPath($violations, 'playerIds'));
         self::assertTrue($this->hasPropertyPath($violations, 'excludePlayerIds'));
+    }
+
+    public function testRejectsMorePlayersThanAGameSeats(): void
+    {
+        $dto = new RoomCreateRequest(playerIds: range(1, Game::MAX_PARTICIPANTS + 1));
+
+        $violations = $this->validator->validate($dto);
+
+        self::assertTrue($this->hasPropertyPath($violations, 'playerIds'));
     }
 
     public function testRejectsInvalidSettingsFields(): void

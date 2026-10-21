@@ -19,6 +19,7 @@ use App\Repository\GameRepository;
 use App\Repository\InvitationRepository;
 use App\Repository\RoundRepository;
 use App\Repository\RoundThrowsRepository;
+use App\Repository\UserRepositoryInterface;
 use App\Service\Game\GameRoomService;
 use App\Service\Game\GameThrowService;
 use App\Service\Game\NewestGameGuard;
@@ -164,7 +165,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
         $openLobbyService = new OpenLobbyService($gameRepository, $this->entityManager);
         $service = new RematchService(
-            new GameRoomService($gameRepository, $this->gamePlayersRepository, $playerManagementService, $access, $openLobbyService),
+            new GameRoomService($gameRepository, $this->gamePlayersRepository, $playerManagementService, $access, $openLobbyService, $this->createMock(UserRepositoryInterface::class)),
             $playerManagementService,
             new InvitationRepository($this->registry()),
             $this->entityManager,

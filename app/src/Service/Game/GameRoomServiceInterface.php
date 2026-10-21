@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace App\Service\Game;
 
 use App\Entity\Game;
+use App\Exception\Game\PlayerNotFoundException;
 use Doctrine\ORM\Exception\ORMException;
 
 /**
@@ -27,6 +28,7 @@ interface GameRoomServiceInterface
      * @return Game The lobby game
      *
      * @throws ORMException
+     * @throws PlayerNotFoundException When an included player id belongs to no user
      */
     public function openRoom(?array $includePlayerIds = null, ?array $excludePlayerIds = null): Game;
 
