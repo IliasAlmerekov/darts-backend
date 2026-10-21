@@ -11,6 +11,7 @@ namespace App\Service\Game;
 
 use App\Entity\Invitation;
 use App\Enum\GameStatus;
+use App\Repository\GameRepositoryInterface;
 use App\Repository\InvitationRepositoryInterface;
 use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
@@ -39,10 +40,11 @@ final readonly class RematchService implements RematchServiceInterface
      * @param GameAccessServiceInterface       $gameAccessService
      * @param OpenLobbyServiceInterface        $openLobbyService
      * @param NewestGameGuardInterface         $newestGameGuard
+     * @param GameRepositoryInterface          $gameRepository
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
-    public function __construct(private GameRoomServiceInterface $gameRoomService, private PlayerManagementServiceInterface $playerManagementService, private InvitationRepositoryInterface $invitationRepository, private EntityManagerInterface $entityManager, private UrlGeneratorInterface $urlGenerator, private GameAccessServiceInterface $gameAccessService, private OpenLobbyServiceInterface $openLobbyService, private NewestGameGuardInterface $newestGameGuard)
+    public function __construct(private GameRoomServiceInterface $gameRoomService, private PlayerManagementServiceInterface $playerManagementService, private InvitationRepositoryInterface $invitationRepository, private EntityManagerInterface $entityManager, private UrlGeneratorInterface $urlGenerator, private GameAccessServiceInterface $gameAccessService, private OpenLobbyServiceInterface $openLobbyService, private NewestGameGuardInterface $newestGameGuard, private GameRepositoryInterface $gameRepository)
     {
     }
 
@@ -60,6 +62,9 @@ final readonly class RematchService implements RematchServiceInterface
         if (!$oldGame) {
             return ['success' => false, 'message' => 'Previous game not found'];
         }
+        // Reloads the status under the game's lock, so a parallel reopen of this game either
+        // commits first and is seen, or waits until the rematch ends.
+        $this->gameRepository->refreshWithSeatsForUpdate($oldGame);
         $this->gameAccessService->assertPlayerInGameOrAdmin($oldGame);
         // Aborted too: the exit flow aborts the started game, then asks for its rematch.
         $this->newestGameGuard->assertNewest($oldGame, [GameStatus::Finished, GameStatus::Aborted]);
