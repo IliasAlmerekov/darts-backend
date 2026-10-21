@@ -197,6 +197,49 @@ final class RegistrationEndpointTest extends WebTestCase
         self::assertSame(['Please enter a valid email address'], $payload['errors']['email'] ?? null);
     }
 
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function companyEmails(): iterable
+    {
+        yield 'lowercase' => ['alice@db-n.com'];
+        yield 'mixed case with trailing space' => ['Alice@DB-N.com '];
+    }
+
+    #[DataProvider('companyEmails')]
+    public function testCompanyDomainEmailRegisters(string $email): void
+    {
+        $client = static::createClient();
+        $body = ['email' => $email] + $this->validBody();
+
+        $this->postRegistration($client, $body, Response::HTTP_CREATED);
+
+        self::assertInstanceOf(User::class, static::getContainer()->get(UserRepository::class)->findOneBy(['email' => trim($email)]));
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function foreignDomainEmails(): iterable
+    {
+        yield 'other domain' => ['alice@gmail.com'];
+        yield 'company domain as subdomain of another' => ['alice@db-n.com.evil.com'];
+        yield 'subdomain of the company domain' => ['alice@sub.db-n.com'];
+        yield 'company domain with a prefix' => ['alice@xdb-n.com'];
+    }
+
+    #[DataProvider('foreignDomainEmails')]
+    public function testForeignDomainEmailIsRejectedAndCreatesNoUser(string $email): void
+    {
+        $client = static::createClient();
+        $body = ['email' => $email] + $this->validBody();
+
+        $payload = $this->postRegistration($client, $body, Response::HTTP_BAD_REQUEST);
+
+        self::assertSame(['email' => ['Please register with your @db-n.com email address']], $payload['errors']);
+        self::assertNull(static::getContainer()->get(UserRepository::class)->findOneBy(['username' => $body['username']]));
+    }
+
     public function testShortPasswordReturnsFieldError(): void
     {
         $client = static::createClient();
@@ -550,7 +593,7 @@ final class RegistrationEndpointTest extends WebTestCase
         $suffix = bin2hex(random_bytes(4));
 
         return [
-            'email' => sprintf('register-%s@test.dev', $suffix),
+            'email' => sprintf('register-%s@db-n.com', $suffix),
             'username' => sprintf('register_%s', $suffix),
             'plainPassword' => 'secret123',
         ];
