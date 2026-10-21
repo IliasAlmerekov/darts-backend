@@ -163,7 +163,7 @@ final class RegistrationEndpointTest extends WebTestCase
         $game = $this->createGame($entityManager, GameStatus::Lobby);
         $invitation = $this->createInvitation($entityManager, $game);
         $this->scanInvitation($client, $invitation);
-        $body = ['plainPassword' => '1234567'] + $this->validBody();
+        $body = ['plainPassword' => '12345'] + $this->validBody();
 
         $this->postRegistration($client, $body, Response::HTTP_BAD_REQUEST);
 
@@ -201,19 +201,19 @@ final class RegistrationEndpointTest extends WebTestCase
     {
         $client = static::createClient();
 
-        $payload = $this->postRegistration($client, ['plainPassword' => '1234567'] + $this->validBody(), Response::HTTP_BAD_REQUEST);
+        $payload = $this->postRegistration($client, ['plainPassword' => '12345'] + $this->validBody(), Response::HTTP_BAD_REQUEST);
 
-        self::assertSame(['Your password should be at least 8 characters long.'], $payload['errors']['plainPassword'] ?? null);
+        self::assertSame(['Your password should be at least 6 characters long.'], $payload['errors']['plainPassword'] ?? null);
     }
 
-    public function testSevenCharacterPasswordIsRejectedAndEightIsAccepted(): void
+    public function testFiveCharacterPasswordIsRejectedAndSixIsAccepted(): void
     {
         $client = static::createClient();
 
-        $rejected = $this->postRegistration($client, ['plainPassword' => '1234567'] + $this->validBody(), Response::HTTP_BAD_REQUEST);
-        $this->postRegistration($client, ['plainPassword' => '12345678'] + $this->validBody(), Response::HTTP_CREATED);
+        $rejected = $this->postRegistration($client, ['plainPassword' => '12345'] + $this->validBody(), Response::HTTP_BAD_REQUEST);
+        $this->postRegistration($client, ['plainPassword' => '123456'] + $this->validBody(), Response::HTTP_CREATED);
 
-        self::assertSame(['Your password should be at least 8 characters long.'], $rejected['errors']['plainPassword'] ?? null);
+        self::assertSame(['Your password should be at least 6 characters long.'], $rejected['errors']['plainPassword'] ?? null);
     }
 
     public function testWrongTypedFieldReturnsFieldError(): void
