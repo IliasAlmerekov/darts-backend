@@ -262,6 +262,49 @@ SQL,
     }
 
     /**
+     * @return array{gameId:int,status:GameStatus}|null
+     */
+    #[\Override]
+    public function findTabletGame(): ?array
+    {
+        /** @var array{gameId:int|string,status:GameStatus}|null $row */
+        $row = $this->createQueryBuilder('g')
+            ->select('g.gameId AS gameId', 'g.status AS status')
+            ->andWhere('g.status IN (:statuses)')
+            ->setParameter('statuses', [GameStatus::Lobby, GameStatus::Started])
+            ->orderBy('g.gameId', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        if (null === $row) {
+            return null;
+        }
+
+        return ['gameId' => (int) $row['gameId'], 'status' => $row['status']];
+    }
+
+    /**
+     * @return int|null
+     */
+    #[\Override]
+    public function findLastFinishedGameId(): ?int
+    {
+        /** @var int|string|null $gameId */
+        $gameId = $this->createQueryBuilder('g')
+            ->select('g.gameId')
+            ->andWhere('g.status = :status')
+            ->setParameter('status', GameStatus::Finished)
+            ->orderBy('g.finishedAt', 'DESC')
+            ->addOrderBy('g.gameId', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult(Query::HYDRATE_SINGLE_SCALAR);
+
+        return null === $gameId ? null : (int) $gameId;
+    }
+
+    /**
      * @return int
      */
     #[\Override]

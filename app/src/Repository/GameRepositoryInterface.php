@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Game;
+use App\Enum\GameStatus;
 use DateTimeImmutable;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\DBAL\LockMode;
@@ -129,6 +130,22 @@ interface GameRepositoryInterface
      * @return int|null
      */
     public function findHighestGameId(): ?int;
+
+    /**
+     * Returns the tablet game: the game in the lobby or started. ADR 0003 and ADR 0004 allow at
+     * most one; when more match, the one with the greatest game id wins.
+     *
+     * @return array{gameId:int,status:GameStatus}|null
+     */
+    public function findTabletGame(): ?array;
+
+    /**
+     * Returns the id of the finished game with the latest finishedAt, or null when no game is
+     * finished. A reopened game that finishes again counts by its new finishedAt.
+     *
+     * @return int|null
+     */
+    public function findLastFinishedGameId(): ?int;
 
     /**
      * @return int
