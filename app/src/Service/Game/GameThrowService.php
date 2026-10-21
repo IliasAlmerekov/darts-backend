@@ -51,6 +51,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      * @param EntityManagerInterface         $entityManager
      * @param GameAccessServiceInterface     $gameAccessService
      * @param GameRepositoryInterface        $gameRepository
+     * @param NewestGameGuard                $newestGameGuard
      * @param ActivePlayerResolverInterface  $activePlayerResolver
      *
      * @psalm-suppress PossiblyUnusedMethod
@@ -62,6 +63,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         private EntityManagerInterface $entityManager,
         private GameAccessServiceInterface $gameAccessService,
         private GameRepositoryInterface $gameRepository,
+        private NewestGameGuard $newestGameGuard,
         private ?ActivePlayerResolverInterface $activePlayerResolver = null,
     ) {
     }
@@ -300,6 +302,11 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         $lastThrow = $this->roundThrowsRepository->findEntityLatestForGame($gameId);
         if (!$lastThrow) {
             return null;
+        }
+
+        // Undo in a finished game makes it started again and aborts the other started games.
+        if (GameStatus::Finished === $game->getStatus()) {
+            $this->newestGameGuard->assertNewest($game, [GameStatus::Finished]);
         }
 
         $undoneThrow = $this->createThrowDeltaFromEntity($lastThrow);

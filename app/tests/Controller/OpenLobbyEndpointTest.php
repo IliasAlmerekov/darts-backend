@@ -97,9 +97,10 @@ final class OpenLobbyEndpointTest extends WebTestCase
         $bob = $this->createPlayer('bob');
         $vanya = $this->createPlayer('vanya');
         $anna = $this->createPlayer('anna');
+        $lobby = $this->createGame(GameStatus::Lobby, [$vanya, $anna]);
         $finished = $this->createGame(GameStatus::Finished, [$bob, $vanya]);
         $finished->setStartScore(501)->setDoubleOut(true)->setTripleOut(true)->setType(2);
-        $lobby = $this->createGame(GameStatus::Lobby, [$vanya, $anna]);
+        $this->entityManager->flush();
         $gameCount = $this->countGames();
 
         $response = $this->postJson(sprintf('/api/room/%d/rematch', $finished->getGameId()));
@@ -120,10 +121,9 @@ final class OpenLobbyEndpointTest extends WebTestCase
     public function testRematchOverwritesTheLobbyTypeEvenWhenTheOldGameHasNone(): void
     {
         $bob = $this->createPlayer('bob');
-        $finished = $this->createGame(GameStatus::Finished, [$bob]);
         $lobby = $this->createGame(GameStatus::Lobby, []);
         $lobby->setType(2);
-        $this->entityManager->flush();
+        $finished = $this->createGame(GameStatus::Finished, [$bob]);
 
         $this->postJson(sprintf('/api/room/%d/rematch', $finished->getGameId()));
 
@@ -131,7 +131,11 @@ final class OpenLobbyEndpointTest extends WebTestCase
         self::assertNull($this->reload($lobby)->getType());
     }
 
-    public function testRepeatedRematchReturnsTheSameLobbyWithoutDuplicateSeats(): void
+    /**
+     * The first rematch makes the lobby the newest game, so the second one targets an older
+     * game (ADR 0005).
+     */
+    public function testRepeatedRematchIsRejectedAndKeepsTheLobbySeats(): void
     {
         $bob = $this->createPlayer('bob');
         $vanya = $this->createPlayer('vanya');
@@ -147,7 +151,8 @@ final class OpenLobbyEndpointTest extends WebTestCase
         $this->entityManager->flush();
         $second = $this->postJson(sprintf('/api/room/%d/rematch', $finished->getGameId()));
 
-        self::assertSame($first['gameId'], $second['gameId']);
+        self::assertResponseStatusCodeSame(Response::HTTP_CONFLICT);
+        self::assertSame('GAME_NOT_NEWEST', $second['error'] ?? null);
         self::assertSame([$bob->getId(), $vanya->getId(), $anna->getId()], $this->seatedPlayerIds($this->reload($lobby)));
     }
 
@@ -177,9 +182,10 @@ final class OpenLobbyEndpointTest extends WebTestCase
         $bob = $this->createPlayer('bob');
         $vanya = $this->createPlayer('vanya');
         $anna = $this->createPlayer('anna');
+        $lobby = $this->createGame(GameStatus::Lobby, [$bob, $anna]);
         $finished = $this->createGame(GameStatus::Finished, [$bob, $vanya]);
         $finished->setStartScore(501)->setDoubleOut(true);
-        $lobby = $this->createGame(GameStatus::Lobby, [$bob, $anna]);
+        $this->entityManager->flush();
         $gameCount = $this->countGames();
 
         $this->postJson(sprintf('/api/game/%d/rematch/start', $finished->getGameId()));
@@ -198,8 +204,8 @@ final class OpenLobbyEndpointTest extends WebTestCase
         $lobbyPlayers = array_map(fn (int $index): User => $this->createPlayer('lobby'.$index), range(1, 9));
         $bob = $this->createPlayer('bob');
         $vanya = $this->createPlayer('vanya');
-        $finished = $this->createGame(GameStatus::Finished, [$bob, $vanya]);
         $lobby = $this->createGame(GameStatus::Lobby, $lobbyPlayers);
+        $finished = $this->createGame(GameStatus::Finished, [$bob, $vanya]);
 
         $this->postJson(sprintf('/api/room/%d/rematch', $finished->getGameId()));
 
@@ -215,8 +221,8 @@ final class OpenLobbyEndpointTest extends WebTestCase
         $bob = $this->createPlayer('bob');
         $vanya = $this->createPlayer('vanya');
         $anna = $this->createPlayer('anna');
-        $finished = $this->createGame(GameStatus::Finished, [$bob, $vanya]);
         $lobby = $this->createGame(GameStatus::Lobby, [$anna]);
+        $finished = $this->createGame(GameStatus::Finished, [$bob, $vanya]);
 
         $this->postJson(
             sprintf('/api/game/%d/rematch/start', $finished->getGameId()),
@@ -234,8 +240,8 @@ final class OpenLobbyEndpointTest extends WebTestCase
         $lobbyPlayers = array_map(fn (int $index): User => $this->createPlayer('lobby'.$index), range(1, 9));
         $bob = $this->createPlayer('bob');
         $vanya = $this->createPlayer('vanya');
-        $finished = $this->createGame(GameStatus::Finished, [$bob, $vanya]);
         $lobby = $this->createGame(GameStatus::Lobby, $lobbyPlayers);
+        $finished = $this->createGame(GameStatus::Finished, [$bob, $vanya]);
 
         $this->postJson(
             sprintf('/api/game/%d/rematch/start', $finished->getGameId()),

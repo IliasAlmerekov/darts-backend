@@ -255,6 +255,7 @@ SQL,
         $result = $this->createQueryBuilder('g')
             ->select('MAX(g.gameId)')
             ->getQuery()
+            ->setLockMode(LockMode::PESSIMISTIC_READ)
             ->getSingleScalarResult();
 
         return $result ? (int) $result : null;

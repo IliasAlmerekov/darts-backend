@@ -6,10 +6,12 @@ namespace App\Tests\Service;
 
 use App\Entity\Game;
 use App\Entity\User;
+use App\Enum\GameStatus;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\InvitationRepositoryInterface;
 use App\Service\Game\GameRoomService;
+use App\Service\Game\NewestGameGuard;
 use App\Service\Game\OpenLobby;
 use App\Service\Game\OpenLobbyServiceInterface;
 use App\Service\Game\RematchService;
@@ -47,6 +49,7 @@ final class RematchServiceTest extends TestCase
             $urlGenerator,
             $access,
             $openLobbyService,
+            new NewestGameGuard($gameRepository),
         );
 
         $result = $service->createRematch(42);
@@ -57,11 +60,12 @@ final class RematchServiceTest extends TestCase
 
     public function testCreateRematchCreatesGameCopiesPlayersAndBuildsInvitation(): void
     {
-        $oldGame = new Game();
+        $oldGame = (new Game())->setStatus(GameStatus::Finished);
         $this->setPrivateProperty($oldGame, 'gameId', 42);
 
         $gameRepository = $this->createMock(GameRepositoryInterface::class);
         $gameRepository->method('find')->with(42)->willReturn($oldGame);
+        $gameRepository->method('findHighestGameId')->willReturn(42);
 
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $gamePlayersRepository->expects(self::once())
@@ -96,6 +100,7 @@ final class RematchServiceTest extends TestCase
             $urlGenerator,
             $access,
             $openLobbyService,
+            new NewestGameGuard($gameRepository),
         );
 
         $result = $service->createRematch(42);

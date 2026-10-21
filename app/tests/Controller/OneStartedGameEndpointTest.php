@@ -75,11 +75,11 @@ final class OneStartedGameEndpointTest extends WebTestCase
     public function testRematchAbortsTheStartedGame(bool $withOpenLobby): void
     {
         $bob = $this->createPlayer('bob');
-        $started = $this->createGame(GameStatus::Started, [$bob]);
-        $finished = $this->createGame(GameStatus::Finished, [$bob]);
         if ($withOpenLobby) {
             $this->createGame(GameStatus::Lobby, []);
         }
+        $started = $this->createGame(GameStatus::Started, [$bob]);
+        $finished = $this->createGame(GameStatus::Finished, [$bob]);
 
         $this->postJson(sprintf('/api/room/%d/rematch', $finished->getGameId()));
 
@@ -123,28 +123,92 @@ final class OneStartedGameEndpointTest extends WebTestCase
     {
         $bob = $this->createPlayer('bob');
         $vanya = $this->createPlayer('vanya');
+        $lobby = $withOpenLobby ? $this->createGame(GameStatus::Lobby, []) : null;
         $started = $this->createGame(GameStatus::Started, [$bob]);
         $finished = $this->createGame(GameStatus::Finished, [$bob, $vanya]);
-        if ($withOpenLobby) {
-            $this->createGame(GameStatus::Lobby, []);
-        }
 
         $this->postJson(sprintf('/api/game/%d/rematch/start', $finished->getGameId()));
 
         self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
         self::assertSame(GameStatus::Aborted, $this->statusOf($started));
         self::assertSame(GameStatus::Finished, $this->statusOf($finished));
-        // The rematch is the newest game: either the open lobby or the lobby the request created.
-        $rematchId = (int) $this->entityManager->getConnection()->fetchOne('SELECT MAX(game_id) FROM game');
-        self::assertSame(GameStatus::Started, $this->statusOfId($rematchId));
+        // The rematch is the open lobby, or the lobby the request created and so the newest game.
+        $rematchId = $lobby?->getGameId() ?? $this->newestGameId();
+        self::assertNotSame($finished->getGameId(), $rematchId);
+        self::assertSame(GameStatus::Started, $this->statusOfId((int) $rematchId));
+    }
+
+    /**
+     * The exit flow aborts the started game, then asks for a rematch of that same game.
+     *
+     * @param string $uriPattern
+     */
+    #[DataProvider('rematchRoutes')]
+    public function testRematchOfTheNewestAbortedGameReturnsALobby(string $uriPattern): void
+    {
+        $aborted = $this->createGame(GameStatus::Started, [$this->createPlayer('bob'), $this->createPlayer('vanya')]);
+        $this->requestJson(Request::METHOD_PATCH, sprintf('/api/game/%d/abort', $aborted->getGameId()));
+        self::assertResponseIsSuccessful((string) $this->client->getResponse()->getContent());
+
+        $this->postJson(sprintf($uriPattern, $aborted->getGameId()));
+
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED, (string) $this->client->getResponse()->getContent());
+        self::assertGreaterThan($aborted->getGameId(), $this->newestGameId());
+        self::assertSame(GameStatus::Aborted, $this->statusOf($aborted));
+    }
+
+    #[DataProvider('rejectedRematchTargets')]
+    public function testRematchOfAGameThatIsNotTheNewestFinishedOrAbortedGameIsRejected(string $uriPattern, GameStatus $targetStatus, ?GameStatus $newerStatus): void
+    {
+        $bob = $this->createPlayer('bob');
+        $target = $this->createGame($targetStatus, [$bob, $this->createPlayer('vanya')]);
+        $newer = null !== $newerStatus ? $this->createGame($newerStatus, [$bob]) : null;
+        $gameCount = $this->gameCount();
+
+        $this->postJson(sprintf($uriPattern, $target->getGameId()));
+
+        $this->assertGameNotNewest();
+        self::assertSame($targetStatus, $this->statusOf($target));
+        if (null !== $newer) {
+            self::assertSame($newerStatus, $this->statusOf($newer));
+        }
+        self::assertSame($gameCount, $this->gameCount());
+    }
+
+    /**
+     * @return array<string, array{string, GameStatus, GameStatus|null}>
+     */
+    public static function rejectedRematchTargets(): array
+    {
+        $targets = [];
+        foreach (self::rematchRoutes() as $route => [$uriPattern]) {
+            $targets[$route.': older finished, newer started'] = [$uriPattern, GameStatus::Finished, GameStatus::Started];
+            $targets[$route.': older finished, newer lobby'] = [$uriPattern, GameStatus::Finished, GameStatus::Lobby];
+            $targets[$route.': older aborted, newer started'] = [$uriPattern, GameStatus::Aborted, GameStatus::Started];
+            $targets[$route.': older aborted, newer finished'] = [$uriPattern, GameStatus::Aborted, GameStatus::Finished];
+            $targets[$route.': newest started'] = [$uriPattern, GameStatus::Started, null];
+        }
+
+        return $targets;
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function rematchRoutes(): array
+    {
+        return [
+            'rematch' => ['/api/room/%d/rematch'],
+            'rematch start' => ['/api/game/%d/rematch/start'],
+        ];
     }
 
     public function testReopenAbortsTheOtherStartedGame(): void
     {
         $bob = $this->createPlayer('bob');
         $started = $this->createGame(GameStatus::Started, [$bob]);
-        $finished = $this->createGame(GameStatus::Finished, [$bob]);
         $lobby = $this->createGame(GameStatus::Lobby, [$bob]);
+        $finished = $this->createGame(GameStatus::Finished, [$bob]);
 
         $this->requestJson(Request::METHOD_PATCH, sprintf('/api/game/%d/reopen', $finished->getGameId()));
 
@@ -152,6 +216,32 @@ final class OneStartedGameEndpointTest extends WebTestCase
         self::assertSame(GameStatus::Aborted, $this->statusOf($started));
         self::assertSame(GameStatus::Started, $this->statusOf($finished));
         self::assertSame(GameStatus::Lobby, $this->statusOf($lobby));
+    }
+
+    #[DataProvider('newerGameStatuses')]
+    public function testReopenOfAnOlderFinishedGameIsRejectedAndKeepsTheNewerGame(GameStatus $newerStatus): void
+    {
+        $bob = $this->createPlayer('bob');
+        $finished = $this->createGame(GameStatus::Finished, [$bob]);
+        $newer = $this->createGame($newerStatus, [$bob]);
+
+        $this->requestJson(Request::METHOD_PATCH, sprintf('/api/game/%d/reopen', $finished->getGameId()));
+
+        $this->assertGameNotNewest();
+        self::assertSame(GameStatus::Finished, $this->statusOf($finished));
+        self::assertSame($newerStatus, $this->statusOf($newer));
+    }
+
+    /**
+     * @return array<string, array{GameStatus}>
+     */
+    public static function newerGameStatuses(): array
+    {
+        return [
+            'started' => [GameStatus::Started],
+            'lobby' => [GameStatus::Lobby],
+            'finished' => [GameStatus::Finished],
+        ];
     }
 
     public function testReopeningAStartedGameChangesNoOtherGame(): void
@@ -169,27 +259,45 @@ final class OneStartedGameEndpointTest extends WebTestCase
 
     public function testUndoingTheLastThrowOfAFinishedGameAbortsTheOtherStartedGame(): void
     {
-        $bob = $this->createPlayer('bob');
-        $vanya = $this->createPlayer('vanya');
-        $finished = $this->createGame(GameStatus::Started, [$bob, $vanya]);
-        $finished->setStartScore(20)->setRound(1);
-        foreach ($finished->getGamePlayers() as $seat) {
-            $seat->setScore(20);
-        }
-        $this->entityManager->flush();
+        $started = $this->createGame(GameStatus::Started, [$this->createPlayer('vanya')]);
+        $finished = $this->createGameFinishedByAThrow();
         $throwUri = sprintf('/api/game/%d/throw/delta', $finished->getGameId());
-        $this->postJson($throwUri, ['playerId' => (int) $bob->getId(), 'value' => 20]);
-        self::assertResponseIsSuccessful((string) $this->client->getResponse()->getContent());
-        self::assertSame(GameStatus::Finished, $this->statusOf($finished));
-        $vanya = $this->entityManager->find(User::class, $vanya->getId());
-        self::assertInstanceOf(User::class, $vanya);
-        $started = $this->createGame(GameStatus::Started, [$vanya]);
 
         $this->requestJson(Request::METHOD_DELETE, $throwUri);
 
         self::assertResponseIsSuccessful((string) $this->client->getResponse()->getContent());
         self::assertSame(GameStatus::Started, $this->statusOf($finished));
         self::assertSame(GameStatus::Aborted, $this->statusOf($started));
+    }
+
+    /**
+     * An admin who reaches an old game's summary must not abort the game in progress (ADR 0005).
+     *
+     * @param string $method
+     * @param string $uriPattern
+     */
+    #[DataProvider('undoRoutes')]
+    public function testUndoOnAnOlderFinishedGameIsRejectedAndKeepsTheStartedGame(string $method, string $uriPattern): void
+    {
+        $finished = $this->createGameFinishedByAThrow();
+        $started = $this->createGame(GameStatus::Started, [$this->createPlayer('vanya')]);
+
+        $this->requestJson($method, sprintf($uriPattern, $finished->getGameId()));
+
+        $this->assertGameNotNewest();
+        self::assertSame(GameStatus::Finished, $this->statusOf($finished));
+        self::assertSame(GameStatus::Started, $this->statusOf($started));
+    }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function undoRoutes(): array
+    {
+        return [
+            'delta' => [Request::METHOD_DELETE, '/api/game/%d/throw/delta'],
+            'deprecated' => [Request::METHOD_DELETE, '/api/game/%d/throw'],
+        ];
     }
 
     /**
@@ -268,6 +376,41 @@ final class OneStartedGameEndpointTest extends WebTestCase
         $this->entityManager->flush();
 
         return $game;
+    }
+
+    /**
+     * A two-player game with start score 20 that bob finishes with one throw of 20.
+     */
+    private function createGameFinishedByAThrow(): Game
+    {
+        $bob = $this->createPlayer('bob');
+        $game = $this->createGame(GameStatus::Started, [$bob, $this->createPlayer('bobsfriend')]);
+        $game->setStartScore(20)->setRound(1);
+        foreach ($game->getGamePlayers() as $seat) {
+            $seat->setScore(20);
+        }
+        $this->entityManager->flush();
+        $this->postJson(sprintf('/api/game/%d/throw/delta', $game->getGameId()), ['playerId' => (int) $bob->getId(), 'value' => 20]);
+        self::assertResponseIsSuccessful((string) $this->client->getResponse()->getContent());
+        self::assertSame(GameStatus::Finished, $this->statusOf($game));
+
+        return $game;
+    }
+
+    private function gameCount(): int
+    {
+        return (int) $this->entityManager->getConnection()->fetchOne('SELECT COUNT(*) FROM game');
+    }
+
+    private function newestGameId(): int
+    {
+        return (int) $this->entityManager->getConnection()->fetchOne('SELECT MAX(game_id) FROM game');
+    }
+
+    private function assertGameNotNewest(): void
+    {
+        self::assertResponseStatusCodeSame(Response::HTTP_CONFLICT, (string) $this->client->getResponse()->getContent());
+        self::assertSame('GAME_NOT_NEWEST', $this->decodeResponse()['error'] ?? null);
     }
 
     /**

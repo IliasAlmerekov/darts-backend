@@ -54,7 +54,7 @@ final class GameRepositoryTest extends KernelTestCase
         $second = $this->createGame(GameStatus::Started);
         $this->entityManager->flush();
 
-        $highest = $this->repository->findHighestGameId();
+        $highest = $this->entityManager->wrapInTransaction(fn (): ?int => $this->repository->findHighestGameId());
 
         self::assertSame($second->getGameId(), $highest);
         self::assertGreaterThan($first->getGameId(), $second->getGameId());

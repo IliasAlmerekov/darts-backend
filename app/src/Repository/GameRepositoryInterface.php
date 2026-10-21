@@ -122,9 +122,12 @@ interface GameRepositoryInterface
     public function abortStartedGames(?int $exceptGameId = null): void;
 
     /**
+     * Returns the id of the newest game, whatever its status, with a shared lock (FOR SHARE).
+     * The locking read sees games committed after the transaction's snapshot and blocks new
+     * games until the transaction ends. Must be called inside a transaction.
+     *
      * @return int|null
      */
-    /** @psalm-suppress PossiblyUnusedMethod */
     public function findHighestGameId(): ?int;
 
     /**

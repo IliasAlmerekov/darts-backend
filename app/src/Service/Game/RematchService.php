@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace App\Service\Game;
 
 use App\Entity\Invitation;
+use App\Enum\GameStatus;
 use App\Repository\InvitationRepositoryInterface;
 use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
@@ -37,10 +38,11 @@ final readonly class RematchService implements RematchServiceInterface
      * @param UrlGeneratorInterface            $urlGenerator
      * @param GameAccessServiceInterface       $gameAccessService
      * @param OpenLobbyServiceInterface        $openLobbyService
+     * @param NewestGameGuard                  $newestGameGuard
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
-    public function __construct(private GameRoomServiceInterface $gameRoomService, private PlayerManagementServiceInterface $playerManagementService, private InvitationRepositoryInterface $invitationRepository, private EntityManagerInterface $entityManager, private UrlGeneratorInterface $urlGenerator, private GameAccessServiceInterface $gameAccessService, private OpenLobbyServiceInterface $openLobbyService)
+    public function __construct(private GameRoomServiceInterface $gameRoomService, private PlayerManagementServiceInterface $playerManagementService, private InvitationRepositoryInterface $invitationRepository, private EntityManagerInterface $entityManager, private UrlGeneratorInterface $urlGenerator, private GameAccessServiceInterface $gameAccessService, private OpenLobbyServiceInterface $openLobbyService, private NewestGameGuard $newestGameGuard)
     {
     }
 
@@ -59,6 +61,8 @@ final readonly class RematchService implements RematchServiceInterface
             return ['success' => false, 'message' => 'Previous game not found'];
         }
         $this->gameAccessService->assertPlayerInGameOrAdmin($oldGame);
+        // Aborted too: the exit flow aborts the started game, then asks for its rematch.
+        $this->newestGameGuard->assertNewest($oldGame, [GameStatus::Finished, GameStatus::Aborted]);
 
         $lobby = $this->openLobbyService->findOrCreate();
         $lobbyGame = $lobby->game;
