@@ -41,9 +41,20 @@ final class PlayerProfileEndpointTest extends WebTestCase
         $client->loginUser($player);
 
         self::assertSame(
-            ['stats' => ['gamesPlayed' => 0, 'scoreAverage' => null], 'recentGames' => []],
+            ['stats' => ['gamesPlayed' => 0, 'scoreAverage' => null], 'recentGames' => [], 'registeredAt' => null],
             $this->getProfile($client)
         );
+    }
+
+    public function testReturnsTheRegistrationDateAsAtomTimestamp(): void
+    {
+        $client = static::createClient();
+        $registeredAt = new DateTimeImmutable('2026-03-02 08:15:00');
+        $player = $this->createUser('player', 'ROLE_PLAYER')->setRegisteredAt($registeredAt);
+        static::getContainer()->get(EntityManagerInterface::class)->flush();
+        $client->loginUser($player);
+
+        self::assertSame($registeredAt->format(DateTimeInterface::ATOM), $this->getProfile($client)['registeredAt']);
     }
 
     public function testStatsEqualThePlayersRowInAdminPlayerStats(): void

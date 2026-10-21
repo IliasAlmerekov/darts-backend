@@ -64,6 +64,10 @@ _Avoid_: Latest game, last game
 The page a player lands on when they open the app without an invitation and without a current game. It shows their own recent finished games and statistics.
 _Avoid_: Dashboard, home page
 
+**Registration date**:
+The moment a player registered. Players who registered before the app stored it count from their first game; a player without a game has none. Guests and the admin never have one.
+_Avoid_: Member since (the frontend label), created at, sign-up date
+
 **Placement**:
 A participant's rank in a finished game. The winner has placement 1.
 _Avoid_: Position (the seat order before the game starts), rank

@@ -12,6 +12,7 @@ namespace App\Service\Registration;
 use App\Dto\RegistrationRequest;
 use App\Entity\User;
 use App\Exception\Registration\RegistrationAccountExistsException;
+use DateTimeImmutable;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use LogicException;
@@ -51,6 +52,7 @@ final readonly class RegistrationService implements RegistrationServiceInterface
         $user->setEmail(trim($request->email));
         $user->setPassword($this->passwordHasher->hashPassword($user, $request->plainPassword));
         $user->setRoles(['ROLE_PLAYER']);
+        $user->setRegisteredAt(new DateTimeImmutable());
 
         // The unique indexes on email and username are the only duplicate check, so two
         // parallel registrations with the same data cannot both pass it.

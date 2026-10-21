@@ -61,6 +61,7 @@ final class GuestPlayerServiceTest extends TestCase
             ->willReturnCallback(static function (User $user): void {
                 self::assertSame('Alex', $user->getDisplayNameRaw());
                 self::assertTrue($user->isGuest());
+                self::assertNull($user->getRegisteredAt());
                 self::assertNotNull($user->getUsername());
                 self::assertStringStartsWith('guest_', (string) $user->getUsername());
                 (new \ReflectionProperty(User::class, 'id'))->setValue($user, 55);

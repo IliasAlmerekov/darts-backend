@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Repository\UserRepository;
+use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -42,6 +43,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?string $password = null;
     #[ORM\Column(options: ['default' => false])]
     private bool $isGuest = false;
+    #[ORM\Column(nullable: true)]
+    private ?DateTimeImmutable $registeredAt = null;
 
     /**
      * @return int|null
@@ -203,6 +206,28 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setIsGuest(bool $isGuest): static
     {
         $this->isGuest = $isGuest;
+
+        return $this;
+    }
+
+    /**
+     * The Registration date. Only a player who registered has one; guests and the admin never do.
+     *
+     * @return DateTimeImmutable|null
+     */
+    public function getRegisteredAt(): ?DateTimeImmutable
+    {
+        return $this->registeredAt;
+    }
+
+    /**
+     * @param DateTimeImmutable $registeredAt
+     *
+     * @return static
+     */
+    public function setRegisteredAt(DateTimeImmutable $registeredAt): static
+    {
+        $this->registeredAt = $registeredAt;
 
         return $this;
     }

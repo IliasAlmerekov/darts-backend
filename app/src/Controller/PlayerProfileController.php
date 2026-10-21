@@ -45,11 +45,10 @@ final class PlayerProfileController extends AbstractController
     public function profile(PlayerProfileServiceInterface $playerProfileService): PlayerProfileResponseDto
     {
         $user = $this->getUser();
-        $playerId = $user instanceof User ? $user->getId() : null;
-        if (null === $playerId) {
+        if (!$user instanceof User || null === $user->getId()) {
             throw $this->createAccessDeniedException();
         }
 
-        return $playerProfileService->getProfile($playerId);
+        return $playerProfileService->getProfile($user);
     }
 }
