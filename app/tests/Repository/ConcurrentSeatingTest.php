@@ -10,10 +10,17 @@ declare(strict_types=1);
 namespace App\Tests\Repository;
 
 use App\Entity\Game;
+use App\Entity\User;
+use App\Exception\Game\GameNotNewestException;
 use App\Repository\GamePlayersRepository;
 use App\Repository\GameRepository;
 use App\Repository\InvitationRepository;
+use App\Service\Game\GameRoomService;
+use App\Service\Game\NewestGameGuard;
+use App\Service\Game\OpenLobbyService;
+use App\Service\Game\RematchService;
 use App\Service\Player\PlayerManagementService;
+use App\Service\Security\GameAccessServiceInterface;
 use App\Tests\Support\ScratchDatabase;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception\LockWaitTimeoutException;
@@ -22,6 +29,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 /**
  * Seats, invitations and started games committed by another request after this request's
@@ -140,6 +148,44 @@ final class ConcurrentSeatingTest extends KernelTestCase
 
         self::assertSame(501, $game->getStartScore());
         self::assertCount(2, $game->getGamePlayers());
+    }
+
+    public function testRematchRejectsAGameReopenedAfterTheSnapshot(): void
+    {
+        $finished = $this->insertGame('finished');
+        $gameRepository = new GameRepository($this->registry());
+        $playerManagementService = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager);
+        $access = $this->createMock(GameAccessServiceInterface::class);
+        $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+        $openLobbyService = new OpenLobbyService($gameRepository, $this->entityManager);
+        $service = new RematchService(
+            new GameRoomService($gameRepository, $this->gamePlayersRepository, $playerManagementService, $access, $openLobbyService),
+            $playerManagementService,
+            new InvitationRepository($this->registry()),
+            $this->entityManager,
+            $this->createMock(UrlGeneratorInterface::class),
+            $access,
+            $openLobbyService,
+            new NewestGameGuard($gameRepository),
+            $gameRepository,
+        );
+
+        $this->request->beginTransaction();
+        $this->takeSnapshot();
+        // A reopen of the finished game commits while the rematch waits for the game's lock.
+        $this->other->update('game', ['status' => 'started'], ['game_id' => $finished]);
+        try {
+            $service->createRematch($finished);
+            self::fail('The rematch used the status from before the reopen.');
+        } catch (GameNotNewestException) {
+            $this->request->rollBack();
+        }
+
+        // The reopened game keeps playing, and no lobby was opened.
+        self::assertSame(
+            [[$finished, 'started']],
+            $this->other->fetchAllNumeric('SELECT game_id, status FROM game ORDER BY game_id'),
+        );
     }
 
     public function testAbortStartedGamesAbortsAGameStartedAfterTheSnapshot(): void
