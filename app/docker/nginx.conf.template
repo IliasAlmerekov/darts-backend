@@ -4,6 +4,12 @@ server {
     root /app/public;
     index index.php;
 
+    # The API takes JSON and urlencoded login forms only. Multipart bodies never reach PHP:
+    # its multipart parser is the main OOM trigger of CVE-2026-109618 (GHSA-w8hw-w9fx-j79w).
+    if ($http_content_type ~* "^\s*multipart/") {
+        return 415;
+    }
+
     location / {
         try_files $uri /index.php$is_args$args;
     }
