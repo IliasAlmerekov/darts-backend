@@ -19,7 +19,8 @@ change must reach: callers, tests, fixtures, config, serializer groups, API docs
 is the scope; features nobody asked for are outside it, named in one line in the report.
 
 Reach for the first option that works: no code at all, then a helper or service already in
-`app/src`, then Symfony or PHP built-ins, then an installed package, then new code.
+`app/src`, then Symfony or PHP built-ins, then an installed package, then one line a reader
+gets at a glance, then new code.
 
 - Add no abstraction, interface, option, or "for later" code the task does not need.
   Deletion beats addition.
