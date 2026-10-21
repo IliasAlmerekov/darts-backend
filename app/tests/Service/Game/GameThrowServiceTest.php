@@ -25,7 +25,6 @@ use App\Service\Game\NewestGameGuard;
 use App\Service\Security\GameAccessServiceInterface;
 use DateTime;
 use DateTimeImmutable;
-use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
@@ -1113,11 +1112,11 @@ final class GameThrowServiceTest extends TestCase
             ->method('contains')
             ->with($game)
             ->willReturn(true);
-        $entityManager->expects(self::once())
-            ->method('lock')
-            ->with($game, LockMode::PESSIMISTIC_WRITE);
         $entityManager->expects(self::once())->method('remove')->with($lastThrow);
         $entityManager->expects(self::once())->method('flush');
+
+        $gameRepository = $this->createMock(GameRepositoryInterface::class);
+        $gameRepository->expects(self::once())->method('refreshWithSeatsForUpdate')->with($game);
 
         $service = new GameThrowService(
             $gamePlayersRepository,
@@ -1125,7 +1124,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->createAccessService(),
-            $this->createMock(GameRepositoryInterface::class),
+            $gameRepository,
             $this->createNewestGameGuard(10),
         );
 
@@ -1215,11 +1214,11 @@ final class GameThrowServiceTest extends TestCase
             ->method('contains')
             ->with($game)
             ->willReturn(true);
-        $entityManager->expects(self::once())
-            ->method('lock')
-            ->with($game, LockMode::PESSIMISTIC_WRITE);
         $entityManager->expects(self::once())->method('remove')->with($lastBustThrow);
         $entityManager->expects(self::once())->method('flush');
+
+        $gameRepository = $this->createMock(GameRepositoryInterface::class);
+        $gameRepository->expects(self::once())->method('refreshWithSeatsForUpdate')->with($game);
 
         $service = new GameThrowService(
             $gamePlayersRepository,
@@ -1227,7 +1226,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->createAccessService(),
-            $this->createMock(GameRepositoryInterface::class),
+            $gameRepository,
             $this->createNewestGameGuard(),
         );
 
@@ -1322,11 +1321,11 @@ final class GameThrowServiceTest extends TestCase
             ->method('contains')
             ->with($game)
             ->willReturn(true);
-        $entityManager->expects(self::once())
-            ->method('lock')
-            ->with($game, LockMode::PESSIMISTIC_WRITE);
         $entityManager->expects(self::once())->method('remove')->with($winningThrow);
         $entityManager->expects(self::once())->method('flush');
+
+        $gameRepository = $this->createMock(GameRepositoryInterface::class);
+        $gameRepository->expects(self::once())->method('refreshWithSeatsForUpdate')->with($game);
 
         $service = new GameThrowService(
             $gamePlayersRepository,
@@ -1334,7 +1333,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->createAccessService(),
-            $this->createMock(GameRepositoryInterface::class),
+            $gameRepository,
             $this->createNewestGameGuard(),
         );
 
@@ -1418,11 +1417,11 @@ final class GameThrowServiceTest extends TestCase
             ->method('contains')
             ->with($game)
             ->willReturn(true);
-        $entityManager->expects(self::once())
-            ->method('lock')
-            ->with($game, LockMode::PESSIMISTIC_WRITE);
         $entityManager->expects(self::once())->method('remove')->with($lastThrow);
         $entityManager->expects(self::once())->method('flush');
+
+        $gameRepository = $this->createMock(GameRepositoryInterface::class);
+        $gameRepository->expects(self::once())->method('refreshWithSeatsForUpdate')->with($game);
 
         $service = new GameThrowService(
             $gamePlayersRepository,
@@ -1430,7 +1429,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->createAccessService(),
-            $this->createMock(GameRepositoryInterface::class),
+            $gameRepository,
             $this->createNewestGameGuard(),
         );
 

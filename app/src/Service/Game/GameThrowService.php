@@ -32,7 +32,6 @@ use App\Service\Security\GameAccessServiceInterface;
 use DateTime;
 use DateTimeImmutable;
 use DateTimeInterface;
-use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Override;
 
@@ -79,7 +78,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
     {
         return $this->entityManager->wrapInTransaction(function () use ($game, $dto): ThrowRecordingResultDto {
             if ($this->entityManager->contains($game)) {
-                $this->entityManager->lock($game, LockMode::PESSIMISTIC_WRITE);
+                $this->gameRepository->refreshWithSeatsForUpdate($game);
             }
 
             return $this->recordThrowUnlocked($game, $dto);
@@ -117,7 +116,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
 
         $undoneThrow = $this->entityManager->wrapInTransaction(function () use ($game): ?ThrowDeltaDto {
             if ($this->entityManager->contains($game)) {
-                $this->entityManager->lock($game, LockMode::PESSIMISTIC_WRITE);
+                $this->gameRepository->refreshWithSeatsForUpdate($game);
             }
 
             return $this->undoLastThrowUnlocked($game);
