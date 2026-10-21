@@ -31,7 +31,7 @@ final class TabletGameEndpointTest extends WebTestCase
 
     public function testOpenLobbyIsTheTabletGame(): void
     {
-        $client = $this->createAdminClient();
+        $client = $this->createAdminClientWithoutTabletOrFinishedGames();
         $lobbyId = $this->createGame(GameStatus::Lobby);
 
         self::assertSame(
@@ -42,7 +42,7 @@ final class TabletGameEndpointTest extends WebTestCase
 
     public function testStartedGameIsTheTabletGame(): void
     {
-        $client = $this->createAdminClient();
+        $client = $this->createAdminClientWithoutTabletOrFinishedGames();
         $finishedId = $this->createGame(GameStatus::Finished, new DateTimeImmutable('-1 hour'));
         $startedId = $this->createGame(GameStatus::Started);
 
@@ -54,7 +54,7 @@ final class TabletGameEndpointTest extends WebTestCase
 
     public function testNoLobbyOrStartedGameGivesNullGame(): void
     {
-        $client = $this->createAdminClient();
+        $client = $this->createAdminClientWithoutTabletOrFinishedGames();
         $this->createGame(GameStatus::Aborted);
         $finishedId = $this->createGame(GameStatus::Finished, new DateTimeImmutable('-1 hour'));
 
@@ -63,14 +63,14 @@ final class TabletGameEndpointTest extends WebTestCase
 
     public function testNoGameAtAllGivesNulls(): void
     {
-        $client = $this->createAdminClient();
+        $client = $this->createAdminClientWithoutTabletOrFinishedGames();
 
         self::assertSame(['game' => null, 'lastFinishedGameId' => null], $this->getTabletGame($client));
     }
 
     public function testGreatestGameIdWinsWhenMoreThanOneGameMatches(): void
     {
-        $client = $this->createAdminClient();
+        $client = $this->createAdminClientWithoutTabletOrFinishedGames();
         $this->createGame(GameStatus::Lobby);
         $startedId = $this->createGame(GameStatus::Started);
 
@@ -82,11 +82,44 @@ final class TabletGameEndpointTest extends WebTestCase
 
     public function testLastFinishedGameFollowsFinishedAtNotGameId(): void
     {
-        $client = $this->createAdminClient();
-        $refinishedId = $this->createGame(GameStatus::Finished, new DateTimeImmutable('-5 minutes'));
+        $client = $this->createAdminClientWithoutTabletOrFinishedGames();
+        $lowerIdLaterFinishId = $this->createGame(GameStatus::Finished, new DateTimeImmutable('-5 minutes'));
         $this->createGame(GameStatus::Finished, new DateTimeImmutable('-1 hour'));
 
-        self::assertSame(['game' => null, 'lastFinishedGameId' => $refinishedId], $this->getTabletGame($client));
+        self::assertSame(['game' => null, 'lastFinishedGameId' => $lowerIdLaterFinishId], $this->getTabletGame($client));
+    }
+
+    public function testReopenedGameCountsByItsNewFinishTime(): void
+    {
+        $client = $this->createAdminClientWithoutTabletOrFinishedGames();
+        $otherId = $this->createGame(GameStatus::Finished, new DateTimeImmutable('-5 minutes'));
+        $reopenedId = $this->createGame(GameStatus::Finished, new DateTimeImmutable('-1 hour'));
+        self::assertSame(['game' => null, 'lastFinishedGameId' => $otherId], $this->getTabletGame($client));
+
+        $client->request(Request::METHOD_PATCH, sprintf('/api/game/%d/reopen', $reopenedId));
+        self::assertResponseIsSuccessful((string) $client->getResponse()->getContent());
+        $client->request(Request::METHOD_POST, sprintf('/api/game/%d/finish', $reopenedId));
+        self::assertResponseIsSuccessful((string) $client->getResponse()->getContent());
+
+        self::assertSame(['game' => null, 'lastFinishedGameId' => $reopenedId], $this->getTabletGame($client));
+    }
+
+    public function testAbortedGameIsNeverTheLastFinishedGame(): void
+    {
+        $client = $this->createAdminClientWithoutTabletOrFinishedGames();
+        $finishedId = $this->createGame(GameStatus::Finished, new DateTimeImmutable('-1 hour'));
+        $this->createGame(GameStatus::Aborted, new DateTimeImmutable('-5 minutes'));
+
+        self::assertSame(['game' => null, 'lastFinishedGameId' => $finishedId], $this->getTabletGame($client));
+    }
+
+    public function testFinishedGameWithoutFinishedAtLosesToOneWithIt(): void
+    {
+        $client = $this->createAdminClientWithoutTabletOrFinishedGames();
+        $finishedId = $this->createGame(GameStatus::Finished, new DateTimeImmutable('-1 hour'));
+        $this->createGame(GameStatus::Finished);
+
+        self::assertSame(['game' => null, 'lastFinishedGameId' => $finishedId], $this->getTabletGame($client));
     }
 
     public function testAnonymousGets401(): void
@@ -112,7 +145,7 @@ final class TabletGameEndpointTest extends WebTestCase
      * Leaves the test database without lobby, started or finished games, so each test sees
      * only the games it creates. The DAMA transaction rolls the update back.
      */
-    private function createAdminClient(): KernelBrowser
+    private function createAdminClientWithoutTabletOrFinishedGames(): KernelBrowser
     {
         $client = static::createClient();
         static::getContainer()->get(EntityManagerInterface::class)
