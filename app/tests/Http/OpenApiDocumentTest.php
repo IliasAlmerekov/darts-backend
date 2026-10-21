@@ -138,7 +138,7 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertArrayNotHasKey('default', $paths['/api/logout']['post']['responses']);
     }
 
-    public function testRegisterDocumentsTheRequestDtoAndTheEightCharacterPasswordMinimum(): void
+    public function testRegisterDocumentsTheRequestDtoAndTheSixCharacterPasswordMinimum(): void
     {
         $document = $this->document();
         $ref = $document['paths']['/api/register']['post']['requestBody']['content']['application/json']['schema']['$ref'];
@@ -146,7 +146,7 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertSame('#/components/schemas/RegistrationRequest', $ref);
         $body = $document['components']['schemas']['RegistrationRequest'];
         self::assertEqualsCanonicalizing(['email', 'username', 'plainPassword'], $body['required']);
-        self::assertSame(8, $body['properties']['plainPassword']['minLength']);
+        self::assertSame(6, $body['properties']['plainPassword']['minLength']);
     }
 
     public function testRegisterDocumentsTheUnsupportedMediaType(): void

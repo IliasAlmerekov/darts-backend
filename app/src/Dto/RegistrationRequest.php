@@ -44,7 +44,7 @@ final class RegistrationRequest
     #[Assert\Sequentially([
         new Assert\NotBlank(message: 'Please enter a password'),
         new Assert\Length(
-            min: 8,
+            min: 6,
             max: 4096,
             minMessage: 'Your password should be at least {{ limit }} characters long.',
         ),
