@@ -9,6 +9,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 
 ### Hinzugefügt
 - **CI**: Dependabot öffnet wöchentlich Update-PRs für Composer, GitHub Actions und die Docker-Basisimages. Minor- und Patch-Updates von Composer kommen gebündelt in einem PR, Actions-Updates ebenso. `symfony/*` bekommt nur Patch-Updates, das `php`-Image bleibt auf 8.4 (#138)
+- **Agenten**: `AGENTS.md` hat einen Abschnitt `## Review guidelines` mit den Schweregraden P0 bis P2 und den Prüfungen, die kein Werkzeug übernimmt. Das neue `SECURITY.md` erklärt, wie man Schwachstellen privat meldet, und enthält das Bedrohungsmodell für Security-Reviews (#136)
 - **Spielerprofil**: Neuer Endpunkt `GET /api/player/profile` liefert dem angemeldeten Spieler seine Statistik und seine 10 letzten beendeten Spiele mit Platzierung, Rundendurchschnitt und allen Teilnehmern (#115)
 - **CSRF-Schutz**: Neue Route `/api/csrf` für öffentlichen Zugriff hinzugefügt. CSRF-Tokens werden nun in Registrierungs- und Login-Formularen verwendet, um Anfragen vor Manipulation zu schützen.
 - **GameAccessService**: Neuer Service zur Durchsetzung von Spiel-Autorisierungsregeln. Überprüft, ob Benutzer authentifiziert, Administrator oder Spieler in einem Spiel sind.
