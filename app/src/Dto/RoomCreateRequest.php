@@ -14,6 +14,8 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * Payload DTO for creating a room via API.
+ *
+ * @psalm-suppress PossiblyUnusedProperty The server ignores previousGameId; it stays for the request contract
  */
 final class RoomCreateRequest
 {
