@@ -20,6 +20,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: GameRepository::class)]
 #[ORM\Table(name: 'game')]
 #[ORM\Index(name: 'idx_game_status_game_id', columns: ['status', 'game_id'])]
+#[ORM\Index(name: 'idx_game_status_finished_at_game_id', columns: ['status', 'finished_at', 'game_id'])]
 #[ORM\UniqueConstraint(name: 'uniq_game_open_lobby', columns: ['open_lobby'])]
 class Game
 {

@@ -262,6 +262,53 @@ SQL,
     }
 
     /**
+     * @return array{tabletGame:array{gameId:int,status:GameStatus}|null,lastFinishedGameId:int|null}
+     */
+    #[\Override]
+    public function findTabletGameAndLastFinishedGameId(): array
+    {
+        $row = $this->getEntityManager()->getConnection()->fetchAssociative(
+            <<<'SQL'
+SELECT
+    tablet.game_id AS tabletGameId,
+    tablet.status AS tabletStatus,
+    finished.game_id AS lastFinishedGameId
+FROM (SELECT 1) AS anchor
+LEFT JOIN (
+    SELECT g.game_id, g.status
+    FROM game g
+    WHERE g.status IN (:lobby, :started)
+    ORDER BY g.game_id DESC
+    LIMIT 1
+) AS tablet ON TRUE
+LEFT JOIN (
+    SELECT g.game_id
+    FROM game g
+    WHERE g.status = :finished
+    ORDER BY g.finished_at DESC, g.game_id DESC
+    LIMIT 1
+) AS finished ON TRUE
+SQL,
+            [
+                'lobby' => GameStatus::Lobby->value,
+                'started' => GameStatus::Started->value,
+                'finished' => GameStatus::Finished->value,
+            ],
+        );
+
+        $tabletGameId = $row['tabletGameId'] ?? null;
+        $tabletStatus = $row['tabletStatus'] ?? null;
+        $lastFinishedGameId = $row['lastFinishedGameId'] ?? null;
+
+        return [
+            'tabletGame' => null !== $tabletGameId && is_string($tabletStatus)
+                ? ['gameId' => (int) $tabletGameId, 'status' => GameStatus::from($tabletStatus)]
+                : null,
+            'lastFinishedGameId' => null !== $lastFinishedGameId ? (int) $lastFinishedGameId : null,
+        ];
+    }
+
+    /**
      * @return int
      */
     #[\Override]

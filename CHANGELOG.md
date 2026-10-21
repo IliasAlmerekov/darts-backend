@@ -8,6 +8,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 ## [Unreleased] - 2026-02-03
 
 ### Hinzugefügt
+- **Tablet-Spiel**: Neuer Admin-Endpunkt `GET /api/tablet/game` liefert das Tablet-Spiel (`lobby` oder `started`) und die ID des zuletzt beendeten Spiels nach `finishedAt`. Beides ist `null`, wenn es keins gibt (#132)
 - **CI**: Dependabot öffnet wöchentlich Update-PRs für Composer, GitHub Actions und die Docker-Basisimages. Minor- und Patch-Updates von Composer kommen gebündelt in einem PR, Actions-Updates ebenso. `symfony/*` bekommt nur Patch-Updates, das `php`-Image bleibt auf 8.4 (#138)
 - **Agenten**: `AGENTS.md` hat einen Abschnitt `## Review guidelines` mit den Schweregraden P0 bis P2 und den Prüfungen, die kein Werkzeug übernimmt. Das neue `SECURITY.md` erklärt, wie man Schwachstellen privat meldet, und enthält das Bedrohungsmodell für Security-Reviews (#136)
 - **Spielerprofil**: Neuer Endpunkt `GET /api/player/profile` liefert dem angemeldeten Spieler seine Statistik und seine 10 letzten beendeten Spiele mit Platzierung, Rundendurchschnitt und allen Teilnehmern (#115)
