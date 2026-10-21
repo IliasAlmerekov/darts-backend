@@ -50,10 +50,10 @@ final class TabletGameController extends AbstractController
     #[Route('/api/tablet/game', name: 'app_tablet_game', methods: ['GET'], format: 'json')]
     public function tabletGame(GameRepositoryInterface $gameRepository): TabletGameResponseDto
     {
-        $game = $gameRepository->findTabletGame();
+        $tabletGame = $gameRepository->findTabletGame();
 
         return new TabletGameResponseDto(
-            game: null !== $game ? new TabletGameDto($game['gameId'], $game['status']->value) : null,
+            game: null !== $tabletGame ? new TabletGameDto($tabletGame['gameId'], $tabletGame['status']->value) : null,
             lastFinishedGameId: $gameRepository->findLastFinishedGameId(),
         );
     }
