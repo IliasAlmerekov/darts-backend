@@ -452,6 +452,9 @@ SQL,
      * counts: finished games in which the player has a finished round. Each row carries its
      * game's start score, out rule and the player's placement in that game.
      *
+     * shortcut: loads every throw of the player on each Profile read, so the payload grows with
+     * the games played; aggregate in SQL or materialise the statistics once a Profile read gets slow.
+     *
      * @param int $playerId
      *
      * @return list<array{
