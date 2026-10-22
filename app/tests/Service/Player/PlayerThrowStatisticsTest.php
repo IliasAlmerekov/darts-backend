@@ -77,6 +77,26 @@ final class PlayerThrowStatisticsTest extends TestCase
     }
 
     /**
+     * Under triple out only 3 to 60 divisible by 3 is checkable: 40 and 20 are not, 60 and 39 are.
+     * A triple-out checkout is a Finish but never a favorite double.
+     */
+    public function testTripleOutCountsOnlyScoresOneTripleChecksOut(): void
+    {
+        $throws = [
+            ...$this->turn(40, 'triple', [[1, 'S', 39], [39, 'T', 0]]),
+            ...$this->turn(60, 'triple', [[20, 'S', 40], [20, 'S', 20]]),
+        ];
+
+        $stats = PlayerThrowStatistics::build(2, 30.0, $throws);
+
+        self::assertSame(2, $stats->checkoutAttempts);
+        self::assertSame(1, $stats->checkoutHits);
+        self::assertSame(50.0, $stats->checkoutRate);
+        self::assertSame([], $stats->favoriteDoubles);
+        self::assertEquals(new PlayerProfileFinishDto(40, 2, ['S1', 'T13']), $stats->highestFinish);
+    }
+
+    /**
      * A double-out game from a double: the player busts with T20 in each of the given turns,
      * then checks out with the double.
      *
@@ -109,7 +129,7 @@ final class PlayerThrowStatisticsTest extends TestCase
     /**
      * One turn in a new finished game the player won.
      *
-     * @param 'single'|'double'          $outRule
+     * @param 'single'|'double'|'triple' $outRule
      * @param list<array{int, string, int}> $darts value as stored, ring S, D or T, score after the dart
      *
      * @return list<array{gameId:int, roundId:int, value:int, isDouble:bool, isTriple:bool, isBust:bool, score:int, startScore:int, doubleOut:bool, tripleOut:bool, placement:int|null}>
@@ -128,7 +148,7 @@ final class PlayerThrowStatisticsTest extends TestCase
             'score' => $dart[2],
             'startScore' => $startScore,
             'doubleOut' => 'double' === $outRule,
-            'tripleOut' => false,
+            'tripleOut' => 'triple' === $outRule,
             'placement' => 1,
         ], $darts);
     }
