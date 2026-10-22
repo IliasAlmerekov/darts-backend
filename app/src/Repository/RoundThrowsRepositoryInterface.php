@@ -174,6 +174,25 @@ interface RoundThrowsRepositoryInterface
     public function getPlayerStatisticsForPlayer(int $playerId): ?array;
 
     /**
+     * @param int $playerId
+     *
+     * @return list<array{
+     *     gameId:int,
+     *     roundId:int,
+     *     value:int,
+     *     isDouble:bool,
+     *     isTriple:bool,
+     *     isBust:bool,
+     *     score:int,
+     *     startScore:int,
+     *     doubleOut:bool,
+     *     tripleOut:bool,
+     *     placement:int|null
+     * }>
+     */
+    public function findThrowsInCountedGamesForPlayer(int $playerId): array;
+
+    /**
      * @return int
      */
     public function countPlayersWithFinishedRounds(): int;

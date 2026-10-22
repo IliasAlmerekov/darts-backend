@@ -539,6 +539,10 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         if ($isDouble && ($baseValue < 0 || $baseValue > 20) && 25 !== $baseValue) {
             throw new InvalidThrowException('Double throws require a base value between 0 and 20, or 25 for bull.');
         }
+
+        if (!$isDouble && !$isTriple && ($baseValue < 0 || $baseValue > 20) && 25 !== $baseValue) {
+            throw new InvalidThrowException('Single throws require a base value between 0 and 20, or 25 for bull.');
+        }
     }
 
     /**

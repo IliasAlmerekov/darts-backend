@@ -13,7 +13,6 @@ use App\Dto\ParticipantTotalsDto;
 use App\Dto\PlayerProfileGameDto;
 use App\Dto\PlayerProfileParticipantDto;
 use App\Dto\PlayerProfileResponseDto;
-use App\Dto\PlayerProfileStatsDto;
 use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Repository\GamePlayersRepositoryInterface;
@@ -23,11 +22,13 @@ use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Game\GameStatisticsServiceInterface;
 use App\Service\Game\ParticipantResult;
 use DateTimeInterface;
+use Doctrine\ORM\EntityManagerInterface;
 use Override;
 
 /**
  * Builds a player's own Profile: their statistics and their most recent finished games.
- * The games, their seats and the throw totals load in a fixed number of queries.
+ * The games, their seats, the throw totals and the throws behind the statistics load in a
+ * fixed number of queries.
  *
  * @psalm-suppress UnusedClass Reason: service is auto-wired and used via interface.
  */
@@ -41,6 +42,7 @@ final readonly class PlayerProfileService implements PlayerProfileServiceInterfa
      * @param GamePlayersRepositoryInterface $gamePlayersRepository
      * @param RoundRepositoryInterface       $roundRepository
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
+     * @param EntityManagerInterface         $entityManager
      */
     public function __construct(
         private GameStatisticsServiceInterface $gameStatisticsService,
@@ -48,6 +50,7 @@ final readonly class PlayerProfileService implements PlayerProfileServiceInterfa
         private GamePlayersRepositoryInterface $gamePlayersRepository,
         private RoundRepositoryInterface $roundRepository,
         private RoundThrowsRepositoryInterface $roundThrowsRepository,
+        private EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -60,16 +63,22 @@ final readonly class PlayerProfileService implements PlayerProfileServiceInterfa
     public function getProfile(User $player): PlayerProfileResponseDto
     {
         $playerId = (int) $player->getId();
-        $stats = $this->gameStatisticsService->getPlayerStatsForPlayer($playerId);
 
-        return new PlayerProfileResponseDto(
-            stats: new PlayerProfileStatsDto(
-                gamesPlayed: $stats?->gamesPlayed ?? 0,
-                scoreAverage: $stats?->scoreAverage,
-            ),
-            recentGames: $this->buildRecentGames($playerId),
-            registeredAt: $player->getRegisteredAt()?->format(DateTimeInterface::ATOM),
-        );
+        // One transaction, so MySQL's repeatable read serves every query from one snapshot and a
+        // game finishing between them cannot make wins exceed gamesPlayed.
+        return $this->entityManager->wrapInTransaction(function () use ($player, $playerId): PlayerProfileResponseDto {
+            $stats = $this->gameStatisticsService->getPlayerStatsForPlayer($playerId);
+
+            return new PlayerProfileResponseDto(
+                stats: PlayerThrowStatistics::build(
+                    $stats?->gamesPlayed ?? 0,
+                    $stats?->scoreAverage,
+                    $this->roundThrowsRepository->findThrowsInCountedGamesForPlayer($playerId),
+                ),
+                recentGames: $this->buildRecentGames($playerId),
+                registeredAt: $player->getRegisteredAt()?->format(DateTimeInterface::ATOM),
+            );
+        });
     }
 
     /**

@@ -35,7 +35,7 @@ final class PlayerProfileController extends AbstractController
      */
     #[OA\Response(
         response: 200,
-        description: 'Profil des angemeldeten Spielers: eigene Statistik und die letzten 10 beendeten Spiele, neueste zuerst. Von anderen Teilnehmern nur Anzeigename, Platzierung, `playerId` (`null` für Gäste) und `isSelf`.',
+        description: 'Profil des angemeldeten Spielers: eigene Statistik und die letzten 10 beendeten Spiele, neueste zuerst. Die Statistik zählt beendete Spiele mit mindestens einer beendeten eigenen Runde und berechnet Siege, Checkouts, Trefferverteilung, Lieblings-Doubles (nur Double-Out) und das höchste Finish aus den eigenen Würfen dieser Spiele; Prozentwerte 0–100 mit einer Nachkommastelle. Von anderen Teilnehmern nur Anzeigename, Platzierung, `playerId` (`null` für Gäste) und `isSelf`.',
         content: new OA\JsonContent(ref: new Model(type: PlayerProfileResponseDto::class))
     )]
     #[OA\Response(response: 401, description: 'Nicht angemeldet.')]

@@ -75,3 +75,17 @@ _Avoid_: Position (the seat order before the game starts), rank
 **Remembered login**:
 A player's phone that stays signed in for 7 days after the player's last visit, so the player skips the login form. A new visit restarts the 7 days.
 _Avoid_: Session, auto-login, remember me
+
+### Statistics
+
+**Checkout**:
+The dart that finishes a game for a participant: it brings their score to exactly zero under the game's out rule (single, double or triple out).
+_Avoid_: Finish (for the single dart), out
+
+**Checkout attempt**:
+A dart thrown while the participant's remaining score could be checked out with that one dart under the game's out rule. The app records what a dart hit, not what it aimed at, so the remaining score stands in for the aim.
+_Avoid_: Double attempt, finish attempt
+
+**Finish**:
+The turn that ends with a checkout. Its value is the participant's remaining score when the turn began; the highest finish is the one with the greatest value.
+_Avoid_: Checkout (for the whole turn), high out
