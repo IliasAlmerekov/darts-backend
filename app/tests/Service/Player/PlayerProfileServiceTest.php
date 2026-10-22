@@ -24,6 +24,7 @@ use App\Service\Game\GameStatisticsServiceInterface;
 use App\Service\Player\PlayerProfileService;
 use App\Service\Player\PlayerThrowStatistics;
 use DateTimeImmutable;
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
@@ -37,6 +38,8 @@ final class PlayerProfileServiceTest extends TestCase
     private GamePlayersRepositoryInterface&Stub $gamePlayersRepository;
     private RoundRepositoryInterface&Stub $roundRepository;
     private RoundThrowsRepositoryInterface&Stub $roundThrowsRepository;
+    private EntityManagerInterface&Stub $entityManager;
+    private bool $inTransaction = false;
     private PlayerProfileService $service;
 
     protected function setUp(): void
@@ -46,6 +49,15 @@ final class PlayerProfileServiceTest extends TestCase
         $this->gamePlayersRepository = $this->createStub(GamePlayersRepositoryInterface::class);
         $this->roundRepository = $this->createStub(RoundRepositoryInterface::class);
         $this->roundThrowsRepository = $this->createStub(RoundThrowsRepositoryInterface::class);
+        $this->entityManager = $this->createStub(EntityManagerInterface::class);
+        $this->entityManager->method('wrapInTransaction')->willReturnCallback(function (callable $operation): mixed {
+            $this->inTransaction = true;
+            try {
+                return $operation();
+            } finally {
+                $this->inTransaction = false;
+            }
+        });
         $this->service = $this->createService($this->gamePlayersRepository);
     }
 
@@ -60,6 +72,22 @@ final class PlayerProfileServiceTest extends TestCase
             new PlayerProfileResponseDto(PlayerThrowStatistics::build(0, null, []), [], null),
             $this->createService($gamePlayersRepository)->getProfile($this->createUser(self::PLAYER_ID, 'ilias'))
         );
+    }
+
+    public function testStatisticsReadsShareOneTransaction(): void
+    {
+        $this->gameStatisticsService->method('getPlayerStatsForPlayer')->willReturnCallback(
+            fn(): PlayerStatsDto => new PlayerStatsDto(self::PLAYER_ID, 'ilias', $this->inTransaction ? 1 : 0, 40.0)
+        );
+        $this->roundThrowsRepository->method('findThrowsInCountedGamesForPlayer')->willReturnCallback(
+            fn(): array => $this->inTransaction ? [] : [['gameId' => 1, 'roundId' => 1, 'value' => 0, 'isDouble' => false, 'isTriple' => false, 'isBust' => false, 'score' => 301, 'startScore' => 301, 'doubleOut' => false, 'tripleOut' => false, 'placement' => 1]]
+        );
+        $this->gameRepository->method('findRecentFinishedForPlayer')->willReturn([]);
+
+        $stats = $this->service->getProfile($this->createUser(self::PLAYER_ID, 'ilias'))->stats;
+
+        self::assertSame(1, $stats->gamesPlayed);
+        self::assertSame(0, $stats->wins);
     }
 
     public function testFinishedGameCarriesOwnResultAndParticipantsByPlacement(): void
@@ -130,6 +158,7 @@ final class PlayerProfileServiceTest extends TestCase
             $gamePlayersRepository,
             $this->roundRepository,
             $this->roundThrowsRepository,
+            $this->entityManager,
         );
     }
 
