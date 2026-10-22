@@ -27,6 +27,15 @@ jobs:
       - run: sh scripts/check-test-db-env.sh
       - run: sh scripts/check-image-eol.sh
 
+  runtime-image:
+    name: Runtime image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker build --pull -f app/Dockerfile --target runtime -t darts-backend:ci .
+      - run: sh scripts/check-runtime-image.sh darts-backend:ci
+
   static-analysis:
     name: PHPCS and Psalm
     runs-on: ubuntu-latest

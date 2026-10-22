@@ -11,7 +11,7 @@
 
 FROM composer:2 AS composer
 
-FROM php:8.4-fpm-alpine AS base
+FROM php:8.4.27-fpm-alpine AS base
 
 WORKDIR /app
 
