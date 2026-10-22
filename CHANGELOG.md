@@ -44,7 +44,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **Aktualisierungen**: Alle Tests (z. B. `RegistrationControllerTest`, `SecurityControllerTest`, `GameFinishServiceTest` usw.) angepasst, um mit dem neuen `GameAccessService` zu arbeiten. Mocks für Zugriffskontrollen hinzugefügt.
 
 ### Sicherheit
-- **PHP-Laufzeit**: Gegen CVE-2026-109618 und CVE-2026-109619 schaltet das Laufzeit-Image `session.upload_progress.enabled` ab, und nginx beantwortet `multipart/*`-Anfragen mit 415, bevor PHP sie parst. Beides gilt, bis das Image auf PHP 8.4.27 läuft (#146)
+- **PHP-Laufzeit**: Das Laufzeit-Image baut auf `php:8.4.27-fpm-alpine` und schließt damit CVE-2026-109618 und CVE-2026-109619. Zusätzlich schaltet es `session.upload_progress.enabled` ab, und nginx beantwortet `multipart/*`-Anfragen mit 415, bevor PHP sie parst. Der neue CI-Job `Runtime image` startet das Image mit `scripts/check-runtime-image.sh` und prüft alle drei Punkte (#146)
 - **Verbesserte Autorisierung**: Spielaktionen sind nun durch rollenbasierte Zugriffsprüfungen geschützt, um Missbrauch zu verhindern.
 - **CSRF-Schutz**: Schutz vor Cross-Site Request Forgery-Angriffen durch Token-Validierung.
 
