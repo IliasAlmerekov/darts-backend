@@ -448,6 +448,87 @@ SQL,
     }
 
     /**
+     * Every throw of the player, oldest first, in the games getPlayerStatisticsForPlayer()
+     * counts: finished games in which the player has a finished round. Each row carries its
+     * game's start score, out rule and the player's placement in that game.
+     *
+     * shortcut: loads every throw of the player on each Profile read, so the payload grows with
+     * the games played; aggregate in SQL or materialise the statistics once a Profile read gets slow.
+     *
+     * @param int $playerId
+     *
+     * @return list<array{
+     *     gameId:int,
+     *     roundId:int,
+     *     value:int,
+     *     isDouble:bool,
+     *     isTriple:bool,
+     *     isBust:bool,
+     *     score:int,
+     *     startScore:int,
+     *     doubleOut:bool,
+     *     tripleOut:bool,
+     *     placement:int|null
+     * }>
+     */
+    #[\Override]
+    public function findThrowsInCountedGamesForPlayer(int $playerId): array
+    {
+        $connection = $this->getEntityManager()->getConnection();
+        $roundTable = $connection->getDatabasePlatform()->quoteSingleIdentifier('round');
+
+        $rows = $connection->fetchAllAssociative(
+            sprintf(
+                <<<'SQL'
+SELECT
+    rt.game_id AS gameId,
+    rt.round_id AS roundId,
+    rt.value AS value,
+    rt.is_double AS isDouble,
+    rt.is_triple AS isTriple,
+    rt.is_bust AS isBust,
+    rt.score AS score,
+    g.start_score AS startScore,
+    g.double_out AS doubleOut,
+    g.triple_out AS tripleOut,
+    gp.position AS placement
+FROM round_throws rt
+INNER JOIN game g ON g.game_id = rt.game_id
+LEFT JOIN game_players gp ON gp.game_id = rt.game_id AND gp.player_id = rt.player_id
+WHERE rt.player_id = :playerId
+  AND g.status = :status
+  AND EXISTS (
+      SELECT 1
+      FROM round_throws finished_throw
+      INNER JOIN %s r ON r.round_id = finished_throw.round_id
+      WHERE finished_throw.game_id = rt.game_id
+        AND finished_throw.player_id = rt.player_id
+        AND r.finished_at IS NOT NULL
+  )
+ORDER BY rt.throw_id ASC
+SQL,
+                $roundTable,
+            ),
+            ['playerId' => $playerId, 'status' => GameStatus::Finished->value],
+            ['playerId' => ParameterType::INTEGER, 'status' => ParameterType::STRING],
+        );
+
+        return array_map(static fn(array $row): array => [
+            'gameId' => (int) $row['gameId'],
+            'roundId' => (int) $row['roundId'],
+            'value' => (int) $row['value'],
+            'isDouble' => (bool) $row['isDouble'],
+            'isTriple' => (bool) $row['isTriple'],
+            'isBust' => (bool) $row['isBust'],
+            'score' => (int) $row['score'],
+            'startScore' => (int) $row['startScore'],
+            'doubleOut' => (bool) $row['doubleOut'],
+            'tripleOut' => (bool) $row['tripleOut'],
+            'placement' => null !== $row['placement'] ? (int) $row['placement'] : null,
+        ], $rows);
+    }
+
+    /**
      * Counts distinct players who have finished rounds in finished games.
      *
      * @return int

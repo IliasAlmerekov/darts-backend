@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Http;
 
+use App\Dto\PlayerProfileDoubleDto;
+use App\Dto\PlayerProfileSegmentHitsDto;
 use App\Tests\Support\DevFunctionalKernel;
 use ReflectionMethod;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -246,7 +248,36 @@ final class OpenApiDocumentTest extends WebTestCase
         $registeredAt = $schemas['PlayerProfileResponseDto']['properties']['registeredAt'];
         self::assertSame('string', $registeredAt['type']);
         self::assertTrue($registeredAt['nullable'] ?? in_array('null', (array) ($registeredAt['type'] ?? []), true));
-        self::assertSame(['gamesPlayed', 'scoreAverage'], array_keys($schemas['PlayerProfileStatsDto']['properties']));
+        $stats = $schemas['PlayerProfileStatsDto']['properties'];
+        self::assertSame(
+            [
+                'gamesPlayed', 'scoreAverage', 'wins', 'winRate', 'checkoutRate', 'checkoutHits', 'checkoutAttempts',
+                'hitDistribution', 'mostHitSegment', 'favoriteDoubles', 'highestFinish',
+            ],
+            array_keys($stats)
+        );
+        self::assertSame('#/components/schemas/PlayerProfileSegmentHitsDto', $stats['hitDistribution']['items']['$ref']);
+        self::assertSame('#/components/schemas/PlayerProfileMostHitSegmentDto', $stats['mostHitSegment']['oneOf'][0]['$ref']);
+        self::assertTrue($stats['mostHitSegment']['nullable']);
+        self::assertSame('#/components/schemas/PlayerProfileDoubleDto', $stats['favoriteDoubles']['items']['$ref']);
+        self::assertSame('#/components/schemas/PlayerProfileFinishDto', $stats['highestFinish']['oneOf'][0]['$ref']);
+        self::assertTrue($stats['highestFinish']['nullable']);
+        self::assertSame(['segment', 'hits'], array_keys($schemas['PlayerProfileSegmentHitsDto']['properties']));
+        self::assertSame(['segment', 'hits', 'share'], array_keys($schemas['PlayerProfileMostHitSegmentDto']['properties']));
+        self::assertSame(['double', 'hits', 'attempts', 'hitRate'], array_keys($schemas['PlayerProfileDoubleDto']['properties']));
+        self::assertSame(['score', 'darts', 'throws'], array_keys($schemas['PlayerProfileFinishDto']['properties']));
+        self::assertSame(
+            PlayerProfileSegmentHitsDto::SEGMENTS,
+            $schemas['PlayerProfileSegmentHitsDto']['properties']['segment']['enum']
+        );
+        self::assertSame(
+            PlayerProfileSegmentHitsDto::SEGMENTS,
+            $schemas['PlayerProfileMostHitSegmentDto']['properties']['segment']['enum']
+        );
+        self::assertSame(PlayerProfileDoubleDto::DOUBLES, $schemas['PlayerProfileDoubleDto']['properties']['double']['enum']);
+        foreach (['wins', 'winRate', 'checkoutRate', 'checkoutHits', 'checkoutAttempts', 'hitDistribution', 'mostHitSegment', 'favoriteDoubles', 'highestFinish'] as $field) {
+            self::assertNotEmpty($stats[$field]['description'] ?? null, $field.' has no description');
+        }
         self::assertSame(
             ['gameId', 'finishedAt', 'placement', 'roundAverage', 'participantsCount', 'participants'],
             array_keys($schemas['PlayerProfileGameDto']['properties'])
