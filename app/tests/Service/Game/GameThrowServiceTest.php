@@ -29,6 +29,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionException;
 use ReflectionProperty;
@@ -647,9 +648,20 @@ final class GameThrowServiceTest extends TestCase
     }
 
     /**
+     * @return iterable<string, array{int, bool, bool}>
+     */
+    public static function outOfRangeBaseValues(): iterable
+    {
+        yield 'triple bull' => [25, false, true];
+        yield 'single 21' => [21, false, false];
+        yield 'single 60' => [60, false, false];
+    }
+
+    /**
      * @throws ReflectionException
      */
-    public function testRecordThrowThrowsWhenTripleBaseValueIsOutOfRange(): void
+    #[DataProvider('outOfRangeBaseValues')]
+    public function testRecordThrowThrowsWhenBaseValueIsOutOfRange(int $value, bool $isDouble, bool $isTriple): void
     {
         $game = new Game();
         $this->setPrivateProperty($game, 'gameId', 10);
@@ -671,9 +683,9 @@ final class GameThrowServiceTest extends TestCase
 
         $dto = new ThrowRequest();
         $dto->playerId = 1;
-        $dto->value = 25;
-        $dto->isDouble = false;
-        $dto->isTriple = true;
+        $dto->value = $value;
+        $dto->isDouble = $isDouble;
+        $dto->isTriple = $isTriple;
 
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $gamePlayersRepository->method('findOneBy')

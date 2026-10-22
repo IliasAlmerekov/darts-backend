@@ -21,6 +21,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **CSRF-Tokens-Endpunkt**: Neuer Endpunkt `/api/csrf` in `SecurityController`, der CSRF-Tokens für Authentifizierungsflüsse bereitstellt.
 
 ### Geändert
+- **Würfe**: `POST /api/game/{gameId}/throw` lehnt einen Single-Wurf über 20 außer 25 mit 400 ab, weil kein Dart ihn treffen kann. In der Profil-Statistik zählt so ein alter Wurf nicht in der Trefferverteilung, und ein Finish mit ihm erscheint nicht als höchstes Finish (#128)
 - **Registrierung**: `POST /api/register` nimmt nur noch E-Mail-Adressen der Domain `db-n.com` an, ohne Beachtung der Groß- und Kleinschreibung. Andere Domains und Subdomains beantwortet die API mit 400 und `errors.email`; bestehende Konten und der Login bleiben unverändert. Die OpenAPI-Doku nennt die Regel (#129)
 - **Registrierung**: `POST /api/register` nimmt Passwörter ab 6 statt ab 8 Zeichen an; ein kürzeres beantwortet die API mit 400 und `errors.plainPassword`. Die OpenAPI-Doku nennt `minLength: 6` (#130)
 - **API-Doku**: Das OpenAPI-Schema `CurrentGameResponseDto` von `GET /api/player/current-game` markiert `gameId` und `status` als Pflichtfelder und beschränkt `status` auf `lobby`, `started` oder `null`; die Antwort selbst bleibt gleich (#123)
