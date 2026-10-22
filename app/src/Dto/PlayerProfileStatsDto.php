@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace App\Dto;
 
+use OpenApi\Attributes as OA;
+
 /**
  * @psalm-immutable
  * A player's own statistics. gamesPlayed and scoreAverage are computed like their row in
@@ -35,14 +37,23 @@ final class PlayerProfileStatsDto
     public function __construct(
         public int $gamesPlayed,
         public ?float $scoreAverage,
+        #[OA\Property(description: 'Gezählte Spiele mit Platzierung 1.')]
         public int $wins,
+        #[OA\Property(description: 'Siege pro 100 gezählte Spiele; `null` ohne gezählte Spiele.', minimum: 0, maximum: 100)]
         public ?float $winRate,
+        #[OA\Property(description: 'Checkout-Treffer pro 100 Checkout-Versuche, über alle Out-Regeln; `null` ohne Versuche.', minimum: 0, maximum: 100)]
         public ?float $checkoutRate,
+        #[OA\Property(description: 'Darts, die das Spiel für den Spieler beendet haben.')]
         public int $checkoutHits,
+        #[OA\Property(description: 'Darts, geworfen bei einem Rest, den ein Dart nach der Out-Regel des Spiels auschecken kann; Busts eingeschlossen.')]
         public int $checkoutAttempts,
+        #[OA\Property(description: 'Immer 22 Einträge in der Reihenfolge `1` bis `20`, `BULL`, `BULLSEYE`. Single, Double und Triple zählen für dasselbe Segment, Busts zählen mit, Fehlwürfe nicht.', maxItems: 22, minItems: 22)]
         public array $hitDistribution,
+        #[OA\Property(description: 'Segment mit den meisten Treffern, bei Gleichstand das höhere; `null` ohne Treffer.')]
         public ?PlayerProfileMostHitSegmentDto $mostHitSegment,
+        #[OA\Property(description: 'Nur Double-Out-Spiele: höchstens 3 Doubles mit mindestens einem Checkout, nach Treffern, dann Trefferquote, dann höherem Double.', maxItems: 3)]
         public array $favoriteDoubles,
+        #[OA\Property(description: 'Höchstes Finish über alle Out-Regeln, bei Gleichstand das mit weniger Darts, dann das frühere; `null` ohne Finish.')]
         public ?PlayerProfileFinishDto $highestFinish,
     ) {
     }

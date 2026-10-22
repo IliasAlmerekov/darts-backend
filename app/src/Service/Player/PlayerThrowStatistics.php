@@ -49,7 +49,7 @@ final class PlayerThrowStatistics
      */
     public static function build(int $gamesPlayed, ?float $scoreAverage, array $throws): PlayerProfileStatsDto
     {
-        $segmentHits = array_fill_keys([...array_map(strval(...), range(1, 20)), self::BULL, self::BULLSEYE], 0);
+        $segmentHits = array_fill_keys(PlayerProfileSegmentHitsDto::SEGMENTS, 0);
         $wonGames = [];
         $remainingByGame = [];
         $checkoutHits = 0;

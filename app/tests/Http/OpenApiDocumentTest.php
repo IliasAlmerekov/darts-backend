@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Http;
 
+use App\Dto\PlayerProfileDoubleDto;
+use App\Dto\PlayerProfileSegmentHitsDto;
 use App\Tests\Support\DevFunctionalKernel;
 use ReflectionMethod;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -264,6 +266,18 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertSame(['segment', 'hits', 'share'], array_keys($schemas['PlayerProfileMostHitSegmentDto']['properties']));
         self::assertSame(['double', 'hits', 'attempts', 'hitRate'], array_keys($schemas['PlayerProfileDoubleDto']['properties']));
         self::assertSame(['score', 'darts', 'throws'], array_keys($schemas['PlayerProfileFinishDto']['properties']));
+        self::assertSame(
+            PlayerProfileSegmentHitsDto::SEGMENTS,
+            $schemas['PlayerProfileSegmentHitsDto']['properties']['segment']['enum']
+        );
+        self::assertSame(
+            PlayerProfileSegmentHitsDto::SEGMENTS,
+            $schemas['PlayerProfileMostHitSegmentDto']['properties']['segment']['enum']
+        );
+        self::assertSame(PlayerProfileDoubleDto::DOUBLES, $schemas['PlayerProfileDoubleDto']['properties']['double']['enum']);
+        foreach (['wins', 'winRate', 'checkoutRate', 'checkoutHits', 'checkoutAttempts', 'hitDistribution', 'mostHitSegment', 'favoriteDoubles', 'highestFinish'] as $field) {
+            self::assertNotEmpty($stats[$field]['description'] ?? null, $field.' has no description');
+        }
         self::assertSame(
             ['gameId', 'finishedAt', 'placement', 'roundAverage', 'participantsCount', 'participants'],
             array_keys($schemas['PlayerProfileGameDto']['properties'])
