@@ -1,0 +1,194 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# Review rules live in AGENTS.md under `## Review guidelines`. This file holds
+# only CodeRabbit settings and a pointer to those rules.
+language: en-US
+early_access: false
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: false
+  high_level_summary_in_walkthrough: true
+  review_status: true
+  collapse_walkthrough: true
+  changed_files_summary: true
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+  sequence_diagrams: false
+  estimate_code_review_effort: false
+  suggested_labels: false
+  suggested_reviewers: false
+  in_progress_fortune: false
+  poem: false
+  enable_prompt_for_ai_agents: true
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 0
+    drafts: false
+  path_filters:
+    - "!**/composer.lock"
+    - "!**/symfony.lock"
+    - "!app/vendor/**"
+    - "!app/var/**"
+    - "!app/build/**"
+  path_instructions:
+    - path: "**/*"
+      instructions: |
+        Review as `## Review guidelines` in AGENTS.md prescribes, with the
+        ADRs the diff touches and SECURITY.md.
+        Post an inline comment only for a finding with all five parts:
+        Severity (P0, P1, or P2), Location, Evidence, Impact, Fix.
+        A suspicion without a concrete failure path is one `Question:` line in
+        the summary comment.
+        Leave formatting, naming, and taste to PHPCS, Psalm, and
+        the author.
+  pre_merge_checks:
+    docstrings:
+      mode: "off"
+    title:
+      mode: "off"
+    description:
+      mode: "off"
+    issue_assessment:
+      mode: warning
+  # CI runs the linters. Keep only the scanners CI lacks.
+  tools:
+    ast-grep:
+      enabled: false
+    shellcheck:
+      enabled: false
+    ruff:
+      enabled: false
+    markdownlint:
+      enabled: false
+    github-checks:
+      enabled: false
+    languagetool:
+      enabled: false
+    biome:
+      enabled: false
+    hadolint:
+      enabled: true
+    swiftlint:
+      enabled: false
+    phpstan:
+      enabled: false
+    phpmd:
+      enabled: false
+    phpcs:
+      enabled: false
+    golangci-lint:
+      enabled: false
+    yamllint:
+      enabled: false
+    gitleaks:
+      enabled: true
+    trufflehog:
+      enabled: false
+    checkov:
+      enabled: false
+    tflint:
+      enabled: false
+    detekt:
+      enabled: false
+    eslint:
+      enabled: false
+    flake8:
+      enabled: false
+    fbinfer:
+      enabled: false
+    fortitudeLint:
+      enabled: false
+    rubocop:
+      enabled: false
+    buf:
+      enabled: false
+    regal:
+      enabled: false
+    actionlint:
+      enabled: true
+    zizmor:
+      enabled: true
+    pmd:
+      enabled: false
+    clang:
+      enabled: false
+    cppcheck:
+      enabled: false
+    vale:
+      enabled: false
+    verilator:
+      enabled: false
+    opengrep:
+      enabled: false
+    semgrep:
+      enabled: false
+    circleci:
+      enabled: false
+    clippy:
+      enabled: false
+    sqlfluff:
+      enabled: false
+    squawk:
+      enabled: false
+    trivy:
+      enabled: false
+    prismaLint:
+      enabled: false
+    pylint:
+      enabled: false
+    oxc:
+      enabled: false
+    shopifyThemeCheck:
+      enabled: false
+    luacheck:
+      enabled: false
+    brakeman:
+      enabled: false
+    dotenvLint:
+      enabled: false
+    htmlhint:
+      enabled: false
+    stylelint:
+      enabled: false
+    checkmake:
+      enabled: false
+    osvScanner:
+      enabled: true
+    oasdiff:
+      enabled: false
+    reactDoctor:
+      enabled: false
+    presidio:
+      enabled: false
+    blinter:
+      enabled: false
+    smartyLint:
+      enabled: false
+    emberTemplateLint:
+      enabled: false
+    skillspector:
+      enabled: false
+    psscriptanalyzer:
+      enabled: false
+
+chat:
+  art: false
+
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - AGENTS.md
+      - SECURITY.md
+      - GLOSSARY.md
+      - docs/adr/*.md
+  learnings:
+    scope: local
+  linked_repositories:
+    - repository: IliasAlmerekov/darts
+      instructions: >-
+        React frontend that calls this API. Valibot schemas in src/shared/api/
+        parse every response; a changed field or status breaks them.

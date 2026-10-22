@@ -8,6 +8,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 ## [Unreleased] - 2026-02-03
 
 ### Hinzugefügt
+- **Code-Review**: `.coderabbit.yaml` richtet CodeRabbit als Senior-Reviewer ein, der `## Review guidelines` in `AGENTS.md` folgt. Er prüft jeden Push eines fertigen PRs, lässt die PR-Beschreibung unverändert und startet nur die Scanner, die in der CI fehlen. Jeder Befund hat fünf Teile (Severity, Location, Evidence, Impact, Fix); der neue Abschnitt `## Review feedback` verlangt von Agenten, einen Befund nachzustellen, bevor sie darauf reagieren (#150)
 - **Spielerprofil**: `GET /api/player/profile` liefert das Registrierungsdatum als `registeredAt` (ATOM-Zeitstempel oder `null`). Die Registrierung speichert es; bestehende Spieler bekommen per Migration das Datum ihres ersten Spiels, Gäste und der Admin bleiben bei `null`. Die OpenAPI-Doku nennt das Feld als nullable (#127)
 - **Tablet-Spiel**: Neuer Admin-Endpunkt `GET /api/tablet/game` liefert das Tablet-Spiel (`lobby` oder `started`) und die ID des zuletzt beendeten Spiels nach `finishedAt`. Beides ist `null`, wenn es keins gibt (#132)
 - **CI**: Dependabot öffnet wöchentlich Update-PRs für Composer, GitHub Actions und die Docker-Basisimages. Minor- und Patch-Updates von Composer kommen gebündelt in einem PR, Actions-Updates ebenso. `symfony/*` bekommt nur Patch-Updates, das `php`-Image bleibt auf 8.4 (#138)
