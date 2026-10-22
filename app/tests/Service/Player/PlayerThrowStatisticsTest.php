@@ -39,6 +39,19 @@ final class PlayerThrowStatisticsTest extends TestCase
         ], PlayerThrowStatistics::build(5, 20.0, $throws)->favoriteDoubles);
     }
 
+    /**
+     * 1 of 300 and 1 of 301 both round to 0.3, but D16 has the better hit rate.
+     */
+    public function testFavoriteDoublesCompareTheExactHitRateNotTheRoundedOne(): void
+    {
+        $throws = [...$this->bustsThenCheckout(40, 300), ...$this->bustsThenCheckout(32, 299)];
+
+        self::assertEquals([
+            new PlayerProfileDoubleDto('D16', 1, 300, 0.3),
+            new PlayerProfileDoubleDto('D20', 1, 301, 0.3),
+        ], PlayerThrowStatistics::build(2, 20.0, $throws)->favoriteDoubles);
+    }
+
     public function testHighestFinishTieGoesToFewerDartsThenToTheEarlierFinish(): void
     {
         $throws = [
@@ -61,6 +74,36 @@ final class PlayerThrowStatisticsTest extends TestCase
             new PlayerProfileMostHitSegmentDto('BULL', 1, 33.3),
             PlayerThrowStatistics::build(1, 45.0, $throws)->mostHitSegment
         );
+    }
+
+    /**
+     * A double-out game from a double: the player busts with T20 in each of the given turns,
+     * then checks out with the double.
+     *
+     * @return list<array{gameId:int, roundId:int, value:int, isDouble:bool, isTriple:bool, isBust:bool, score:int, startScore:int, doubleOut:bool, tripleOut:bool, placement:int|null}>
+     */
+    private function bustsThenCheckout(int $double, int $busts): array
+    {
+        $gameId = $this->nextGameId++;
+        $throws = [];
+        foreach (range(0, $busts) as $turn) {
+            $isCheckout = $turn === $busts;
+            $throws[] = [
+                'gameId' => $gameId,
+                'roundId' => $gameId * 1000 + $turn,
+                'value' => $isCheckout ? $double : 60,
+                'isDouble' => $isCheckout,
+                'isTriple' => !$isCheckout,
+                'isBust' => !$isCheckout,
+                'score' => $isCheckout ? 0 : $double,
+                'startScore' => $double,
+                'doubleOut' => true,
+                'tripleOut' => false,
+                'placement' => 1,
+            ];
+        }
+
+        return $throws;
     }
 
     /**

@@ -222,6 +222,7 @@ final class PlayerThrowStatistics
             if ($double['hits'] > 0) {
                 $favorites[] = [
                     'score' => $score,
+                    'rate' => $double['hits'] / $double['attempts'],
                     'dto' => new PlayerProfileDoubleDto(
                         50 === $score ? self::BULLSEYE : 'D'.intdiv($score, 2),
                         $double['hits'],
@@ -231,9 +232,9 @@ final class PlayerThrowStatistics
                 ];
             }
         }
-        // Most hits first, then the better hit rate, then the higher double.
+        // Most hits first, then the better unrounded hit rate, then the higher double.
         usort($favorites, static function (array $a, array $b): int {
-            return [$b['dto']->hits, $b['dto']->hitRate, $b['score']] <=> [$a['dto']->hits, $a['dto']->hitRate, $a['score']];
+            return [$b['dto']->hits, $b['rate'], $b['score']] <=> [$a['dto']->hits, $a['rate'], $a['score']];
         });
 
         return array_map(
