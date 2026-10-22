@@ -19,6 +19,10 @@ use App\Dto\PlayerProfileStatsDto;
  * A player's Profile statistics from their throws in the counted games. The app records what
  * a dart hit, not what it aimed at, so the remaining score before a dart stands in for the aim.
  *
+ * shortcut: every throw is judged by the out rule the game finished with, because the rule is
+ * stored per game and a started game may still change it; store the rule per throw once a
+ * mid-game change has to count correctly.
+ *
  * @psalm-type ThrowRow = array{
  *     gameId:int,
  *     roundId:int,
@@ -59,6 +63,7 @@ final class PlayerThrowStatistics
         $turnRoundId = null;
         $turnStart = 0;
         $turnDarts = [];
+        $turnReadable = true;
         $highestFinish = null;
 
         foreach ($throws as $throw) {
@@ -73,26 +78,31 @@ final class PlayerThrowStatistics
                 $turnRoundId = $throw['roundId'];
                 $turnStart = $remaining;
                 $turnDarts = [];
+                $turnReadable = true;
             }
             $segment = self::segment($throw);
-            $turnDarts[] = self::dartLabel($segment, $throw);
+            $label = self::dartLabel($segment, $throw);
+            $turnReadable = $turnReadable && null !== $label;
+            $turnDarts[] = $label ?? self::MISS;
             if (null !== $segment && isset($segmentHits[$segment])) {
                 $segmentHits[$segment]++;
             }
 
             $isCheckout = !$throw['isBust'] && 0 === $throw['score'];
-            if (self::isCheckable($remaining, $throw['doubleOut'], $throw['tripleOut'])) {
+            $isAttempt = self::isCheckable($remaining, $throw['doubleOut'], $throw['tripleOut']);
+            if ($isAttempt) {
                 $checkoutAttempts++;
                 $checkoutHits += $isCheckout ? 1 : 0;
             }
-            if ($throw['doubleOut'] && self::isDouble($remaining)) {
+            if ($isAttempt && $throw['doubleOut']) {
                 $doubles[$remaining] ??= ['hits' => 0, 'attempts' => 0];
                 $doubles[$remaining]['attempts']++;
                 $doubles[$remaining]['hits'] += $isCheckout ? 1 : 0;
             }
 
             $darts = count($turnDarts);
-            if ($isCheckout && (null === $highestFinish
+            // A finish with an unreadable dart is left out rather than shown with a wrong label.
+            if ($isCheckout && $turnReadable && (null === $highestFinish
                 || $turnStart > $highestFinish->score
                 || ($turnStart === $highestFinish->score && $darts < $highestFinish->darts))
             ) {
@@ -122,7 +132,8 @@ final class PlayerThrowStatistics
     }
 
     /**
-     * The board segment a dart hit: 1 to 20, BULL or BULLSEYE, or null for a miss.
+     * The board segment a dart hit: 1 to 20, BULL or BULLSEYE. Null for a miss, and for a single
+     * above 20 other than 25, which the throw endpoint used to accept but no dart can score.
      *
      * @param ThrowRow $throw
      *
@@ -137,6 +148,7 @@ final class PlayerThrowStatistics
             $throw['isTriple'] => (string) intdiv($value, 3),
             $throw['isDouble'] => 50 === $value ? self::BULLSEYE : (string) intdiv($value, 2),
             25 === $value => self::BULL,
+            $value > 20 => null,
             default => (string) $value,
         };
     }
@@ -145,12 +157,12 @@ final class PlayerThrowStatistics
      * @param string|null $segment
      * @param ThrowRow    $throw
      *
-     * @return string S<n>, D<n>, T<n>, BULL, BULLSEYE or MISS
+     * @return string|null S<n>, D<n>, T<n>, BULL, BULLSEYE or MISS; null for an unreadable single
      */
-    private static function dartLabel(?string $segment, array $throw): string
+    private static function dartLabel(?string $segment, array $throw): ?string
     {
         return match (true) {
-            null === $segment => self::MISS,
+            null === $segment => 0 === $throw['value'] ? self::MISS : null,
             self::BULL === $segment, self::BULLSEYE === $segment => $segment,
             $throw['isTriple'] => 'T'.$segment,
             $throw['isDouble'] => 'D'.$segment,
@@ -159,7 +171,8 @@ final class PlayerThrowStatistics
     }
 
     /**
-     * Whether one dart can check out this remaining score under the game's out rule.
+     * Whether one dart can check out this remaining score under the game's out rule. With both
+     * double and triple out no dart can, as GameThrowService needs a dart that is both.
      *
      * @param int  $remaining
      * @param bool $doubleOut
@@ -169,15 +182,14 @@ final class PlayerThrowStatistics
      */
     private static function isCheckable(int $remaining, bool $doubleOut, bool $tripleOut): bool
     {
-        $isTriple = $remaining >= 3 && $remaining <= 60 && 0 === $remaining % 3;
-        if ($doubleOut) {
-            return self::isDouble($remaining);
-        }
-        if ($tripleOut) {
-            return $isTriple;
-        }
+        $oneTripleScores = $remaining >= 3 && $remaining <= 60 && 0 === $remaining % 3;
 
-        return ($remaining >= 1 && $remaining <= 20) || 25 === $remaining || self::isDouble($remaining) || $isTriple;
+        return match (true) {
+            $doubleOut && $tripleOut => false,
+            $doubleOut => self::isDouble($remaining),
+            $tripleOut => $oneTripleScores,
+            default => ($remaining >= 1 && $remaining <= 20) || 25 === $remaining || self::isDouble($remaining) || $oneTripleScores,
+        };
     }
 
     /**

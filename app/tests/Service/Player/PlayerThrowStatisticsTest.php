@@ -97,6 +97,38 @@ final class PlayerThrowStatisticsTest extends TestCase
     }
 
     /**
+     * With double and triple out at once no dart can check out, so no dart is an attempt.
+     */
+    public function testDoubleAndTripleOutTogetherHaveNoCheckoutAttempts(): void
+    {
+        $throws = array_map(
+            static fn(array $throw): array => ['tripleOut' => true] + $throw,
+            $this->turn(40, 'double', [[20, 'S', 20], [10, 'S', 10], [10, 'D', 10]])
+        );
+
+        $stats = PlayerThrowStatistics::build(1, 40.0, $throws);
+
+        self::assertSame(0, $stats->checkoutAttempts);
+        self::assertNull($stats->checkoutRate);
+        self::assertSame([], $stats->favoriteDoubles);
+    }
+
+    /**
+     * An old single above 20 that no dart can score hits no segment but still counts as a dart,
+     * and its finish is left out instead of being labelled S60.
+     */
+    public function testUnreadableSingleHitsNoSegmentAndItsFinishIsLeftOut(): void
+    {
+        $stats = PlayerThrowStatistics::build(1, 110.0, $this->turn(110, 'single', [[60, 'S', 50], [50, 'D', 0]]));
+
+        self::assertSame(1, $stats->checkoutAttempts);
+        self::assertSame(1, $stats->checkoutHits);
+        self::assertEquals(new PlayerProfileMostHitSegmentDto('BULLSEYE', 1, 50.0), $stats->mostHitSegment);
+        self::assertSame(1, array_sum(array_map(static fn($entry): int => $entry->hits, $stats->hitDistribution)));
+        self::assertNull($stats->highestFinish);
+    }
+
+    /**
      * A double-out game from a double: the player busts with T20 in each of the given turns,
      * then checks out with the double.
      *
