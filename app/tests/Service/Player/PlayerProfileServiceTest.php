@@ -13,7 +13,6 @@ use App\Dto\ParticipantTotalsDto;
 use App\Dto\PlayerProfileGameDto;
 use App\Dto\PlayerProfileParticipantDto;
 use App\Dto\PlayerProfileResponseDto;
-use App\Dto\PlayerProfileStatsDto;
 use App\Dto\PlayerStatsDto;
 use App\Entity\GamePlayers;
 use App\Entity\User;
@@ -23,6 +22,7 @@ use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Game\GameStatisticsServiceInterface;
 use App\Service\Player\PlayerProfileService;
+use App\Service\Player\PlayerThrowStatistics;
 use DateTimeImmutable;
 use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
@@ -57,7 +57,7 @@ final class PlayerProfileServiceTest extends TestCase
         $gamePlayersRepository->expects(self::never())->method('findByGameIds');
 
         self::assertEquals(
-            new PlayerProfileResponseDto(new PlayerProfileStatsDto(0, null), [], null),
+            new PlayerProfileResponseDto(PlayerThrowStatistics::build(0, null, []), [], null),
             $this->createService($gamePlayersRepository)->getProfile($this->createUser(self::PLAYER_ID, 'ilias'))
         );
     }
@@ -89,7 +89,7 @@ final class PlayerProfileServiceTest extends TestCase
 
         self::assertEquals(
             new PlayerProfileResponseDto(
-                new PlayerProfileStatsDto(4, 37.5),
+                PlayerThrowStatistics::build(4, 37.5, []),
                 [new PlayerProfileGameDto(
                     gameId: 42,
                     finishedAt: '2026-10-18T17:42:00+00:00',

@@ -8,6 +8,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 ## [Unreleased] - 2026-02-03
 
 ### Hinzugefügt
+- **Spielerprofil**: `stats` in `GET /api/player/profile` enthält zusätzlich Siege und Siegquote, Checkout-Quote mit Treffern und Versuchen, die Trefferverteilung über 1–20, `BULL` und `BULLSEYE`, das meistgetroffene Segment, die drei Lieblings-Doubles aus Double-Out-Spielen und das höchste Finish. Alles wird beim Lesen aus den Würfen der gezählten Spiele berechnet, ohne neue Spalte; die OpenAPI-Doku beschreibt die Felder, das Glossar nennt Checkout, Checkout attempt und Finish (#128)
 - **Spielerprofil**: `GET /api/player/profile` liefert das Registrierungsdatum als `registeredAt` (ATOM-Zeitstempel oder `null`). Die Registrierung speichert es; bestehende Spieler bekommen per Migration das Datum ihres ersten Spiels, Gäste und der Admin bleiben bei `null`. Die OpenAPI-Doku nennt das Feld als nullable (#127)
 - **Tablet-Spiel**: Neuer Admin-Endpunkt `GET /api/tablet/game` liefert das Tablet-Spiel (`lobby` oder `started`) und die ID des zuletzt beendeten Spiels nach `finishedAt`. Beides ist `null`, wenn es keins gibt (#132)
 - **CI**: Dependabot öffnet wöchentlich Update-PRs für Composer, GitHub Actions und die Docker-Basisimages. Minor- und Patch-Updates von Composer kommen gebündelt in einem PR, Actions-Updates ebenso. `symfony/*` bekommt nur Patch-Updates, das `php`-Image bleibt auf 8.4 (#138)
