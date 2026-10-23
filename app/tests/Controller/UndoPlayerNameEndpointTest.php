@@ -53,4 +53,35 @@ final class UndoPlayerNameEndpointTest extends WebTestCase
         self::assertSame('Joined Name', $thrown['throw']['playerName']);
         self::assertSame($thrown['throw']['playerName'], $undone['undoneThrow']['playerName']);
     }
+
+    public function testUndoAfterThePlayerLeftTakesTheNameFromTheUser(): void
+    {
+        $client = static::createClient();
+        $entityManager = static::getContainer()->get(EntityManagerInterface::class);
+        $admin = TestUserFactory::create($entityManager, 'undoleft', 'admin', ['ROLE_ADMIN']);
+        $player = TestUserFactory::create($entityManager, 'undoleft', 'player', ['ROLE_PLAYER'])->setDisplayName(' Left Player ');
+        $game = (new Game())->setDate(new DateTime())->setStatus(GameStatus::Started)->setRound(1);
+        $entityManager->persist($game);
+        $seat = (new GamePlayers())->setPlayer($player)->setPosition(1)->setScore(301);
+        $game->addGamePlayer($seat);
+        $entityManager->persist($seat);
+        $entityManager->flush();
+        $client->loginUser($admin);
+        $gameId = (int) $game->getGameId();
+        $uri = sprintf('/api/game/%d/throw/delta', $gameId);
+
+        $client->request(Request::METHOD_POST, $uri, [], [], ['CONTENT_TYPE' => 'application/json'], json_encode(['playerId' => (int) $player->getId(), 'value' => 5], JSON_THROW_ON_ERROR));
+        self::assertResponseIsSuccessful();
+        // The room endpoint removes the seat without checking the game's status.
+        $client->request(Request::METHOD_DELETE, sprintf('/api/room/%d?playerId=%d', $gameId, (int) $player->getId()));
+        self::assertResponseIsSuccessful();
+        $entityManager->clear();
+
+        $client->request(Request::METHOD_DELETE, $uri);
+        self::assertResponseIsSuccessful();
+        /** @var array{undoneThrow: array{playerName: string}} $undone */
+        $undone = json_decode((string) $client->getResponse()->getContent(), true, flags: JSON_THROW_ON_ERROR);
+
+        self::assertSame('Left Player', $undone['undoneThrow']['playerName']);
+    }
 }

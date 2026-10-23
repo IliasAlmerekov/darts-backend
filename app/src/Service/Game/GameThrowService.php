@@ -563,14 +563,19 @@ final readonly class GameThrowService implements GameThrowServiceInterface
 
     /**
      * @param RoundThrows      $throw
-     * @param GamePlayers|null $seat  the thrower's seat, from the game's loaded seats
+     * @param GamePlayers|null $seat  the thrower's seat, from the game's loaded seats; null once the player left the room
      *
      * @return ThrowDeltaDto
      */
     private function createThrowDeltaFromEntity(RoundThrows $throw, ?GamePlayers $seat): ThrowDeltaDto
     {
-        $playerId = $throw->getPlayer()?->getId() ?? 0;
-        $playerName = null !== $seat ? PlayerDisplayName::forSeat($seat) : '';
+        $player = $throw->getPlayer();
+        $playerId = $player?->getId() ?? 0;
+        $playerName = match (true) {
+            null !== $seat => PlayerDisplayName::forSeat($seat),
+            null !== $player => PlayerDisplayName::forUser($player),
+            default => '',
+        };
         $timestamp = $throw->getTimestamp();
         $storedValue = $throw->getValue() ?? 0;
 
