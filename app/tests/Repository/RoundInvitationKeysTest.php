@@ -118,6 +118,28 @@ final class RoundInvitationKeysTest extends KernelTestCase
         });
     }
 
+    public function testMigrationKeepsTheEarliestStartAndTheLatestFinishOfDuplicateRounds(): void
+    {
+        $this->withScratchDatabase('round_keys_timestamps', function (ScratchDatabase $database): void {
+            $database->migrate(self::PREVIOUS_VERSION);
+            $connection = $database->connect();
+            $game = $this->insertGame($connection);
+            $kept = $this->insertRound($connection, $game, 1, null, null);
+            $this->insertRound($connection, $game, 1, '2026-10-01 12:00:00', '2026-10-01 12:05:00');
+            $this->insertRound($connection, $game, 1, '2026-10-01 12:10:00', '2026-10-01 12:15:00');
+
+            $database->migrate(self::KEYS_VERSION);
+
+            self::assertSame(
+                ['round_id' => $kept, 'started_at' => '2026-10-01 12:00:00', 'finished_at' => '2026-10-01 12:15:00'],
+                array_map(
+                    static fn (mixed $value): mixed => is_numeric($value) ? (int) $value : $value,
+                    (array) $connection->fetchAssociative('SELECT round_id, started_at, finished_at FROM `round` WHERE game_id = ?', [$game]),
+                ),
+            );
+        });
+    }
+
     public function testMigrationFailsWhenThrowsOfDuplicateRoundsCollide(): void
     {
         $this->withScratchDatabase('round_keys_collision', function (ScratchDatabase $database): void {
@@ -175,9 +197,9 @@ final class RoundInvitationKeysTest extends KernelTestCase
         return (int) $connection->lastInsertId();
     }
 
-    private function insertRound(Connection $connection, int $gameId, int $roundNumber): int
+    private function insertRound(Connection $connection, int $gameId, int $roundNumber, ?string $startedAt = null, ?string $finishedAt = null): int
     {
-        $connection->insert('round', ['game_id' => $gameId, 'round_number' => $roundNumber]);
+        $connection->insert('round', ['game_id' => $gameId, 'round_number' => $roundNumber, 'started_at' => $startedAt, 'finished_at' => $finishedAt]);
 
         return (int) $connection->lastInsertId();
     }

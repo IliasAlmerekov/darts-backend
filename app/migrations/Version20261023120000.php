@@ -38,6 +38,9 @@ final class Version20261023120000 extends AbstractMigration
             ),
         );
         $this->addSql('UPDATE round_throws t INNER JOIN `round` later ON later.round_id = t.round_id INNER JOIN ('.self::DUPLICATE_ROUNDS.') duplicate ON duplicate.game_id = later.game_id AND duplicate.round_number = later.round_number AND later.round_id > duplicate.first_id SET t.round_id = duplicate.first_id');
+        // The kept round takes the earliest start and the latest finish of its group, so
+        // merging never loses that a round was played or completed.
+        $this->addSql('UPDATE `round` kept INNER JOIN (SELECT MIN(round_id) AS first_id, MIN(started_at) AS started_at, MAX(finished_at) AS finished_at FROM `round` GROUP BY game_id, round_number HAVING COUNT(*) > 1) duplicate ON duplicate.first_id = kept.round_id SET kept.started_at = duplicate.started_at, kept.finished_at = duplicate.finished_at');
         $this->addSql('DELETE later FROM `round` later INNER JOIN ('.self::DUPLICATE_ROUNDS.') duplicate ON duplicate.game_id = later.game_id AND duplicate.round_number = later.round_number AND later.round_id > duplicate.first_id');
         $this->addSql('CREATE UNIQUE INDEX uniq_round_game_round_number ON `round` (game_id, round_number)');
 
