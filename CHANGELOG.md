@@ -46,6 +46,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **Sicherheitslücken**: Zugriffsprüfungen hinzugefügt, um unbefugten Zugriff auf Spielaktionen zu verhindern (z. B. nur Spieler oder Administratoren können Spiele ändern).
 
 ### Tests
+- **Spielstart**: Ein Regressionstest in `ConcurrentSeatingTest` startet eine Lobby, die eine zweite Verbindung nach dem Laden schon gestartet und committet hat. `GameStartService::start()` muss mit `GameStartNotAllowedException` (409) ablehnen und darf keine zweite erste Runde anlegen; ohne den sperrenden Refresh schlägt der Test fehl (#42)
 - **Aktualisierungen**: Alle Tests (z. B. `RegistrationControllerTest`, `SecurityControllerTest`, `GameFinishServiceTest` usw.) angepasst, um mit dem neuen `GameAccessService` zu arbeiten. Mocks für Zugriffskontrollen hinzugefügt.
 
 ### Sicherheit
