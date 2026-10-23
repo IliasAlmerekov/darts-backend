@@ -14,6 +14,7 @@ use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Exception\Game\InvalidPlayerOrderException;
 use App\Repository\GamePlayersRepositoryInterface;
+use App\Service\Game\PlayerDisplayName;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
 use Override;
@@ -316,25 +317,6 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     }
 
     /**
-     * @param User|null $player
-     * @param int|null  $playerId
-     *
-     * @return string
-     */
-    private function resolveDisplayNameSnapshot(?User $player, ?int $playerId = null): string
-    {
-        if (null === $player) {
-            return null !== $playerId ? sprintf('player_%d', $playerId) : 'player';
-        }
-
-        $displayName = $player->getDisplayNameRaw() ?? $player->getUsername();
-
-        return null !== $displayName && '' !== $displayName
-            ? $displayName
-            : (null !== $playerId ? sprintf('player_%d', $playerId) : 'player');
-    }
-
-    /**
      * @param int      $gameId
      * @param User     $player
      * @param int|null $position
@@ -346,7 +328,6 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     private function createGamePlayer(int $gameId, User $player, ?int $position = null): GamePlayers
     {
         $gamePlayer = new GamePlayers();
-        $playerId = $player->getId();
         // getReference() returns the managed Game when it is already loaded, so add the
         // seat through the inverse side too; otherwise getGamePlayers() misses it until reload.
         // The first add loads the game's seats (and the game, if still a proxy); later adds reuse them.
@@ -354,7 +335,7 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
         $game = $this->entityManager->getReference(Game::class, $gameId);
         $game->addGamePlayer($gamePlayer);
         $gamePlayer->setPlayer($player);
-        $gamePlayer->setDisplayNameSnapshot($this->resolveDisplayNameSnapshot($player, $playerId));
+        $gamePlayer->setDisplayNameSnapshot(PlayerDisplayName::forUser($player));
         $gamePlayer->setPosition($this->resolvePosition($position, $gameId));
         $this->entityManager->persist($gamePlayer);
 

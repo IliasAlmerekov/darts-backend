@@ -21,6 +21,7 @@ use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\InvitationRepositoryInterface;
 use App\Repository\UserRepositoryInterface;
+use App\Service\Game\PlayerDisplayName;
 use App\Service\Player\PlayerManagementServiceInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\DBAL\LockMode;
@@ -149,17 +150,14 @@ final readonly class InvitationService implements InvitationServiceInterface
                 continue;
             }
 
-            $baseName = $player->getDisplayNameSnapshot();
-            if (null === $baseName || '' === trim($baseName)) {
-                $baseName = $user->getDisplayNameRaw() ?? $user->getUsername();
-            }
-            if (null === $baseName || '' === trim($baseName)) {
+            $name = PlayerDisplayName::forSeat($player);
+            if ('' === $name) {
                 continue;
             }
 
             $users[] = [
                 'id' => $user->getId(),
-                'username' => $baseName,
+                'username' => $name,
             ];
         }
 

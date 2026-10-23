@@ -31,7 +31,7 @@ The name a player picks when registering. It is unique across the whole app, and
 _Avoid_: Login name, handle; "username" for a guest's name
 
 **Display name**:
-The name shown for a participant in a game: a player's username, or the name the admin typed for a guest. The admin cannot add a guest under a display name already used in that game; two participants can still share one when a player joins after a guest of the same name.
+The name shown for a participant in a game: a player's display name, else their username, or the name the admin typed for a guest. A participant keeps the display name their seat got when they joined the game. The admin cannot add a guest under a display name already used in that game; two participants can still share one when a player joins after a guest of the same name.
 _Avoid_: Nickname, username (for guests)
 
 ### Game flow

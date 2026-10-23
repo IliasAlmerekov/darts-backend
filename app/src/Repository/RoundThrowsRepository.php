@@ -57,11 +57,7 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
                 'rt.timestamp AS timestamp',
                 'r.roundNumber AS roundNumber',
                 'u.id AS playerId',
-                "CASE
-                    WHEN gp.displayNameSnapshot IS NOT NULL AND gp.displayNameSnapshot <> '' THEN gp.displayNameSnapshot
-                    WHEN u.displayName IS NOT NULL AND u.displayName <> '' THEN u.displayName
-                    ELSE u.username
-                END AS playerName"
+                "COALESCE(NULLIF(TRIM(gp.displayNameSnapshot), ''), NULLIF(TRIM(u.displayName), ''), TRIM(u.username)) AS playerName"
             )
             ->innerJoin('rt.round', 'r')
             ->innerJoin('rt.player', 'u')

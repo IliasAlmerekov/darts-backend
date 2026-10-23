@@ -41,18 +41,7 @@ final readonly class GameStateVersionService implements GameStateVersionServiceI
 
         /** @var list<GamePlayers> $gamePlayers */
         $gamePlayers = $game->getGamePlayers()->toArray();
-        usort($gamePlayers, static function (GamePlayers $left, GamePlayers $right): int {
-            $leftPosition = $left->getPosition() ?? PHP_INT_MAX;
-            $rightPosition = $right->getPosition() ?? PHP_INT_MAX;
-            if ($leftPosition !== $rightPosition) {
-                return $leftPosition <=> $rightPosition;
-            }
-
-            $leftId = $left->getGamePlayerId() ?? PHP_INT_MAX;
-            $rightId = $right->getGamePlayerId() ?? PHP_INT_MAX;
-
-            return $leftId <=> $rightId;
-        });
+        usort($gamePlayers, TurnOrder::compare(...));
 
         $playerChunks = [];
         foreach ($gamePlayers as $gamePlayer) {

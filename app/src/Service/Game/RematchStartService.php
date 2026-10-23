@@ -6,7 +6,6 @@ namespace App\Service\Game;
 
 use App\Dto\StartGameRequest;
 use App\Entity\Game;
-use App\Entity\GamePlayers;
 use App\Exception\Game\GameNotFoundException;
 use App\Repository\GameRepositoryInterface;
 use LogicException;
@@ -83,7 +82,7 @@ final readonly class RematchStartService implements RematchStartServiceInterface
         }
 
         $seats = $lobby->getGamePlayers()->toArray();
-        usort($seats, static fn (GamePlayers $a, GamePlayers $b): int => $a->getPosition() <=> $b->getPosition());
+        usort($seats, TurnOrder::compare(...));
         $seatedIds = [];
         foreach ($seats as $seat) {
             $playerId = $seat->getPlayer()?->getId();
