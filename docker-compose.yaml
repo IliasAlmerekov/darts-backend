@@ -4,7 +4,7 @@ name: darts
 
 services:
   php:
-    image: registry.deepblue.technology/library/php:8.4.11-0-dev
+    image: registry.deepblue.technology/library/php:8.4.27-0-dev
     environment:
       PHP_IDE_CONFIG: "serverName=be_training_project02"
       DOCKERHOST: "host.docker.internal"
