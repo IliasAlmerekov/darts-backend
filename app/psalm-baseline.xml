@@ -66,11 +66,8 @@
   </file>
   <file src="src/Entity/Game.php">
     <PossiblyUnusedMethod>
-      <code><![CDATA[getInvitation]]></code>
       <code><![CDATA[removeGamePlayer]]></code>
-      <code><![CDATA[removeRound]]></code>
       <code><![CDATA[setGameId]]></code>
-      <code><![CDATA[setInvitation]]></code>
     </PossiblyUnusedMethod>
   </file>
   <file src="src/Entity/GamePlayers.php">
@@ -88,7 +85,6 @@
       <code><![CDATA[addRoundThrow]]></code>
       <code><![CDATA[getFinishedAt]]></code>
       <code><![CDATA[getRoundId]]></code>
-      <code><![CDATA[getRoundThrows]]></code>
       <code><![CDATA[removeRoundThrow]]></code>
       <code><![CDATA[setRoundId]]></code>
     </PossiblyUnusedMethod>

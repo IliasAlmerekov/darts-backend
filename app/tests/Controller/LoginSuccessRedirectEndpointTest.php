@@ -138,7 +138,7 @@ final class LoginSuccessRedirectEndpointTest extends WebTestCase
         $player = $this->createUser('player', 'ROLE_PLAYER');
         $this->createGame(GameStatus::Lobby, $player);
         $startedGameId = $this->createGame(GameStatus::Started, $this->createUser('other', 'ROLE_PLAYER'));
-        $invitation = (new Invitation())->setUuid(Uuid::v4())->setGameId($startedGameId);
+        $invitation = (new Invitation())->setUuid(Uuid::v4())->setGame($entityManager->getReference(Game::class, $startedGameId));
         $entityManager->persist($invitation);
         $entityManager->flush();
 

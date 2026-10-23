@@ -80,12 +80,12 @@ final class InvitationServiceTest extends TestCase
     public function testCreateOrGetReturnsExistingInvitation(): void
     {
         $game = (new Game())->setGameId(10);
-        $existing = (new Invitation())->setUuid('uuid')->setGameId(10);
+        $existing = (new Invitation())->setUuid('uuid')->setGame($game);
 
         $this->invitationRepository
             ->expects(self::once())
             ->method('findOneBy')
-            ->with(['gameId' => 10])
+            ->with(['game' => $game])
             ->willReturn($existing);
 
         $this->entityManager->expects(self::never())->method('persist');
@@ -103,7 +103,7 @@ final class InvitationServiceTest extends TestCase
         $this->invitationRepository
             ->expects(self::once())
             ->method('findOneBy')
-            ->with(['gameId' => 20])
+            ->with(['game' => $game])
             ->willReturn(null);
 
         $this->entityManager->expects(self::once())->method('persist');
@@ -129,7 +129,7 @@ final class InvitationServiceTest extends TestCase
     public function testGetInvitationPayloadReturnsUsersAndLink(): void
     {
         $game = (new Game())->setGameId(30);
-        $invitation = (new Invitation())->setUuid('abc')->setGameId(30);
+        $invitation = (new Invitation())->setUuid('abc')->setGame($game);
 
         $player = new GamePlayers();
         $user = $this->createUserWithId(101, 'u', 'u@test');
@@ -138,7 +138,7 @@ final class InvitationServiceTest extends TestCase
 
         $this->invitationRepository
             ->method('findOneBy')
-            ->with(['gameId' => 30])
+            ->with(['game' => $game])
             ->willReturn($invitation);
 
         $this->gamePlayersRepository

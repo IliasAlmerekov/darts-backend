@@ -531,7 +531,7 @@ final class RegistrationEndpointTest extends WebTestCase
 
     private function createInvitation(EntityManagerInterface $entityManager, Game $game): Invitation
     {
-        $invitation = (new Invitation())->setUuid(Uuid::v4())->setGameId((int) $game->getGameId());
+        $invitation = (new Invitation())->setUuid(Uuid::v4())->setGame($game);
         $entityManager->persist($invitation);
         $entityManager->flush();
 
