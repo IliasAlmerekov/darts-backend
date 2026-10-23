@@ -6,6 +6,8 @@ namespace App\Tests\Service;
 
 use App\Dto\StartGameRequest;
 use App\Entity\Game;
+use App\Entity\GamePlayers;
+use App\Entity\User;
 use App\Exception\Game\GameNotFoundException;
 use App\Repository\GameRepositoryInterface;
 use App\Service\Game\GameRoomServiceInterface;
@@ -16,6 +18,7 @@ use LogicException;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use ReflectionProperty;
 
 #[AllowMockObjectsWithoutExpectations]
 final class RematchStartServiceTest extends TestCase
@@ -98,5 +101,32 @@ final class RematchStartServiceTest extends TestCase
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage('Rematch service did not return a valid gameId.');
         $this->service->createAndStart(42, $dto);
+    }
+
+    public function testLobbyParticipantsWithTheSamePositionFollowSeatOrder(): void
+    {
+        $game = new Game();
+        $game->addGamePlayer($this->seat(9, 1, 101));
+        $game->addGamePlayer($this->seat(4, 1, 102));
+        $dto = new StartGameRequest();
+        $dto->playerPositions = [];
+
+        $this->rematchService->method('createRematch')->willReturn(['success' => true, 'gameId' => 77]);
+        $this->gameRoomService->method('findGameById')->willReturn($game);
+        $this->gameStartService->expects(self::once())
+            ->method('start')
+            ->with($game, self::callback(static fn (StartGameRequest $sent): bool => [102, 101] === $sent->playerPositions));
+
+        $this->service->createAndStart(42, $dto);
+    }
+
+    private function seat(int $seatId, int $position, int $userId): GamePlayers
+    {
+        $user = new User();
+        (new ReflectionProperty(User::class, 'id'))->setValue($user, $userId);
+        $seat = (new GamePlayers())->setPlayer($user)->setPosition($position);
+        (new ReflectionProperty(GamePlayers::class, 'gamePlayerId'))->setValue($seat, $seatId);
+
+        return $seat;
     }
 }

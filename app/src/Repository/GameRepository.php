@@ -65,11 +65,11 @@ SELECT
     g.finished_at AS finishedAt,
     COUNT(DISTINCT gp.game_player_id) AS playersCount,
     winner.id AS winnerId,
-    CASE
-        WHEN winner_gp.display_name_snapshot IS NOT NULL AND winner_gp.display_name_snapshot <> '' THEN winner_gp.display_name_snapshot
-        WHEN winner.display_name IS NOT NULL AND winner.display_name <> '' THEN winner.display_name
-        ELSE winner.username
-    END AS winnerName
+    COALESCE(
+        NULLIF(TRIM(winner_gp.display_name_snapshot), ''),
+        NULLIF(TRIM(winner.display_name), ''),
+        TRIM(winner.username)
+    ) AS winnerName
 FROM game g
 LEFT JOIN game_players gp ON gp.game_id = g.game_id
 LEFT JOIN %s winner ON winner.id = g.winner_id

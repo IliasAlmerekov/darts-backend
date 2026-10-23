@@ -159,7 +159,7 @@ final readonly class GameDeltaService implements GameDeltaServiceInterface
             id: (int) ($latestThrow['id'] ?? 0),
             playerId: $playerId,
             playerName: $playerName,
-            value: $this->normalizeThrowValueForResponse($storedValue, $isDouble, $isTriple),
+            value: DartThrow::baseValue($storedValue, $isDouble, $isTriple),
             isDouble: $isDouble,
             isTriple: $isTriple,
             isBust: (bool) ($latestThrow['isBust'] ?? false),
@@ -181,34 +181,6 @@ final readonly class GameDeltaService implements GameDeltaServiceInterface
         }
 
         return (int) $latestThrow['id'];
-    }
-
-    /**
-     * Normalizes stored multiplied values back to the base board segment value for delta responses.
-     *
-     * @param int  $storedValue
-     * @param bool $isDouble
-     * @param bool $isTriple
-     *
-     * @return int
-     */
-    private function normalizeThrowValueForResponse(int $storedValue, bool $isDouble, bool $isTriple): int
-    {
-        if ($isTriple && 0 === $storedValue % 3) {
-            $baseValue = intdiv($storedValue, 3);
-            if ($baseValue >= 0 && $baseValue <= 20) {
-                return $baseValue;
-            }
-        }
-
-        if ($isDouble && 0 === $storedValue % 2) {
-            $baseValue = intdiv($storedValue, 2);
-            if (($baseValue >= 0 && $baseValue <= 20) || 25 === $baseValue) {
-                return $baseValue;
-            }
-        }
-
-        return $storedValue;
     }
 
     /**

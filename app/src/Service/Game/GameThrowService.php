@@ -160,7 +160,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         $roundStateSnapshot = $this->loadCurrentRoundStateSnapshot($game, $round);
         $this->assertActivePlayer($game, $requestedPlayerId, $roundStateSnapshot);
 
-        $playerThrowsThisRound = $this->resolvePlayerRoundState($roundStateSnapshot, $requestedPlayerId)['throwsCount'];
+        $playerThrowsThisRound = TurnOrder::roundState($roundStateSnapshot, $requestedPlayerId)['throwsCount'];
         if ($playerThrowsThisRound >= 3) {
             throw new PlayerAlreadyThrewThreeTimesException();
         }
@@ -265,7 +265,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             }
         }
 
-        $latestThrowPlayerName = $this->resolveLatestThrowPlayerName($player);
+        $latestThrowPlayerName = PlayerDisplayName::forSeat($player);
 
         $this->entityManager->persist($roundThrow);
         $updatedRoundStateSnapshot = $roundStateSnapshot;
@@ -308,8 +308,6 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             $this->newestGameGuard->assertNewest($game, [GameStatus::Finished]);
         }
 
-        $undoneThrow = $this->createThrowDeltaFromEntity($lastThrow);
-
         $player = $lastThrow->getPlayer();
         $playerId = $player?->getId();
         $lastThrowRoundNumber = $lastThrow->getRound()?->getRoundNumber() ?? $game->getRound();
@@ -330,6 +328,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
                 $gamePlayersByPlayerId[$gamePlayerId] = $gamePlayer;
             }
         }
+        $undoneThrow = $this->createThrowDeltaFromEntity($lastThrow, null !== $playerId ? ($gamePlayersByPlayerId[$playerId] ?? null) : null);
 
         if (null !== $playerId && isset($gamePlayersByPlayerId[$playerId])) {
             $restoredScore = $previousPlayerThrow?->getScore() ?? $game->getStartScore();
@@ -449,7 +448,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
                 continue;
             }
 
-            $playerRoundState = $this->resolvePlayerRoundState($roundStateSnapshot, $playerId);
+            $playerRoundState = TurnOrder::roundState($roundStateSnapshot, $playerId);
             if ($playerRoundState['throwsCount'] < 3 && false === $playerRoundState['lastThrowBust']) {
                 return false;
                 // Noch nicht alle AKTIVEN Spieler haben 3 Würfe gemacht
@@ -513,21 +512,8 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             $unfinishedPlayers[] = $gamePlayer;
         }
 
-        $sortByPosition = static function (GamePlayers $left, GamePlayers $right): int {
-            $leftPosition = $left->getPosition() ?? PHP_INT_MAX;
-            $rightPosition = $right->getPosition() ?? PHP_INT_MAX;
-            if ($leftPosition !== $rightPosition) {
-                return $leftPosition <=> $rightPosition;
-            }
-
-            $leftId = $left->getGamePlayerId() ?? PHP_INT_MAX;
-            $rightId = $right->getGamePlayerId() ?? PHP_INT_MAX;
-
-            return $leftId <=> $rightId;
-        };
-
-        usort($finishedPlayers, $sortByPosition);
-        usort($unfinishedPlayers, $sortByPosition);
+        usort($finishedPlayers, TurnOrder::compare(...));
+        usort($unfinishedPlayers, TurnOrder::compare(...));
 
         $position = 1;
         foreach ($finishedPlayers as $finishedPlayer) {
@@ -576,15 +562,20 @@ final readonly class GameThrowService implements GameThrowServiceInterface
     }
 
     /**
-     * @param RoundThrows $throw
+     * @param RoundThrows      $throw
+     * @param GamePlayers|null $seat  the thrower's seat, from the game's loaded seats; null once the player left the room
      *
      * @return ThrowDeltaDto
      */
-    private function createThrowDeltaFromEntity(RoundThrows $throw): ThrowDeltaDto
+    private function createThrowDeltaFromEntity(RoundThrows $throw, ?GamePlayers $seat): ThrowDeltaDto
     {
         $player = $throw->getPlayer();
         $playerId = $player?->getId() ?? 0;
-        $playerName = $player?->getDisplayNameRaw() ?? $player?->getUsername() ?? '';
+        $playerName = match (true) {
+            null !== $seat => PlayerDisplayName::forSeat($seat),
+            null !== $player => PlayerDisplayName::forUser($player),
+            default => '',
+        };
         $timestamp = $throw->getTimestamp();
         $storedValue = $throw->getValue() ?? 0;
 
@@ -592,7 +583,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             id: $throw->getThrowId() ?? 0,
             playerId: $playerId,
             playerName: $playerName,
-            value: $this->normalizeThrowValueForResponse($storedValue, $throw->isDouble(), $throw->isTriple()),
+            value: DartThrow::baseValue($storedValue, $throw->isDouble(), $throw->isTriple()),
             isDouble: $throw->isDouble(),
             isTriple: $throw->isTriple(),
             isBust: $throw->isBust(),
@@ -600,34 +591,6 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             roundNumber: $throw->getRound()?->getRoundNumber() ?? 0,
             timestamp: $timestamp instanceof DateTimeInterface ? $timestamp->format(DateTimeInterface::ATOM) : (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
         );
-    }
-
-    /**
-     * Normalizes stored multiplied values back to the base board segment value for throw payloads.
-     *
-     * @param int  $storedValue
-     * @param bool $isDouble
-     * @param bool $isTriple
-     *
-     * @return int
-     */
-    private function normalizeThrowValueForResponse(int $storedValue, bool $isDouble, bool $isTriple): int
-    {
-        if ($isTriple && 0 === $storedValue % 3) {
-            $baseValue = intdiv($storedValue, 3);
-            if ($baseValue >= 0 && $baseValue <= 20) {
-                return $baseValue;
-            }
-        }
-
-        if ($isDouble && 0 === $storedValue % 2) {
-            $baseValue = intdiv($storedValue, 2);
-            if (($baseValue >= 0 && $baseValue <= 20) || 25 === $baseValue) {
-                return $baseValue;
-            }
-        }
-
-        return $storedValue;
     }
 
     /**
@@ -667,26 +630,6 @@ final readonly class GameThrowService implements GameThrowServiceInterface
     }
 
     /**
-     * @param GamePlayers $gamePlayer
-     *
-     * @return string
-     */
-    private function resolveLatestThrowPlayerName(GamePlayers $gamePlayer): string
-    {
-        $playerName = trim($gamePlayer->getDisplayNameSnapshot() ?? '');
-        if ('' !== $playerName) {
-            return $playerName;
-        }
-
-        $playerName = trim($gamePlayer->getPlayer()?->getDisplayNameRaw() ?? '');
-        if ('' !== $playerName) {
-            return $playerName;
-        }
-
-        return trim($gamePlayer->getPlayer()?->getUsername() ?? '');
-    }
-
-    /**
      * @param Game  $game
      * @param Round $round
      *
@@ -701,31 +644,5 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         }
 
         return $this->roundThrowsRepository->findCurrentRoundStateSnapshot($gameId, $roundNumber);
-    }
-
-    /**
-     * @param array<int, array<string, int|bool|null>> $roundStateSnapshot
-     * @param int                                      $playerId
-     *
-     * @return array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}
-     */
-    private function resolvePlayerRoundState(array $roundStateSnapshot, int $playerId): array
-    {
-        $playerRoundState = $roundStateSnapshot[$playerId] ?? null;
-        if (!is_array($playerRoundState)) {
-            return [
-                'throwsCount' => 0,
-                'lastThrowNumber' => null,
-                'lastThrowValue' => null,
-                'lastThrowBust' => false,
-            ];
-        }
-
-        return [
-            'throwsCount' => (int) ($playerRoundState['throwsCount'] ?? 0),
-            'lastThrowNumber' => isset($playerRoundState['lastThrowNumber']) ? (int) $playerRoundState['lastThrowNumber'] : null,
-            'lastThrowValue' => isset($playerRoundState['lastThrowValue']) ? (int) $playerRoundState['lastThrowValue'] : null,
-            'lastThrowBust' => true === ($playerRoundState['lastThrowBust'] ?? false),
-        ];
     }
 }

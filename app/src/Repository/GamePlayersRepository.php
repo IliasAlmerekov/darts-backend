@@ -44,18 +44,14 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
     #[\Override]
     public function findPlayersWithUserInfo(int $gameId): array
     {
-        $players = $this->createQueryBuilder('gamePlayer')
+        $players = $this->createSeatsQueryBuilder($gameId)
             ->select(
                 'u.id as id',
-                'gamePlayer.displayNameSnapshot as name',
-                'gamePlayer.position as position',
+                "COALESCE(NULLIF(TRIM(gp.displayNameSnapshot), ''), NULLIF(TRIM(u.displayName), ''), TRIM(u.username)) as name",
+                'gp.position as position',
                 'u.isGuest as isGuest'
             )
-            ->innerJoin('gamePlayer.player', 'u')
-            ->andWhere('gamePlayer.game = :gameId')
-            ->setParameter('gameId', $gameId)
-            ->orderBy('gamePlayer.position', 'ASC')
-            ->addOrderBy('u.id', 'ASC')
+            ->innerJoin('gp.player', 'u')
             ->getQuery()
             ->getArrayResult();
 
@@ -139,14 +135,12 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
         }
 
         /** @var list<GamePlayers> $seats */
-        $seats = $this->createQueryBuilder('gp')
+        $seats = $this->createSeatOrderQueryBuilder()
             ->addSelect('game', 'player')
             ->innerJoin('gp.game', 'game')
             ->innerJoin('gp.player', 'player')
             ->andWhere('gp.game IN (:gameIds)')
             ->setParameter('gameIds', $gameIds)
-            ->orderBy('gp.position', 'ASC')
-            ->addOrderBy('gp.gamePlayerId', 'ASC')
             ->getQuery()
             ->getResult();
 
@@ -181,7 +175,7 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
     #[\Override]
     public function existsNameInGame(int $gameId, string $name): bool
     {
-        $normalizedName = trim($name);
+        $normalizedName = trim($name, ' ');
         $normalizedName = function_exists('mb_strtolower')
             ? mb_strtolower($normalizedName)
             : strtolower($normalizedName);
@@ -262,23 +256,15 @@ SQL,
     #[\Override]
     public function findGameStatePlayersByGameId(int $gameId): array
     {
-        $rows = $this->createQueryBuilder('gp')
+        $rows = $this->createSeatsQueryBuilder($gameId)
             ->select(
                 'player.id AS playerId',
-                "CASE
-                    WHEN gp.displayNameSnapshot IS NOT NULL AND gp.displayNameSnapshot <> '' THEN gp.displayNameSnapshot
-                    WHEN player.displayName IS NOT NULL AND player.displayName <> '' THEN player.displayName
-                    ELSE player.username
-                END AS name",
+                "COALESCE(NULLIF(TRIM(gp.displayNameSnapshot), ''), NULLIF(TRIM(player.displayName), ''), TRIM(player.username)) AS name",
                 'gp.position AS position',
                 'gp.score AS score',
                 'player.isGuest AS isGuest'
             )
             ->innerJoin('gp.player', 'player')
-            ->andWhere('gp.game = :gameId')
-            ->setParameter('gameId', $gameId)
-            ->orderBy('gp.position', 'ASC')
-            ->addOrderBy('gp.gamePlayerId', 'ASC')
             ->getQuery()
             ->getArrayResult();
 
@@ -376,10 +362,21 @@ SQL,
      */
     private function createSeatsQueryBuilder(int $gameId): QueryBuilder
     {
-        return $this->createQueryBuilder('gp')
+        return $this->createSeatOrderQueryBuilder()
             ->andWhere('gp.game = :gameId')
-            ->setParameter('gameId', $gameId)
-            ->orderBy('gp.position', 'ASC')
+            ->setParameter('gameId', $gameId);
+    }
+
+    /**
+     * Seats in turn order, the same order as TurnOrder::compare().
+     *
+     * @return QueryBuilder
+     */
+    private function createSeatOrderQueryBuilder(): QueryBuilder
+    {
+        return $this->createQueryBuilder('gp')
+            ->orderBy('CASE WHEN gp.position IS NULL THEN 1 ELSE 0 END', 'ASC')
+            ->addOrderBy('gp.position', 'ASC')
             ->addOrderBy('gp.gamePlayerId', 'ASC');
     }
 }

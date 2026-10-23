@@ -51,20 +51,13 @@ final class ParticipantResult
      */
     public static function displayName(GamePlayers $seat): ?string
     {
-        $user = $seat->getPlayer();
-        if (null === $user) {
+        if (null === $seat->getPlayer()) {
             return null;
         }
 
-        $baseName = $seat->getDisplayNameSnapshot();
-        if (null === $baseName || '' === trim($baseName)) {
-            $baseName = $user->getDisplayNameRaw() ?? $user->getUsername();
-        }
-        if (null === $baseName || '' === trim($baseName)) {
-            return null;
-        }
+        $name = PlayerDisplayName::forSeat($seat);
 
-        return $baseName;
+        return '' !== $name ? $name : null;
     }
 
     /**

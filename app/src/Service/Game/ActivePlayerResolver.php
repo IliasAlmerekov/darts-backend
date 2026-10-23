@@ -54,7 +54,7 @@ final readonly class ActivePlayerResolver implements ActivePlayerResolverInterfa
                 continue;
             }
 
-            $playerRoundState = $this->resolvePlayerRoundState($roundStateSnapshot, $playerId);
+            $playerRoundState = TurnOrder::roundState($roundStateSnapshot, $playerId);
             $throwsCount = $playerRoundState['throwsCount'];
             $hasBusted = $playerRoundState['lastThrowBust'];
 
@@ -75,18 +75,7 @@ final readonly class ActivePlayerResolver implements ActivePlayerResolverInterfa
     {
         /** @var list<GamePlayers> $gamePlayers */
         $gamePlayers = $game->getGamePlayers()->toArray();
-        usort($gamePlayers, static function (GamePlayers $left, GamePlayers $right): int {
-            $leftPosition = $left->getPosition() ?? PHP_INT_MAX;
-            $rightPosition = $right->getPosition() ?? PHP_INT_MAX;
-            if ($leftPosition !== $rightPosition) {
-                return $leftPosition <=> $rightPosition;
-            }
-
-            $leftId = $left->getGamePlayerId() ?? PHP_INT_MAX;
-            $rightId = $right->getGamePlayerId() ?? PHP_INT_MAX;
-
-            return $leftId <=> $rightId;
-        });
+        usort($gamePlayers, TurnOrder::compare(...));
 
         return $gamePlayers;
     }
@@ -105,31 +94,5 @@ final readonly class ActivePlayerResolver implements ActivePlayerResolverInterfa
         }
 
         return $this->roundThrowsRepository->findCurrentRoundStateSnapshot($gameId, $roundNumber);
-    }
-
-    /**
-    * @param RoundStateSnapshot $roundStateSnapshot
-    * @param int                $playerId
-     *
-     * @return array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}
-     */
-    private function resolvePlayerRoundState(array $roundStateSnapshot, int $playerId): array
-    {
-        $playerRoundState = $roundStateSnapshot[$playerId] ?? null;
-        if (!is_array($playerRoundState)) {
-            return [
-                'throwsCount' => 0,
-                'lastThrowNumber' => null,
-                'lastThrowValue' => null,
-                'lastThrowBust' => false,
-            ];
-        }
-
-        return [
-            'throwsCount' => (int) ($playerRoundState['throwsCount'] ?? 0),
-            'lastThrowNumber' => isset($playerRoundState['lastThrowNumber']) ? (int) $playerRoundState['lastThrowNumber'] : null,
-            'lastThrowValue' => isset($playerRoundState['lastThrowValue']) ? (int) $playerRoundState['lastThrowValue'] : null,
-            'lastThrowBust' => true === ($playerRoundState['lastThrowBust'] ?? false),
-        ];
     }
 }

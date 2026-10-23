@@ -220,6 +220,28 @@ final class PlayerManagementServiceTest extends TestCase
         self::assertSame([$result], $game->getGamePlayers()->toArray());
     }
 
+    public function testSnapshotSkipsABlankDisplayNameForTheTrimmedUsername(): void
+    {
+        $player = $this->userWithId(403, ' tom ', '   ');
+        $this->gamePlayersRepository->expects(self::once())->method('findNextPositionForGame')->willReturn(1);
+        $this->entityManager->expects(self::once())->method('getReference')->willReturn((new Game())->setGameId(303));
+
+        $result = $this->service->addPlayerEntity(303, $player, flush: false);
+
+        self::assertSame('tom', $result->getDisplayNameSnapshot());
+    }
+
+    public function testSnapshotOfAUserWithoutAnyNameStaysEmptyInsteadOfPlayerN(): void
+    {
+        $player = $this->userWithId(404, '   ');
+        $this->gamePlayersRepository->expects(self::once())->method('findNextPositionForGame')->willReturn(1);
+        $this->entityManager->expects(self::once())->method('getReference')->willReturn((new Game())->setGameId(304));
+
+        $result = $this->service->addPlayerEntity(304, $player, flush: false);
+
+        self::assertSame('', $result->getDisplayNameSnapshot());
+    }
+
     public function testCopyPlayersCopiesEveryPlayerAndFillsMissingPositions(): void
     {
         $sourcePlayer1 = (new GamePlayers())->setPlayer($this->userWithId(1, 'alpha', 'Alpha'))->setPosition(2);

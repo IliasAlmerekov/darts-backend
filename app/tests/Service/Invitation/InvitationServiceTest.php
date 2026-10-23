@@ -209,6 +209,22 @@ final class InvitationServiceTest extends TestCase
         self::assertSame([], $result);
     }
 
+    public function testGetUsersForGameReturnsTheTrimmedSeatName(): void
+    {
+        $game = (new Game())->setGameId(56);
+        $seat = (new GamePlayers())
+            ->setPlayer($this->createUserWithId(6, 'mia', 'mia@test'))
+            ->setDisplayNameSnapshot(' Mia (joined) ');
+
+        $this->gamePlayersRepository
+            ->expects(self::once())
+            ->method('findByGameId')
+            ->with(56)
+            ->willReturn([$seat]);
+
+        self::assertSame([['id' => 6, 'username' => 'Mia (joined)']], $this->service->getUsersForGame($game));
+    }
+
     public function testProcessInvitationAddsPlayerToGameAndRedirects(): void
     {
         $session = $this->createMock(SessionInterface::class);
