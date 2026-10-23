@@ -60,6 +60,7 @@ final class UndoRoundBoundaryEndpointTest extends WebTestCase
     {
         $this->throwDarts(3);
         $this->undo();
+        self::assertSame([1 => false], $this->roundsFinished());
 
         $this->throwDarts(1);
 
