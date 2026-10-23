@@ -9,10 +9,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
+use App\Dto\StartGameRequest;
 use App\Dto\ThrowRequest;
 use App\Entity\Game;
 use App\Entity\User;
 use App\Exception\Game\GameNotNewestException;
+use App\Exception\Game\GameStartNotAllowedException;
 use App\Exception\Game\GameThrowNotAllowedException;
 use App\Repository\GamePlayersRepository;
 use App\Repository\GameRepository;
@@ -21,6 +23,8 @@ use App\Repository\RoundRepository;
 use App\Repository\RoundThrowsRepository;
 use App\Repository\UserRepositoryInterface;
 use App\Service\Game\GameRoomService;
+use App\Service\Game\GameSetupService;
+use App\Service\Game\GameStartService;
 use App\Service\Game\GameThrowService;
 use App\Service\Game\NewestGameGuard;
 use App\Service\Game\OpenLobbyService;
@@ -333,6 +337,46 @@ final class ConcurrentSeatingTest extends KernelTestCase
             $this->other->fetchAllNumeric('SELECT game_id, status, winner_id FROM game ORDER BY game_id'),
         );
         self::assertSame(2, (int) $this->other->fetchOne('SELECT COUNT(*) FROM round_throws WHERE game_id = ?', [$game]));
+    }
+
+    public function testStartRejectsAGameStartedAfterItWasLoaded(): void
+    {
+        $bob = $this->insertUser('bob');
+        $anna = $this->insertUser('anna');
+        $lobby = $this->insertGame('lobby');
+        $this->insertSeat($lobby, $bob, 1);
+        $this->insertSeat($lobby, $anna, 2);
+        $gameRepository = new GameRepository($this->registry());
+        $access = $this->createMock(GameAccessServiceInterface::class);
+        $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+        $service = new GameStartService(
+            new GameSetupService(),
+            $this->entityManager,
+            $access,
+            new RoundRepository($this->registry()),
+            $gameRepository,
+        );
+
+        $this->request->beginTransaction();
+        $loaded = $this->entityManager->find(Game::class, $lobby);
+        self::assertInstanceOf(Game::class, $loaded);
+        // A parallel start of the same lobby commits after this request loaded the game.
+        $this->other->update('game', ['status' => 'started', 'round' => 1], ['game_id' => $lobby]);
+        $this->other->insert('round', ['game_id' => $lobby, 'round_number' => 1]);
+        try {
+            $service->start($loaded, new StartGameRequest());
+            self::fail('The start used the status from before the parallel start.');
+        } catch (GameStartNotAllowedException) {
+            // start() threw before it wrote anything, so commit and rollback end the same.
+            $this->request->commit();
+        }
+
+        // The parallel start keeps its game and its one first round.
+        self::assertSame(
+            [['started', 1]],
+            $this->other->fetchAllNumeric('SELECT status, round FROM game WHERE game_id = ?', [$lobby]),
+        );
+        self::assertSame(1, (int) $this->other->fetchOne('SELECT COUNT(*) FROM round WHERE game_id = ? AND round_number = 1', [$lobby]));
     }
 
     public function testAbortStartedGamesKeepsTheExceptedGameStarted(): void
