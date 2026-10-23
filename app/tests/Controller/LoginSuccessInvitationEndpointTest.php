@@ -43,7 +43,7 @@ final class LoginSuccessInvitationEndpointTest extends WebTestCase
         $entityManager->flush();
         $gameId = (int) $game->getGameId();
 
-        $invitation = (new Invitation())->setUuid(Uuid::v4())->setGameId($gameId);
+        $invitation = (new Invitation())->setUuid(Uuid::v4())->setGame($game);
         $entityManager->persist($invitation);
         $entityManager->flush();
 
@@ -265,7 +265,7 @@ final class LoginSuccessInvitationEndpointTest extends WebTestCase
 
     private function createInvitation(EntityManagerInterface $entityManager, Game $game): Invitation
     {
-        $invitation = (new Invitation())->setUuid(Uuid::v4())->setGameId((int) $game->getGameId());
+        $invitation = (new Invitation())->setUuid(Uuid::v4())->setGame($game);
         $entityManager->persist($invitation);
         $entityManager->flush();
 

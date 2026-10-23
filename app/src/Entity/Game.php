@@ -41,7 +41,7 @@ class Game
     #[ORM\Column(type: Types::DATE_MUTABLE)]
     private ?DateTime $date = null;
 
-    #[ORM\Column(nullable: true, options: ['default' => 301])]
+    #[ORM\Column(options: ['default' => 301])]
     private int $startScore = 301;
 
     #[ORM\Column(options: ['default' => false])]
@@ -80,10 +80,6 @@ class Game
 
     #[ORM\OneToMany(targetEntity: Round::class, mappedBy: 'game', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $rounds;
-
-    #[ORM\OneToOne(cascade: ['persist', 'remove'])]
-    #[ORM\JoinColumn(nullable: true)]
-    private ?Invitation $invitation = null;
 
     #[ORM\Column(nullable: true)]
     private ?int $round = null;
@@ -342,26 +338,6 @@ class Game
                 $round->setGame(null);
             }
         }
-
-        return $this;
-    }
-
-    /**
-     * @return Invitation|null
-     */
-    public function getInvitation(): ?Invitation
-    {
-        return $this->invitation;
-    }
-
-    /**
-     * @param Invitation|null $invitation
-     *
-     * @return static
-     */
-    public function setInvitation(?Invitation $invitation): static
-    {
-        $this->invitation = $invitation;
 
         return $this;
     }

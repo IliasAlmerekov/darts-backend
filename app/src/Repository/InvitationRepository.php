@@ -36,7 +36,7 @@ final class InvitationRepository extends ServiceEntityRepository implements Invi
     {
         /** @var Invitation|null $invitation */
         $invitation = $this->createQueryBuilder('i')
-            ->andWhere('i.gameId = :gameId')
+            ->andWhere('IDENTITY(i.game) = :gameId')
             ->setParameter('gameId', $gameId)
             ->getQuery()
             ->setLockMode(LockMode::PESSIMISTIC_READ)

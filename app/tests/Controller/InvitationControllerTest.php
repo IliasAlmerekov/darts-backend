@@ -82,7 +82,7 @@ final class InvitationControllerTest extends TestCase
         $game->method('getGameId')->willReturn($gameId);
 
         $createdInvitation = new Invitation();
-        $createdInvitation->setGameId($gameId);
+        $createdInvitation->setGame($game);
         $createdInvitation->setUuid(Uuid::v4());
 
         $invitationService = $this->createMock(InvitationServiceInterface::class);

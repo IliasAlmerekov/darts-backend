@@ -72,24 +72,23 @@ final readonly class InvitationService implements InvitationServiceInterface
     #[Override]
     public function createOrGetInvitation(Game $game): Invitation
     {
-        $gameId = $game->getGameId();
-        if (null === $gameId) {
+        if (null === $game->getGameId()) {
             throw new GameNotFoundException();
         }
 
-        return $this->entityManager->wrapInTransaction(function () use ($game, $gameId): Invitation {
+        return $this->entityManager->wrapInTransaction(function () use ($game): Invitation {
             if ($this->entityManager->contains($game)) {
                 $this->entityManager->lock($game, LockMode::PESSIMISTIC_WRITE);
             }
 
-            $candidate = $this->invitationRepository->findOneBy(['gameId' => $gameId]);
+            $candidate = $this->invitationRepository->findOneBy(['game' => $game]);
             if ($candidate instanceof Invitation) {
                 return $candidate;
             }
 
             $invitation = new Invitation();
             $invitation->setUuid(Uuid::v4());
-            $invitation->setGameId($gameId);
+            $invitation->setGame($game);
             $this->entityManager->persist($invitation);
             $this->entityManager->flush();
 

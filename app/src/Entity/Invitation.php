@@ -21,8 +21,9 @@ class Invitation
     private ?int $id = null;
     #[ORM\Column(length: 255, unique: true)]
     private ?string $uuid = null;
-    #[ORM\Column(unique: true)]
-    private ?int $gameId = null;
+    #[ORM\OneToOne(targetEntity: Game::class)]
+    #[ORM\JoinColumn(name: 'game_id', referencedColumnName: 'game_id', nullable: false, onDelete: 'CASCADE')]
+    private ?Game $game = null;
 
     /**
      * @psalm-suppress PossiblyUnusedMethod
@@ -53,17 +54,17 @@ class Invitation
      */
     public function getGameId(): ?int
     {
-        return $this->gameId;
+        return $this->game?->getGameId();
     }
 
     /**
-     * @param int $gameId
+     * @param Game $game
      *
      * @return static
      */
-    public function setGameId(int $gameId): static
+    public function setGame(Game $game): static
     {
-        $this->gameId = $gameId;
+        $this->game = $game;
 
         return $this;
     }

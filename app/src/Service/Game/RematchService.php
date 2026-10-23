@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Service\Game;
 
+use App\Entity\Game;
 use App\Entity\Invitation;
 use App\Enum\GameStatus;
 use App\Repository\GameRepositoryInterface;
@@ -88,16 +89,17 @@ final readonly class RematchService implements RematchServiceInterface
         return [
             'success' => true,
             'gameId' => $lobbyGameId,
-            'invitationLink' => $this->createInvitation($lobbyGameId),
+            'invitationLink' => $this->createInvitation($lobbyGame, $lobbyGameId),
         ];
     }
 
     /**
-     * @param int $gameId
+     * @param Game $game
+     * @param int  $gameId
      *
      * @return string
      */
-    private function createInvitation(int $gameId): string
+    private function createInvitation(Game $game, int $gameId): string
     {
         // A plain read would use the snapshot taken before the lobby lock and miss the
         // invitation of a rematch that committed while this one waited.
@@ -106,7 +108,7 @@ final readonly class RematchService implements RematchServiceInterface
             $uuid = Uuid::v4();
             $invitation = new Invitation();
             $invitation->setUuid($uuid);
-            $invitation->setGameId($gameId);
+            $invitation->setGame($game);
             $this->entityManager->persist($invitation);
             $this->entityManager->flush();
         }

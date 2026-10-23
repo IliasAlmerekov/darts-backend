@@ -19,6 +19,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: RoundRepository::class)]
 #[ORM\Table(name: '`round`')]
 #[ORM\Index(name: 'idx_round_finished_at_round_id', columns: ['finished_at', 'round_id'])]
+#[ORM\UniqueConstraint(name: 'uniq_round_game_round_number', columns: ['game_id', 'round_number'])]
 class Round
 {
     #[ORM\Id]

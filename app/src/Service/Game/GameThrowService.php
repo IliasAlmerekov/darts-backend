@@ -356,11 +356,41 @@ final readonly class GameThrowService implements GameThrowServiceInterface
 
         $game->setWinner(null);
         $game->setRound($lastThrowRoundNumber);
+        $this->reopenRound($game, $lastThrow->getRound());
 
         $this->entityManager->remove($lastThrow);
         $this->entityManager->flush();
 
         return $undoneThrow;
+    }
+
+    /**
+     * Undoing the throw that completed a round deletes the empty round that throw opened
+     * and marks the completed round unfinished again, so the next throw advances once.
+     *
+     * @param Game       $game
+     * @param Round|null $round The round of the undone throw
+     *
+     * @return void
+     */
+    private function reopenRound(Game $game, ?Round $round): void
+    {
+        $roundNumber = $round?->getRoundNumber();
+        if (null === $round || null === $roundNumber) {
+            return;
+        }
+
+        $nextRound = $this->roundRepository->findOneBy([
+            'game' => $game,
+            'roundNumber' => $roundNumber + 1,
+        ]);
+        if (!$nextRound instanceof Round || !$nextRound->getRoundThrows()->isEmpty()) {
+            return;
+        }
+
+        $game->removeRound($nextRound);
+        $this->entityManager->remove($nextRound);
+        $round->setFinishedAt(null);
     }
 
     /**

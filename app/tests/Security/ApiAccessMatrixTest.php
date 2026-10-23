@@ -415,8 +415,7 @@ final class ApiAccessMatrixTest extends WebTestCase
         $invitationUuid = Uuid::v4()->toRfc4122();
         $invitation = (new Invitation())
             ->setUuid($invitationUuid)
-            ->setGameId($gameId);
-        $game->setInvitation($invitation);
+            ->setGame($game);
         $entityManager->persist($invitation);
         $entityManager->flush();
 

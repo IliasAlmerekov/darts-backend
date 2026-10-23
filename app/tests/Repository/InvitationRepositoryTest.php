@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
+use App\Entity\Game;
 use App\Entity\Invitation;
 use App\Repository\InvitationRepository;
+use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Uid\Uuid;
@@ -31,7 +33,7 @@ final class InvitationRepositoryTest extends KernelTestCase
 
     public function testPersistAndFind(): void
     {
-        $invitation = $this->createInvitation(42);
+        $invitation = $this->createInvitation();
         $this->entityManager->flush();
 
         $found = $this->repository->find($invitation->getId());
@@ -44,7 +46,7 @@ final class InvitationRepositoryTest extends KernelTestCase
 
     public function testFindOneByUuid(): void
     {
-        $invitation = $this->createInvitation(7);
+        $invitation = $this->createInvitation();
         $this->entityManager->flush();
 
         $found = $this->repository->findOneBy(['uuid' => $invitation->getUuid()]);
@@ -54,11 +56,13 @@ final class InvitationRepositoryTest extends KernelTestCase
         self::assertSame($invitation->getGameId(), $found->getGameId());
     }
 
-    private function createInvitation(int $gameId): Invitation
+    private function createInvitation(): Invitation
     {
+        $game = (new Game())->setDate(new DateTime());
+        $this->entityManager->persist($game);
         $invitation = (new Invitation())
             ->setUuid(Uuid::v4())
-            ->setGameId($gameId);
+            ->setGame($game);
 
         $this->entityManager->persist($invitation);
 
