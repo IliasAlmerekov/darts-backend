@@ -29,7 +29,7 @@ final class GameAbortNotAllowedException extends ApiHttpException
         parent::__construct(
             ErrorCode::GameAbortNotAllowed,
             Response::HTTP_CONFLICT,
-            sprintf('Game can only be aborted from started status. Current status: %s.', $status->value)
+            sprintf('Game cannot be aborted from status %s.', $status->value)
         );
     }
 }

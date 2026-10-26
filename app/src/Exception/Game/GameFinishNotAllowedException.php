@@ -29,7 +29,7 @@ final class GameFinishNotAllowedException extends ApiHttpException
         parent::__construct(
             ErrorCode::GameFinishNotAllowed,
             Response::HTTP_CONFLICT,
-            sprintf('Game can only be finished from started status. Current status: %s.', $status->value)
+            sprintf('Game cannot be finished from status %s.', $status->value)
         );
     }
 }
