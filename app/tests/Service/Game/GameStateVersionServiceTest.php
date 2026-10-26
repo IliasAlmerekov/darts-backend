@@ -59,7 +59,7 @@ final class GameStateVersionServiceTest extends TestCase
     public function testBuildStateVersionChangesWhenAPlacementChanges(): void
     {
         $game = $this->createGame();
-        $service = new GameStateVersionService($this->createMock(RoundThrowsRepositoryInterface::class));
+        $service = new GameStateVersionService($this->createStub(RoundThrowsRepositoryInterface::class));
         $before = $service->buildStateVersion($game, 123);
 
         $game->getGamePlayers()->first()->setPlacement(1);
