@@ -67,7 +67,6 @@ final class GameFinishServiceTest extends TestCase
             ->willReturn(5);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        
         $service = $this->createService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $roundRepository);
 
         $summary = $service->finishGame($game);
@@ -223,7 +222,6 @@ final class GameFinishServiceTest extends TestCase
             ->willReturn(6);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        
         $service = $this->createService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $roundRepository);
         $finishedAt = new \DateTimeImmutable('2026-03-10T12:00:00+00:00');
 
