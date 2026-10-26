@@ -67,7 +67,6 @@ final class GameFinishServiceTest extends TestCase
             ->willReturn(5);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $callback): mixed => $callback());
         
         $service = $this->createService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $roundRepository);
 
@@ -168,7 +167,6 @@ final class GameFinishServiceTest extends TestCase
             ->willReturn(10);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $callback): mixed => $callback());
 
         $service = $this->createService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $roundRepository);
 
@@ -225,7 +223,6 @@ final class GameFinishServiceTest extends TestCase
             ->willReturn(6);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $callback): mixed => $callback());
         
         $service = $this->createService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $roundRepository);
         $finishedAt = new \DateTimeImmutable('2026-03-10T12:00:00+00:00');
@@ -253,6 +250,7 @@ final class GameFinishServiceTest extends TestCase
         RoundThrowsRepositoryInterface $roundThrowsRepository,
         RoundRepositoryInterface $roundRepository
     ): GameFinishService {
+        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $callback): mixed => $callback());
         $access = $this->createMock(GameAccessServiceInterface::class);
         $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
 

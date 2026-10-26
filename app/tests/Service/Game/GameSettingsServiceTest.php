@@ -29,7 +29,6 @@ final class GameSettingsServiceTest extends TestCase
         $dto->tripleOut = false;
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $callback): mixed => $callback());
         $entityManager->expects(self::once())->method('flush');
 
         $service = $this->createService($entityManager);
@@ -48,7 +47,6 @@ final class GameSettingsServiceTest extends TestCase
         $dto->startScore = 301;
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $callback): mixed => $callback());
         $entityManager->expects(self::never())->method('flush');
 
         $service = $this->createService($entityManager);
@@ -63,7 +61,6 @@ final class GameSettingsServiceTest extends TestCase
         $dto = new GameSettingsRequest();
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $callback): mixed => $callback());
         $entityManager->expects(self::never())->method('flush');
 
         $service = $this->createService($entityManager);
@@ -79,7 +76,6 @@ final class GameSettingsServiceTest extends TestCase
         $dto->startScore = 999;
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $callback): mixed => $callback());
         $entityManager->expects(self::never())->method('flush');
 
         $service = $this->createService($entityManager);
@@ -97,7 +93,6 @@ final class GameSettingsServiceTest extends TestCase
         $dto->tripleOut = true;
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $callback): mixed => $callback());
         $entityManager->expects(self::once())->method('flush');
 
         $service = $this->createService($entityManager);
@@ -115,7 +110,6 @@ final class GameSettingsServiceTest extends TestCase
         $dto->startScore = 301;
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $callback): mixed => $callback());
         $entityManager->expects(self::never())->method('flush');
 
         $service = $this->createService($entityManager);
@@ -133,7 +127,6 @@ final class GameSettingsServiceTest extends TestCase
         $dto->tripleOut = false;
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $callback): mixed => $callback());
         $entityManager->expects(self::once())->method('flush');
 
         $access = $this->createMock(GameAccessServiceInterface::class);
@@ -147,10 +140,23 @@ final class GameSettingsServiceTest extends TestCase
         self::assertFalse($game->isTripleOut());
     }
 
+    public function testApplySettingsNeverTakesTheGameLock(): void
+    {
+        $dto = new GameSettingsRequest();
+        $dto->startScore = 401;
+
+        $gameRepository = $this->createMock(GameRepositoryInterface::class);
+        $gameRepository->expects(self::never())->method('refreshWithSeatsForUpdate');
+        $service = new GameSettingsService($this->createStub(EntityManagerInterface::class), $this->createStub(GameAccessServiceInterface::class), $gameRepository);
+
+        $service->applySettings(new Game(), $dto);
+    }
+
     private function createService(EntityManagerInterface $entityManager): GameSettingsService
     {
         $access = $this->createStub(GameAccessServiceInterface::class);
         $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $callback): mixed => $callback());
 
         return new GameSettingsService($entityManager, $access, $this->createStub(GameRepositoryInterface::class));
     }

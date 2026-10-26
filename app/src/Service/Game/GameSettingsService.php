@@ -52,6 +52,7 @@ final readonly class GameSettingsService implements GameSettingsServiceInterface
     #[Override]
     public function updateSettings(Game $game, GameSettingsRequest $dto): void
     {
+        // The route loaded the game before this transaction: check the committed status, not that snapshot.
         $this->entityManager->wrapInTransaction(function () use ($game, $dto): void {
             $this->gameRepository->refreshWithSeatsForUpdate($game);
             $this->gameAccessService->assertPlayerInGameOrAdmin($game);

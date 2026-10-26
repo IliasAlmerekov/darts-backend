@@ -56,15 +56,16 @@ final readonly class GameFinishService implements GameFinishServiceInterface
             ? $finishedAt
             : (null !== $finishedAt ? DateTimeImmutable::createFromInterface($finishedAt) : new DateTimeImmutable());
         // The route loaded the game before this transaction: rank the committed scores, not that snapshot.
-        $this->entityManager->wrapInTransaction(function () use ($game, $timestamp): void {
+        return $this->entityManager->wrapInTransaction(function () use ($game, $timestamp): GameSummaryResponseDto {
             $this->gameRepository->refreshWithSeatsForUpdate($game);
             $this->gameAccessService->assertPlayerInGameOrAdmin($game);
             $game->setStatus(GameStatus::Finished);
             $game->setFinishedAt($timestamp);
             $this->recalculatePositions($game);
-        });
 
-        return $this->buildGameSummary($game);
+            // Built under the lock too, so a parallel undo or reopen cannot leak into the response.
+            return $this->buildGameSummary($game);
+        });
     }
 
     /**

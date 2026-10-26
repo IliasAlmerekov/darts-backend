@@ -42,6 +42,7 @@ final readonly class GameAbortService implements GameAbortServiceInterface
     #[\Override]
     public function abortGame(Game $game): void
     {
+        // Wait for a throw, undo or finish that holds the game lock, then abort the committed state.
         $this->entityManager->wrapInTransaction(function () use ($game): void {
             $this->gameRepository->refreshWithSeatsForUpdate($game);
             $this->gameAccessService->assertPlayerInGameOrAdmin($game);

@@ -14,6 +14,7 @@ use App\Dto\StartGameRequest;
 use App\Dto\ThrowRequest;
 use App\Entity\Game;
 use App\Entity\User;
+use App\Enum\GameStatus;
 use App\Exception\Game\GameNotNewestException;
 use App\Exception\Game\GameStartNotAllowedException;
 use App\Exception\Game\GameThrowNotAllowedException;
@@ -449,23 +450,35 @@ final class ConcurrentSeatingTest extends KernelTestCase
 
     public function testAbortWaitsForTheGameLock(): void
     {
-        // An aborted game makes the abort a no-op write, so only the lock read can make it wait.
+        // An aborted game makes a lock-free abort a no-op write, so only the lock read can make it wait.
         $game = $this->insertGame('aborted');
         $loaded = $this->entityManager->find(Game::class, $game);
         self::assertInstanceOf(Game::class, $loaded);
         $access = $this->createMock(GameAccessServiceInterface::class);
         $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
 
-        // A throw, undo or finish holds the game lock and has not committed.
+        // A reopen holds the game lock and has not committed.
         $this->other->beginTransaction();
-        $this->other->fetchOne('SELECT game_id FROM game WHERE game_id = ? FOR UPDATE', [$game]);
+        $this->other->update('game', ['status' => 'started'], ['game_id' => $game]);
         $this->request->executeStatement('SET SESSION innodb_lock_wait_timeout = 1');
         try {
             (new GameAbortService($this->entityManager, $access, new GameRepository($this->registry())))->abortGame($loaded);
             self::fail('The abort did not wait for the game lock.');
         } catch (LockWaitTimeoutException) {
         }
+
+        // The timeout closed the request's entity manager, as in production before a retry.
+        // A single process cannot block inside the abort until the commit, so the wait is shown by
+        // the timeout above and the order by the abort below, which acts on the holder's commit.
+        $this->entityManager = new EntityManager($this->request, $this->entityManager->getConfiguration());
+        $stale = $this->entityManager->find(Game::class, $game);
+        self::assertInstanceOf(Game::class, $stale);
+        self::assertSame(GameStatus::Aborted, $stale->getStatus());
         $this->other->commit();
+
+        (new GameAbortService($this->entityManager, $access, new GameRepository($this->registry())))->abortGame($stale);
+
+        self::assertSame('aborted', $this->other->fetchOne('SELECT status FROM game WHERE game_id = ?', [$game]));
     }
 
     /**
