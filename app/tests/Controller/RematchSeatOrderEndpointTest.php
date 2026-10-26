@@ -47,7 +47,7 @@ final class RematchSeatOrderEndpointTest extends WebTestCase
 
     public function testRematchOfAFinishedGameSeatsTheLastPlacedFirstAndTheWinnerLast(): void
     {
-        // The stored positions are the placements A, B, C.
+        // The stored placements are A, B, C.
         $oldGameId = $this->createGame(GameStatus::Finished, [[$this->a, 1, 20], [$this->b, 2, 50], [$this->c, 3, 90]]);
 
         $lobbyId = $this->rematch($oldGameId);
@@ -100,7 +100,7 @@ final class RematchSeatOrderEndpointTest extends WebTestCase
     }
 
     /**
-     * @param list<array{0: User, 1: int, 2: int}> $seats user, position, score
+     * @param list<array{0: User, 1: int, 2: int}> $seats user, position (the placement in a finished game), score
      */
     private function createGame(GameStatus $status, array $seats): int
     {
@@ -111,6 +111,10 @@ final class RematchSeatOrderEndpointTest extends WebTestCase
         $this->entityManager->persist($game);
         foreach ($seats as [$user, $position, $score]) {
             $seat = (new GamePlayers())->setPlayer($user)->setPosition($position)->setScore($score);
+            if (GameStatus::Finished === $status) {
+                // Seats of a finished game carry their placement; the position is the turn order.
+                $seat->setPlacement($position);
+            }
             $game->addGamePlayer($seat);
             $this->entityManager->persist($seat);
         }

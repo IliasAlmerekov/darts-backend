@@ -72,7 +72,7 @@ final readonly class GameFinishService implements GameFinishServiceInterface
 
             $game->setStatus(GameStatus::Finished);
             $game->setFinishedAt($timestamp);
-            $this->recalculatePositions($game);
+            $this->recalculatePlacements($game);
 
             // Built under the lock too, so a parallel undo or reopen cannot leak into the response.
             return $this->buildGameSummary($game);
@@ -116,6 +116,7 @@ final readonly class GameFinishService implements GameFinishServiceInterface
      *     playerId:int|null,
      *     username:string|null,
      *     position:int|null,
+     *     placement:int|null,
      *     roundsPlayed:int|null,
      *     roundAverage:float
      * }>
@@ -147,6 +148,7 @@ final readonly class GameFinishService implements GameFinishServiceInterface
                 'playerId' => $playerId,
                 'username' => ParticipantResult::displayName($player),
                 'position' => $player->getPosition(),
+                'placement' => $player->getPlacement(),
                 'roundsPlayed' => $roundsPlayed,
                 'roundAverage' => $roundAverage,
             ];
@@ -160,7 +162,7 @@ final readonly class GameFinishService implements GameFinishServiceInterface
      *
      * @return void
      */
-    private function recalculatePositions(Game $game): void
+    private function recalculatePlacements(Game $game): void
     {
         $players = $this->gamePlayersRepository->findByGameId((int) $game->getGameId());
 
@@ -168,13 +170,14 @@ final readonly class GameFinishService implements GameFinishServiceInterface
             $scoreA = $a->getScore() ?? PHP_INT_MAX;
             $scoreB = $b->getScore() ?? PHP_INT_MAX;
             if ($scoreA === $scoreB) {
-                return ($a->getPosition() ?? PHP_INT_MAX) <=> ($b->getPosition() ?? PHP_INT_MAX);
+                // Seats that checked out keep their order, then the turn order breaks the tie.
+                return ParticipantResult::compareByPlacement($a, $b) ?: TurnOrder::compare($a, $b);
             }
 
             return $scoreA <=> $scoreB;
         });
         foreach ($players as $index => $player) {
-            $player->setPosition($index + 1);
+            $player->setPlacement($index + 1);
         }
 
         if ([] !== $players) {
@@ -278,6 +281,7 @@ final readonly class GameFinishService implements GameFinishServiceInterface
                 playerId: $finishedPlayer['playerId'],
                 username: $finishedPlayer['username'],
                 position: $finishedPlayer['position'],
+                placement: $finishedPlayer['placement'],
                 roundsPlayed: $finishedPlayer['roundsPlayed'],
                 roundAverage: $finishedPlayer['roundAverage'],
             );

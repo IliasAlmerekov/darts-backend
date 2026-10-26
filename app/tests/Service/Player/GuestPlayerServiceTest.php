@@ -82,6 +82,7 @@ final class GuestPlayerServiceTest extends TestCase
         self::assertSame(55, $result['playerId']);
         self::assertSame('Alex', $result['name']);
         self::assertSame(2, $result['position']);
+        self::assertNull($result['placement']);
         self::assertTrue($result['isGuest']);
     }
 

@@ -27,8 +27,8 @@ final class ParticipantResult
      */
     public static function compareByPlacement(GamePlayers $a, GamePlayers $b): int
     {
-        $placementA = $a->getPosition();
-        $placementB = $b->getPosition();
+        $placementA = $a->getPlacement();
+        $placementB = $b->getPlacement();
         if (null === $placementA && null === $placementB) {
             return ($a->getScore() ?? PHP_INT_MAX) <=> ($b->getScore() ?? PHP_INT_MAX);
         }

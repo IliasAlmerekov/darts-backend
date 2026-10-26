@@ -100,7 +100,9 @@ final class GameStatusTransitionsEndpointTest extends WebTestCase
         $players = $repeated['finishedPlayers'] ?? null;
         self::assertIsArray($players);
         self::assertSame([(int) $this->second->getId(), (int) $this->first->getId()], array_column($players, 'playerId'));
-        self::assertSame([1, 2], array_column($players, 'position'));
+        self::assertSame([1, 2], array_column($players, 'placement'));
+        // The positions are the turn order and stay as the lobby set them.
+        self::assertSame([2, 1], array_column($players, 'position'));
     }
 
     public function testAbortFromLobbyIsRejected(): void
@@ -211,10 +213,10 @@ final class GameStatusTransitionsEndpointTest extends WebTestCase
         if (GameStatus::Finished === $status) {
             $game->setWinner($this->entityManager->getReference(User::class, $this->second->getId()));
         }
-        // The first player leads on score; a finished game ranks them second to show the stored placements win.
-        $seats = [[$this->first, 20, GameStatus::Finished === $status ? 2 : 1], [$this->second, 50, GameStatus::Finished === $status ? 1 : 2]];
-        foreach ($seats as [$user, $score, $position]) {
-            $seat = (new GamePlayers())->setPlayer($user)->setScore($score)->setPosition($position)->setIsWinner(GameStatus::Finished === $status && 1 === $position);
+        // The first player leads on score; a finished game places them second to show the stored placements win.
+        $seats = [[$this->first, 20, 1, GameStatus::Finished === $status ? 2 : null], [$this->second, 50, 2, GameStatus::Finished === $status ? 1 : null]];
+        foreach ($seats as [$user, $score, $position, $placement]) {
+            $seat = (new GamePlayers())->setPlayer($user)->setScore($score)->setPosition($position)->setPlacement($placement)->setIsWinner(1 === $placement);
             $game->addGamePlayer($seat);
             $this->entityManager->persist($seat);
         }
@@ -277,7 +279,7 @@ final class GameStatusTransitionsEndpointTest extends WebTestCase
 
         return [
             'finishedAt' => false === $finishedAt || null === $finishedAt ? null : (string) $finishedAt,
-            'placements' => $connection->fetchFirstColumn('SELECT position FROM game_players WHERE game_id = ? ORDER BY player_id', [$gameId]),
+            'placements' => $connection->fetchFirstColumn('SELECT placement FROM game_players WHERE game_id = ? ORDER BY player_id', [$gameId]),
         ];
     }
 

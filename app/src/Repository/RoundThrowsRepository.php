@@ -487,7 +487,7 @@ SELECT
     g.start_score AS startScore,
     g.double_out AS doubleOut,
     g.triple_out AS tripleOut,
-    gp.position AS placement
+    gp.placement AS placement
 FROM round_throws rt
 INNER JOIN game g ON g.game_id = rt.game_id
 LEFT JOIN game_players gp ON gp.game_id = rt.game_id AND gp.player_id = rt.player_id

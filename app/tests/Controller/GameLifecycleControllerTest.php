@@ -396,6 +396,7 @@ final class GameLifecycleControllerTest extends TestCase
                     'isActive' => true,
                     'isBust' => false,
                     'position' => 1,
+                    'placement' => null,
                     'throwsInCurrentRound' => 1,
                     'currentRoundThrows' => [
                         [
@@ -438,6 +439,7 @@ final class GameLifecycleControllerTest extends TestCase
                     'isActive' => false,
                     'isBust' => false,
                     'position' => 2,
+                    'placement' => 1,
                     'throwsInCurrentRound' => 0,
                     'currentRoundThrows' => [],
                     'roundHistory' => [],
@@ -528,6 +530,7 @@ final class GameLifecycleControllerTest extends TestCase
                     isActive: true,
                     isBust: false,
                     position: 1,
+                    placement: null,
                     throwsInCurrentRound: 1,
                     currentRoundThrows: [
                         new ThrowResponseDto(
@@ -570,6 +573,7 @@ final class GameLifecycleControllerTest extends TestCase
                     isActive: false,
                     isBust: false,
                     position: 2,
+                    placement: 1,
                     throwsInCurrentRound: 0,
                     currentRoundThrows: [],
                     roundHistory: [],
@@ -597,7 +601,8 @@ final class GameLifecycleControllerTest extends TestCase
                 new GameSummaryFinishedPlayerDto(
                     playerId: 1,
                     username: 'player',
-                    position: 1,
+                    position: 2,
+                    placement: 1,
                     roundsPlayed: 5,
                     roundAverage: 60.0,
                 ),

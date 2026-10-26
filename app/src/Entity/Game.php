@@ -271,6 +271,27 @@ class Game
     }
 
     /**
+     * Undo and reopen use this rule: a seat with score left has no placement and cannot hold the win;
+     * the seats without score left keep both.
+     *
+     * @return void
+     */
+    public function takeBackPlacementsFromSeatsWithScoreLeft(): void
+    {
+        foreach ($this->gamePlayers as $gamePlayer) {
+            if (($gamePlayer->getScore() ?? $this->startScore) <= 0) {
+                continue;
+            }
+
+            $gamePlayer->setPlacement(null);
+            if (true === $gamePlayer->isWinner()) {
+                $gamePlayer->setIsWinner(false);
+                $this->winner = null;
+            }
+        }
+    }
+
+    /**
      * @param GamePlayers $gamePlayer
      *
      * @return static

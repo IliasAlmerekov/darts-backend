@@ -21,6 +21,7 @@ final class ScoreboardPlayerDeltaDto
      * @param string    $name
      * @param int       $score
      * @param int|null  $position
+     * @param int|null  $placement
      * @param bool      $isActive
      * @param bool      $isGuest
      * @param bool|null $isBust
@@ -30,6 +31,7 @@ final class ScoreboardPlayerDeltaDto
         public string $name,
         public int $score,
         public ?int $position,
+        public ?int $placement,
         public bool $isActive,
         public bool $isGuest,
         public ?bool $isBust = null,

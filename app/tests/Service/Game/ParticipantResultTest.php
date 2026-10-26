@@ -18,8 +18,9 @@ final class ParticipantResultTest extends TestCase
 {
     public function testSeatsSortByPlacementWithUnplacedSeatsLastByRemainingScore(): void
     {
-        $third = (new GamePlayers())->setPosition(3);
-        $first = (new GamePlayers())->setPosition(1);
+        // The positions are the turn order and contradict the placements.
+        $third = (new GamePlayers())->setPosition(1)->setPlacement(3);
+        $first = (new GamePlayers())->setPosition(3)->setPlacement(1);
         $unplacedHigh = (new GamePlayers())->setScore(120);
         $unplacedLow = (new GamePlayers())->setScore(40);
         $unplacedWithoutScore = new GamePlayers();

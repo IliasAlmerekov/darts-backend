@@ -126,6 +126,7 @@ final class GameStatsControllerTest extends TestCase
                     playerId: $winnerId,
                     username: $winnerName,
                     position: 1,
+                    placement: 1,
                     roundsPlayed: $winnerRoundsPlayed,
                     roundAverage: $winnerRoundAverage,
                 ),

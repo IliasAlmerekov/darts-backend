@@ -102,6 +102,27 @@ final class PlayerProfileEndpointTest extends WebTestCase
         self::assertSame($rows[0]['scoreAverage'], $stats['scoreAverage']);
     }
 
+    /**
+     * Position is the turn order, so the winner may sit anywhere; wins follow the placement.
+     */
+    public function testWinsFollowThePlacementNotTheSeatPosition(): void
+    {
+        $client = static::createClient();
+        $first = $this->createUser('first', 'ROLE_PLAYER');
+        $second = $this->createUser('second', 'ROLE_PLAYER');
+        $game = $this->createGame(GameStatus::Finished, [$first, $second]);
+        $this->recordRound($game, 1, [[$first, [20]], [$second, [60]]]);
+        $this->settle($game, new DateTimeImmutable(), [[$second, 1, 0], [$first, 2, 281]]);
+
+        $client->loginUser($second);
+        $winner = $this->getProfile($client)['stats'];
+        $client->loginUser($first);
+        $loser = $this->getProfile($client)['stats'];
+
+        self::assertSame([1, 100.0], [$winner['wins'], $winner['winRate']]);
+        self::assertSame([0, 0.0], [$loser['wins'], $loser['winRate']]);
+    }
+
     public function testFinishedGameListsOwnResultAndParticipantsByPlacement(): void
     {
         $client = static::createClient();
@@ -140,7 +161,7 @@ final class PlayerProfileEndpointTest extends WebTestCase
             static fn(array $row): bool => $row['playerId'] === $player->getId()
         ));
         self::assertCount(1, $own);
-        self::assertSame(2, $own[0]['position']);
+        self::assertSame(2, $own[0]['placement']);
         self::assertSame(45.0, $own[0]['roundAverage']);
     }
 
@@ -544,7 +565,7 @@ final class PlayerProfileEndpointTest extends WebTestCase
         foreach ($results as [$participant, $placement, $score]) {
             foreach ($game->getGamePlayers() as $seat) {
                 if ($seat->getPlayer() === $participant) {
-                    $seat->setPosition($placement)->setScore($score)->setIsWinner(1 === $placement);
+                    $seat->setPlacement($placement)->setScore($score)->setIsWinner(1 === $placement);
                 }
             }
             if (1 === $placement) {

@@ -49,6 +49,7 @@ final readonly class GameStateVersionService implements GameStateVersionServiceI
             $playerChunks[] = implode(':', [
                 (string) ($gamePlayer->getPlayer()?->getId() ?? 'n'),
                 (string) ($gamePlayer->getPosition() ?? 'n'),
+                (string) ($gamePlayer->getPlacement() ?? 'n'),
                 (string) ($gamePlayer->getScore() ?? 'n'),
                 null === $isWinner ? 'n' : ($isWinner ? '1' : '0'),
             ]);

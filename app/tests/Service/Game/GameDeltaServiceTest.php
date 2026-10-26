@@ -51,6 +51,7 @@ final class GameDeltaServiceTest extends TestCase
                     'playerId' => 10,
                     'name' => 'Alex',
                     'position' => 1,
+                    'placement' => null,
                     'score' => 26,
                     'isGuest' => false,
                 ],
@@ -160,6 +161,7 @@ final class GameDeltaServiceTest extends TestCase
                     'playerId' => 10,
                     'name' => 'Alex',
                     'position' => 1,
+                    'placement' => null,
                     'score' => 121,
                     'isGuest' => false,
                 ],
@@ -167,6 +169,7 @@ final class GameDeltaServiceTest extends TestCase
                     'playerId' => 11,
                     'name' => 'Sam',
                     'position' => 2,
+                    'placement' => 1,
                     'score' => 140,
                     'isGuest' => true,
                 ],
@@ -195,6 +198,8 @@ final class GameDeltaServiceTest extends TestCase
         self::assertSame(11, $ack->scoreboardDelta->changedPlayers[1]->playerId);
         self::assertTrue($ack->scoreboardDelta->changedPlayers[0]->isBust ?? false);
         self::assertTrue($ack->scoreboardDelta->changedPlayers[1]->isActive);
+        self::assertSame([1, 2], [$ack->scoreboardDelta->changedPlayers[0]->position, $ack->scoreboardDelta->changedPlayers[1]->position]);
+        self::assertSame([null, 1], [$ack->scoreboardDelta->changedPlayers[0]->placement, $ack->scoreboardDelta->changedPlayers[1]->placement]);
     }
 
     /**
@@ -246,6 +251,7 @@ final class GameDeltaServiceTest extends TestCase
                     'playerId' => 10,
                     'name' => 'Alex',
                     'position' => 1,
+                    'placement' => null,
                     'score' => 51,
                     'isGuest' => false,
                 ],
@@ -314,6 +320,7 @@ final class GameDeltaServiceTest extends TestCase
                     'playerId' => 10,
                     'name' => 'Snapshot Name',
                     'position' => 1,
+                    'placement' => null,
                     'score' => 180,
                     'isGuest' => false,
                 ],
@@ -389,6 +396,7 @@ final class GameDeltaServiceTest extends TestCase
                     'playerId' => 31,
                     'name' => 'Guest Player',
                     'position' => 1,
+                    'placement' => null,
                     'score' => 250,
                     'isGuest' => true,
                 ],
