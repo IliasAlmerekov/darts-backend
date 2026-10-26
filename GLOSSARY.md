@@ -97,7 +97,7 @@ The moment a player registered. Players who registered before the app stored it 
 _Avoid_: Member since (the frontend label), created at, sign-up date
 
 **Placement**:
-A participant's rank in a finished game. The winner has placement 1.
+A participant's rank in a game. A participant gets it at their checkout, or when the game ends without one. The winner has placement 1. Undoing a throw or reopening the game takes the placement away from everyone whose score is above zero again, and the win with it; the others keep theirs.
 _Avoid_: Position (the seat order before the game starts), rank
 
 **Remembered login**:
