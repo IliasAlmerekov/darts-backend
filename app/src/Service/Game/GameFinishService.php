@@ -65,7 +65,7 @@ final readonly class GameFinishService implements GameFinishServiceInterface
                 throw new GameFinishNotAllowedException($status);
             }
 
-            // A finished game stays as it is: the auto-finish client calls finish again.
+            // A repeated finish leaves the game unchanged: same finishedAt, same placements.
             if (GameStatus::Finished === $status) {
                 return $this->buildGameSummary($game);
             }
