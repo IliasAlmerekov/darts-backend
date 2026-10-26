@@ -98,7 +98,7 @@ _Avoid_: Member since (the frontend label), created at, sign-up date
 
 **Placement**:
 A participant's rank in a game. A participant gets it at their checkout, or when the game ends without one. The winner has placement 1. Undoing a throw or reopening the game takes the placement away from everyone whose score is above zero again, and the win with it; the others keep theirs.
-_Avoid_: Position (the seat order before the game starts), rank
+_Avoid_: Position (the turn order), rank
 
 **Remembered login**:
 A player's phone that stays signed in for 7 days after the player's last visit, so the player skips the login form. A new visit restarts the 7 days.
