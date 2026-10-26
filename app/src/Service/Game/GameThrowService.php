@@ -521,7 +521,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             $unfinishedPlayers[] = $gamePlayer;
         }
 
-        usort($finishedPlayers, static fn (GamePlayers $left, GamePlayers $right): int => ($left->getPlacement() ?? PHP_INT_MAX) <=> ($right->getPlacement() ?? PHP_INT_MAX));
+        usort($finishedPlayers, ParticipantResult::compareByPlacement(...));
         usort($unfinishedPlayers, TurnOrder::compare(...));
 
         $placement = 1;

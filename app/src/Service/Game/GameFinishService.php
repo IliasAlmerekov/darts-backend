@@ -171,7 +171,7 @@ final readonly class GameFinishService implements GameFinishServiceInterface
             $scoreB = $b->getScore() ?? PHP_INT_MAX;
             if ($scoreA === $scoreB) {
                 // Seats that checked out keep their order, then the turn order breaks the tie.
-                return ($a->getPlacement() ?? PHP_INT_MAX) <=> ($b->getPlacement() ?? PHP_INT_MAX) ?: TurnOrder::compare($a, $b);
+                return ParticipantResult::compareByPlacement($a, $b) ?: TurnOrder::compare($a, $b);
             }
 
             return $scoreA <=> $scoreB;
