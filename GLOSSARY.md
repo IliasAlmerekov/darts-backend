@@ -26,6 +26,10 @@ _Avoid_: Member, joined player
 The record that makes a player or guest a participant of one game, with their position in the turn order. A participant has exactly one seat per game.
 _Avoid_: Game player
 
+**Position**:
+A seat's place in the turn order of its game. No two seats of the same game share a position.
+_Avoid_: Placement (the rank after the game), order number
+
 **Username**:
 The name a player picks when registering. It is unique across the whole app, and a guest has none.
 _Avoid_: Login name, handle; "username" for a guest's name

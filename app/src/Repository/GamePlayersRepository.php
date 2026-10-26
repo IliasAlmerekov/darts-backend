@@ -235,6 +235,7 @@ SELECT
     COUNT(gp.game_player_id) AS playersCount
 FROM game_players gp
 WHERE gp.game_id = :gameId
+FOR SHARE
 SQL,
             ['gameId' => $gameId],
             ['gameId' => ParameterType::INTEGER]

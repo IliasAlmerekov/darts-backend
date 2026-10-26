@@ -13,8 +13,10 @@ use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Exception\Game\GameIdMissingException;
+use App\Exception\Game\GameNotFoundException;
 use App\Exception\Request\UsernameAlreadyTakenException;
 use App\Repository\GamePlayersRepositoryInterface;
+use App\Repository\GameRepositoryInterface;
 use App\Service\Player\GuestPlayerService;
 use App\Service\Player\PlayerManagementServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -28,10 +30,14 @@ final class GuestPlayerServiceTest extends TestCase
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
         $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn(callable $func): mixed => $func());
+        $gameRepository = $this->createStub(GameRepositoryInterface::class);
+        $gameRepository->method('findOneByGameIdForUpdate')->willReturn($game);
         $service = new GuestPlayerService(
             $gamePlayersRepository,
             $playerManagementService,
             $entityManager,
+            $gameRepository,
         );
 
         $gamePlayersRepository
@@ -85,10 +91,14 @@ final class GuestPlayerServiceTest extends TestCase
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
         $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn(callable $func): mixed => $func());
+        $gameRepository = $this->createStub(GameRepositoryInterface::class);
+        $gameRepository->method('findOneByGameIdForUpdate')->willReturn($game);
         $service = new GuestPlayerService(
             $gamePlayersRepository,
             $playerManagementService,
             $entityManager,
+            $gameRepository,
         );
 
         $gamePlayersRepository
@@ -128,10 +138,14 @@ final class GuestPlayerServiceTest extends TestCase
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
         $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn(callable $func): mixed => $func());
+        $gameRepository = $this->createStub(GameRepositoryInterface::class);
+        $gameRepository->method('findOneByGameIdForUpdate')->willReturn($game);
         $service = new GuestPlayerService(
             $gamePlayersRepository,
             $playerManagementService,
             $entityManager,
+            $gameRepository,
         );
 
         $gamePlayersRepository
@@ -170,10 +184,14 @@ final class GuestPlayerServiceTest extends TestCase
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
         $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn(callable $func): mixed => $func());
+        $gameRepository = $this->createStub(GameRepositoryInterface::class);
+        $gameRepository->method('findOneByGameIdForUpdate')->willReturn($game);
         $service = new GuestPlayerService(
             $gamePlayersRepository,
             $playerManagementService,
             $entityManager,
+            $gameRepository,
         );
 
         $gamePlayersRepository
@@ -198,5 +216,47 @@ final class GuestPlayerServiceTest extends TestCase
         } catch (GameIdMissingException) {
             self::assertTrue(true);
         }
+    }
+
+    public function testCreateGuestPlayerThrowsBeforeWritesWhenGameIsGoneUnderTheLock(): void
+    {
+        $game = (new Game())->setGameId(10);
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn(callable $func): mixed => $func());
+        $gameRepository = $this->createMock(GameRepositoryInterface::class);
+        $service = new GuestPlayerService(
+            $gamePlayersRepository,
+            $playerManagementService,
+            $entityManager,
+            $gameRepository,
+        );
+
+        $gameRepository
+            ->expects(self::once())
+            ->method('findOneByGameIdForUpdate')
+            ->with(10)
+            ->willReturn(null);
+
+        $gamePlayersRepository
+            ->expects(self::never())
+            ->method('existsNameInGame');
+
+        $playerManagementService
+            ->expects(self::never())
+            ->method('addPlayerEntity');
+
+        $entityManager
+            ->expects(self::never())
+            ->method('persist');
+
+        $entityManager
+            ->expects(self::never())
+            ->method('flush');
+
+        $this->expectException(GameNotFoundException::class);
+
+        $service->createGuestPlayer($game, 'Alex');
     }
 }
