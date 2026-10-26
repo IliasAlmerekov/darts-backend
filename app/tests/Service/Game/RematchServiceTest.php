@@ -33,7 +33,7 @@ final class RematchServiceTest extends TestCase
 
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $playerManagementService = new PlayerManagementService($gamePlayersRepository, $entityManager);
+        $playerManagementService = new PlayerManagementService($gamePlayersRepository, $entityManager, $gameRepository);
         $access = $this->createMock(GameAccessServiceInterface::class);
         $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
         $openLobbyService = $this->createMock(OpenLobbyServiceInterface::class);
@@ -78,7 +78,7 @@ final class RematchServiceTest extends TestCase
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::atLeastOnce())->method('flush');
 
-        $playerManagementService = new PlayerManagementService($gamePlayersRepository, $entityManager);
+        $playerManagementService = new PlayerManagementService($gamePlayersRepository, $entityManager, $gameRepository);
         $access = $this->createMock(GameAccessServiceInterface::class);
         $access->method('requireAuthenticatedUser')->willReturn(new User());
         $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());

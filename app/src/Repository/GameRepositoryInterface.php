@@ -61,7 +61,8 @@ interface GameRepositoryInterface
     public function findOneByGameId(int $gameId): ?Game;
 
     /**
-     * Loads a game by id and acquires a pessimistic write lock.
+     * Loads a game by id and acquires a pessimistic write lock. A game this request already
+     * holds is reloaded, so it shows what other transactions committed before the lock.
      * Must be called inside an open transaction.
      *
      * @psalm-suppress PossiblyUnusedMethod

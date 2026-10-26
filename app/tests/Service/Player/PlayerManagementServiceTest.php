@@ -14,6 +14,7 @@ use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Exception\Game\InvalidPlayerOrderException;
 use App\Repository\GamePlayersRepositoryInterface;
+use App\Repository\GameRepositoryInterface;
 use App\Service\Player\PlayerManagementService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -29,7 +30,10 @@ final class PlayerManagementServiceTest extends TestCase
     {
         $this->gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
-        $this->service = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager);
+        $this->entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $func): mixed => $func());
+        $gameRepository = $this->createStub(GameRepositoryInterface::class);
+        $gameRepository->method('findOneByGameIdForUpdate')->willReturnCallback(static fn (int $gameId): Game => (new Game())->setGameId($gameId));
+        $this->service = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager, $gameRepository);
     }
 
     public function testRemovePlayerReturnsFalseWhenNotFound(): void

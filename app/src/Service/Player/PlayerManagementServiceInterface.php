@@ -11,6 +11,9 @@ namespace App\Service\Player;
 
 use App\Entity\GamePlayers;
 use App\Entity\User;
+use App\Exception\Game\GameNotFoundException;
+use App\Exception\Game\InvalidPlayerOrderException;
+use App\Exception\Game\SeatsNotEditableException;
 use Doctrine\ORM\Exception\ORMException;
 
 /**
@@ -25,6 +28,8 @@ interface PlayerManagementServiceInterface
      * @param int $playerId The player ID to remove
      *
      * @return bool True if the player was removed, false if not found
+     *
+     * @throws SeatsNotEditableException When the game is no longer in the lobby
      */
     public function removePlayer(int $gameId, int $playerId): bool;
 
@@ -95,6 +100,10 @@ interface PlayerManagementServiceInterface
      * @param list<array{playerId:int, position:int}>|array $positions
      *
      * @return void
+     *
+     * @throws GameNotFoundException       When no game has this ID
+     * @throws SeatsNotEditableException   When the game is no longer in the lobby
+     * @throws InvalidPlayerOrderException When the positions do not cover every seat exactly once
      */
     public function updatePlayerPositions(int $gameId, array $positions): void;
 }

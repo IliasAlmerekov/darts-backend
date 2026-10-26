@@ -12,8 +12,11 @@ namespace App\Service\Player;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\User;
+use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\InvalidPlayerOrderException;
+use App\Exception\Game\SeatsNotEditableException;
 use App\Repository\GamePlayersRepositoryInterface;
+use App\Repository\GameRepositoryInterface;
 use App\Service\Game\ParticipantResult;
 use App\Service\Game\PlayerDisplayName;
 use Doctrine\ORM\EntityManagerInterface;
@@ -29,9 +32,13 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     /**
      * @param GamePlayersRepositoryInterface $gamePlayersRepository
      * @param EntityManagerInterface         $entityManager
+     * @param GameRepositoryInterface        $gameRepository
      */
-    public function __construct(private GamePlayersRepositoryInterface $gamePlayersRepository, private EntityManagerInterface $entityManager)
-    {
+    public function __construct(
+        private GamePlayersRepositoryInterface $gamePlayersRepository,
+        private EntityManagerInterface $entityManager,
+        private GameRepositoryInterface $gameRepository,
+    ) {
     }
 
     /**
@@ -43,20 +50,26 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     #[Override]
     public function removePlayer(int $gameId, int $playerId): bool
     {
-        $gamePlayer = $this->gamePlayersRepository->findOneBy(
-            [
-                'game' => $gameId,
-                'player' => $playerId,
-            ]
-        );
-        if (null === $gamePlayer) {
-            return false;
-        }
+        return $this->entityManager->wrapInTransaction(function () use ($gameId, $playerId): bool {
+            if (null === $this->lockEditableSeats($gameId)) {
+                return false;
+            }
 
-        $this->entityManager->remove($gamePlayer);
-        $this->entityManager->flush();
+            $gamePlayer = $this->gamePlayersRepository->findOneBy(
+                [
+                    'game' => $gameId,
+                    'player' => $playerId,
+                ]
+            );
+            if (null === $gamePlayer) {
+                return false;
+            }
 
-        return true;
+            $this->entityManager->remove($gamePlayer);
+            $this->entityManager->flush();
+
+            return true;
+        });
     }
 
     /**
@@ -202,106 +215,128 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     #[Override]
     public function updatePlayerPositions(int $gameId, array $positions): void
     {
-        if ([] === $positions) {
-            return;
-        }
-
-        $seenPlayerIds = [];
-        $seenPositions = [];
-        foreach ($positions as $orderItem) {
-            $playerId = $orderItem['playerId'] ?? null;
-            $position = $orderItem['position'] ?? null;
-            if (!is_int($playerId) || !is_int($position)) {
-                continue;
+        $this->entityManager->wrapInTransaction(function () use ($gameId, $positions): void {
+            if (null === $this->lockEditableSeats($gameId)) {
+                throw new GameNotFoundException();
+            }
+            if ([] === $positions) {
+                return;
             }
 
-            if (isset($seenPlayerIds[$playerId])) {
-                throw new InvalidPlayerOrderException(sprintf('Duplicate playerId in positions payload: %d.', $playerId));
-            }
-            if (isset($seenPositions[$position])) {
-                throw new InvalidPlayerOrderException(sprintf('Duplicate position in positions payload: %d.', $position));
+            $seenPlayerIds = [];
+            $seenPositions = [];
+            foreach ($positions as $orderItem) {
+                $playerId = $orderItem['playerId'] ?? null;
+                $position = $orderItem['position'] ?? null;
+                if (!is_int($playerId) || !is_int($position)) {
+                    continue;
+                }
+
+                if (isset($seenPlayerIds[$playerId])) {
+                    throw new InvalidPlayerOrderException(sprintf('Duplicate playerId in positions payload: %d.', $playerId));
+                }
+                if (isset($seenPositions[$position])) {
+                    throw new InvalidPlayerOrderException(sprintf('Duplicate position in positions payload: %d.', $position));
+                }
+
+                $seenPlayerIds[$playerId] = true;
+                $seenPositions[$position] = true;
             }
 
-            $seenPlayerIds[$playerId] = true;
-            $seenPositions[$position] = true;
-        }
-
-        $gamePlayers = $this->gamePlayersRepository->findBy(['game' => $gameId]);
-        $playersById = [];
-        $finalPositionsByPlayerId = [];
-        foreach ($gamePlayers as $gamePlayer) {
-            $playerId = $gamePlayer->getPlayer()?->getId();
-            if (null !== $playerId) {
-                $playersById[$playerId] = $gamePlayer;
-                $existingPosition = $gamePlayer->getPosition();
-                if (null !== $existingPosition) {
-                    $finalPositionsByPlayerId[$playerId] = $existingPosition;
+            $gamePlayers = $this->gamePlayersRepository->findBy(['game' => $gameId]);
+            $playersById = [];
+            $finalPositionsByPlayerId = [];
+            foreach ($gamePlayers as $gamePlayer) {
+                $playerId = $gamePlayer->getPlayer()?->getId();
+                if (null !== $playerId) {
+                    $playersById[$playerId] = $gamePlayer;
+                    $existingPosition = $gamePlayer->getPosition();
+                    if (null !== $existingPosition) {
+                        $finalPositionsByPlayerId[$playerId] = $existingPosition;
+                    }
                 }
             }
-        }
 
-        $updates = [];
-        $providedPlayerIds = [];
-        foreach ($positions as $orderItem) {
-            $playerId = $orderItem['playerId'] ?? null;
-            $position = $orderItem['position'] ?? null;
-            if (!is_int($playerId) || !is_int($position)) {
-                continue;
+            $updates = [];
+            $providedPlayerIds = [];
+            foreach ($positions as $orderItem) {
+                $playerId = $orderItem['playerId'] ?? null;
+                $position = $orderItem['position'] ?? null;
+                if (!is_int($playerId) || !is_int($position)) {
+                    continue;
+                }
+
+                if (!isset($playersById[$playerId])) {
+                    throw new InvalidPlayerOrderException(sprintf('Player %d is not part of the game.', $playerId));
+                }
+
+                $updates[$playerId] = $position;
+                $providedPlayerIds[$playerId] = true;
+                $finalPositionsByPlayerId[$playerId] = $position;
             }
 
-            if (!isset($playersById[$playerId])) {
-                throw new InvalidPlayerOrderException(sprintf('Player %d is not part of the game.', $playerId));
+            if (count($updates) !== count($playersById)) {
+                throw new InvalidPlayerOrderException('Player order update must include all players in the game.');
             }
 
-            $updates[$playerId] = $position;
-            $providedPlayerIds[$playerId] = true;
-            $finalPositionsByPlayerId[$playerId] = $position;
-        }
-
-        if (count($updates) !== count($playersById)) {
-            throw new InvalidPlayerOrderException('Player order update must include all players in the game.');
-        }
-
-        foreach ($playersById as $playerId => $_gamePlayer) {
-            if (!isset($providedPlayerIds[$playerId])) {
-                throw new InvalidPlayerOrderException(sprintf('Missing player %d in positions payload.', $playerId));
-            }
-        }
-
-        $providedPositions = array_values($updates);
-        sort($providedPositions);
-        if ([] !== $providedPositions) {
-            $minPosition = $providedPositions[0];
-            if (0 !== $minPosition && 1 !== $minPosition) {
-                throw new InvalidPlayerOrderException('Positions must start with 0 or 1 and be contiguous.');
+            foreach ($playersById as $playerId => $_gamePlayer) {
+                if (!isset($providedPlayerIds[$playerId])) {
+                    throw new InvalidPlayerOrderException(sprintf('Missing player %d in positions payload.', $playerId));
+                }
             }
 
-            $expectedPositions = range($minPosition, $minPosition + count($providedPositions) - 1);
-            if ($providedPositions !== $expectedPositions) {
-                throw new InvalidPlayerOrderException('Positions must be contiguous without gaps.');
-            }
-        }
+            $providedPositions = array_values($updates);
+            sort($providedPositions);
+            if ([] !== $providedPositions) {
+                $minPosition = $providedPositions[0];
+                if (0 !== $minPosition && 1 !== $minPosition) {
+                    throw new InvalidPlayerOrderException('Positions must start with 0 or 1 and be contiguous.');
+                }
 
-        $seenFinalPositions = [];
-        foreach ($finalPositionsByPlayerId as $playerId => $position) {
-            if (isset($seenFinalPositions[$position])) {
-                $conflictingPlayerId = $seenFinalPositions[$position];
-                throw new InvalidPlayerOrderException(sprintf(
-                    'Resulting positions contain duplicate position %d for playerId %d and playerId %d.',
-                    $position,
-                    $conflictingPlayerId,
-                    $playerId
-                ));
+                $expectedPositions = range($minPosition, $minPosition + count($providedPositions) - 1);
+                if ($providedPositions !== $expectedPositions) {
+                    throw new InvalidPlayerOrderException('Positions must be contiguous without gaps.');
+                }
             }
 
-            $seenFinalPositions[$position] = $playerId;
+            $seenFinalPositions = [];
+            foreach ($finalPositionsByPlayerId as $playerId => $position) {
+                if (isset($seenFinalPositions[$position])) {
+                    $conflictingPlayerId = $seenFinalPositions[$position];
+                    throw new InvalidPlayerOrderException(sprintf(
+                        'Resulting positions contain duplicate position %d for playerId %d and playerId %d.',
+                        $position,
+                        $conflictingPlayerId,
+                        $playerId
+                    ));
+                }
+
+                $seenFinalPositions[$position] = $playerId;
+            }
+
+            foreach ($updates as $playerId => $position) {
+                $playersById[$playerId]->setPosition($position);
+            }
+
+            $this->entityManager->flush();
+        });
+    }
+
+    /**
+     * Locks the game and rejects a seat change outside the lobby. Must be called inside a transaction.
+     *
+     * @param int $gameId
+     *
+     * @return Game|null The locked game, or null when it does not exist
+     */
+    private function lockEditableSeats(int $gameId): ?Game
+    {
+        $game = $this->gameRepository->findOneByGameIdForUpdate($gameId);
+        if (null !== $game && !$game->getStatus()->canChangeSeats()) {
+            throw new SeatsNotEditableException();
         }
 
-        foreach ($updates as $playerId => $position) {
-            $playersById[$playerId]->setPosition($position);
-        }
-
-        $this->entityManager->flush();
+        return $game;
     }
 
     /**

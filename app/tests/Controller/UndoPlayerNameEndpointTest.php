@@ -72,9 +72,9 @@ final class UndoPlayerNameEndpointTest extends WebTestCase
 
         $client->request(Request::METHOD_POST, $uri, [], [], ['CONTENT_TYPE' => 'application/json'], json_encode(['playerId' => (int) $player->getId(), 'value' => 5], JSON_THROW_ON_ERROR));
         self::assertResponseIsSuccessful();
-        // The room endpoint removes the seat without checking the game's status.
-        $client->request(Request::METHOD_DELETE, sprintf('/api/room/%d?playerId=%d', $gameId, (int) $player->getId()));
-        self::assertResponseIsSuccessful();
+        // The room endpoint no longer removes a seat from a started game (#38); a game from
+        // before that fix can still lack the seat of a player who threw.
+        $entityManager->getConnection()->executeStatement('DELETE FROM game_players WHERE game_id = ? AND player_id = ?', [$gameId, (int) $player->getId()]);
         $entityManager->clear();
 
         $client->request(Request::METHOD_DELETE, $uri);
