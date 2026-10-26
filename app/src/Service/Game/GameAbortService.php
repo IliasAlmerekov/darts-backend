@@ -11,6 +11,7 @@ namespace App\Service\Game;
 
 use App\Entity\Game;
 use App\Enum\GameStatus;
+use App\Exception\Game\GameAbortNotAllowedException;
 use App\Repository\GameRepositoryInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -46,6 +47,11 @@ final readonly class GameAbortService implements GameAbortServiceInterface
         $this->entityManager->wrapInTransaction(function () use ($game): void {
             $this->gameRepository->refreshWithSeatsForUpdate($game);
             $this->gameAccessService->assertPlayerInGameOrAdmin($game);
+            $status = $game->getStatus();
+            if (!$status->canAbort()) {
+                throw new GameAbortNotAllowedException($status);
+            }
+
             $game->setStatus(GameStatus::Aborted);
         });
     }

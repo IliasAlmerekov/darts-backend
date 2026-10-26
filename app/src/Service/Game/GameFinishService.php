@@ -15,6 +15,7 @@ use App\Dto\GameSummaryWinnerDto;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Enum\GameStatus;
+use App\Exception\Game\GameFinishNotAllowedException;
 use App\Exception\Game\GameNotFinishedException;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
@@ -59,6 +60,16 @@ final readonly class GameFinishService implements GameFinishServiceInterface
         return $this->entityManager->wrapInTransaction(function () use ($game, $timestamp): GameSummaryResponseDto {
             $this->gameRepository->refreshWithSeatsForUpdate($game);
             $this->gameAccessService->assertPlayerInGameOrAdmin($game);
+            $status = $game->getStatus();
+            if (!$status->canFinish()) {
+                throw new GameFinishNotAllowedException($status);
+            }
+
+            // A finished game stays as it is: the auto-finish client calls finish again.
+            if (GameStatus::Finished === $status) {
+                return $this->buildGameSummary($game);
+            }
+
             $game->setStatus(GameStatus::Finished);
             $game->setFinishedAt($timestamp);
             $this->recalculatePositions($game);
