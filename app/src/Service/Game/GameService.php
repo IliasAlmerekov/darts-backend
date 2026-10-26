@@ -159,6 +159,7 @@ final readonly class GameService implements GameServiceInterface
                 isActive: $isActive,
                 isBust: $isBust,
                 position: $gamePlayer['position'],
+                placement: $gamePlayer['placement'],
                 throwsInCurrentRound: $throwsThisRound,
                 currentRoundThrows: $currentRoundThrows,
                 roundHistory: $roundHistory,
@@ -231,7 +232,7 @@ final readonly class GameService implements GameServiceInterface
 
     /**
         * @param Game                                                                                                                    $game
-     * @param array<int, array{playerId:int,name:string,position:int|null,score:int|null,isGuest:bool}>                               $gamePlayers
+     * @param array<int, array{playerId:int,name:string,position:int|null,placement:int|null,score:int|null,isGuest:bool}>            $gamePlayers
      * @param array<int, list<array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>> $currentRoundThrowsByPlayer
      *
      * @return int|null

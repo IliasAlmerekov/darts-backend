@@ -27,7 +27,7 @@ final class GameFinishServiceTest extends TestCase
     /**
      * @throws ReflectionException
      */
-    public function testFinishGameSetsWinnerPositionsAndAggregates(): void
+    public function testFinishGameSetsWinnerPlacementsAndAggregates(): void
     {
         $game = new Game();
         $this->setPrivateProperty($game, 'gameId', 42);
@@ -37,12 +37,14 @@ final class GameFinishServiceTest extends TestCase
         $this->setPrivateProperty($user1, 'id', 1);
         $player1 = (new GamePlayers())
             ->setPlayer($user1)
+            ->setPosition(2)
             ->setScore(0); // already finished
 
         $user2 = (new User())->setUsername('Player 2');
         $this->setPrivateProperty($user2, 'id', 2);
         $player2 = (new GamePlayers())
             ->setPlayer($user2)
+            ->setPosition(1)
             ->setScore(10);
 
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
@@ -73,8 +75,11 @@ final class GameFinishServiceTest extends TestCase
 
         self::assertSame(GameStatus::Finished, $game->getStatus());
         self::assertNotNull($game->getFinishedAt());
-        self::assertSame(1, $player1->getPosition());
-        self::assertSame(2, $player2->getPosition());
+        self::assertSame(1, $player1->getPlacement());
+        self::assertSame(2, $player2->getPlacement());
+        // The positions are the turn order and stay as the lobby set them.
+        self::assertSame(2, $player1->getPosition());
+        self::assertSame(1, $player2->getPosition());
         self::assertSame($user1, $game->getWinner());
         self::assertTrue($player1->isWinner());
         self::assertFalse($player2->isWinner());
@@ -90,7 +95,8 @@ final class GameFinishServiceTest extends TestCase
         $firstFinished = $summary->finishedPlayers[0];
         self::assertSame(1, $firstFinished->playerId);
         self::assertSame('Player 1', $firstFinished->username);
-        self::assertSame(1, $firstFinished->position);
+        self::assertSame(2, $firstFinished->position);
+        self::assertSame(1, $firstFinished->placement);
         self::assertSame(5, $firstFinished->roundsPlayed);
         self::assertSame(301.0 / 5.0, $firstFinished->roundAverage);
     }

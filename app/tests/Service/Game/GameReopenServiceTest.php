@@ -21,18 +21,20 @@ use PHPUnit\Framework\TestCase;
 #[AllowMockObjectsWithoutExpectations]
 final class GameReopenServiceTest extends TestCase
 {
-    public function testReopenFinishedGameResetsCompletionState(): void
+    public function testReopenKeepsPlacementAndWinWhenTheWinnerHasCheckedOut(): void
     {
         $winner = (new User())->setUsername('winner');
         $finishedPlayer = (new GamePlayers())
             ->setPlayer($winner)
             ->setScore(0)
-            ->setPosition(1)
+            ->setPosition(2)
+            ->setPlacement(1)
             ->setIsWinner(true);
         $activePlayer = (new GamePlayers())
             ->setPlayer((new User())->setUsername('active'))
             ->setScore(20)
-            ->setPosition(2)
+            ->setPosition(1)
+            ->setPlacement(2)
             ->setIsWinner(false);
 
         $game = (new Game())
@@ -63,9 +65,42 @@ final class GameReopenServiceTest extends TestCase
 
         self::assertSame(GameStatus::Started, $game->getStatus());
         self::assertNull($game->getFinishedAt());
-        self::assertNull($game->getWinner());
-        self::assertFalse((bool) $finishedPlayer->isWinner());
+        self::assertSame($winner, $game->getWinner());
+        self::assertTrue($finishedPlayer->isWinner());
         self::assertFalse((bool) $activePlayer->isWinner());
+        self::assertSame(1, $finishedPlayer->getPlacement());
+        self::assertNull($activePlayer->getPlacement());
+        // The positions are the turn order and stay as they were.
+        self::assertSame(2, $finishedPlayer->getPosition());
+        self::assertSame(1, $activePlayer->getPosition());
+    }
+
+    public function testReopenClearsWinAndPlacementsOfSeatsWithScoreLeft(): void
+    {
+        $winner = (new User())->setUsername('winner');
+        $winningSeat = (new GamePlayers())->setPlayer($winner)->setScore(20)->setPosition(1)->setPlacement(1)->setIsWinner(true);
+        $otherSeat = (new GamePlayers())->setPlayer((new User())->setUsername('other'))->setScore(90)->setPosition(2)->setPlacement(2)->setIsWinner(false);
+        $game = (new Game())
+            ->setGameId(7)
+            ->setStatus(GameStatus::Finished)
+            ->setFinishedAt(new DateTimeImmutable())
+            ->setWinner($winner)
+            ->addGamePlayer($winningSeat)
+            ->addGamePlayer($otherSeat);
+
+        $access = $this->createMock(GameAccessServiceInterface::class);
+        $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+        $gameRepository = $this->createMock(GameRepositoryInterface::class);
+        $gameRepository->method('findHighestGameId')->willReturn(7);
+        $service = new GameReopenService($this->createMock(EntityManagerInterface::class), $access, $gameRepository, new NewestGameGuard($gameRepository));
+
+        $service->reopen($game);
+
+        self::assertNull($game->getWinner());
+        self::assertFalse((bool) $winningSeat->isWinner());
+        self::assertNull($winningSeat->getPlacement());
+        self::assertNull($otherSeat->getPlacement());
+        self::assertSame([1, 2], [$winningSeat->getPosition(), $otherSeat->getPosition()]);
     }
 
     public function testReopenStartedGameIsNoop(): void

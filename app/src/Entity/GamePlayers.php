@@ -29,6 +29,8 @@ class GamePlayers
     #[ORM\Column(nullable: true)]
     private ?int $position = null;
     #[ORM\Column(nullable: true)]
+    private ?int $placement = null;
+    #[ORM\Column(nullable: true)]
     private ?int $score = null;
     #[ORM\Column(nullable: true)]
     private ?bool $isWinner = null;
@@ -97,6 +99,28 @@ class GamePlayers
     public function setPosition(int $position): static
     {
         $this->position = $position;
+
+        return $this;
+    }
+
+    /**
+     * The rank in the game, 1 for the winner; null while the seat has not placed.
+     *
+     * @return int|null
+     */
+    public function getPlacement(): ?int
+    {
+        return $this->placement;
+    }
+
+    /**
+     * @param int|null $placement
+     *
+     * @return static
+     */
+    public function setPlacement(?int $placement): static
+    {
+        $this->placement = $placement;
 
         return $this;
     }

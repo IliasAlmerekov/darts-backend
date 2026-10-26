@@ -485,7 +485,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
 
         self::assertSame(
             [[$anna, 1, 1], [$bob, 2, 0]],
-            $this->other->fetchAllNumeric('SELECT player_id, position, is_winner FROM game_players WHERE game_id = ? ORDER BY position', [$game]),
+            $this->other->fetchAllNumeric('SELECT player_id, placement, is_winner FROM game_players WHERE game_id = ? ORDER BY placement', [$game]),
         );
         self::assertSame(
             [['finished', $anna]],

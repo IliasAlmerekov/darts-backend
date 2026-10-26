@@ -56,6 +56,20 @@ final class GameStateVersionServiceTest extends TestCase
     /**
      * @throws ReflectionException
      */
+    public function testBuildStateVersionChangesWhenAPlacementChanges(): void
+    {
+        $game = $this->createGame();
+        $service = new GameStateVersionService($this->createMock(RoundThrowsRepositoryInterface::class));
+        $before = $service->buildStateVersion($game, 123);
+
+        $game->getGamePlayers()->first()->setPlacement(1);
+
+        self::assertNotSame($before, $service->buildStateVersion($game, 123));
+    }
+
+    /**
+     * @throws ReflectionException
+     */
     public function testBuildStateVersionFallsBackToLatestThrowRepositoryLookup(): void
     {
         $game = $this->createGame();

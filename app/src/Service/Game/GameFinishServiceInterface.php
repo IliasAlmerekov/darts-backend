@@ -58,6 +58,7 @@ interface GameFinishServiceInterface
      *     playerId:int|null,
      *     username:string|null,
      *     position:int|null,
+     *     placement:int|null,
      *     roundsPlayed:int|null,
      *     roundAverage:float
      * }>

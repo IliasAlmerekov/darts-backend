@@ -94,6 +94,7 @@ final class GameServiceTest extends TestCase
                 'playerId' => 1,
                 'name' => 'Ilias A',
                 'position' => 1,
+                'placement' => null,
                 'score' => 100,
                 'isGuest' => false,
             ],
@@ -101,6 +102,7 @@ final class GameServiceTest extends TestCase
                 'playerId' => 2,
                 'name' => 'Ilias T',
                 'position' => 2,
+                'placement' => null,
                 'score' => 0,
                 'isGuest' => false,
             ],
@@ -166,6 +168,7 @@ final class GameServiceTest extends TestCase
                 'playerId' => 9,
                 'name' => 'Hugh',
                 'position' => 1,
+                'placement' => null,
                 'score' => 26,
                 'isGuest' => false,
             ],
@@ -234,6 +237,7 @@ final class GameServiceTest extends TestCase
                 'playerId' => 21,
                 'name' => 'Busted',
                 'position' => 1,
+                'placement' => null,
                 'score' => 81,
                 'isGuest' => false,
             ],
@@ -241,6 +245,7 @@ final class GameServiceTest extends TestCase
                 'playerId' => 22,
                 'name' => 'Waiting',
                 'position' => 2,
+                'placement' => null,
                 'score' => 120,
                 'isGuest' => false,
             ],
@@ -300,6 +305,7 @@ final class GameServiceTest extends TestCase
                 'playerId' => 31,
                 'name' => 'Winner',
                 'position' => 1,
+                'placement' => 1,
                 'score' => 0,
                 'isGuest' => false,
             ],
@@ -307,6 +313,7 @@ final class GameServiceTest extends TestCase
                 'playerId' => 32,
                 'name' => 'Middle',
                 'position' => 2,
+                'placement' => null,
                 'score' => 140,
                 'isGuest' => false,
             ],
@@ -314,6 +321,7 @@ final class GameServiceTest extends TestCase
                 'playerId' => 33,
                 'name' => 'Last',
                 'position' => 3,
+                'placement' => null,
                 'score' => 200,
                 'isGuest' => true,
             ],
@@ -330,6 +338,7 @@ final class GameServiceTest extends TestCase
 
         self::assertSame([31, 32, 33], array_map(static fn($player) => $player->id, $dto->players));
         self::assertSame([1, 2, 3], array_map(static fn($player) => $player->position, $dto->players));
+        self::assertSame([1, null, null], array_map(static fn($player) => $player->placement, $dto->players));
         self::assertSame(32, $dto->activePlayerId);
 
         $finishedPlayer = $dto->players[0];
@@ -371,6 +380,7 @@ final class GameServiceTest extends TestCase
                 'playerId' => 41,
                 'name' => 'History',
                 'position' => 1,
+                'placement' => null,
                 'score' => 141,
                 'isGuest' => false,
             ],

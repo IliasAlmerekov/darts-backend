@@ -61,10 +61,18 @@ final readonly class GameReopenService implements GameReopenServiceInterface
         $this->gameRepository->abortStartedGames($game->getGameId());
         $game->setStatus(GameStatus::Started);
         $game->setFinishedAt(null);
-        $game->setWinner(null);
 
+        // Same rule as undo: a seat with score left has no placement and cannot hold the win.
         foreach ($game->getGamePlayers() as $gamePlayer) {
-            $gamePlayer->setIsWinner(false);
+            if (($gamePlayer->getScore() ?? $game->getStartScore()) <= 0) {
+                continue;
+            }
+
+            $gamePlayer->setPlacement(null);
+            if (true === $gamePlayer->isWinner()) {
+                $gamePlayer->setIsWinner(false);
+                $game->setWinner(null);
+            }
         }
 
         $this->entityManager->flush();

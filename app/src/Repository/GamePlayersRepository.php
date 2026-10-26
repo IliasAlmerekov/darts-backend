@@ -39,7 +39,7 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
      *
      * @param int $gameId
      *
-     * @return array<int, array{id:int|null,name:string|null,position:int|null,isGuest:bool}>
+     * @return array<int, array{id:int|null,name:string|null,position:int|null,placement:int|null,isGuest:bool}>
      */
     #[\Override]
     public function findPlayersWithUserInfo(int $gameId): array
@@ -49,6 +49,7 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
                 'u.id as id',
                 "COALESCE(NULLIF(TRIM(gp.displayNameSnapshot), ''), NULLIF(TRIM(u.displayName), ''), TRIM(u.username)) as name",
                 'gp.position as position',
+                'gp.placement as placement',
                 'u.isGuest as isGuest'
             )
             ->innerJoin('gp.player', 'u')
@@ -60,6 +61,7 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
                 'id' => isset($player['id']) ? (int) $player['id'] : null,
                 'name' => $player['name'] ?? null,
                 'position' => isset($player['position']) ? (int) $player['position'] : null,
+                'placement' => isset($player['placement']) ? (int) $player['placement'] : null,
                 'isGuest' => isset($player['isGuest']) ? (bool) $player['isGuest'] : false,
             ];
         }, $players);
@@ -252,7 +254,7 @@ SQL,
     /**
      * @param int $gameId
      *
-     * @return array<int, array{playerId:int,name:string,position:int|null,score:int|null,isGuest:bool}>
+     * @return array<int, array{playerId:int,name:string,position:int|null,placement:int|null,score:int|null,isGuest:bool}>
      */
     #[\Override]
     public function findGameStatePlayersByGameId(int $gameId): array
@@ -262,6 +264,7 @@ SQL,
                 'player.id AS playerId',
                 "COALESCE(NULLIF(TRIM(gp.displayNameSnapshot), ''), NULLIF(TRIM(player.displayName), ''), TRIM(player.username)) AS name",
                 'gp.position AS position',
+                'gp.placement AS placement',
                 'gp.score AS score',
                 'player.isGuest AS isGuest'
             )
@@ -274,6 +277,7 @@ SQL,
                 'playerId' => (int) $row['playerId'],
                 'name' => (string) $row['name'],
                 'position' => isset($row['position']) ? (int) $row['position'] : null,
+                'placement' => isset($row['placement']) ? (int) $row['placement'] : null,
                 'score' => isset($row['score']) ? (int) $row['score'] : null,
                 'isGuest' => isset($row['isGuest']) ? (bool) $row['isGuest'] : false,
             ];

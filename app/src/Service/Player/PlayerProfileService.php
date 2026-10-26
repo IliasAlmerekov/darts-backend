@@ -116,7 +116,7 @@ final readonly class PlayerProfileService implements PlayerProfileServiceInterfa
                 $participants[] = new PlayerProfileParticipantDto(
                     playerId: null !== $user && !$user->isGuest() ? $user->getId() : null,
                     displayName: ParticipantResult::displayName($seat),
-                    placement: $seat->getPosition(),
+                    placement: $seat->getPlacement(),
                     isSelf: $isSelf,
                 );
             }
@@ -124,7 +124,7 @@ final readonly class PlayerProfileService implements PlayerProfileServiceInterfa
             $recentGames[] = new PlayerProfileGameDto(
                 gameId: $gameId,
                 finishedAt: $game['finishedAt']?->format(DateTimeInterface::ATOM),
-                placement: $ownSeat?->getPosition(),
+                placement: $ownSeat?->getPlacement(),
                 roundAverage: null !== $ownSeat
                     ? $this->ownRoundAverage($ownSeat, $playerId, $finishedRoundsByGameId[$gameId] ?? 0, $totals)
                     : 0.0,

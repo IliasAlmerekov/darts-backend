@@ -237,7 +237,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             // Check, ob der Spieler gewonnen hat
             if (0 === $newScore && $currentScore > 0) {
                 $finishedPlayers = $this->gamePlayersRepository->countFinishedPlayers((int) $game->getGameId());
-                $player->setPosition($finishedPlayers + 1);
+                $player->setPlacement($finishedPlayers + 1);
                 if (0 === $finishedPlayers) {
                     $game->setWinner($player->getPlayer());
                     $player->setIsWinner(true);
@@ -260,7 +260,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
                 if ($activePlayers <= 1) {
                     $game->setStatus(GameStatus::Finished);
                     $game->setFinishedAt(new DateTimeImmutable());
-                    $this->normalizeFinishedGamePositions($game);
+                    $this->normalizeFinishedGamePlacements($game);
                 }
             }
         }
@@ -349,16 +349,20 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             $game->setFinishedAt(null);
         }
 
+        // A seat with score left has no placement and cannot hold the win; the others keep both.
         foreach ($game->getGamePlayers() as $gamePlayer) {
             $currentPlayerScore = $gamePlayer->getScore() ?? $game->getStartScore();
-            if ($currentPlayerScore > 0 && null !== $gamePlayer->getPosition()) {
-                $gamePlayer->setPosition(0);
+            if ($currentPlayerScore <= 0) {
+                continue;
             }
 
-            $gamePlayer->setIsWinner(false);
+            $gamePlayer->setPlacement(null);
+            if (true === $gamePlayer->isWinner()) {
+                $gamePlayer->setIsWinner(false);
+                $game->setWinner(null);
+            }
         }
 
-        $game->setWinner(null);
         $game->setRound($lastThrowRoundNumber);
         $this->reopenRound($game, $lastThrow->getRound());
 
@@ -494,15 +498,15 @@ final readonly class GameThrowService implements GameThrowServiceInterface
     }
 
     /**
-     * Normalize final standings to unique positions (1..N).
-     * Keeps finished players first (ordered by their existing finish position),
-     * then appends unfinished players preserving their previous order.
+     * Give every seat a unique placement (1..N) when the game ends.
+     * Seats that checked out keep their order of placement, then the seats with score left
+     * follow in turn order. Position stays untouched.
      *
      * @param Game $game
      *
      * @return void
      */
-    private function normalizeFinishedGamePositions(Game $game): void
+    private function normalizeFinishedGamePlacements(Game $game): void
     {
         $finishedPlayers = [];
         $unfinishedPlayers = [];
@@ -517,18 +521,13 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             $unfinishedPlayers[] = $gamePlayer;
         }
 
-        usort($finishedPlayers, TurnOrder::compare(...));
+        usort($finishedPlayers, static fn (GamePlayers $left, GamePlayers $right): int => ($left->getPlacement() ?? PHP_INT_MAX) <=> ($right->getPlacement() ?? PHP_INT_MAX));
         usort($unfinishedPlayers, TurnOrder::compare(...));
 
-        $position = 1;
-        foreach ($finishedPlayers as $finishedPlayer) {
-            $finishedPlayer->setPosition($position);
-            $position++;
-        }
-
-        foreach ($unfinishedPlayers as $unfinishedPlayer) {
-            $unfinishedPlayer->setPosition($position);
-            $position++;
+        $placement = 1;
+        foreach ([...$finishedPlayers, ...$unfinishedPlayers] as $gamePlayer) {
+            $gamePlayer->setPlacement($placement);
+            $placement++;
         }
 
         if ([] !== $finishedPlayers) {

@@ -172,6 +172,6 @@ final class PlayerProfileServiceTest extends TestCase
 
     private function createSeat(User $user, int $placement, int $score): GamePlayers
     {
-        return (new GamePlayers())->setPlayer($user)->setPosition($placement)->setScore($score);
+        return (new GamePlayers())->setPlayer($user)->setPlacement($placement)->setScore($score);
     }
 }

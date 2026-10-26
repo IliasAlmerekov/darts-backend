@@ -46,7 +46,7 @@ final class GamePlayersRepositoryTest extends KernelTestCase
         $secondPlayerInGame = $this->createUser('player-second');
 
         $this->persistGamePlayer($game, $playerInGame, position: 2);
-        $this->persistGamePlayer($game, $secondPlayerInGame, position: 1);
+        $this->persistGamePlayer($game, $secondPlayerInGame, position: 1)->setPlacement(2);
         $this->persistGamePlayer($otherGame, $playerInOtherGame);
         $this->entityManager->flush();
 
@@ -56,9 +56,11 @@ final class GamePlayersRepositoryTest extends KernelTestCase
         self::assertSame($secondPlayerInGame->getId(), (int) $result[0]['id']);
         self::assertSame($secondPlayerInGame->getUsername(), $result[0]['name']);
         self::assertSame(1, $result[0]['position']);
+        self::assertSame(2, $result[0]['placement']);
         self::assertSame($playerInGame->getId(), (int) $result[1]['id']);
         self::assertSame($playerInGame->getUsername(), $result[1]['name']);
         self::assertSame(2, $result[1]['position']);
+        self::assertNull($result[1]['placement']);
     }
 
     public function testIsPlayerInGame(): void
@@ -178,7 +180,8 @@ final class GamePlayersRepositoryTest extends KernelTestCase
 
         $this->persistGamePlayer($game, $alpha, score: 140, position: 2);
         $this->persistGamePlayer($game, $beta, score: 32, position: 1)
-            ->setDisplayNameSnapshot('Snapshot Beta');
+            ->setDisplayNameSnapshot('Snapshot Beta')
+            ->setPlacement(3);
         $this->entityManager->flush();
 
         $result = $this->repository->findGameStatePlayersByGameId($game->getGameId());
@@ -188,6 +191,7 @@ final class GamePlayersRepositoryTest extends KernelTestCase
                 'playerId' => $beta->getId(),
                 'name' => 'Snapshot Beta',
                 'position' => 1,
+                'placement' => 3,
                 'score' => 32,
                 'isGuest' => true,
             ],
@@ -195,6 +199,7 @@ final class GamePlayersRepositoryTest extends KernelTestCase
                 'playerId' => $alpha->getId(),
                 'name' => 'alpha',
                 'position' => 2,
+                'placement' => null,
                 'score' => 140,
                 'isGuest' => false,
             ],

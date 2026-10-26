@@ -25,7 +25,7 @@ use Override;
 /**
  * Builds compact throw acknowledgements for low-latency clients.
  *
- * @phpstan-type GameStatePlayerRow array{playerId:int,name:string,position:int|null,score:int|null,isGuest:bool}
+ * @phpstan-type GameStatePlayerRow array{playerId:int,name:string,position:int|null,placement:int|null,score:int|null,isGuest:bool}
  * @phpstan-type RoundStateSnapshot array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}>
  *
  * @psalm-suppress UnusedClass Reason: service is auto-wired by the container and used through DI.
@@ -264,6 +264,7 @@ final readonly class GameDeltaService implements GameDeltaServiceInterface
                 name: $name,
                 score: isset($gameStatePlayer['score']) ? (int) $gameStatePlayer['score'] : $game->getStartScore(),
                 position: isset($gameStatePlayer['position']) ? (int) $gameStatePlayer['position'] : null,
+                placement: isset($gameStatePlayer['placement']) ? (int) $gameStatePlayer['placement'] : null,
                 isActive: $playerId === $activePlayerId,
                 isGuest: true === ($gameStatePlayer['isGuest'] ?? false),
                 isBust: $isBust,

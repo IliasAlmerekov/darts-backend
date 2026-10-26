@@ -1174,6 +1174,7 @@ final class GameThrowServiceTest extends TestCase
             ->setPlayer($winnerUser)
             ->setScore(0)
             ->setPosition(1)
+            ->setPlacement(1)
             ->setIsWinner(true);
         $otherPlayer = (new GamePlayers())
             ->setPlayer($otherUser)
@@ -1248,8 +1249,10 @@ final class GameThrowServiceTest extends TestCase
         self::assertSame(GameStatus::Started, $game->getStatus());
         self::assertNull($game->getFinishedAt());
         self::assertSame(40, $winnerPlayer->getScore());
-        self::assertSame(0, $winnerPlayer->getPosition());
-        self::assertSame(0, $otherPlayer->getPosition());
+        self::assertSame(1, $winnerPlayer->getPosition());
+        self::assertSame(2, $otherPlayer->getPosition());
+        self::assertNull($winnerPlayer->getPlacement());
+        self::assertNull($otherPlayer->getPlacement());
         self::assertNull($game->getWinner());
         self::assertFalse((bool) $winnerPlayer->isWinner());
         self::assertFalse((bool) $otherPlayer->isWinner());
@@ -1350,8 +1353,10 @@ final class GameThrowServiceTest extends TestCase
         self::assertNotNull($undoneThrow);
         self::assertTrue($undoneThrow->isBust);
         self::assertSame(181, $player->getScore());
-        self::assertSame(0, $player->getPosition());
-        self::assertSame(0, $otherPlayer->getPosition());
+        self::assertSame(1, $player->getPosition());
+        self::assertSame(2, $otherPlayer->getPosition());
+        self::assertNull($player->getPlacement());
+        self::assertNull($otherPlayer->getPlacement());
         self::assertSame(4, $game->getRound());
         self::assertNull($game->getWinner());
         self::assertFalse((bool) $player->isWinner());
@@ -1380,6 +1385,7 @@ final class GameThrowServiceTest extends TestCase
             ->setPlayer($winnerUser)
             ->setScore(0)
             ->setPosition(1)
+            ->setPlacement(1)
             ->setIsWinner(true);
         $secondPlayer = (new GamePlayers())
             ->setPlayer($secondUser)
@@ -1456,9 +1462,10 @@ final class GameThrowServiceTest extends TestCase
 
         self::assertNotNull($undoneThrow);
         self::assertSame(40, $winnerPlayer->getScore());
-        self::assertSame(0, $winnerPlayer->getPosition());
-        self::assertSame(0, $secondPlayer->getPosition());
-        self::assertSame(0, $thirdPlayer->getPosition());
+        self::assertSame(1, $winnerPlayer->getPosition());
+        self::assertSame(2, $secondPlayer->getPosition());
+        self::assertSame(3, $thirdPlayer->getPosition());
+        self::assertNull($winnerPlayer->getPlacement());
         self::assertSame(GameStatus::Started, $game->getStatus());
         self::assertNull($game->getFinishedAt());
         self::assertNull($game->getWinner());
@@ -1559,7 +1566,7 @@ final class GameThrowServiceTest extends TestCase
     /**
      * @throws ReflectionException
      */
-    public function testRecordThrowFinishesGameAndNormalizesFinalPositions(): void
+    public function testRecordThrowFinishesGameAndNormalizesFinalPlacementsWithoutTouchingPositions(): void
     {
         $game = new Game();
         $this->setPrivateProperty($game, 'gameId', 10);
@@ -1584,6 +1591,7 @@ final class GameThrowServiceTest extends TestCase
             ->setPlayer($guestWinnerUser)
             ->setScore(0)
             ->setPosition(1)
+            ->setPlacement(1)
             ->setIsWinner(true);
 
         $guestSecondUser = (new User())->setUsername('Guest Second')->setIsGuest(true);
@@ -1592,6 +1600,7 @@ final class GameThrowServiceTest extends TestCase
             ->setPlayer($guestSecondUser)
             ->setScore(0)
             ->setPosition(2)
+            ->setPlacement(2)
             ->setIsWinner(false);
 
         $normalThirdUser = (new User())->setUsername('Regular Third');
@@ -1653,10 +1662,12 @@ final class GameThrowServiceTest extends TestCase
         self::assertSame(GameStatus::Finished, $game->getStatus());
         self::assertNotNull($game->getFinishedAt());
         self::assertSame($guestWinnerUser, $game->getWinner());
-        self::assertSame(1, $guestWinner->getPosition());
-        self::assertSame(2, $guestSecond->getPosition());
-        self::assertSame(3, $normalThird->getPosition());
-        self::assertSame(4, $normalLast->getPosition());
+        self::assertSame(1, $guestWinner->getPlacement());
+        self::assertSame(2, $guestSecond->getPlacement());
+        self::assertSame(3, $normalThird->getPlacement());
+        self::assertSame(4, $normalLast->getPlacement());
+        // The positions are the turn order and stay as the lobby set them.
+        self::assertSame([4, 1, 2, 3], [$normalLast->getPosition(), $guestWinner->getPosition(), $guestSecond->getPosition(), $normalThird->getPosition()]);
     }
 
     /**

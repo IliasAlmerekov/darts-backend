@@ -74,7 +74,7 @@ interface GamePlayersRepositoryInterface
     /**
      * @param int $gameId
      *
-     * @return array<int, array{id:int|null,name:string|null,position:int|null,isGuest:bool}>
+     * @return array<int, array{id:int|null,name:string|null,position:int|null,placement:int|null,isGuest:bool}>
      */
     public function findPlayersWithUserInfo(int $gameId): array;
 
@@ -99,7 +99,7 @@ interface GamePlayersRepositoryInterface
     /**
      * @param int $gameId
      *
-     * @return array<int, array{playerId:int,name:string,position:int|null,score:int|null,isGuest:bool}>
+     * @return array<int, array{playerId:int,name:string,position:int|null,placement:int|null,score:int|null,isGuest:bool}>
      */
     public function findGameStatePlayersByGameId(int $gameId): array;
 

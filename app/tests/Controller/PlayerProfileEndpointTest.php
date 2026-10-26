@@ -140,7 +140,7 @@ final class PlayerProfileEndpointTest extends WebTestCase
             static fn(array $row): bool => $row['playerId'] === $player->getId()
         ));
         self::assertCount(1, $own);
-        self::assertSame(2, $own[0]['position']);
+        self::assertSame(2, $own[0]['placement']);
         self::assertSame(45.0, $own[0]['roundAverage']);
     }
 
@@ -544,7 +544,7 @@ final class PlayerProfileEndpointTest extends WebTestCase
         foreach ($results as [$participant, $placement, $score]) {
             foreach ($game->getGamePlayers() as $seat) {
                 if ($seat->getPlayer() === $participant) {
-                    $seat->setPosition($placement)->setScore($score)->setIsWinner(1 === $placement);
+                    $seat->setPlacement($placement)->setScore($score)->setIsWinner(1 === $placement);
                 }
             }
             if (1 === $placement) {
