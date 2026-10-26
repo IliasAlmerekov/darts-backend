@@ -548,12 +548,12 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             throw new InvalidThrowException('Throw cannot be both double and triple at the same time.');
         }
 
-        if ($isTriple && ($baseValue < 0 || $baseValue > 20)) {
-            throw new InvalidThrowException('Triple throws require a base value between 0 and 20.');
+        if ($isTriple && ($baseValue < 1 || $baseValue > 20)) {
+            throw new InvalidThrowException('Triple throws require a base value between 1 and 20.');
         }
 
-        if ($isDouble && ($baseValue < 0 || $baseValue > 20) && 25 !== $baseValue) {
-            throw new InvalidThrowException('Double throws require a base value between 0 and 20, or 25 for bull.');
+        if ($isDouble && ($baseValue < 1 || $baseValue > 20) && 25 !== $baseValue) {
+            throw new InvalidThrowException('Double throws require a base value between 1 and 20, or 25 for bull.');
         }
 
         if (!$isDouble && !$isTriple && ($baseValue < 0 || $baseValue > 20) && 25 !== $baseValue) {
