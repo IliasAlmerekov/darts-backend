@@ -71,6 +71,19 @@ final class PlacementApartFromPositionEndpointTest extends WebTestCase
         self::assertSame(['a' => 1, 'b' => 2, 'c' => 3], $this->positions($gameId));
     }
 
+    public function testNextTurnAfterACheckoutFollowsTheZeroBasedLobbyOrderNotTheSeatId(): void
+    {
+        // The lobby posts positions 0..N-1. Seat ids run b, a, c; the lobby order is a, b, c.
+        // a checks out with the first dart; the next turn goes to b, the seat after a in the lobby.
+        $gameId = $this->createGame(20, [[$this->b, 1, 20], [$this->a, 0, 20], [$this->c, 2, 20]]);
+
+        $this->throwDart($gameId, $this->a, 20, Response::HTTP_OK);
+
+        $this->throwDart($gameId, $this->c, 1, Response::HTTP_CONFLICT);
+        $this->throwDart($gameId, $this->b, 1, Response::HTTP_OK);
+        self::assertSame(['a' => 0, 'b' => 1, 'c' => 2], $this->positions($gameId));
+    }
+
     public function testManualEndThenReopenKeepsTheTurnOrderAndClearsThePlacementsOfSeatsWithScoreLeft(): void
     {
         // b has the lowest score, so b takes placement 1 at the manual end.
