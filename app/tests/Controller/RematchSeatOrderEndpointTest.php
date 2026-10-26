@@ -74,7 +74,7 @@ final class RematchSeatOrderEndpointTest extends WebTestCase
         self::assertSame(['c', 'a', 'b'], $this->seatedUsers($lobbyId));
     }
 
-    public function testRematchIntoAnOpenLobbyKeepsSeatedPlayersAndAppendsTheMissingLoserFirst(): void
+    public function testRematchIntoAnOpenLobbyKeepsSeatedPlayersAndAppendsTheMissingLastPlacedFirst(): void
     {
         // An open lobby is older than the finished game only in data from before ADR 0003.
         $lobbyId = $this->createGame(GameStatus::Lobby, [[$this->b, 1, 301]]);
