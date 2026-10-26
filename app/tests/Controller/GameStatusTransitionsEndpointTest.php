@@ -87,6 +87,20 @@ final class GameStatusTransitionsEndpointTest extends WebTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_OK, (string) $this->client->getResponse()->getContent());
         self::assertSame($before, $this->storedFinishState($gameId));
         self::assertSame('2020-01-01 10:00:00', $before['finishedAt']);
+        $repeated = $this->decodeResponse();
+
+        // The body is the stored summary: the same one GET /finished returns for this game.
+        $this->request(Request::METHOD_GET, sprintf('/api/game/%d/finished', $gameId));
+        self::assertSame($this->decodeResponse(), $repeated);
+        self::assertSame($gameId, $repeated['gameId'] ?? null);
+        self::assertSame((new DateTimeImmutable('2020-01-01 10:00:00'))->format(DATE_ATOM), $repeated['finishedAt'] ?? null);
+        $winner = $repeated['winner'] ?? null;
+        self::assertIsArray($winner);
+        self::assertSame((int) $this->second->getId(), $winner['id'] ?? null);
+        $players = $repeated['finishedPlayers'] ?? null;
+        self::assertIsArray($players);
+        self::assertSame([(int) $this->second->getId(), (int) $this->first->getId()], array_column($players, 'playerId'));
+        self::assertSame([1, 2], array_column($players, 'position'));
     }
 
     public function testAbortFromLobbyIsRejected(): void
@@ -115,6 +129,7 @@ final class GameStatusTransitionsEndpointTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(Response::HTTP_OK, (string) $this->client->getResponse()->getContent());
         self::assertSame('aborted', $this->storedStatus($gameId));
+        self::assertSame(['message' => 'Game aborted successfully', 'success' => true], $this->decodeResponse());
     }
 
     public function testAbortFromAbortedIsIdempotent(): void
@@ -125,6 +140,7 @@ final class GameStatusTransitionsEndpointTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(Response::HTTP_OK, (string) $this->client->getResponse()->getContent());
         self::assertSame('aborted', $this->storedStatus($gameId));
+        self::assertSame(['message' => 'Game aborted successfully', 'success' => true], $this->decodeResponse());
     }
 
     public function testUndoFromLobbyIsRejected(): void
@@ -192,10 +208,13 @@ final class GameStatusTransitionsEndpointTest extends WebTestCase
     {
         $game = (new Game())->setDate(new DateTime())->setStartScore(301)->setStatus($status)->setRound(1)->setFinishedAt($finishedAt);
         $this->entityManager->persist($game);
+        if (GameStatus::Finished === $status) {
+            $game->setWinner($this->entityManager->getReference(User::class, $this->second->getId()));
+        }
         // The first player leads on score; a finished game ranks them second to show the stored placements win.
         $seats = [[$this->first, 20, GameStatus::Finished === $status ? 2 : 1], [$this->second, 50, GameStatus::Finished === $status ? 1 : 2]];
         foreach ($seats as [$user, $score, $position]) {
-            $seat = (new GamePlayers())->setPlayer($user)->setScore($score)->setPosition($position);
+            $seat = (new GamePlayers())->setPlayer($user)->setScore($score)->setPosition($position)->setIsWinner(GameStatus::Finished === $status && 1 === $position);
             $game->addGamePlayer($seat);
             $this->entityManager->persist($seat);
         }
@@ -230,6 +249,17 @@ final class GameStatusTransitionsEndpointTest extends WebTestCase
         $body = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
         self::assertSame($errorCode, $body['error'] ?? null);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function decodeResponse(): array
+    {
+        $body = json_decode((string) $this->client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+
+        return $body;
     }
 
     private function storedStatus(int $gameId): string
