@@ -13,6 +13,7 @@ enum ErrorCode: string
     case GameNotFound = 'GAME_NOT_FOUND';
     case GameRoomFull = 'GAME_ROOM_FULL';
     case GameInvalidOutMode = 'GAME_INVALID_OUT_MODE';
+    case GameConflictingOutRules = 'GAME_CONFLICTING_OUT_RULES';
     case GameInvalidPlayerOrder = 'GAME_INVALID_PLAYER_ORDER';
     case GameInvalidStartScore = 'GAME_INVALID_START_SCORE';
     case GameNoSettingsProvided = 'GAME_NO_SETTINGS_PROVIDED';
@@ -24,6 +25,7 @@ enum ErrorCode: string
     case GameSettingsNotEditable = 'GAME_SETTINGS_NOT_EDITABLE';
     case GameStartNotAllowed = 'GAME_START_NOT_ALLOWED';
     case GameStartScoreChangeNotAllowed = 'GAME_START_SCORE_CHANGE_NOT_ALLOWED';
+    case GameOutRuleChangeNotAllowed = 'GAME_OUT_RULE_CHANGE_NOT_ALLOWED';
     case GameAlreadyStarted = 'GAME_ALREADY_STARTED';
     case GameJoinNotAllowed = 'GAME_JOIN_NOT_ALLOWED';
     case GameNotFinished = 'GAME_NOT_FINISHED';

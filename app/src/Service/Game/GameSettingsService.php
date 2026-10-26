@@ -11,13 +11,16 @@ namespace App\Service\Game;
 
 use App\Dto\GameSettingsRequest;
 use App\Entity\Game;
+use App\Exception\Game\ConflictingOutRulesException;
 use App\Exception\Game\InvalidOutModeException;
 use App\Exception\Game\InvalidStartScoreException;
 use App\Exception\Game\NoSettingsProvidedException;
+use App\Exception\Game\OutRuleCannotBeChangedAfterFirstThrowException;
 use App\Exception\Game\SettingsNotEditableException;
 use App\Exception\Game\StartScoreCannotBeChangedAfterStartException;
 use App\Enum\GameStatus;
 use App\Repository\GameRepositoryInterface;
+use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Override;
@@ -33,14 +36,19 @@ final readonly class GameSettingsService implements GameSettingsServiceInterface
     private const ALLOWED_START_SCORES = [101, 201, 301, 401, 501];
 
     /**
-     * @param EntityManagerInterface     $entityManager
-     * @param GameAccessServiceInterface $gameAccessService
-     * @param GameRepositoryInterface    $gameRepository
+     * @param EntityManagerInterface         $entityManager
+     * @param GameAccessServiceInterface     $gameAccessService
+     * @param GameRepositoryInterface        $gameRepository
+     * @param RoundThrowsRepositoryInterface $roundThrowsRepository
      *
      * @psalm-suppress PossiblyUnusedMethod Reason: constructor is used by Symfony autowiring.
      */
-    public function __construct(private EntityManagerInterface $entityManager, private GameAccessServiceInterface $gameAccessService, private GameRepositoryInterface $gameRepository)
-    {
+    public function __construct(
+        private EntityManagerInterface $entityManager,
+        private GameAccessServiceInterface $gameAccessService,
+        private GameRepositoryInterface $gameRepository,
+        private RoundThrowsRepositoryInterface $roundThrowsRepository,
+    ) {
     }
 
     /**
@@ -88,6 +96,12 @@ final readonly class GameSettingsService implements GameSettingsServiceInterface
             $game->setStartScore($dto->startScore);
         }
 
+        $changesOutRule = null !== $dto->outMode || null !== $dto->doubleOut || null !== $dto->tripleOut;
+        // Like startScore, a sent out rule is a change even when it equals the current one.
+        if ($changesOutRule && $isStarted && $this->roundThrowsRepository->count(['game' => $game]) > 0) {
+            throw new OutRuleCannotBeChangedAfterFirstThrowException();
+        }
+
         $doubleOut = $game->isDoubleOut();
         $tripleOut = $game->isTripleOut();
 
@@ -113,6 +127,10 @@ final readonly class GameSettingsService implements GameSettingsServiceInterface
             if (null !== $dto->tripleOut) {
                 $tripleOut = $dto->tripleOut;
             }
+        }
+
+        if ($doubleOut && $tripleOut) {
+            throw new ConflictingOutRulesException();
         }
 
         $game->setDoubleOut($doubleOut);
