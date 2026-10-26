@@ -62,6 +62,9 @@ interface GamePlayersRepositoryInterface
     public function existsNameInGame(int $gameId, string $name): bool;
 
     /**
+     * Reads with a shared lock (FOR SHARE), so the next position also counts seats
+     * committed after the transaction's snapshot was taken.
+     *
      * @param int $gameId
      *
      * @return int

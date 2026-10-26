@@ -29,6 +29,7 @@ use App\Service\Game\GameThrowService;
 use App\Service\Game\NewestGameGuard;
 use App\Service\Game\OpenLobbyService;
 use App\Service\Game\RematchService;
+use App\Service\Player\GuestPlayerService;
 use App\Service\Player\PlayerManagementService;
 use App\Service\Security\GameAccessServiceInterface;
 use App\Tests\Support\ScratchDatabase;
@@ -105,6 +106,72 @@ final class ConcurrentSeatingTest extends KernelTestCase
             [[$bob, 1], [$vanya, 2]],
             $this->other->fetchAllNumeric('SELECT player_id, position FROM game_players WHERE game_id = ? ORDER BY position, game_player_id', [$lobby]),
         );
+    }
+
+    public function testJoinGivesTheNextPositionAfterASeatCommittedWhileItWaitedForTheLock(): void
+    {
+        $bob = $this->insertUser('bob');
+        $anna = $this->insertUser('anna');
+        $lobby = $this->insertGame('lobby');
+        $gameRepository = new GameRepository($this->registry());
+        $service = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager);
+
+        // The join's query order: find() takes the snapshot, then the locking reload.
+        $this->request->beginTransaction();
+        $game = $this->entityManager->find(Game::class, $lobby);
+        self::assertInstanceOf(Game::class, $game);
+        // Bob's join holds the game lock, adds his seat and commits first.
+        $this->other->beginTransaction();
+        $this->other->fetchOne('SELECT game_id FROM game WHERE game_id = ? FOR UPDATE', [$lobby]);
+        $this->insertSeat($lobby, $bob, 1);
+        $this->other->commit();
+        $gameRepository->refreshWithSeatsForUpdate($game);
+        $service->addPlayer($lobby, $anna);
+        $this->request->commit();
+
+        self::assertSame(
+            [[$bob, 1], [$anna, 2]],
+            $this->other->fetchAllNumeric('SELECT player_id, position FROM game_players WHERE game_id = ? ORDER BY position, game_player_id', [$lobby]),
+        );
+    }
+
+    public function testGuestGetsTheNextPositionAfterASeatCommittedAfterTheSnapshot(): void
+    {
+        $bob = $this->insertUser('bob');
+        $lobby = $this->insertGame('lobby');
+
+        $this->request->beginTransaction();
+        $this->takeSnapshot();
+        // Bob's join holds the game lock, adds his seat and commits while the guest is added.
+        $this->insertSeat($lobby, $bob, 1);
+        $guest = $this->addGuest($lobby, 'Alex');
+        $this->request->commit();
+
+        self::assertSame(2, $guest['position']);
+        self::assertSame(
+            [[$bob, 1], [$guest['playerId'], 2]],
+            $this->other->fetchAllNumeric('SELECT player_id, position FROM game_players WHERE game_id = ? ORDER BY position, game_player_id', [$lobby]),
+        );
+    }
+
+    public function testGuestWaitsForTheGameLock(): void
+    {
+        $lobby = $this->insertGame('lobby');
+
+        // Another request holds a lock on the game and has not committed.
+        $this->other->beginTransaction();
+        $this->other->fetchOne('SELECT game_id FROM game WHERE game_id = ? FOR SHARE', [$lobby]);
+
+        $this->request->executeStatement('SET SESSION innodb_lock_wait_timeout = 1');
+        try {
+            $this->addGuest($lobby, 'Alex');
+            self::fail('The guest was added without the game lock.');
+        } catch (LockWaitTimeoutException) {
+        }
+        $this->other->commit();
+
+        self::assertSame(0, (int) $this->other->fetchOne('SELECT COUNT(*) FROM game_players WHERE game_id = ?', [$lobby]));
+        self::assertSame(0, (int) $this->other->fetchOne('SELECT COUNT(*) FROM user WHERE is_guest = 1'));
     }
 
     public function testIsPlayerInGameForShareSeesASeatCommittedAfterTheSnapshot(): void
@@ -429,6 +496,29 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $this->other->insert('game', ['date' => '2026-10-01', 'status' => $status]);
 
         return (int) $this->other->lastInsertId();
+    }
+
+    /**
+     * Adds the guest through a new entity manager: a failed transaction closes the old one.
+     *
+     * @return array{playerId:int,name:string,position:int|null,isGuest:bool}
+     */
+    private function addGuest(int $gameId, string $name): array
+    {
+        /** @var EntityManagerInterface $testEntityManager */
+        $testEntityManager = static::getContainer()->get(EntityManagerInterface::class);
+        $this->entityManager = new EntityManager($this->request, $testEntityManager->getConfiguration());
+        $gamePlayersRepository = new GamePlayersRepository($this->registry());
+        $game = $this->entityManager->find(Game::class, $gameId);
+        self::assertInstanceOf(Game::class, $game);
+        $service = new GuestPlayerService(
+            $gamePlayersRepository,
+            new PlayerManagementService($gamePlayersRepository, $this->entityManager),
+            $this->entityManager,
+            new GameRepository($this->registry()),
+        );
+
+        return $service->createGuestPlayer($game, $name);
     }
 
     private function throwService(): GameThrowService
