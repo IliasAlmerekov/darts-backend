@@ -12,6 +12,7 @@ namespace App\Service\Game;
 use App\Dto\StartGameRequest;
 use App\Entity\Game;
 use App\Entity\Round;
+use App\Exception\Game\ConflictingOutRulesException;
 use App\Exception\Game\GameMustHaveValidPlayerCountException;
 use App\Exception\Game\GameStartNotAllowedException;
 use App\Exception\Game\PlayerPositionsCountMismatchException;
@@ -65,6 +66,9 @@ final readonly class GameStartService implements GameStartServiceInterface
             throw new GameStartNotAllowedException($status);
         }
         $this->guardPlayerCount($game, $dto);
+        $doubleOut = $dto->doubleOut ?? $game->isDoubleOut();
+        $tripleOut = $dto->tripleOut ?? $game->isTripleOut();
+        ConflictingOutRulesException::assertCompatible($doubleOut, $tripleOut);
         // The tablet runs one game at a time (ADR 0004).
         $this->gameRepository->abortStartedGames($game->getGameId());
         $game->setStatus(GameStatus::Started);
@@ -72,13 +76,8 @@ final readonly class GameStartService implements GameStartServiceInterface
             $game->setStartScore($dto->startScore);
         }
 
-        if (null !== $dto->doubleOut) {
-            $game->setDoubleOut($dto->doubleOut);
-        }
-
-        if (null !== $dto->tripleOut) {
-            $game->setTripleOut($dto->tripleOut);
-        }
+        $game->setDoubleOut($doubleOut);
+        $game->setTripleOut($tripleOut);
 
         // Initialize the first round if none exists
         if (!$this->hasExistingRounds($game)) {

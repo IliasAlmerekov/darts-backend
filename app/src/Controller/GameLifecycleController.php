@@ -72,7 +72,7 @@ final class GameLifecycleController extends AbstractController
     )]
     #[ApiResponse(groups: ['game:read'])]
     #[OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Ein Setting wurde in camelCase und in Kleinschreibung mit unterschiedlichen Werten gesendet (`REQUEST_CONFLICTING_SETTING_KEYS`).')]
-    #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht.')]
+    #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht, oder das Spiel hätte danach `doubleOut` und `tripleOut` zugleich (`GAME_CONFLICTING_OUT_RULES`). Das Spiel bleibt unverändert.')]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
     #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'], format: 'json')]
     public function start(#[AttributeMapEntity(id: 'gameId')] Game $game, GameStartServiceInterface $gameStartService, GameServiceInterface $gameService, GameRepositoryInterface $gameRepository, RetryingTransactionInterface $transaction, Request $request, #[MapRequestPayload] StartGameRequest $dto): Game
@@ -118,7 +118,7 @@ final class GameLifecycleController extends AbstractController
     )]
     #[ApiResponse(status: Response::HTTP_CREATED, groups: ['game:read'])]
     #[OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Ein Setting wurde in camelCase und in Kleinschreibung mit unterschiedlichen Werten gesendet (`REQUEST_CONFLICTING_SETTING_KEYS`).')]
-    #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht.')]
+    #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht, oder das Spiel hätte danach `doubleOut` und `tripleOut` zugleich (`GAME_CONFLICTING_OUT_RULES`). Das Spiel bleibt unverändert.')]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
     #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Das alte Spiel ist nicht das neueste Spiel, oder es ist weder beendet noch abgebrochen (`GAME_NOT_NEWEST`). Eine offene Lobby ist immer das neueste Spiel.')]
     #[Route('/api/game/{gameId}/rematch/start', name: 'app_game_rematch_start', methods: ['POST'], format: 'json')]
@@ -152,7 +152,7 @@ final class GameLifecycleController extends AbstractController
         content: new OA\JsonContent(ref: new Model(type: GameResponseDto::class))
     )]
     #[ApiResponse(status: Response::HTTP_CREATED)]
-    #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht.')]
+    #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht, oder das Spiel hätte danach `doubleOut` und `tripleOut` zugleich (`GAME_CONFLICTING_OUT_RULES`). Das Spiel bleibt unverändert.')]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
     #[Route('/api/game/settings', name: 'app_game_settings_create', methods: ['POST'], format: 'json')]
     public function createSettings(GameRoomServiceInterface $gameRoomService, GameSettingsServiceInterface $gameSettingsService, GameServiceInterface $gameService, RetryingTransactionInterface $transaction, #[MapRequestPayload] GameSettingsRequest $dto): mixed
@@ -189,8 +189,9 @@ final class GameLifecycleController extends AbstractController
         content: new OA\JsonContent(ref: new Model(type: GameSettingsResponseDto::class))
     )]
     #[ApiResponse]
-    #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht.')]
+    #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht, oder das Spiel hätte danach `doubleOut` und `tripleOut` zugleich (`GAME_CONFLICTING_OUT_RULES`). Das Spiel bleibt unverändert.')]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
+    #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Das Spiel ist gestartet und der Request sendet `startScore` (`GAME_START_SCORE_CHANGE_NOT_ALLOWED`), oder das Spiel hat schon einen Wurf und der Request sendet `outMode`, `doubleOut` oder `tripleOut`, auch mit dem aktuellen Wert (`GAME_OUT_RULE_CHANGE_NOT_ALLOWED`). Nachdem Undo jeden Wurf entfernt hat, ist die Out-Regel wieder änderbar.')]
     #[Route('/api/game/{gameId}/settings', name: 'app_game_settings', methods: ['PATCH'], format: 'json')]
     public function updateSettings(#[AttributeMapEntity(id: 'gameId')] Game $game, GameSettingsServiceInterface $gameSettingsService, #[MapRequestPayload] GameSettingsRequest $dto): GameSettingsResponseDto
     {

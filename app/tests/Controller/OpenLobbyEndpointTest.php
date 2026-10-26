@@ -57,7 +57,7 @@ final class OpenLobbyEndpointTest extends WebTestCase
             'excludePlayerIds' => [(int) $bob->getId()],
             'startScore' => 501,
             'doubleOut' => true,
-            'tripleOut' => true,
+            'tripleOut' => false,
         ]);
 
         self::assertResponseIsSuccessful();
@@ -67,7 +67,7 @@ final class OpenLobbyEndpointTest extends WebTestCase
         self::assertSame(GameStatus::Lobby, $reloaded->getStatus());
         self::assertSame(501, $reloaded->getStartScore());
         self::assertTrue($reloaded->isDoubleOut());
-        self::assertTrue($reloaded->isTripleOut());
+        self::assertFalse($reloaded->isTripleOut());
         self::assertSame([$bob->getId(), $vanya->getId()], $this->seatedPlayerIds($reloaded));
     }
 

@@ -64,6 +64,18 @@ _Avoid_: Current game (for the tablet's game), active game
 The game with the greatest game id, whatever its status. Undo into play, reopen and rematch act only on the newest game, so an older game never aborts the tablet game (ADR 0005).
 _Avoid_: Latest game, last game
 
+**Out rule**:
+The kind of dart a game's checkout must be: single, double or triple out. A game has exactly one.
+_Avoid_: Out mode, game mode
+
+**Dead score**:
+A remaining score from which no checkout is possible under the game's out rule: 1 in double out, 1 or 2 in triple out.
+_Avoid_: Blocked score, unfinishable score
+
+**Turn**:
+Up to three darts one participant throws in a row. A bust or a checkout ends the turn early.
+_Avoid_: Visit, throw (for the whole turn)
+
 **Profile**:
 The page a player lands on when they open the app without an invitation and without a current game. It shows their own recent finished games and statistics.
 _Avoid_: Dashboard, home page

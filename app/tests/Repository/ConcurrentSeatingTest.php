@@ -503,7 +503,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
 
         try {
-            (new GameSettingsService($this->entityManager, $access, new GameRepository($this->registry())))
+            (new GameSettingsService($this->entityManager, $access, new GameRepository($this->registry()), new RoundThrowsRepository($this->registry())))
                 ->updateSettings($loaded, new GameSettingsRequest(startScore: 501));
             self::fail('The settings changed a finished game.');
         } catch (SettingsNotEditableException) {
