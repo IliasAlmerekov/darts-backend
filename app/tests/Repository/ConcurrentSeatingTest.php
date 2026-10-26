@@ -142,7 +142,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
 
         $this->request->beginTransaction();
         $this->takeSnapshot();
-        // Bob's join holds the game lock, adds his seat and commits while the guest is added.
+        // Bob's seat is committed after the snapshot, before the guest's position is looked up.
         $this->insertSeat($lobby, $bob, 1);
         $guest = $this->addGuest($lobby, 'Alex');
         $this->request->commit();
