@@ -12,6 +12,7 @@ use App\Exception\Game\InvalidStartScoreException;
 use App\Exception\Game\NoSettingsProvidedException;
 use App\Exception\Game\SettingsNotEditableException;
 use App\Exception\Game\StartScoreCannotBeChangedAfterStartException;
+use App\Repository\GameRepositoryInterface;
 use App\Service\Game\GameSettingsService;
 use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -131,7 +132,7 @@ final class GameSettingsServiceTest extends TestCase
         $access = $this->createMock(GameAccessServiceInterface::class);
         $access->expects(self::never())->method('assertPlayerInGameOrAdmin');
 
-        $service = new GameSettingsService($entityManager, $access);
+        $service = new GameSettingsService($entityManager, $access, $this->createStub(GameRepositoryInterface::class));
         $service->applySettings($game, $dto);
 
         self::assertSame(401, $game->getStartScore());
@@ -139,11 +140,24 @@ final class GameSettingsServiceTest extends TestCase
         self::assertFalse($game->isTripleOut());
     }
 
+    public function testApplySettingsNeverTakesTheGameLock(): void
+    {
+        $dto = new GameSettingsRequest();
+        $dto->startScore = 401;
+
+        $gameRepository = $this->createMock(GameRepositoryInterface::class);
+        $gameRepository->expects(self::never())->method('refreshWithSeatsForUpdate');
+        $service = new GameSettingsService($this->createStub(EntityManagerInterface::class), $this->createStub(GameAccessServiceInterface::class), $gameRepository);
+
+        $service->applySettings(new Game(), $dto);
+    }
+
     private function createService(EntityManagerInterface $entityManager): GameSettingsService
     {
         $access = $this->createStub(GameAccessServiceInterface::class);
         $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $callback): mixed => $callback());
 
-        return new GameSettingsService($entityManager, $access);
+        return new GameSettingsService($entityManager, $access, $this->createStub(GameRepositoryInterface::class));
     }
 }

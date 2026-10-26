@@ -9,20 +9,26 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
+use App\Dto\GameSettingsRequest;
 use App\Dto\StartGameRequest;
 use App\Dto\ThrowRequest;
 use App\Entity\Game;
 use App\Entity\User;
+use App\Enum\GameStatus;
 use App\Exception\Game\GameNotNewestException;
 use App\Exception\Game\GameStartNotAllowedException;
 use App\Exception\Game\GameThrowNotAllowedException;
+use App\Exception\Game\SettingsNotEditableException;
 use App\Repository\GamePlayersRepository;
 use App\Repository\GameRepository;
 use App\Repository\InvitationRepository;
 use App\Repository\RoundRepository;
 use App\Repository\RoundThrowsRepository;
 use App\Repository\UserRepositoryInterface;
+use App\Service\Game\GameAbortService;
+use App\Service\Game\GameFinishService;
 use App\Service\Game\GameRoomService;
+use App\Service\Game\GameSettingsService;
 use App\Service\Game\GameSetupService;
 use App\Service\Game\GameStartService;
 use App\Service\Game\GameThrowService;
@@ -392,6 +398,89 @@ final class ConcurrentSeatingTest extends KernelTestCase
         );
     }
 
+    public function testFinishRanksTheScoresCommittedAfterTheGameWasLoaded(): void
+    {
+        $bob = $this->insertUser('bob');
+        $anna = $this->insertUser('anna');
+        $game = $this->insertGame('started');
+        $this->insertSeat($game, $bob, 1);
+        $this->insertSeat($game, $anna, 2);
+        $this->other->update('game_players', ['score' => 20], ['game_id' => $game, 'player_id' => $bob]);
+        $this->other->update('game_players', ['score' => 50], ['game_id' => $game, 'player_id' => $anna]);
+        $loaded = $this->entityManager->find(Game::class, $game);
+        self::assertInstanceOf(Game::class, $loaded);
+        self::assertCount(2, $loaded->getGamePlayers());
+        // Anna's checkout commits after this request loaded the game and its seats.
+        $this->other->update('game_players', ['score' => 0], ['game_id' => $game, 'player_id' => $anna]);
+
+        $this->finishService()->finishGame($loaded);
+
+        self::assertSame(
+            [[$anna, 1, 1], [$bob, 2, 0]],
+            $this->other->fetchAllNumeric('SELECT player_id, position, is_winner FROM game_players WHERE game_id = ? ORDER BY position', [$game]),
+        );
+        self::assertSame(
+            [['finished', $anna]],
+            $this->other->fetchAllNumeric('SELECT status, winner_id FROM game WHERE game_id = ?', [$game]),
+        );
+    }
+
+    public function testUpdateSettingsRejectsAGameFinishedAfterItWasLoaded(): void
+    {
+        $game = $this->insertGame('lobby');
+        $loaded = $this->entityManager->find(Game::class, $game);
+        self::assertInstanceOf(Game::class, $loaded);
+        // The game finishes after the settings request loaded it.
+        $this->other->update('game', ['status' => 'finished'], ['game_id' => $game]);
+        $access = $this->createMock(GameAccessServiceInterface::class);
+        $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+
+        try {
+            (new GameSettingsService($this->entityManager, $access, new GameRepository($this->registry())))
+                ->updateSettings($loaded, new GameSettingsRequest(startScore: 501));
+            self::fail('The settings changed a finished game.');
+        } catch (SettingsNotEditableException) {
+        }
+
+        self::assertSame(
+            [['finished', 301]],
+            $this->other->fetchAllNumeric('SELECT status, start_score FROM game WHERE game_id = ?', [$game]),
+        );
+    }
+
+    public function testAbortWaitsForTheGameLock(): void
+    {
+        // An aborted game makes a lock-free abort a no-op write, so only the lock read can make it wait.
+        $game = $this->insertGame('aborted');
+        $loaded = $this->entityManager->find(Game::class, $game);
+        self::assertInstanceOf(Game::class, $loaded);
+        $access = $this->createMock(GameAccessServiceInterface::class);
+        $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+
+        // A reopen holds the game lock and has not committed.
+        $this->other->beginTransaction();
+        $this->other->update('game', ['status' => 'started'], ['game_id' => $game]);
+        $this->request->executeStatement('SET SESSION innodb_lock_wait_timeout = 1');
+        try {
+            (new GameAbortService($this->entityManager, $access, new GameRepository($this->registry())))->abortGame($loaded);
+            self::fail('The abort did not wait for the game lock.');
+        } catch (LockWaitTimeoutException) {
+        }
+
+        // The timeout closed the request's entity manager, as in production before a retry.
+        // A single process cannot block inside the abort until the commit, so the wait is shown by
+        // the timeout above and the order by the abort below, which acts on the holder's commit.
+        $this->entityManager = new EntityManager($this->request, $this->entityManager->getConfiguration());
+        $stale = $this->entityManager->find(Game::class, $game);
+        self::assertInstanceOf(Game::class, $stale);
+        self::assertSame(GameStatus::Aborted, $stale->getStatus());
+        $this->other->commit();
+
+        (new GameAbortService($this->entityManager, $access, new GameRepository($this->registry())))->abortGame($stale);
+
+        self::assertSame('aborted', $this->other->fetchOne('SELECT status FROM game WHERE game_id = ?', [$game]));
+    }
+
     /**
      * Repositories built on it run their queries through the "request" connection.
      */
@@ -445,6 +534,21 @@ final class ConcurrentSeatingTest extends KernelTestCase
             $access,
             $gameRepository,
             new NewestGameGuard($gameRepository),
+        );
+    }
+
+    private function finishService(): GameFinishService
+    {
+        $access = $this->createMock(GameAccessServiceInterface::class);
+        $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+
+        return new GameFinishService(
+            $this->entityManager,
+            $this->gamePlayersRepository,
+            new RoundThrowsRepository($this->registry()),
+            new RoundRepository($this->registry()),
+            $access,
+            new GameRepository($this->registry()),
         );
     }
 
