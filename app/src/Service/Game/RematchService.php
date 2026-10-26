@@ -79,11 +79,13 @@ final readonly class RematchService implements RematchServiceInterface
         $this->entityManager->flush();
         $lobbyGameId = $lobbyGame->getGameId() ?? throw new LogicException('The lobby game has no id.');
 
+        // After a finished game the last placed throws first; an aborted game has no placements.
+        $loserFirst = GameStatus::Finished === $oldGame->getStatus();
         if ($lobby->created) {
-            $this->playerManagementService->copyPlayers($oldGameId, $lobbyGameId);
+            $this->playerManagementService->copyPlayers($oldGameId, $lobbyGameId, $loserFirst);
         } else {
             // Players who joined the open lobby keep their seats.
-            $this->playerManagementService->appendMissingPlayers($oldGameId, $lobbyGameId);
+            $this->playerManagementService->appendMissingPlayers($oldGameId, $lobbyGameId, $loserFirst);
         }
 
         return [

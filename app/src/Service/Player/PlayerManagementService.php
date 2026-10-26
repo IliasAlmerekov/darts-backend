@@ -14,6 +14,7 @@ use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Exception\Game\InvalidPlayerOrderException;
 use App\Repository\GamePlayersRepositoryInterface;
+use App\Service\Game\ParticipantResult;
 use App\Service\Game\PlayerDisplayName;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
@@ -102,17 +103,18 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     /**
      * Copy every player from one game to another.
      *
-     * @param int $fromGameId
-     * @param int $toGameId
+     * @param int  $fromGameId
+     * @param int  $toGameId
+     * @param bool $reverseByPlacement Seat the last placed first and number the seats 1, 2, 3
      *
      * @throws ORMException
      *
      * @return void
      */
     #[Override]
-    public function copyPlayers(int $fromGameId, int $toGameId): void
+    public function copyPlayers(int $fromGameId, int $toGameId, bool $reverseByPlacement = false): void
     {
-        $oldGamePlayers = $this->gamePlayersRepository->findByGameId($fromGameId);
+        $oldGamePlayers = $this->seatsToCopy($fromGameId, $reverseByPlacement);
         $orderIndex = 0;
         $hasCopiedPlayers = false;
         foreach ($oldGamePlayers as $oldGamePlayer) {
@@ -122,7 +124,7 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
             }
 
             if (null !== $player->getId()) {
-                $position = $oldGamePlayer->getPosition();
+                $position = $reverseByPlacement ? null : $oldGamePlayer->getPosition();
                 if (!is_int($position)) {
                     $orderIndex++;
                     $position = $orderIndex;
@@ -143,15 +145,16 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     /**
      * Seat every player of one game who is missing from another, after the players already there.
      *
-     * @param int $fromGameId
-     * @param int $toGameId
+     * @param int  $fromGameId
+     * @param int  $toGameId
+     * @param bool $reverseByPlacement Append the last placed first
      *
      * @throws ORMException
      *
      * @return void
      */
     #[Override]
-    public function appendMissingPlayers(int $fromGameId, int $toGameId): void
+    public function appendMissingPlayers(int $fromGameId, int $toGameId, bool $reverseByPlacement = false): void
     {
         $seatedPlayerIds = [];
         $lastPosition = 0;
@@ -168,7 +171,7 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
         }
 
         $hasAddedPlayers = false;
-        foreach ($this->gamePlayersRepository->findByGameId($fromGameId) as $oldSeat) {
+        foreach ($this->seatsToCopy($fromGameId, $reverseByPlacement) as $oldSeat) {
             if ($seatCount >= Game::MAX_PARTICIPANTS) {
                 break;
             }
@@ -188,6 +191,26 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
         if (true === $hasAddedPlayers) {
             $this->entityManager->flush();
         }
+    }
+
+    /**
+     * The seats of the old game in the order a rematch takes them: the seat order, or for a finished
+     * game the reverse placement order, ranked as the game summary ranks them.
+     *
+     * @param int  $fromGameId
+     * @param bool $reverseByPlacement
+     *
+     * @return list<GamePlayers>
+     */
+    private function seatsToCopy(int $fromGameId, bool $reverseByPlacement): array
+    {
+        $seats = array_values($this->gamePlayersRepository->findByGameId($fromGameId));
+        if ($reverseByPlacement) {
+            usort($seats, ParticipantResult::compareByPlacement(...));
+            $seats = array_reverse($seats);
+        }
+
+        return $seats;
     }
 
     /**

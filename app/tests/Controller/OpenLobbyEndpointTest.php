@@ -224,7 +224,7 @@ final class OpenLobbyEndpointTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(Response::HTTP_CONFLICT);
         self::assertSame('GAME_NOT_NEWEST', $second['error'] ?? null);
-        self::assertSame([$bob->getId(), $vanya->getId(), $anna->getId()], $this->seatedPlayerIds($this->reload($lobby)));
+        self::assertSame([$vanya->getId(), $bob->getId(), $anna->getId()], $this->seatedPlayerIds($this->reload($lobby)));
     }
 
     public function testRematchWithoutOpenLobbyCreatesOne(): void
@@ -245,7 +245,8 @@ final class OpenLobbyEndpointTest extends WebTestCase
         self::assertSame(GameStatus::Lobby, $created->getStatus());
         self::assertSame(501, $created->getStartScore());
         self::assertTrue($created->isDoubleOut());
-        self::assertSame([$bob->getId(), $vanya->getId()], $this->seatedPlayerIds($created));
+        // Bob placed first, so he takes the last seat.
+        self::assertSame([$vanya->getId(), $bob->getId()], $this->seatedPlayerIds($created));
     }
 
     public function testRematchStartWithOpenLobbyStartsThatLobbyWithEveryPlayer(): void
@@ -282,7 +283,7 @@ final class OpenLobbyEndpointTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
         self::assertSame(
-            [...array_map(static fn (User $player): ?int => $player->getId(), $lobbyPlayers), $bob->getId()],
+            [...array_map(static fn (User $player): ?int => $player->getId(), $lobbyPlayers), $vanya->getId()],
             $this->seatedPlayerIds($this->reload($lobby)),
         );
     }
@@ -323,7 +324,7 @@ final class OpenLobbyEndpointTest extends WebTestCase
         $reloaded = $this->reload($lobby);
         self::assertSame(GameStatus::Started, $reloaded->getStatus());
         self::assertSame(
-            [$bob->getId(), ...array_map(static fn (User $player): ?int => $player->getId(), $lobbyPlayers)],
+            [$vanya->getId(), ...array_map(static fn (User $player): ?int => $player->getId(), $lobbyPlayers)],
             $this->seatedPlayerIds($reloaded),
         );
     }
