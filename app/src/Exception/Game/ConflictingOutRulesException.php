@@ -29,4 +29,19 @@ final class ConflictingOutRulesException extends ApiHttpException
             'doubleOut and tripleOut cannot both be true.'
         );
     }
+
+    /**
+     * Rejects the out rule a game would end up with, before anything is changed.
+     *
+     * @param bool $doubleOut
+     * @param bool $tripleOut
+     *
+     * @return void
+     */
+    public static function assertCompatible(bool $doubleOut, bool $tripleOut): void
+    {
+        if ($doubleOut && $tripleOut) {
+            throw new self();
+        }
+    }
 }

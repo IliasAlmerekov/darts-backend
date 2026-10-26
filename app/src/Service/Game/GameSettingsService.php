@@ -93,12 +93,10 @@ final readonly class GameSettingsService implements GameSettingsServiceInterface
                 throw new StartScoreCannotBeChangedAfterStartException();
             }
             $this->guardStartScore($dto->startScore);
-            $game->setStartScore($dto->startScore);
         }
 
-        $changesOutRule = null !== $dto->outMode || null !== $dto->doubleOut || null !== $dto->tripleOut;
-        // Like startScore, a sent out rule is a change even when it equals the current one.
-        if ($changesOutRule && $isStarted && $this->roundThrowsRepository->count(['game' => $game]) > 0) {
+        $sendsOutRule = null !== $dto->outMode || null !== $dto->doubleOut || null !== $dto->tripleOut;
+        if ($sendsOutRule && $isStarted && $this->roundThrowsRepository->count(['game' => $game]) > 0) {
             throw new OutRuleCannotBeChangedAfterFirstThrowException();
         }
 
@@ -129,10 +127,11 @@ final readonly class GameSettingsService implements GameSettingsServiceInterface
             }
         }
 
-        if ($doubleOut && $tripleOut) {
-            throw new ConflictingOutRulesException();
-        }
+        ConflictingOutRulesException::assertCompatible($doubleOut, $tripleOut);
 
+        if (null !== $dto->startScore) {
+            $game->setStartScore($dto->startScore);
+        }
         $game->setDoubleOut($doubleOut);
         $game->setTripleOut($tripleOut);
 

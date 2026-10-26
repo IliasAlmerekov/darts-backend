@@ -68,9 +68,7 @@ final readonly class GameStartService implements GameStartServiceInterface
         $this->guardPlayerCount($game, $dto);
         $doubleOut = $dto->doubleOut ?? $game->isDoubleOut();
         $tripleOut = $dto->tripleOut ?? $game->isTripleOut();
-        if ($doubleOut && $tripleOut) {
-            throw new ConflictingOutRulesException();
-        }
+        ConflictingOutRulesException::assertCompatible($doubleOut, $tripleOut);
         // The tablet runs one game at a time (ADR 0004).
         $this->gameRepository->abortStartedGames($game->getGameId());
         $game->setStatus(GameStatus::Started);
