@@ -88,11 +88,11 @@ final class GameReopenServiceTest extends TestCase
             ->addGamePlayer($winningSeat)
             ->addGamePlayer($otherSeat);
 
-        $access = $this->createMock(GameAccessServiceInterface::class);
+        $access = $this->createStub(GameAccessServiceInterface::class);
         $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
-        $gameRepository = $this->createMock(GameRepositoryInterface::class);
+        $gameRepository = $this->createStub(GameRepositoryInterface::class);
         $gameRepository->method('findHighestGameId')->willReturn(7);
-        $service = new GameReopenService($this->createMock(EntityManagerInterface::class), $access, $gameRepository, new NewestGameGuard($gameRepository));
+        $service = new GameReopenService($this->createStub(EntityManagerInterface::class), $access, $gameRepository, new NewestGameGuard($gameRepository));
 
         $service->reopen($game);
 
