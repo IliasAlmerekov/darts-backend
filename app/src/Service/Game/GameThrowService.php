@@ -349,19 +349,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             $game->setFinishedAt(null);
         }
 
-        // A seat with score left has no placement and cannot hold the win; the others keep both.
-        foreach ($game->getGamePlayers() as $gamePlayer) {
-            $currentPlayerScore = $gamePlayer->getScore() ?? $game->getStartScore();
-            if ($currentPlayerScore <= 0) {
-                continue;
-            }
-
-            $gamePlayer->setPlacement(null);
-            if (true === $gamePlayer->isWinner()) {
-                $gamePlayer->setIsWinner(false);
-                $game->setWinner(null);
-            }
-        }
+        $game->takeBackPlacementsFromSeatsWithScoreLeft();
 
         $game->setRound($lastThrowRoundNumber);
         $this->reopenRound($game, $lastThrow->getRound());
