@@ -64,6 +64,18 @@ _Avoid_: Current game (for the tablet's game), active game
 The game with the greatest game id, whatever its status. Undo into play, reopen and rematch act only on the newest game, so an older game never aborts the tablet game (ADR 0005).
 _Avoid_: Latest game, last game
 
+**Manual end**:
+The admin ends a started game without a checkout; placements follow the remaining scores.
+_Avoid_: Finish (that is the turn with a checkout), force finish
+
+**Abort**:
+The admin stops a started game without placements; the game keeps its throws but no one can play or undo in it again.
+_Avoid_: Cancel, quit
+
+**Rematch**:
+A new lobby with the participants of the newest game, once it is finished or aborted. After a finished game the last placed participant throws first.
+_Avoid_: Replay, new round
+
 **Out rule**:
 The kind of dart a game's checkout must be: single, double or triple out. A game has exactly one.
 _Avoid_: Out mode, game mode

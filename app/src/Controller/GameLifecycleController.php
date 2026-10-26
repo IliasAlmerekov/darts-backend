@@ -244,6 +244,7 @@ final class GameLifecycleController extends AbstractController
     )]
     #[ApiResponse]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
+    #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Das Spiel ist in der Lobby oder abgebrochen (`GAME_FINISH_NOT_ALLOWED`). Ein bereits beendetes Spiel bleibt unverändert (200).')]
     #[Route('/api/game/{gameId}/finish', name: 'app_game_finish', methods: ['POST'], format: 'json')]
     public function finish(#[AttributeMapEntity(id: 'gameId')] Game $game, GameFinishServiceInterface $gameFinishService): GameSummaryResponseDto
     {
@@ -372,6 +373,7 @@ final class GameLifecycleController extends AbstractController
     )]
     #[ApiResponse]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
+    #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Das Spiel ist in der Lobby oder beendet (`GAME_ABORT_NOT_ALLOWED`). Ein bereits abgebrochenes Spiel bleibt unverändert (200).')]
     #[Route('/api/game/{gameId}/abort', name: 'app_game_abort', methods: ['PATCH'], format: 'json')]
     public function abortGame(#[AttributeMapEntity(id: 'gameId')] Game $game, GameAbortServiceInterface $gameAbortService): SuccessMessageDto
     {

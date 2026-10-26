@@ -62,29 +62,31 @@ interface PlayerManagementServiceInterface
     /**
      * Copy every player from one game to another.
      *
-     * @param int $fromGameId Source game ID
-     * @param int $toGameId   Target game ID
+     * @param int  $fromGameId         Source game ID
+     * @param int  $toGameId           Target game ID
+     * @param bool $reverseByPlacement Take the seats in reverse placement order (last placed first) and number them 1, 2, 3
      *
      * @throws ORMException
      *
      * @return void
      */
-    public function copyPlayers(int $fromGameId, int $toGameId): void;
+    public function copyPlayers(int $fromGameId, int $toGameId, bool $reverseByPlacement = false): void;
 
     /**
      * Seat every player of the source game who is missing from the target game. They take
-     * the positions after the players already in the target game, in their source order.
+     * the positions after the players already in the target game, in their source order, or reverse placement order.
      * Once the target game has Game::MAX_PARTICIPANTS seats, the rest are skipped.
      * Must be called inside a transaction, because it reads the target seats with a lock.
      *
-     * @param int $fromGameId Source game ID
-     * @param int $toGameId   Target game ID
+     * @param int  $fromGameId         Source game ID
+     * @param int  $toGameId           Target game ID
+     * @param bool $reverseByPlacement Take the seats in reverse placement order (last placed first)
      *
      * @throws ORMException
      *
      * @return void
      */
-    public function appendMissingPlayers(int $fromGameId, int $toGameId): void;
+    public function appendMissingPlayers(int $fromGameId, int $toGameId, bool $reverseByPlacement = false): void;
 
     /**
      * Update player positions for a game.

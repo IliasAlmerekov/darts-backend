@@ -293,6 +293,11 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      */
     private function undoLastThrowUnlocked(Game $game): ?ThrowDeltaDto
     {
+        $status = $game->getStatus();
+        if (!$status->canUndo()) {
+            throw new GameThrowNotAllowedException($status);
+        }
+
         $gameId = $game->getGameId();
         if (null === $gameId) {
             return null;

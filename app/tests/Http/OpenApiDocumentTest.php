@@ -206,6 +206,23 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertSame(['ack'], $schemas['UndoAckDto']['properties']['type']['enum']);
     }
 
+    public function testFinishAbortAndUndoDocumentTheirStatusConflicts(): void
+    {
+        $paths = $this->document()['paths'];
+        $expected = [
+            ['/api/game/{gameId}/finish', 'post', 'GAME_FINISH_NOT_ALLOWED'],
+            ['/api/game/{gameId}/abort', 'patch', 'GAME_ABORT_NOT_ALLOWED'],
+            ['/api/game/{gameId}/throw', 'delete', 'GAME_THROW_NOT_ALLOWED'],
+            ['/api/game/{gameId}/throw/delta', 'delete', 'GAME_THROW_NOT_ALLOWED'],
+        ];
+
+        foreach ($expected as [$path, $method, $errorCode]) {
+            $conflict = $paths[$path][$method]['responses']['409'] ?? null;
+            self::assertIsArray($conflict, $path);
+            self::assertStringContainsString($errorCode, $conflict['description'], $path);
+        }
+    }
+
     public function testCurrentGameDocumentsNullableFieldsAnd401And403(): void
     {
         $document = $this->document();

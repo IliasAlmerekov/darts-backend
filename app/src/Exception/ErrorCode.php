@@ -30,6 +30,8 @@ enum ErrorCode: string
     case GameJoinNotAllowed = 'GAME_JOIN_NOT_ALLOWED';
     case GameNotFinished = 'GAME_NOT_FINISHED';
     case GameReopenNotAllowed = 'GAME_REOPEN_NOT_ALLOWED';
+    case GameFinishNotAllowed = 'GAME_FINISH_NOT_ALLOWED';
+    case GameAbortNotAllowed = 'GAME_ABORT_NOT_ALLOWED';
     case GameNotNewest = 'GAME_NOT_NEWEST';
     case GameThrowNotAllowed = 'GAME_THROW_NOT_ALLOWED';
     case PlayerNotFound = 'PLAYER_NOT_FOUND';
