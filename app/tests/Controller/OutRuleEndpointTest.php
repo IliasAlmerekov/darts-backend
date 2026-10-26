@@ -87,6 +87,16 @@ final class OutRuleEndpointTest extends WebTestCase
         $this->assertOutRule($lobby, true, false);
     }
 
+    public function testSettingsRejectDoubleAndTripleOutAlongsideOutMode(): void
+    {
+        $lobby = $this->createGame(GameStatus::Lobby, doubleOut: true);
+
+        $response = $this->patchSettings($lobby, ['outMode' => 'singleout', 'doubleOut' => true, 'tripleOut' => true]);
+
+        $this->assertConflictingOutRules($response);
+        $this->assertOutRule($lobby, true, false);
+    }
+
     public function testSettingsOutModeAloneReplacesBothFlags(): void
     {
         $lobby = $this->createGame(GameStatus::Lobby, doubleOut: true);

@@ -100,6 +100,9 @@ final readonly class GameSettingsService implements GameSettingsServiceInterface
             throw new OutRuleCannotBeChangedAfterFirstThrowException();
         }
 
+        // outMode takes precedence over the flags, so a sent conflicting pair is rejected before it can hide it.
+        ConflictingOutRulesException::assertCompatible(true === $dto->doubleOut, true === $dto->tripleOut);
+
         $doubleOut = $game->isDoubleOut();
         $tripleOut = $game->isTripleOut();
 
