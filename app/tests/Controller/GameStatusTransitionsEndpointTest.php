@@ -64,11 +64,16 @@ final class GameStatusTransitionsEndpointTest extends WebTestCase
     public function testFinishFromStartedFinishesTheGame(): void
     {
         $gameId = $this->createGame(GameStatus::Started);
+        // The turn order contradicts the scores (first 20, second 50), so a placement from it would be wrong.
+        $this->entityManager->getConnection()->executeStatement('UPDATE game_players SET position = ? WHERE game_id = ? AND player_id = ?', [2, $gameId, $this->first->getId()]);
+        $this->entityManager->getConnection()->executeStatement('UPDATE game_players SET position = ? WHERE game_id = ? AND player_id = ?', [1, $gameId, $this->second->getId()]);
 
         $this->request(Request::METHOD_POST, sprintf('/api/game/%d/finish', $gameId));
 
         self::assertResponseStatusCodeSame(Response::HTTP_OK, (string) $this->client->getResponse()->getContent());
         self::assertSame('finished', $this->storedStatus($gameId));
+        // Lowest remaining score takes placement 1.
+        self::assertSame([1, 2], $this->storedFinishState($gameId)['placements']);
     }
 
     public function testFinishFromFinishedKeepsFinishedAtAndPlacements(): void
@@ -142,6 +147,18 @@ final class GameStatusTransitionsEndpointTest extends WebTestCase
         $this->assertConflict(Request::METHOD_DELETE, sprintf('/api/game/%d/throw/delta', $gameId), 'GAME_THROW_NOT_ALLOWED');
 
         self::assertSame($throwsBefore, $this->throwCount($gameId));
+        self::assertSame('aborted', $this->storedStatus($gameId));
+    }
+
+    public function testDeprecatedUndoFromAbortedIsRejectedAndDeletesNothing(): void
+    {
+        $gameId = $this->createGame(GameStatus::Started);
+        $this->throwDart($gameId, $this->first);
+        $this->request(Request::METHOD_PATCH, sprintf('/api/game/%d/abort', $gameId));
+
+        $this->assertConflict(Request::METHOD_DELETE, sprintf('/api/game/%d/throw', $gameId), 'GAME_THROW_NOT_ALLOWED');
+
+        self::assertSame(1, $this->throwCount($gameId));
         self::assertSame('aborted', $this->storedStatus($gameId));
     }
 
