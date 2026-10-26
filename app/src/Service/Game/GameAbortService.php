@@ -11,6 +11,7 @@ namespace App\Service\Game;
 
 use App\Entity\Game;
 use App\Enum\GameStatus;
+use App\Repository\GameRepositoryInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -25,8 +26,9 @@ final readonly class GameAbortService implements GameAbortServiceInterface
     /**
      * @param EntityManagerInterface     $entityManager
      * @param GameAccessServiceInterface $gameAccessService
+     * @param GameRepositoryInterface    $gameRepository
      */
-    public function __construct(private EntityManagerInterface $entityManager, private GameAccessServiceInterface $gameAccessService)
+    public function __construct(private EntityManagerInterface $entityManager, private GameAccessServiceInterface $gameAccessService, private GameRepositoryInterface $gameRepository)
     {
     }
 
@@ -40,8 +42,10 @@ final readonly class GameAbortService implements GameAbortServiceInterface
     #[\Override]
     public function abortGame(Game $game): void
     {
-        $this->gameAccessService->assertPlayerInGameOrAdmin($game);
-        $game->setStatus(GameStatus::Aborted);
-        $this->entityManager->flush();
+        $this->entityManager->wrapInTransaction(function () use ($game): void {
+            $this->gameRepository->refreshWithSeatsForUpdate($game);
+            $this->gameAccessService->assertPlayerInGameOrAdmin($game);
+            $game->setStatus(GameStatus::Aborted);
+        });
     }
 }

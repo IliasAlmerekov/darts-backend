@@ -17,6 +17,7 @@ use App\Entity\GamePlayers;
 use App\Enum\GameStatus;
 use App\Exception\Game\GameNotFinishedException;
 use App\Repository\GamePlayersRepositoryInterface;
+use App\Repository\GameRepositoryInterface;
 use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Security\GameAccessServiceInterface;
@@ -36,8 +37,9 @@ final readonly class GameFinishService implements GameFinishServiceInterface
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
      * @param RoundRepositoryInterface       $roundRepository
      * @param GameAccessServiceInterface     $gameAccessService
+     * @param GameRepositoryInterface        $gameRepository
      */
-    public function __construct(private EntityManagerInterface $entityManager, private GamePlayersRepositoryInterface $gamePlayersRepository, private RoundThrowsRepositoryInterface $roundThrowsRepository, private RoundRepositoryInterface $roundRepository, private GameAccessServiceInterface $gameAccessService)
+    public function __construct(private EntityManagerInterface $entityManager, private GamePlayersRepositoryInterface $gamePlayersRepository, private RoundThrowsRepositoryInterface $roundThrowsRepository, private RoundRepositoryInterface $roundRepository, private GameAccessServiceInterface $gameAccessService, private GameRepositoryInterface $gameRepository)
     {
     }
 
@@ -50,14 +52,17 @@ final readonly class GameFinishService implements GameFinishServiceInterface
     #[\Override]
     public function finishGame(Game $game, ?DateTimeInterface $finishedAt = null): GameSummaryResponseDto
     {
-        $this->gameAccessService->assertPlayerInGameOrAdmin($game);
-        $game->setStatus(GameStatus::Finished);
         $timestamp = $finishedAt instanceof DateTimeImmutable
             ? $finishedAt
             : (null !== $finishedAt ? DateTimeImmutable::createFromInterface($finishedAt) : new DateTimeImmutable());
-        $game->setFinishedAt($timestamp);
-        $this->recalculatePositions($game);
-        $this->entityManager->flush();
+        // The route loaded the game before this transaction: rank the committed scores, not that snapshot.
+        $this->entityManager->wrapInTransaction(function () use ($game, $timestamp): void {
+            $this->gameRepository->refreshWithSeatsForUpdate($game);
+            $this->gameAccessService->assertPlayerInGameOrAdmin($game);
+            $game->setStatus(GameStatus::Finished);
+            $game->setFinishedAt($timestamp);
+            $this->recalculatePositions($game);
+        });
 
         return $this->buildGameSummary($game);
     }

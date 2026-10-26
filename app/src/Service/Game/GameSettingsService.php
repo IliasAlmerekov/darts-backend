@@ -17,6 +17,7 @@ use App\Exception\Game\NoSettingsProvidedException;
 use App\Exception\Game\SettingsNotEditableException;
 use App\Exception\Game\StartScoreCannotBeChangedAfterStartException;
 use App\Enum\GameStatus;
+use App\Repository\GameRepositoryInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Override;
@@ -34,10 +35,11 @@ final readonly class GameSettingsService implements GameSettingsServiceInterface
     /**
      * @param EntityManagerInterface     $entityManager
      * @param GameAccessServiceInterface $gameAccessService
+     * @param GameRepositoryInterface    $gameRepository
      *
      * @psalm-suppress PossiblyUnusedMethod Reason: constructor is used by Symfony autowiring.
      */
-    public function __construct(private EntityManagerInterface $entityManager, private GameAccessServiceInterface $gameAccessService)
+    public function __construct(private EntityManagerInterface $entityManager, private GameAccessServiceInterface $gameAccessService, private GameRepositoryInterface $gameRepository)
     {
     }
 
@@ -50,8 +52,11 @@ final readonly class GameSettingsService implements GameSettingsServiceInterface
     #[Override]
     public function updateSettings(Game $game, GameSettingsRequest $dto): void
     {
-        $this->gameAccessService->assertPlayerInGameOrAdmin($game);
-        $this->applySettings($game, $dto);
+        $this->entityManager->wrapInTransaction(function () use ($game, $dto): void {
+            $this->gameRepository->refreshWithSeatsForUpdate($game);
+            $this->gameAccessService->assertPlayerInGameOrAdmin($game);
+            $this->applySettings($game, $dto);
+        });
     }
 
     /**
