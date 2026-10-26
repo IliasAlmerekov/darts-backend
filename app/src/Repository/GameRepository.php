@@ -162,6 +162,9 @@ SQL,
             ->setParameter('gameId', $gameId)
             ->getQuery()
             ->setLockMode(LockMode::PESSIMISTIC_WRITE)
+            // A game this request already loaded would come back as loaded, missing what other
+            // transactions committed while this one waited for the lock.
+            ->setHint(Query::HINT_REFRESH, true)
             ->getOneOrNullResult();
     }
 

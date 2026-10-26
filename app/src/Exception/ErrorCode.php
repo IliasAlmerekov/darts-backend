@@ -23,6 +23,7 @@ enum ErrorCode: string
     case GamePlayerNotFound = 'GAME_PLAYER_NOT_FOUND';
     case GamePlayerPositionsCountMismatch = 'GAME_PLAYER_POSITIONS_COUNT_MISMATCH';
     case GameSettingsNotEditable = 'GAME_SETTINGS_NOT_EDITABLE';
+    case GameSeatsNotEditable = 'GAME_SEATS_NOT_EDITABLE';
     case GameStartNotAllowed = 'GAME_START_NOT_ALLOWED';
     case GameStartScoreChangeNotAllowed = 'GAME_START_SCORE_CHANGE_NOT_ALLOWED';
     case GameOutRuleChangeNotAllowed = 'GAME_OUT_RULE_CHANGE_NOT_ALLOWED';

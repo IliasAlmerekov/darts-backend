@@ -43,4 +43,14 @@ enum GameStatus: string
     {
         return self::Started === $this || self::Finished === $this;
     }
+
+    /**
+     * Whether seats can be added, removed or reordered. Once a game has started, the seats are fixed.
+     *
+     * @return bool
+     */
+    public function canChangeSeats(): bool
+    {
+        return self::Lobby === $this;
+    }
 }

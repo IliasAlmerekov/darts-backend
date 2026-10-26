@@ -13,6 +13,8 @@ use App\Entity\Game;
 use App\Entity\User;
 use App\Exception\Game\GameIdMissingException;
 use App\Exception\Game\GameNotFoundException;
+use App\Exception\Game\GameRoomFullException;
+use App\Exception\Game\SeatsNotEditableException;
 use App\Exception\Request\UsernameAlreadyTakenException;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
@@ -63,8 +65,15 @@ final readonly class GuestPlayerService implements GuestPlayerServiceInterface
         // Seats are added under the game lock, like the join, so a parallel join or guest
         // waits and then gets the next position.
         return $this->entityManager->wrapInTransaction(function () use ($gameId, $normalized): array {
-            if (null === $this->gameRepository->findOneByGameIdForUpdate($gameId)) {
+            $lockedGame = $this->gameRepository->findOneByGameIdForUpdate($gameId);
+            if (null === $lockedGame) {
                 throw new GameNotFoundException();
+            }
+            if (!$lockedGame->getStatus()->canChangeSeats()) {
+                throw new SeatsNotEditableException();
+            }
+            if ($lockedGame->getGamePlayers()->count() >= Game::MAX_PARTICIPANTS) {
+                throw new GameRoomFullException(Game::MAX_PARTICIPANTS);
             }
 
             if ($this->isNameTakenInGame($gameId, $normalized)) {

@@ -18,6 +18,7 @@ use App\Enum\GameStatus;
 use App\Exception\Game\GameNotNewestException;
 use App\Exception\Game\GameStartNotAllowedException;
 use App\Exception\Game\GameThrowNotAllowedException;
+use App\Exception\Game\SeatsNotEditableException;
 use App\Exception\Game\SettingsNotEditableException;
 use App\Repository\GamePlayersRepository;
 use App\Repository\GameRepository;
@@ -99,7 +100,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $lobby = $this->insertGame('lobby');
         $this->insertSeat($finished, $bob, 1);
         $this->insertSeat($finished, $vanya, 2);
-        $service = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager);
+        $service = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager, new GameRepository($this->registry()));
 
         $this->request->beginTransaction();
         $this->takeSnapshot();
@@ -120,7 +121,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $anna = $this->insertUser('anna');
         $lobby = $this->insertGame('lobby');
         $gameRepository = new GameRepository($this->registry());
-        $service = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager);
+        $service = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager, new GameRepository($this->registry()));
 
         // The join's query order: find() takes the snapshot, then the locking reload.
         $this->request->beginTransaction();
@@ -237,7 +238,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
     {
         $finished = $this->insertGame('finished');
         $gameRepository = new GameRepository($this->registry());
-        $playerManagementService = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager);
+        $playerManagementService = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager, new GameRepository($this->registry()));
         $access = $this->createMock(GameAccessServiceInterface::class);
         $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
         $openLobbyService = new OpenLobbyService($gameRepository, $this->entityManager);
@@ -515,6 +516,57 @@ final class ConcurrentSeatingTest extends KernelTestCase
         );
     }
 
+    public function testGuestRejectsAGameStartedAfterItWasLoaded(): void
+    {
+        $bob = $this->insertUser('bob');
+        $game = $this->insertGame('lobby');
+        $this->insertSeat($game, $bob, 1);
+        $loaded = $this->entityManager->find(Game::class, $game);
+        self::assertInstanceOf(Game::class, $loaded);
+        // The game starts after the guest request loaded it.
+        $this->other->update('game', ['status' => 'started'], ['game_id' => $game]);
+        $gameRepository = new GameRepository($this->registry());
+        $service = new GuestPlayerService(
+            $this->gamePlayersRepository,
+            new PlayerManagementService($this->gamePlayersRepository, $this->entityManager, $gameRepository),
+            $this->entityManager,
+            $gameRepository,
+        );
+
+        try {
+            $service->createGuestPlayer($loaded, 'Alex');
+            self::fail('A guest was seated in a started game.');
+        } catch (SeatsNotEditableException) {
+        }
+
+        self::assertSame([[$bob]], $this->other->fetchAllNumeric('SELECT player_id FROM game_players WHERE game_id = ?', [$game]));
+    }
+
+    public function testReorderRejectsAGameStartedAfterItWasLoaded(): void
+    {
+        $bob = $this->insertUser('bob');
+        $vanya = $this->insertUser('vanya');
+        $game = $this->insertGame('lobby');
+        $this->insertSeat($game, $bob, 1);
+        $this->insertSeat($game, $vanya, 2);
+        // The room controller loads the game before it calls the service.
+        self::assertInstanceOf(Game::class, $this->entityManager->find(Game::class, $game));
+        // The game starts after the reorder request loaded it.
+        $this->other->update('game', ['status' => 'started'], ['game_id' => $game]);
+        $service = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager, new GameRepository($this->registry()));
+
+        try {
+            $service->updatePlayerPositions($game, [['playerId' => $bob, 'position' => 2], ['playerId' => $vanya, 'position' => 1]]);
+            self::fail('A started game was reordered.');
+        } catch (SeatsNotEditableException) {
+        }
+
+        self::assertSame(
+            [[$bob, 1], [$vanya, 2]],
+            $this->other->fetchAllNumeric('SELECT player_id, position FROM game_players WHERE game_id = ? ORDER BY position', [$game]),
+        );
+    }
+
     public function testAbortWaitsForTheGameLock(): void
     {
         // An aborted game makes a lock-free abort a no-op write, so only the lock read can make it wait.
@@ -602,7 +654,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         self::assertInstanceOf(Game::class, $game);
         $service = new GuestPlayerService(
             $gamePlayersRepository,
-            new PlayerManagementService($gamePlayersRepository, $this->entityManager),
+            new PlayerManagementService($gamePlayersRepository, $this->entityManager, new GameRepository($this->registry())),
             $this->entityManager,
             new GameRepository($this->registry()),
         );

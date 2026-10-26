@@ -23,7 +23,6 @@ final class UpdatePlayerOrderRequest
      */
     public function __construct(
         #[Assert\NotNull]
-        #[Assert\Count(min: 1)]
         #[Assert\All([
             new Assert\Collection([
                 'playerId' => [new Assert\NotNull(), new Assert\Type('integer'), new Assert\Positive()],

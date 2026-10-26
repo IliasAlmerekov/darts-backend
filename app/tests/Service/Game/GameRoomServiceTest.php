@@ -66,7 +66,8 @@ final class GameRoomServiceTest extends TestCase
             });
         $this->playerManagementService = new PlayerManagementService(
             $this->gamePlayersRepository,
-            $this->entityManager
+            $this->entityManager,
+            $this->gameRepository
         );
         $this->gameAccessService = $this->createMock(GameAccessServiceInterface::class);
         $this->gameAccessService->method('requireAuthenticatedUser')->willReturn(new User());
