@@ -31,6 +31,8 @@ final class Version20261026160250 extends AbstractMigration
 
     public function down(Schema $schema): void
     {
+        // The old code reads position as the rank, so seats with a placement get it back there.
+        $this->addSql('UPDATE game_players SET position = placement WHERE placement IS NOT NULL');
         $this->addSql('ALTER TABLE game_players DROP placement');
     }
 }

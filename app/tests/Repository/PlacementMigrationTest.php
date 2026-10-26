@@ -78,6 +78,22 @@ final class PlacementMigrationTest extends KernelTestCase
         self::assertArrayNotHasKey('placement', $columns);
     }
 
+    public function testDownCopiesThePlacementBackIntoPositionForSeatsThatHaveOne(): void
+    {
+        $this->database->migrate(self::PLACEMENT_VERSION);
+        $users = [$this->insertUser('one'), $this->insertUser('two'), $this->insertUser('three')];
+        $game = $this->insertGame('finished');
+        $this->seat($game, $users[0], 1, 90);
+        $this->seat($game, $users[1], 2, 0);
+        $this->seat($game, $users[2], 3, 120);
+        $this->connection->executeStatement('UPDATE game_players SET placement = 3 - position WHERE position < 3 AND game_id = ?', [$game]);
+
+        $this->database->migrate(self::PREVIOUS_VERSION);
+
+        // The old code reads position as the rank, so the seats with a placement get it back there.
+        self::assertSame([2, 1, 3], $this->positionsOf($game));
+    }
+
     private function insertUser(string $label): int
     {
         $this->connection->insert('`user`', [
