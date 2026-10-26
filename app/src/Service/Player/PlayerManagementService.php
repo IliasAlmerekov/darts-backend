@@ -194,26 +194,6 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     }
 
     /**
-     * The seats of the old game in the order a rematch takes them: the seat order, or for a finished
-     * game the reverse placement order, ranked as the game summary ranks them.
-     *
-     * @param int  $fromGameId
-     * @param bool $reverseByPlacement
-     *
-     * @return list<GamePlayers>
-     */
-    private function seatsToCopy(int $fromGameId, bool $reverseByPlacement): array
-    {
-        $seats = array_values($this->gamePlayersRepository->findByGameId($fromGameId));
-        if ($reverseByPlacement) {
-            usort($seats, ParticipantResult::compareByPlacement(...));
-            $seats = array_reverse($seats);
-        }
-
-        return $seats;
-    }
-
-    /**
      * @param int                                           $gameId
      * @param list<array{playerId:int, position:int}>|array $positions
      *
@@ -363,5 +343,25 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
         $this->entityManager->persist($gamePlayer);
 
         return $gamePlayer;
+    }
+
+    /**
+     * The seats of the old game in the order a rematch takes them: the seat order, or for a finished
+     * game the reverse placement order, ranked as the game summary ranks them.
+     *
+     * @param int  $fromGameId
+     * @param bool $reverseByPlacement
+     *
+     * @return list<GamePlayers>
+     */
+    private function seatsToCopy(int $fromGameId, bool $reverseByPlacement): array
+    {
+        $seats = array_values($this->gamePlayersRepository->findByGameId($fromGameId));
+        if ($reverseByPlacement) {
+            usort($seats, ParticipantResult::compareByPlacement(...));
+            $seats = array_reverse($seats);
+        }
+
+        return $seats;
     }
 }
