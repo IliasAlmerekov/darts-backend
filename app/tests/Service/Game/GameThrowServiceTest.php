@@ -652,9 +652,18 @@ final class GameThrowServiceTest extends TestCase
      */
     public static function outOfRangeBaseValues(): iterable
     {
+        yield 'double 0' => [0, true, false];
+        yield 'triple 0' => [0, false, true];
+        yield 'double 21' => [21, true, false];
+        yield 'double 24' => [24, true, false];
+        yield 'double 26' => [26, true, false];
+        yield 'triple 21' => [21, false, true];
         yield 'triple bull' => [25, false, true];
         yield 'single 21' => [21, false, false];
+        yield 'single 24' => [24, false, false];
+        yield 'single 26' => [26, false, false];
         yield 'single 60' => [60, false, false];
+        yield 'double and triple' => [20, true, true];
     }
 
     /**
@@ -720,6 +729,100 @@ final class GameThrowServiceTest extends TestCase
 
         $this->expectException(InvalidThrowException::class);
         $service->recordThrow($game, $dto);
+    }
+
+    /**
+     * @return iterable<string, array{int, bool, bool, int}>
+     */
+    public static function boardBoundaryValues(): iterable
+    {
+        yield 'single 0 (miss)' => [0, false, false, 0];
+        yield 'single 20' => [20, false, false, 20];
+        yield 'single bull' => [25, false, false, 25];
+        yield 'double 1' => [1, true, false, 2];
+        yield 'double 20' => [20, true, false, 40];
+        yield 'double bull' => [25, true, false, 50];
+        yield 'triple 1' => [1, false, true, 3];
+        yield 'triple 20' => [20, false, true, 60];
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    #[DataProvider('boardBoundaryValues')]
+    public function testRecordThrowAcceptsBoardBoundaryValues(
+        int $value,
+        bool $isDouble,
+        bool $isTriple,
+        int $expectedValue,
+    ): void {
+        $game = new Game();
+        $this->setPrivateProperty($game, 'gameId', 10);
+        $game->setStartScore(301);
+        $game->setRound(1);
+        $game->setStatus(GameStatus::Started);
+
+        $round = (new Round())
+            ->setRoundNumber(1)
+            ->setGame($game);
+
+        $user1 = (new User())->setUsername('Player 1');
+        $this->setPrivateProperty($user1, 'id', 1);
+        $player1 = (new GamePlayers())
+            ->setPlayer($user1)
+            ->setScore(301)
+            ->setPosition(1);
+        $game->addGamePlayer($player1);
+
+        $dto = new ThrowRequest();
+        $dto->playerId = 1;
+        $dto->value = $value;
+        $dto->isDouble = $isDouble;
+        $dto->isTriple = $isTriple;
+
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $gamePlayersRepository->method('findOneBy')
+            ->with(['game' => 10, 'player' => 1])
+            ->willReturn($player1);
+
+        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
+        $roundRepository->method('findOneBy')
+            ->with(['game' => $game, 'roundNumber' => 1])
+            ->willReturn($round);
+
+        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository->method('findCurrentRoundStateSnapshot')
+            ->with(10, 1)
+            ->willReturn([]);
+
+        $persistedThrow = null;
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')
+            ->willReturnCallback(static fn (\Closure $fn) => $fn());
+        $entityManager->expects(self::once())
+            ->method('persist')
+            ->with(self::callback(function (object $entity) use (&$persistedThrow): bool {
+                $persistedThrow = $entity;
+
+                return true;
+            }));
+        $entityManager->expects(self::once())->method('flush');
+
+        $service = new GameThrowService(
+            $gamePlayersRepository,
+            $roundRepository,
+            $roundThrowsRepository,
+            $entityManager,
+            $this->createAccessService(),
+            $this->createMock(GameRepositoryInterface::class),
+            $this->createNewestGameGuard(),
+        );
+
+        $service->recordThrow($game, $dto);
+
+        self::assertNotNull($persistedThrow);
+        self::assertSame($expectedValue, $persistedThrow->getValue());
+        self::assertSame(301 - $expectedValue, $player1->getScore());
     }
 
     /**
