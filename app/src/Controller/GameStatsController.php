@@ -148,7 +148,7 @@ final class GameStatsController extends AbstractController
     )]
     #[OA\Parameter(
         name: 'sort',
-        description: "Sortierung im Format `average:asc|desc` oder `gamesplayed:asc|desc`.",
+        description: "Sortierung im Format `average:asc|desc`, `gamesplayed:asc|desc` oder `name:asc|desc` (Anzeigename). Gleiche Werte folgen der Spieler-ID.",
         in: 'query',
         required: false,
         schema: new OA\Schema(type: 'string', default: 'average:desc', example: 'average:desc')
@@ -195,7 +195,7 @@ final class GameStatsController extends AbstractController
             $field = strtolower(trim($sort));
         }
 
-        if (!in_array($field, ['average', 'gamesplayed'], true)) {
+        if (!in_array($field, ['average', 'gamesplayed', 'name'], true)) {
             $field = 'average';
         }
 

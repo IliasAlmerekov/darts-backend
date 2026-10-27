@@ -466,7 +466,7 @@ SQL,
      * @param int|null $playerId  only this player's row, or every player's
      * @param int|null $limit     page size, or every row
      * @param int      $offset
-     * @param string   $sortField 'gamesPlayed', or the score average
+     * @param string   $sortField 'gamesPlayed', 'name' (display name), or the score average; ties follow the player id
      * @param string   $direction
      *
      * @return array<int, array{
@@ -485,7 +485,11 @@ SQL,
         string $sortField = 'average',
         string $direction = 'DESC',
     ): array {
-        $orderColumn = 'gamesPlayed' === $sortField ? 'gamesPlayed' : 'scoreAverage';
+        $orderColumn = match ($sortField) {
+            'gamesPlayed' => 'gamesPlayed',
+            'name' => 'username',
+            default => 'scoreAverage',
+        };
         $direction = 'ASC' === strtoupper($direction) ? 'ASC' : 'DESC';
         $parameters = ['status' => GameStatus::Finished->value];
         $types = ['status' => ParameterType::STRING];
@@ -532,7 +536,7 @@ FROM (
     GROUP BY rt.player_id, u.display_name, rt.game_id, rt.round_id
 ) player_turns
 GROUP BY player_turns.playerId, player_turns.username
-ORDER BY %s %s
+ORDER BY %s %s, playerId ASC
 %s
 SQL,
             $userTable,
