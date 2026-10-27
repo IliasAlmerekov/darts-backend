@@ -524,7 +524,7 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
         ));
 
         self::assertSame($listRows[0], $this->repo->getPlayerStatisticsForPlayer((int) $alice->getId()));
-        self::assertSame('90.0000', $listRows[0]['scoreAverage']);
+        self::assertSame(90.0, (float) $listRows[0]['scoreAverage']);
         self::assertNull($this->repo->getPlayerStatisticsForPlayer((int) $nobody->getId()));
     }
 

@@ -185,7 +185,7 @@ final class PlayerProfileEndpointTest extends WebTestCase
 
         self::assertSame([
             'gamesPlayed' => 1,
-            'scoreAverage' => 53.3333,
+            'scoreAverage' => 53.333333333333336,
             'wins' => 1,
             'winRate' => 100.0,
             'checkoutRate' => 50.0,

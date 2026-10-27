@@ -513,7 +513,7 @@ SELECT
     SUM(player_turns.turnTotal) AS totalValue,
     SUM(player_turns.turnDarts) AS dartsThrown,
     (
-        SUM(player_turns.turnTotal) * 3 /
+        CAST(SUM(player_turns.turnTotal) AS DOUBLE) * 3 /
         NULLIF(SUM(player_turns.turnDarts), 0)
     ) AS scoreAverage
 FROM (

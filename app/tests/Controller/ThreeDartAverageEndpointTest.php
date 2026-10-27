@@ -127,6 +127,33 @@ final class ThreeDartAverageEndpointTest extends WebTestCase
         self::assertLessThan(array_search($this->anna->getId(), $ids, true), array_search($this->boris->getId(), $ids, true));
     }
 
+    public function testAnAverageThatDoesNotDivideCleanlyIsTheSameNumberEverywhere(): void
+    {
+        $game = $this->createStartedGame();
+
+        // Anna: 95 points over 7 darts, which does not divide cleanly (40.714285714285715 in double precision).
+        $this->throwDarts($game, $this->anna, ['20', '20', '20']);
+        $this->throwDarts($game, $this->boris, ['1', '1', '1']);
+        $this->throwDarts($game, $this->anna, ['20', '5', '5']);
+        $this->throwDarts($game, $this->boris, ['1', '1', '1']);
+        $this->throwDarts($game, $this->anna, ['5']);
+        $this->post(sprintf('/api/game/%d/finish', (int) $game->getGameId()));
+
+        $summary = $this->get(sprintf('/api/game/%d/finished', (int) $game->getGameId()));
+        $summaryAverage = null;
+        foreach ($summary['finishedPlayers'] as $player) {
+            if ($player['playerId'] === $this->anna->getId()) {
+                $summaryAverage = $player['roundAverage'];
+            }
+        }
+        $profile = $this->get('/api/player/profile', $this->anna);
+
+        self::assertSame(95 * 3 / 7, $summaryAverage);
+        self::assertSame($summaryAverage, $this->statsRow($this->anna)['scoreAverage']);
+        self::assertSame($summaryAverage, $profile['stats']['scoreAverage']);
+        self::assertSame($summaryAverage, $profile['recentGames'][0]['roundAverage']);
+    }
+
     private function createStartedGame(): Game
     {
         $game = (new Game())
