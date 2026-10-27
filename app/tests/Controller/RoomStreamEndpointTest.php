@@ -58,4 +58,14 @@ final class RoomStreamEndpointTest extends WebTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_NO_CONTENT);
         self::assertSame('', (string) $this->client->getInternalResponse()->getContent());
     }
+
+    public function testStreamOnAMissingGameAnswersNotFound(): void
+    {
+        $this->client->request('GET', '/api/room/999999999/stream');
+
+        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
+        $response = json_decode((string) $this->client->getResponse()->getContent(), true);
+        self::assertIsArray($response);
+        self::assertSame('GAME_NOT_FOUND', $response['error'] ?? null);
+    }
 }

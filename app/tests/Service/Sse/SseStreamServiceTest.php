@@ -112,16 +112,17 @@ final class SseStreamServiceTest extends TestCase
     }
 
     /**
-     * @return iterable<string, array{GameStatus}>
+     * @return iterable<string, array{GameStatus|null}>
      */
     public static function statusAfterTheLobby(): iterable
     {
         yield 'started' => [GameStatus::Started];
         yield 'aborted' => [GameStatus::Aborted];
+        yield 'deleted' => [null];
     }
 
     #[DataProvider('statusAfterTheLobby')]
-    public function testStreamEndsWithinOnePollIntervalAfterTheGameLeavesTheLobby(GameStatus $status): void
+    public function testStreamEndsWithinOnePollIntervalAfterTheGameLeavesTheLobby(?GameStatus $status): void
     {
         $this->gameRepository->method('findStatus')
             ->willReturnOnConsecutiveCalls(GameStatus::Lobby, GameStatus::Lobby, $status);
