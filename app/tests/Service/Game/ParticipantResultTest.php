@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Game;
 
+use App\Dto\ParticipantTotalsDto;
 use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Service\Game\ParticipantResult;
@@ -53,34 +54,15 @@ final class ParticipantResultTest extends TestCase
         self::assertNull(ParticipantResult::displayName(new GamePlayers()));
     }
 
-    public function testMaxRoundNumberIsTheLaterOfFinishedRoundsAndTheLastRoundThrown(): void
+    public function testThreeDartAverageIsPointsPerDartTimesThree(): void
     {
-        self::assertSame(5, ParticipantResult::maxRoundNumber(3, [7 => 4, 8 => 5]));
-        self::assertSame(6, ParticipantResult::maxRoundNumber(6, [7 => 4]));
-        self::assertSame(3, ParticipantResult::maxRoundNumber(3, []));
-        self::assertNull(ParticipantResult::maxRoundNumber(null, []));
+        self::assertSame(60.6, ParticipantResult::threeDartAverage(new ParticipantTotalsDto(turns: 2, dartsThrown: 5, totalScore: 101.0)));
+        self::assertSame(45.0, ParticipantResult::threeDartAverage(new ParticipantTotalsDto(turns: 1, dartsThrown: 2, totalScore: 30.0)));
     }
 
-    public function testCheckedOutParticipantPlayedOnlyTheirOwnRounds(): void
+    public function testThreeDartAverageIsZeroWithoutDarts(): void
     {
-        self::assertSame(4, ParticipantResult::roundsPlayed(0, 4, 6));
-        self::assertSame(0, ParticipantResult::roundsPlayed(0, null, 6));
-    }
-
-    public function testParticipantStillInPlayedEveryRoundOfTheGame(): void
-    {
-        self::assertSame(6, ParticipantResult::roundsPlayed(40, 4, 6));
-        self::assertSame(6, ParticipantResult::roundsPlayed(null, null, 6));
-    }
-
-    public function testRoundAverageDividesTheTotalByTheRoundsPlayed(): void
-    {
-        self::assertSame(45.0, ParticipantResult::roundAverage(90.0, 2));
-    }
-
-    public function testRoundAverageIsZeroWithoutRounds(): void
-    {
-        self::assertSame(0.0, ParticipantResult::roundAverage(90.0, 0));
-        self::assertSame(0.0, ParticipantResult::roundAverage(90.0, null));
+        self::assertSame(0.0, ParticipantResult::threeDartAverage(new ParticipantTotalsDto(turns: 0, dartsThrown: 0, totalScore: 0.0)));
+        self::assertSame(0.0, ParticipantResult::threeDartAverage(null));
     }
 }

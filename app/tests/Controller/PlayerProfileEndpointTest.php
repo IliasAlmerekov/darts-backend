@@ -86,7 +86,7 @@ final class PlayerProfileEndpointTest extends WebTestCase
         $client->loginUser($player);
         $stats = $this->getProfile($client)['stats'];
 
-        self::assertSame(['gamesPlayed' => 2, 'scoreAverage' => 50.0], array_intersect_key($stats, ['gamesPlayed' => 0, 'scoreAverage' => 0]));
+        self::assertSame(['gamesPlayed' => 2, 'scoreAverage' => 124.2], array_intersect_key($stats, ['gamesPlayed' => 0, 'scoreAverage' => 0]));
 
         $client->loginUser($admin);
         $client->request(Request::METHOD_GET, '/api/players/stats?limit=100');
@@ -142,7 +142,7 @@ final class PlayerProfileEndpointTest extends WebTestCase
             'gameId' => $game->getGameId(),
             'finishedAt' => $finishedAt->format(DateTimeInterface::ATOM),
             'placement' => 2,
-            'roundAverage' => 45.0,
+            'roundAverage' => 90.0,
             'participantsCount' => 3,
             'participants' => [
                 ['playerId' => $mia->getId(), 'displayName' => 'Mia', 'placement' => 1, 'isSelf' => false],
@@ -162,12 +162,13 @@ final class PlayerProfileEndpointTest extends WebTestCase
         ));
         self::assertCount(1, $own);
         self::assertSame(2, $own[0]['placement']);
-        self::assertSame(45.0, $own[0]['roundAverage']);
+        self::assertSame(90.0, $own[0]['roundAverage']);
     }
 
     /**
      * Double out from 160. Round 2 busts with T20 at 40, a Checkout attempt at D20 without a hit;
-     * round 3 finishes 120 with T20, S20, D20.
+     * round 3 finishes 120 with T20, S20, D20. The average is 160 points over 9 darts, the bust
+     * turn counted as 3 darts and 0 points.
      */
     public function testDoubleOutGamePlayedToTheEndFillsTheThrowStatistics(): void
     {
@@ -184,7 +185,7 @@ final class PlayerProfileEndpointTest extends WebTestCase
 
         self::assertSame([
             'gamesPlayed' => 1,
-            'scoreAverage' => 60.0,
+            'scoreAverage' => 53.333333333333336,
             'wins' => 1,
             'winRate' => 100.0,
             'checkoutRate' => 50.0,
@@ -245,7 +246,7 @@ final class PlayerProfileEndpointTest extends WebTestCase
 
         self::assertSame([
             'gamesPlayed' => 1,
-            'scoreAverage' => 20.0,
+            'scoreAverage' => 22.5,
             'wins' => 1,
             'winRate' => 100.0,
             'checkoutRate' => 20.0,
@@ -306,7 +307,7 @@ final class PlayerProfileEndpointTest extends WebTestCase
 
     /**
      * Per the issue, recentGames lists every finished game with a seat, while stats count only
-     * games with a finished round, as the admin list does. The two can differ.
+     * games in which the player threw, as the admin list does. The two can differ.
      */
     public function testFinishedGameWithoutOwnThrowAppearsButIsNotCountedInStats(): void
     {

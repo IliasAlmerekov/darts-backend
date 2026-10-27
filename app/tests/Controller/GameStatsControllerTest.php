@@ -101,7 +101,7 @@ final class GameStatsControllerTest extends TestCase
         $statsService->method('getPlayerStats')->willReturn([new PlayerStatsDto(1, 'p', 1, 50.0)]);
 
         $throwsRepo = $this->createMock(RoundThrowsRepositoryInterface::class);
-        $throwsRepo->method('countPlayersWithFinishedRounds')->willReturn(1);
+        $throwsRepo->method('countPlayersWithStatistics')->willReturn(1);
 
         $response = $this->controller->playerStats($statsService, $throwsRepo, 20, 0, 'average:desc');
 

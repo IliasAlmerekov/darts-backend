@@ -33,14 +33,16 @@ final class GameStatisticsServiceTest extends TestCase
                     'username' => 'alice',
                     'gamesPlayed' => 5,
                     'totalValue' => '150.0',
-                    'roundsFinished' => '10',
+                    'dartsThrown' => '30',
+                    'scoreAverage' => '15.0',
                 ],
                 [
                     'playerId' => 2,
                     'username' => 'bob',
                     'gamesPlayed' => 3,
                     'totalValue' => '60.0',
-                    'roundsFinished' => '0', // защитный кейс: деление на 0
+                    'dartsThrown' => '0',
+                    'scoreAverage' => null, // no darts: the SQL average is NULL
                 ],
             ]);
 
@@ -75,8 +77,7 @@ final class GameStatisticsServiceTest extends TestCase
                     0 => '7',
                     'username' => 'legacy-player',
                     2 => '4',
-                    3 => '88.0',
-                    4 => '8',
+                    5 => '11.0',
                 ],
                 [
                     0 => '8',
@@ -113,7 +114,7 @@ final class GameStatisticsServiceTest extends TestCase
                     'username' => 'postgres-lower',
                     'gamesplayed' => '7',
                     'totalvalue' => '140.0',
-                    'roundsfinished' => '4',
+                    'scoreaverage' => '35.0',
                 ],
                 [
                     'player_id' => '12',
@@ -148,7 +149,7 @@ final class GameStatisticsServiceTest extends TestCase
                 'username' => 'alice',
                 'gamesPlayed' => '5',
                 'totalValue' => '150.0',
-                'roundsFinished' => '10',
+                'dartsThrown' => '30',
                 'scoreAverage' => '15.0',
             ]);
 

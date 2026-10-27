@@ -171,7 +171,7 @@ final class GameStatsController extends AbstractController
         return new PlayerStatsResponseDto(
             limit: $pagination->limit,
             offset: $pagination->offset,
-            total: $roundThrowsRepository->countPlayersWithFinishedRounds(),
+            total: $roundThrowsRepository->countPlayersWithStatistics(),
             items: $items
         );
     }

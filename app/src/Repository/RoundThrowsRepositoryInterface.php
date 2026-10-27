@@ -104,20 +104,6 @@ interface RoundThrowsRepositoryInterface
     public function findRoundHistoryForGame(int $gameId): array;
 
     /**
-     * @param int $gameId
-     *
-     * @return array<int, int>
-     */
-    public function getRoundsPlayedForGame(int $gameId): array;
-
-    /**
-     * @param int $gameId
-     *
-     * @return array<int, float>
-     */
-    public function getTotalScoreForGame(int $gameId): array;
-
-    /**
      * @psalm-suppress PossiblyUnusedMethod
      *
      * @param int $gameId
@@ -125,15 +111,6 @@ interface RoundThrowsRepositoryInterface
      * @return array<int, array<string, mixed>>
      */
     public function getRoundAveragesForGame(int $gameId): array;
-
-    /**
-     * @psalm-suppress PossiblyUnusedMethod
-     *
-     * @param int $gameId
-     *
-     * @return array<int, int>
-     */
-    public function getLastRoundNumberForGame(int $gameId): array;
 
     /**
      * @param list<int> $gameIds
@@ -153,8 +130,8 @@ interface RoundThrowsRepositoryInterface
      *     username:string,
      *     gamesPlayed:string,
      *     totalValue:string,
-     *     roundsFinished:string,
-     *     scoreAverage:string|null
+     *     dartsThrown:string,
+     *     scoreAverage:float|string|null
      * }>
      */
     public function getPlayerStatistics(int $limit, int $offset, string $sortField = 'average', string $direction = 'DESC'): array;
@@ -167,8 +144,8 @@ interface RoundThrowsRepositoryInterface
      *     username:string,
      *     gamesPlayed:string,
      *     totalValue:string,
-     *     roundsFinished:string,
-     *     scoreAverage:string|null
+     *     dartsThrown:string,
+     *     scoreAverage:float|string|null
      * }|null
      */
     public function getPlayerStatisticsForPlayer(int $playerId): ?array;
@@ -195,7 +172,7 @@ interface RoundThrowsRepositoryInterface
     /**
      * @return int
      */
-    public function countPlayersWithFinishedRounds(): int;
+    public function countPlayersWithStatistics(): int;
 
     /**
      * @param int $gameId

@@ -688,7 +688,6 @@ final class ConcurrentSeatingTest extends KernelTestCase
             $this->entityManager,
             $this->gamePlayersRepository,
             new RoundThrowsRepository($this->registry()),
-            new RoundRepository($this->registry()),
             $access,
             new GameRepository($this->registry()),
         );
