@@ -58,9 +58,13 @@ final class PlayerStatsSortEndpointTest extends WebTestCase
         );
     }
 
+    /**
+     * A full game of tied players: from six ties on, MySQL cuts a LIMIT 2 page with an
+     * unstable sort, so without the player-id tie-break pages repeat and skip players.
+     */
     public function testPlayersWithEqualSortValuesComeBackInPlayerIdOrder(): void
     {
-        $players = $this->playFinishedGame([['Sort47 Twin', '7'], ['Sort47 Twin', '7'], ['Sort47 Twin', '7']]);
+        $players = $this->playFinishedGame(array_fill(0, Game::MAX_PARTICIPANTS, ['Sort47 Twin', '7']));
         $ids = array_keys($players);
 
         foreach (['name:asc', 'name:desc', 'average:asc', 'average:desc', 'gamesplayed:asc', 'gamesplayed:desc'] as $sort) {
