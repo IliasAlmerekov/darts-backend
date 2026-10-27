@@ -48,6 +48,23 @@ final class GameRepositoryTest extends KernelTestCase
         self::assertSame(GameStatus::Started, $found->getStatus());
     }
 
+    public function testFindStatusReadsTheStoredStatusPastTheIdentityMap(): void
+    {
+        $game = $this->createGame(GameStatus::Lobby);
+        $this->entityManager->flush();
+        $gameId = (int) $game->getGameId();
+
+        // Another request starts the game; the entity this request holds still says lobby.
+        $this->entityManager->getConnection()->executeStatement(
+            'UPDATE game SET status = :status WHERE game_id = :gameId',
+            ['status' => GameStatus::Started->value, 'gameId' => $gameId],
+        );
+
+        self::assertSame(GameStatus::Lobby, $game->getStatus());
+        self::assertSame(GameStatus::Started, $this->repository->findStatus($gameId));
+        self::assertNull($this->repository->findStatus($gameId + 1000));
+    }
+
     public function testFindHighestGameId(): void
     {
         $first = $this->createGame(GameStatus::Lobby);

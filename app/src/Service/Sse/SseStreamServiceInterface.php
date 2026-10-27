@@ -12,8 +12,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 interface SseStreamServiceInterface
 {
     /**
-     * Create a SSE stream for player updates and throws.
-     * Streams real-time updates about players and their throws to the client.
+     * Create a SSE stream for the players of a room in the lobby.
+     * Sends `players` events while the game is in the lobby, and ends when it leaves the lobby
+     * or after a lifetime cap.
      *
      * @param int $gameId The game ID to stream updates for
      *

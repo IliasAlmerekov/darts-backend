@@ -152,6 +152,22 @@ SQL,
     /**
      * @param int $gameId
      *
+     * @return GameStatus|null
+     */
+    #[\Override]
+    public function findStatus(int $gameId): ?GameStatus
+    {
+        $status = $this->getEntityManager()->getConnection()->fetchOne(
+            'SELECT status FROM game WHERE game_id = :gameId',
+            ['gameId' => $gameId],
+        );
+
+        return is_string($status) ? GameStatus::from($status) : null;
+    }
+
+    /**
+     * @param int $gameId
+     *
      * @return Game|null
      */
     #[\Override]

@@ -61,6 +61,16 @@ interface GameRepositoryInterface
     public function findOneByGameId(int $gameId): ?Game;
 
     /**
+     * Returns the game's stored status, or null for a missing game. The scalar read skips the
+     * identity map, so a long-lived request sees status changes other requests committed.
+     *
+     * @param int $gameId
+     *
+     * @return GameStatus|null
+     */
+    public function findStatus(int $gameId): ?GameStatus;
+
+    /**
      * Loads a game by id and acquires a pessimistic write lock. A game this request already
      * holds is reloaded, so it shows what other transactions committed before the lock.
      * Must be called inside an open transaction.
