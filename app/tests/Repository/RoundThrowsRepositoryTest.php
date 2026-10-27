@@ -284,7 +284,7 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
         $player1 = $this->createUser('u1');
         $player2 = $this->createUser('u2');
 
-        // Player 1: round 1 -> 10, 20 (avg 15); round 2 -> a bust dart, then 5
+        // Player 1: round 1 -> 10, 20 (two darts); round 2 -> a bust dart, then 5
         $this->createThrow($game, $round1, $player1, 1, 10, 10);
         $this->createThrow($game, $round1, $player1, 2, 20, 30);
         $this->createThrow($game, $round2, $player1, 1, 50, 30, isBust: true);
@@ -452,18 +452,41 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
     {
         $finished = $this->createGame(GameStatus::Finished);
         $started = $this->createGame(GameStatus::Started);
-        $closed = $this->createRound($finished, 1, finished: true);
-        $open = $this->createRound($finished, 2);
+        $open1 = $this->createRound($finished, 1);
+        $open2 = $this->createRound($finished, 2);
         $startedRound = $this->createRound($started, 1);
         $alice = $this->createUser('counted-alice');
-        $this->createThrow($finished, $closed, $alice, 1, 20, 281);
-        $this->createThrow($finished, $open, $alice, 1, 25, 256);
+        // Every round Alice threw in is unfinished: only the new rule counts her throws.
+        $this->createThrow($finished, $open1, $alice, 1, 20, 281);
+        $this->createThrow($finished, $open2, $alice, 1, 25, 256);
         $this->createThrow($started, $startedRound, $alice, 1, 9, 292);
         $this->em->flush();
 
         $rows = $this->repo->findThrowsInCountedGamesForPlayer((int) $alice->getId());
 
         self::assertSame([20, 25], array_column($rows, 'value'));
+    }
+
+    public function testPlayerStatisticsIncludeAPlayerWhoseOnlyTurnsSitInUnfinishedRounds(): void
+    {
+        $game = $this->createGame(GameStatus::Finished);
+        $open = $this->createRound($game, 1);
+        $alice = $this->createUser('open-only-alice');
+        $this->createThrow($game, $open, $alice, 1, 20, 281);
+        $this->createThrow($game, $open, $alice, 2, 40, 241);
+        $this->em->flush();
+
+        $list = array_values(array_filter(
+            $this->repo->getPlayerStatistics(1000, 0),
+            static fn(array $row): bool => (int) $row['playerId'] === $alice->getId()
+        ));
+        $single = $this->repo->getPlayerStatisticsForPlayer((int) $alice->getId());
+
+        self::assertCount(1, $list);
+        self::assertNotNull($single);
+        self::assertSame($list[0], $single);
+        self::assertSame('2', (string) $single['dartsThrown']);
+        self::assertSame(90.0, (float) $single['scoreAverage']);
     }
 
     public function testCountPlayersWithStatisticsCountsRegisteredPlayersWhoThrewInAFinishedGame(): void
