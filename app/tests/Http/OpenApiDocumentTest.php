@@ -330,6 +330,19 @@ final class OpenApiDocumentTest extends WebTestCase
         }
     }
 
+    public function testGameStartAndRematchStartDocumentTheGameStateAsTheirSuccessBody(): void
+    {
+        $paths = $this->document()['paths'];
+
+        foreach (['/api/game/{gameId}/start' => '200', '/api/game/{gameId}/rematch/start' => '201'] as $path => $status) {
+            self::assertSame(
+                '#/components/schemas/GameResponseDto',
+                $paths[$path]['post']['responses'][$status]['content']['application/json']['schema']['$ref'] ?? null,
+                $path,
+            );
+        }
+    }
+
     public function testRoomCreateAndRematchDocumentTheOpenLobbyReuse(): void
     {
         $paths = $this->document()['paths'];

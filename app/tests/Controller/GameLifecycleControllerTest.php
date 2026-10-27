@@ -67,11 +67,13 @@ final class GameLifecycleControllerTest extends TestCase
             ->method('buildStateVersion')
             ->with($game)
             ->willReturn('state-v1');
+        $gameDto = $this->dummyGameDto();
+        $gameService->expects($this->once())->method('createGameDto')->with($game)->willReturn($gameDto);
         $request = new Request();
 
         $response = $this->controller->start($game, $startService, $gameService, $this->gameRepositoryFinding($game), $this->runningTransaction(), $request, $dto);
 
-        $this->assertSame($game, $response);
+        $this->assertSame($gameDto, $response);
         $this->assertSame([
             'ETag' => '"state-v1"',
             'Cache-Control' => 'private, no-cache',
@@ -111,13 +113,15 @@ final class GameLifecycleControllerTest extends TestCase
             });
         $gameService = $this->createMock(GameServiceInterface::class);
         $gameService->expects($this->once())->method('buildStateVersion')->with($reloadedGame)->willReturn('state-v2');
+        $gameDto = $this->dummyGameDto();
+        $gameService->expects($this->once())->method('createGameDto')->with($reloadedGame)->willReturn($gameDto);
         $entityManager = $this->createStub(EntityManagerInterface::class);
         $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $operation): mixed => $operation());
         $transaction = new RetryingTransaction($entityManager, $this->createStub(ManagerRegistry::class));
 
         $response = $this->controller->start($routeGame, $startService, $gameService, $gameRepository, $transaction, new Request(), new StartGameRequest());
 
-        $this->assertSame($reloadedGame, $response);
+        $this->assertSame($gameDto, $response);
     }
 
     public function testCreateAndStartRematchReturnsStartedGame(): void
@@ -135,10 +139,13 @@ final class GameLifecycleControllerTest extends TestCase
             ->method('wrapInTransaction')
             ->willReturnCallback(static fn (callable $operation): mixed => $operation());
         $transaction = new RetryingTransaction($entityManager, $this->createStub(ManagerRegistry::class));
+        $gameDto = $this->dummyGameDto();
+        $gameService = $this->createMock(GameServiceInterface::class);
+        $gameService->expects($this->once())->method('createGameDto')->with($game)->willReturn($gameDto);
 
-        $response = $this->controller->createAndStartRematch($gameId, $rematchStartService, $transaction, $dto);
+        $response = $this->controller->createAndStartRematch($gameId, $rematchStartService, $gameService, $transaction, $dto);
 
-        $this->assertSame($game, $response);
+        $this->assertSame($gameDto, $response);
     }
 
     public function testCreateSettingsCreatesGame(): void
