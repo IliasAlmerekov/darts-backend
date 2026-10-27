@@ -69,7 +69,7 @@ final class ParticipantResult
      *
      * @return float
      */
-    public static function roundAverage(?ParticipantTotalsDto $totals): float
+    public static function threeDartAverage(?ParticipantTotalsDto $totals): float
     {
         return null !== $totals && $totals->dartsThrown > 0
             ? $totals->totalScore * 3.0 / (float) $totals->dartsThrown

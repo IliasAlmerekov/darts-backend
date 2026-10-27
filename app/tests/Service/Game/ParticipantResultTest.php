@@ -56,13 +56,13 @@ final class ParticipantResultTest extends TestCase
 
     public function testRoundAverageIsPointsPerDartTimesThree(): void
     {
-        self::assertSame(60.6, ParticipantResult::roundAverage(new ParticipantTotalsDto(turns: 2, dartsThrown: 5, totalScore: 101.0)));
-        self::assertSame(45.0, ParticipantResult::roundAverage(new ParticipantTotalsDto(turns: 1, dartsThrown: 2, totalScore: 30.0)));
+        self::assertSame(60.6, ParticipantResult::threeDartAverage(new ParticipantTotalsDto(turns: 2, dartsThrown: 5, totalScore: 101.0)));
+        self::assertSame(45.0, ParticipantResult::threeDartAverage(new ParticipantTotalsDto(turns: 1, dartsThrown: 2, totalScore: 30.0)));
     }
 
     public function testRoundAverageIsZeroWithoutDarts(): void
     {
-        self::assertSame(0.0, ParticipantResult::roundAverage(new ParticipantTotalsDto(turns: 0, dartsThrown: 0, totalScore: 0.0)));
-        self::assertSame(0.0, ParticipantResult::roundAverage(null));
+        self::assertSame(0.0, ParticipantResult::threeDartAverage(new ParticipantTotalsDto(turns: 0, dartsThrown: 0, totalScore: 0.0)));
+        self::assertSame(0.0, ParticipantResult::threeDartAverage(null));
     }
 }

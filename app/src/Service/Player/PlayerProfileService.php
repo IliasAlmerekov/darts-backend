@@ -119,7 +119,7 @@ final readonly class PlayerProfileService implements PlayerProfileServiceInterfa
                 gameId: $gameId,
                 finishedAt: $game['finishedAt']?->format(DateTimeInterface::ATOM),
                 placement: $ownSeat?->getPlacement(),
-                roundAverage: ParticipantResult::roundAverage($totals[$playerId] ?? null),
+                roundAverage: ParticipantResult::threeDartAverage($totals[$playerId] ?? null),
                 participantsCount: count($participants),
                 participants: $participants,
             );

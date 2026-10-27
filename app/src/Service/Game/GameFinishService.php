@@ -12,7 +12,6 @@ namespace App\Service\Game;
 use App\Dto\GameSummaryFinishedPlayerDto;
 use App\Dto\GameSummaryResponseDto;
 use App\Dto\GameSummaryWinnerDto;
-use App\Dto\ParticipantTotalsDto;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Enum\GameStatus;
@@ -106,8 +105,7 @@ final readonly class GameFinishService implements GameFinishServiceInterface
     }
 
     /**
-     * @param int                                   $gameId
-     * @param array<int, ParticipantTotalsDto>|null $totals per player id, loaded when omitted
+     * @param int $gameId
      *
      * @return list<array{
      *     playerId:int|null,
@@ -119,9 +117,9 @@ final readonly class GameFinishService implements GameFinishServiceInterface
      * }>
      */
     #[\Override]
-    public function buildFinishedPlayersList(int $gameId, ?array $totals = null): array
+    public function buildFinishedPlayersList(int $gameId): array
     {
-        $totals ??= $this->roundThrowsRepository->getParticipantTotalsForGames([$gameId])[$gameId] ?? [];
+        $totals = $this->roundThrowsRepository->getParticipantTotalsForGames([$gameId])[$gameId] ?? [];
         $players = $this->gamePlayersRepository->findByGameId($gameId);
         usort($players, ParticipantResult::compareByPlacement(...));
         $result = [];
@@ -135,7 +133,7 @@ final readonly class GameFinishService implements GameFinishServiceInterface
                 'position' => $player->getPosition(),
                 'placement' => $player->getPlacement(),
                 'roundsPlayed' => $ownTotals?->turns ?? 0,
-                'roundAverage' => ParticipantResult::roundAverage($ownTotals),
+                'roundAverage' => ParticipantResult::threeDartAverage($ownTotals),
             ];
         }
 
