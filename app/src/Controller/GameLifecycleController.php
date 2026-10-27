@@ -59,7 +59,7 @@ final class GameLifecycleController extends AbstractController
      * @param Request                      $request
      * @param StartGameRequest             $dto
      *
-     * @return Game
+     * @return GameResponseDto
      *
      * @throws ApiExceptionInterface
      */
@@ -68,14 +68,14 @@ final class GameLifecycleController extends AbstractController
     #[OA\Response(
         response: Response::HTTP_OK,
         description: 'Aktualisierter Spielzustand nach dem Start.',
-        content: new OA\JsonContent(ref: new Model(type: Game::class, groups: ['game:read']))
+        content: new OA\JsonContent(ref: new Model(type: GameResponseDto::class))
     )]
-    #[ApiResponse(groups: ['game:read'])]
+    #[ApiResponse]
     #[OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Ein Setting wurde in camelCase und in Kleinschreibung mit unterschiedlichen Werten gesendet (`REQUEST_CONFLICTING_SETTING_KEYS`).')]
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht, oder das Spiel hätte danach `doubleOut` und `tripleOut` zugleich (`GAME_CONFLICTING_OUT_RULES`). Das Spiel bleibt unverändert.')]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
     #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'], format: 'json')]
-    public function start(#[AttributeMapEntity(id: 'gameId')] Game $game, GameStartServiceInterface $gameStartService, GameServiceInterface $gameService, GameRepositoryInterface $gameRepository, RetryingTransactionInterface $transaction, Request $request, #[MapRequestPayload] StartGameRequest $dto): Game
+    public function start(#[AttributeMapEntity(id: 'gameId')] Game $game, GameStartServiceInterface $gameStartService, GameServiceInterface $gameService, GameRepositoryInterface $gameRepository, RetryingTransactionInterface $transaction, Request $request, #[MapRequestPayload] StartGameRequest $dto): GameResponseDto
     {
         $gameId = $game->getGameId() ?? throw new GameNotFoundException();
         $started = $transaction->run(static function () use ($gameRepository, $gameStartService, $gameId, $dto): Game {
@@ -90,7 +90,7 @@ final class GameLifecycleController extends AbstractController
             $this->createStateVersionHeaders($gameService->buildStateVersion($started)),
         );
 
-        return $started;
+        return $gameService->createGameDto($started);
     }
 
     /**
@@ -98,10 +98,11 @@ final class GameLifecycleController extends AbstractController
      *
         * @param int                          $gameId
      * @param RematchStartServiceInterface $rematchStartService
+     * @param GameServiceInterface         $gameService
      * @param RetryingTransactionInterface $transaction
         * @param StartGameRequest             $dto
      *
-     * @return Game
+     * @return GameResponseDto
      *
      * @throws ApiExceptionInterface
      */
@@ -114,17 +115,19 @@ final class GameLifecycleController extends AbstractController
     #[OA\Response(
         response: Response::HTTP_CREATED,
         description: 'Die offene Lobby oder eine neue Lobby wurde mit den Spielern befüllt und gestartet.',
-        content: new OA\JsonContent(ref: new Model(type: Game::class, groups: ['game:read']))
+        content: new OA\JsonContent(ref: new Model(type: GameResponseDto::class))
     )]
-    #[ApiResponse(status: Response::HTTP_CREATED, groups: ['game:read'])]
+    #[ApiResponse(status: Response::HTTP_CREATED)]
     #[OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Ein Setting wurde in camelCase und in Kleinschreibung mit unterschiedlichen Werten gesendet (`REQUEST_CONFLICTING_SETTING_KEYS`).')]
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht, oder das Spiel hätte danach `doubleOut` und `tripleOut` zugleich (`GAME_CONFLICTING_OUT_RULES`). Das Spiel bleibt unverändert.')]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
     #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Das alte Spiel ist nicht das neueste Spiel, oder es ist weder beendet noch abgebrochen (`GAME_NOT_NEWEST`). Eine offene Lobby ist immer das neueste Spiel.')]
     #[Route('/api/game/{gameId}/rematch/start', name: 'app_game_rematch_start', methods: ['POST'], format: 'json')]
-    public function createAndStartRematch(int $gameId, RematchStartServiceInterface $rematchStartService, RetryingTransactionInterface $transaction, #[MapRequestPayload] StartGameRequest $dto): Game
+    public function createAndStartRematch(int $gameId, RematchStartServiceInterface $rematchStartService, GameServiceInterface $gameService, RetryingTransactionInterface $transaction, #[MapRequestPayload] StartGameRequest $dto): GameResponseDto
     {
-        return $transaction->run(static fn (): Game => $rematchStartService->createAndStart($gameId, $dto));
+        $started = $transaction->run(static fn (): Game => $rematchStartService->createAndStart($gameId, $dto));
+
+        return $gameService->createGameDto($started);
     }
 
     /**

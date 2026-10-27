@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\EventSubscriber;
 
 use App\Controller\GameLifecycleController;
-use App\Entity\Game;
+use App\Controller\GameStatsController;
+use App\Dto\GameResponseDto;
+use App\Dto\PlayerStatsResponseDto;
 use App\EventSubscriber\ApiViewSubscriber;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -19,11 +21,11 @@ final class ApiViewSubscriberTest extends TestCase
 {
     public function testOnKernelViewUsesRealGameLifecycleStartMetadataAndMergesHeaders(): void
     {
-        $game = $this->createStub(Game::class);
+        $gameDto = new GameResponseDto(id: 42, status: 'started', currentRound: 1, activePlayerId: null, currentThrowCount: 0, players: [], winnerId: null, settings: []);
         $serializer = $this->createMock(SerializerInterface::class);
         $serializer->expects($this->once())
             ->method('serialize')
-            ->with($game, 'json', ['groups' => ['game:read']])
+            ->with($gameDto, 'json', [])
             ->willReturn('{"id":42,"status":"started"}');
 
         $subscriber = new ApiViewSubscriber($serializer);
@@ -39,7 +41,7 @@ final class ApiViewSubscriberTest extends TestCase
             $this->createStub(HttpKernelInterface::class),
             $request,
             HttpKernelInterface::MAIN_REQUEST,
-            $game,
+            $gameDto,
         );
 
         $subscriber->onKernelView($event);
@@ -53,5 +55,34 @@ final class ApiViewSubscriberTest extends TestCase
         $this->assertTrue($response->headers->hasCacheControlDirective('no-cache'));
         $this->assertSame('state-v1', $response->headers->get('X-Game-State-Version'));
         $this->assertSame('{"id":42,"status":"started"}', $response->getContent());
+    }
+
+    public function testOnKernelViewPassesRealApiResponseGroupsToSerializer(): void
+    {
+        $statsDto = new PlayerStatsResponseDto(limit: 20, offset: 0, total: 0, items: []);
+        $serializer = $this->createMock(SerializerInterface::class);
+        $serializer->expects($this->once())
+            ->method('serialize')
+            ->with($statsDto, 'json', ['groups' => ['stats:read']])
+            ->willReturn('{"limit":20,"offset":0,"total":0,"items":[]}');
+
+        $subscriber = new ApiViewSubscriber($serializer);
+        $request = Request::create('/api/players/stats', 'GET');
+        $request->attributes->set('_controller', GameStatsController::class.'::playerStats');
+
+        $event = new ViewEvent(
+            $this->createStub(HttpKernelInterface::class),
+            $request,
+            HttpKernelInterface::MAIN_REQUEST,
+            $statsDto,
+        );
+
+        $subscriber->onKernelView($event);
+
+        $response = $event->getResponse();
+
+        $this->assertInstanceOf(JsonResponse::class, $response);
+        $this->assertSame(Response::HTTP_OK, $response->getStatusCode());
+        $this->assertSame('{"limit":20,"offset":0,"total":0,"items":[]}', $response->getContent());
     }
 }
