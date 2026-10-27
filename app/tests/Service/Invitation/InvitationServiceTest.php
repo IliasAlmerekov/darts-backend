@@ -30,6 +30,7 @@ use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
@@ -168,6 +169,26 @@ final class InvitationServiceTest extends TestCase
                 'username' => $user->getDisplayName(),
             ],
         ], $payload['users']);
+    }
+
+    public function testGetInvitationPayloadPropagatesParticipantListFailure(): void
+    {
+        $game = (new Game())->setGameId(31);
+        $failure = new RuntimeException('participant list failed');
+
+        $this->invitationRepository
+            ->method('findOneBy')
+            ->willReturn((new Invitation())->setUuid('def')->setGame($game));
+        $this->gamePlayersRepository
+            ->method('findByGameId')
+            ->willThrowException($failure);
+
+        try {
+            $this->service->getInvitationPayload($game);
+            self::fail('getInvitationPayload() must not swallow the participant list failure.');
+        } catch (RuntimeException $caught) {
+            self::assertSame($failure, $caught);
+        }
     }
 
     public function testProcessInvitationRejectsWhenUserNotLoggedIn(): void

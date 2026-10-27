@@ -32,7 +32,6 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Uid\Uuid;
-use Throwable;
 
 /**
  * Service to handle invitation creation and related data.
@@ -112,12 +111,7 @@ final readonly class InvitationService implements InvitationServiceInterface
         }
 
         $invitation = $this->createOrGetInvitation($game);
-        try {
-            $users = $this->getUsersForGame($game);
-        } catch (Throwable) {
-            // Keep invitation creation available even if participant projection fails due to schema drift.
-            $users = [];
-        }
+        $users = $this->getUsersForGame($game);
         $invitationLink = $this->router->generate('join_invitation', ['uuid' => $invitation->getUuid()]);
 
         return [
