@@ -343,7 +343,7 @@ SQL,
      *     gamesPlayed:string,
      *     totalValue:string,
      *     dartsThrown:string,
-     *     scoreAverage:string|null
+     *     scoreAverage:float|string|null
      * }>
      */
     #[\Override]
@@ -364,7 +364,7 @@ SQL,
      *     gamesPlayed:string,
      *     totalValue:string,
      *     dartsThrown:string,
-     *     scoreAverage:string|null
+     *     scoreAverage:float|string|null
      * }|null
      */
     #[\Override]
@@ -475,7 +475,7 @@ SQL,
      *     gamesPlayed:string,
      *     totalValue:string,
      *     dartsThrown:string,
-     *     scoreAverage:string|null
+     *     scoreAverage:float|string|null
      * }>
      */
     private function fetchPlayerStatistics(
@@ -548,7 +548,7 @@ SQL,
          *     gamesPlayed:string,
          *     totalValue:string,
          *     dartsThrown:string,
-         *     scoreAverage:string|null
+         *     scoreAverage:float|string|null
          * }> $rows
          */
         $rows = $connection->fetchAllAssociative($sql, $parameters, $types);

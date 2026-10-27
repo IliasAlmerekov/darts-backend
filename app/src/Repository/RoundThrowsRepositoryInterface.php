@@ -131,7 +131,7 @@ interface RoundThrowsRepositoryInterface
      *     gamesPlayed:string,
      *     totalValue:string,
      *     dartsThrown:string,
-     *     scoreAverage:string|null
+     *     scoreAverage:float|string|null
      * }>
      */
     public function getPlayerStatistics(int $limit, int $offset, string $sortField = 'average', string $direction = 'DESC'): array;
@@ -145,7 +145,7 @@ interface RoundThrowsRepositoryInterface
      *     gamesPlayed:string,
      *     totalValue:string,
      *     dartsThrown:string,
-     *     scoreAverage:string|null
+     *     scoreAverage:float|string|null
      * }|null
      */
     public function getPlayerStatisticsForPlayer(int $playerId): ?array;
