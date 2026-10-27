@@ -16,6 +16,7 @@ use App\Dto\RoomCreateRequest;
 use App\Dto\SuccessMessageDto;
 use App\Dto\UpdatePlayerOrderRequest;
 use App\Entity\User;
+use App\Enum\GameStatus;
 use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\PlayerNotFoundInGameException;
 use App\Exception\Request\UsernameAlreadyTakenException;
@@ -34,7 +35,6 @@ use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
@@ -298,22 +298,23 @@ final class GameRoomController extends AbstractController
     }
 
     /**
-     * Streams SSE updates for a room.
+     * Streams the players of a room in the lobby; outside the lobby answers 204 (ADR 0001).
      *
      * @param int     $id
      * @param Request $request
      *
-     * @return StreamedResponse
+     * @return Response
      */
     #[OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
     #[OA\Response(
         response: Response::HTTP_OK,
-        description: 'Server-Sent Events (SSE) Stream für Raum-Updates.',
+        description: 'Server-Sent Events (SSE) Stream für die Lobby. Sendet `players`-Events (`players`, `count`), wenn sich die Spieler ändern, und Heartbeats. Der Stream endet spätestens eine Sekunde, nachdem das Spiel die Lobby verlässt (gestartet oder abgebrochen), und spätestens nach 5 Minuten. Würfe sendet der Stream nicht.',
         content: new OA\MediaType(mediaType: 'text/event-stream')
     )]
+    #[OA\Response(response: Response::HTTP_NO_CONTENT, description: 'Das Spiel ist nicht in der Lobby (gestartet, beendet oder abgebrochen). Ohne Body, damit EventSource nicht neu verbindet.')]
     #[OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Spiel nicht gefunden.')]
     #[Route(path: '/api/room/{id}/stream', name: 'room_stream', methods: ['GET'])]
-    public function roomStream(int $id, Request $request): StreamedResponse
+    public function roomStream(int $id, Request $request): Response
     {
         if ($request->hasSession()) {
             $request->getSession()->save();
@@ -322,6 +323,9 @@ final class GameRoomController extends AbstractController
         $game = $this->gameRoomService->findGameById($id);
         if (!$game) {
             throw new GameNotFoundException();
+        }
+        if (GameStatus::Lobby !== $game->getStatus()) {
+            return new Response(null, Response::HTTP_NO_CONTENT);
         }
 
         return $this->sseStreamService->createPlayerStream($id);
