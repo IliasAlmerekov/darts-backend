@@ -9,10 +9,11 @@ declare(strict_types=1);
 
 namespace App\Service\Game;
 
+use App\Dto\ParticipantTotalsDto;
 use App\Entity\GamePlayers;
 
 /**
- * A participant's result in a game: placement order, display name and round average.
+ * A participant's result in a game: placement order, display name and three-dart average.
  * The game summary and the player's Profile both use it, so the two always agree.
  */
 final class ParticipantResult
@@ -61,49 +62,17 @@ final class ParticipantResult
     }
 
     /**
-     * The number of rounds the game ran: its finished rounds, or the last round anyone threw in.
+     * The three-dart average: points divided by darts thrown, times three. A participant who
+     * threw nothing averages 0.
      *
-     * @param int|null        $finishedRounds
-     * @param array<int, int> $lastRoundByPlayer
-     *
-     * @return int|null
-     */
-    public static function maxRoundNumber(?int $finishedRounds, array $lastRoundByPlayer): ?int
-    {
-        if ([] === $lastRoundByPlayer) {
-            return $finishedRounds;
-        }
-
-        return max($finishedRounds, max($lastRoundByPlayer));
-    }
-
-    /**
-     * A participant who checked out (score 0) played their own rounds; everyone else played
-     * every round of the game.
-     *
-     * @param int|null $score
-     * @param int|null $ownRoundsPlayed
-     * @param int|null $maxRoundNumber
-     *
-     * @return int|null
-     */
-    public static function roundsPlayed(?int $score, ?int $ownRoundsPlayed, ?int $maxRoundNumber): ?int
-    {
-        if (0 === $score) {
-            return $ownRoundsPlayed ?? 0;
-        }
-
-        return $maxRoundNumber;
-    }
-
-    /**
-     * @param float    $totalScore
-     * @param int|null $roundsPlayed
+     * @param ParticipantTotalsDto|null $totals
      *
      * @return float
      */
-    public static function roundAverage(float $totalScore, ?int $roundsPlayed): float
+    public static function roundAverage(?ParticipantTotalsDto $totals): float
     {
-        return $roundsPlayed > 0 ? $totalScore / (float) $roundsPlayed : 0.0;
+        return null !== $totals && $totals->dartsThrown > 0
+            ? $totals->totalScore * 3.0 / (float) $totals->dartsThrown
+            : 0.0;
     }
 }

@@ -284,7 +284,7 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
         $player1 = $this->createUser('u1');
         $player2 = $this->createUser('u2');
 
-        // Player 1: round 1 -> 10, 20 (avg 15); round 2 -> bust then 5 (avg (0+5)/2 = 2.5)
+        // Player 1: round 1 -> 10, 20 (avg 15); round 2 -> a bust dart, then 5
         $this->createThrow($game, $round1, $player1, 1, 10, 10);
         $this->createThrow($game, $round1, $player1, 2, 20, 30);
         $this->createThrow($game, $round2, $player1, 1, 50, 30, isBust: true);
@@ -296,9 +296,7 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
         $this->em->flush();
 
         $averages = $this->repo->getRoundAveragesForGame($game->getGameId());
-        $roundsPlayed = $this->repo->getRoundsPlayedForGame($game->getGameId());
-        $lastRounds = $this->repo->getLastRoundNumberForGame($game->getGameId());
-        $totals = $this->repo->getTotalScoreForGame($game->getGameId());
+        $totals = $this->repo->getParticipantTotalsForGames([(int) $game->getGameId()])[(int) $game->getGameId()];
 
         $averages = array_map(
             static fn(array $row): array => [
@@ -318,27 +316,12 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
             ['playerId' => $player2->getId(), 'roundNumber' => 2, 'average' => 40.0],
         ], $averages);
 
-        ksort($roundsPlayed);
-        ksort($lastRounds);
-
-        self::assertSame([
-            $player1->getId() => 2,
-            $player2->getId() => 2,
-        ], $roundsPlayed);
-
-        self::assertSame([
-            $player1->getId() => 2,
-            $player2->getId() => 2,
-        ], $lastRounds);
-
-        // bust throw counts as 0 for totals
-        self::assertSame([
-            $player1->getId() => 35.0,
-            $player2->getId() => 70.0,
-        ], $totals);
+        // Player 1's second turn holds a bust, so it scores 0 and counts as 3 darts.
+        self::assertEquals(new ParticipantTotalsDto(turns: 2, dartsThrown: 5, totalScore: 30.0), $totals[(int) $player1->getId()]);
+        self::assertEquals(new ParticipantTotalsDto(turns: 2, dartsThrown: 2, totalScore: 70.0), $totals[(int) $player2->getId()]);
     }
 
-    public function testGetPlayerStatisticsAggregatesFinishedRoundsPerPlayer(): void
+    public function testGetPlayerStatisticsAggregatesTheThreeDartAveragePerPlayer(): void
     {
         $finishedGameA = $this->createGame(GameStatus::Finished);
         $finishedGameB = $this->createGame(GameStatus::Finished);
@@ -379,27 +362,29 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
                 'username' => (string) $row['username'],
                 'gamesPlayed' => (int) $row['gamesPlayed'],
                 'totalValue' => round((float) $row['totalValue'], 4),
-                'roundsFinished' => (int) $row['roundsFinished'],
+                'dartsThrown' => (int) $row['dartsThrown'],
                 'scoreAverage' => null !== $row['scoreAverage'] ? round((float) $row['scoreAverage'], 4) : null,
             ];
         }, $rows);
 
+        // Alice: 30 + 0 (bust turn) + 60 + 30 points over 2 + 3 + 1 + 1 darts, so the open round
+        // of the finished game counts and the started game does not.
         self::assertSame([
+            [
+                'playerId' => $alice->getId(),
+                'username' => 'Alice',
+                'gamesPlayed' => 2,
+                'totalValue' => 120.0,
+                'dartsThrown' => 7,
+                'scoreAverage' => 51.4286,
+            ],
             [
                 'playerId' => $bob->getId(),
                 'username' => 'Bob',
                 'gamesPlayed' => 1,
                 'totalValue' => 30.0,
-                'roundsFinished' => 1,
-                'scoreAverage' => 30.0,
-            ],
-            [
-                'playerId' => $alice->getId(),
-                'username' => 'Alice',
-                'gamesPlayed' => 2,
-                'totalValue' => 65.0,
-                'roundsFinished' => 3,
-                'scoreAverage' => 21.6667,
+                'dartsThrown' => 2,
+                'scoreAverage' => 45.0,
             ],
         ], $normalizedRows);
     }
@@ -431,19 +416,25 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
         self::assertSame('2', (string) $rows[0]['gamesPlayed']);
     }
 
-    public function testGetParticipantTotalsForGamesMatchesThePerGameAggregates(): void
+    public function testGetParticipantTotalsForGamesAppliesTheTurnRules(): void
     {
         $first = $this->createGame(GameStatus::Finished);
         $second = $this->createGame(GameStatus::Finished);
         $first1 = $this->createRound($first, 1, finished: true);
         $first2 = $this->createRound($first, 2, finished: true);
-        $second1 = $this->createRound($second, 1, finished: true);
+        $first3 = $this->createRound($first, 3);
+        $second1 = $this->createRound($second, 1);
         $alice = $this->createUser('totals-alice');
         $bob = $this->createUser('totals-bob');
+        // Turn 1: two darts, 60 points. Turn 2: a bust on the first dart. Turn 3: one dart of an open round.
         $this->createThrow($first, $first1, $alice, 1, 20, 281);
         $this->createThrow($first, $first1, $alice, 2, 40, 241);
         $this->createThrow($first, $first2, $alice, 1, 60, 241, isBust: true);
+        $this->createThrow($first, $first3, $alice, 1, 11, 230);
+        // A bust on the last dart voids the two darts before it.
         $this->createThrow($first, $first1, $bob, 1, 5, 296);
+        $this->createThrow($first, $first1, $bob, 2, 7, 289);
+        $this->createThrow($first, $first1, $bob, 3, 50, 289, isBust: true);
         $this->createThrow($second, $second1, $alice, 1, 7, 294);
         $this->em->flush();
         $firstId = (int) $first->getGameId();
@@ -451,15 +442,46 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
 
         $totals = $this->repo->getParticipantTotalsForGames([$firstId, $secondId]);
 
-        self::assertEquals(new ParticipantTotalsDto(2, 2, 60.0), $totals[$firstId][(int) $alice->getId()]);
-        self::assertEquals(new ParticipantTotalsDto(1, 1, 5.0), $totals[$firstId][(int) $bob->getId()]);
-        self::assertEquals(new ParticipantTotalsDto(1, 1, 7.0), $totals[$secondId][(int) $alice->getId()]);
-        foreach ([$firstId, $secondId] as $gameId) {
-            self::assertSame($this->repo->getLastRoundNumberForGame($gameId), array_map(static fn(ParticipantTotalsDto $t): int => $t->lastRound, $totals[$gameId]));
-            self::assertSame($this->repo->getRoundsPlayedForGame($gameId), array_map(static fn(ParticipantTotalsDto $t): int => $t->roundsPlayed, $totals[$gameId]));
-            self::assertSame($this->repo->getTotalScoreForGame($gameId), array_map(static fn(ParticipantTotalsDto $t): float => $t->totalScore, $totals[$gameId]));
-        }
+        self::assertEquals(new ParticipantTotalsDto(turns: 3, dartsThrown: 6, totalScore: 71.0), $totals[$firstId][(int) $alice->getId()]);
+        self::assertEquals(new ParticipantTotalsDto(turns: 1, dartsThrown: 3, totalScore: 0.0), $totals[$firstId][(int) $bob->getId()]);
+        self::assertEquals(new ParticipantTotalsDto(turns: 1, dartsThrown: 1, totalScore: 7.0), $totals[$secondId][(int) $alice->getId()]);
         self::assertSame([], $this->repo->getParticipantTotalsForGames([]));
+    }
+
+    public function testFindThrowsInCountedGamesIncludesTheOpenRoundOfAFinishedGame(): void
+    {
+        $finished = $this->createGame(GameStatus::Finished);
+        $started = $this->createGame(GameStatus::Started);
+        $closed = $this->createRound($finished, 1, finished: true);
+        $open = $this->createRound($finished, 2);
+        $startedRound = $this->createRound($started, 1);
+        $alice = $this->createUser('counted-alice');
+        $this->createThrow($finished, $closed, $alice, 1, 20, 281);
+        $this->createThrow($finished, $open, $alice, 1, 25, 256);
+        $this->createThrow($started, $startedRound, $alice, 1, 9, 292);
+        $this->em->flush();
+
+        $rows = $this->repo->findThrowsInCountedGamesForPlayer((int) $alice->getId());
+
+        self::assertSame([20, 25], array_column($rows, 'value'));
+    }
+
+    public function testCountPlayersWithStatisticsCountsRegisteredPlayersWhoThrewInAFinishedGame(): void
+    {
+        $before = $this->repo->countPlayersWithStatistics();
+        $finished = $this->createGame(GameStatus::Finished);
+        $started = $this->createGame(GameStatus::Started);
+        $open = $this->createRound($finished, 1);
+        $startedRound = $this->createRound($started, 1);
+        $alice = $this->createUser('count-alice');
+        $bob = $this->createUser('count-bob');
+        $guest = $this->createUser('count-guest')->setIsGuest(true);
+        $this->createThrow($finished, $open, $alice, 1, 20, 281);
+        $this->createThrow($finished, $open, $guest, 1, 20, 281);
+        $this->createThrow($started, $startedRound, $bob, 1, 20, 281);
+        $this->em->flush();
+
+        self::assertSame($before + 1, $this->repo->countPlayersWithStatistics());
     }
 
     public function testGetPlayerStatisticsForPlayerReturnsThatPlayersListRow(): void
@@ -479,7 +501,7 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
         ));
 
         self::assertSame($listRows[0], $this->repo->getPlayerStatisticsForPlayer((int) $alice->getId()));
-        self::assertSame('30.0000', $listRows[0]['scoreAverage']);
+        self::assertSame('90.0000', $listRows[0]['scoreAverage']);
         self::assertNull($this->repo->getPlayerStatisticsForPlayer((int) $nobody->getId()));
     }
 

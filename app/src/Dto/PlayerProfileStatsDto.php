@@ -22,7 +22,7 @@ use OpenApi\Attributes as OA;
 final class PlayerProfileStatsDto
 {
     /**
-     * @param int                                 $gamesPlayed      finished games with at least one finished round
+     * @param int                                 $gamesPlayed      finished games in which the player threw
      * @param float|null                          $scoreAverage     null when gamesPlayed is 0
      * @param int                                 $wins             counted games with placement 1
      * @param float|null                          $winRate          null when gamesPlayed is 0
@@ -36,6 +36,7 @@ final class PlayerProfileStatsDto
      */
     public function __construct(
         public int $gamesPlayed,
+        #[OA\Property(description: 'Drei-Dart-Durchschnitt über alle Aufnahmen der gezählten Spiele; `null` ohne gezählte Spiele.')]
         public ?float $scoreAverage,
         #[OA\Property(description: 'Gezählte Spiele mit Platzierung 1.')]
         public int $wins,

@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Dto;
 
+use OpenApi\Attributes as OA;
 use Symfony\Component\Serializer\Attribute\Groups;
 
 /**
@@ -23,6 +24,7 @@ final class PlayerStatsDto
     #[Groups(['stats:read'])]
     public int $gamesPlayed;
     #[Groups(['stats:read'])]
+    #[OA\Property(description: 'Drei-Dart-Durchschnitt über alle Aufnahmen beendeter Spiele: Punkte geteilt durch geworfene Darts, mal drei. Eine Aufnahme mit Bust zählt 0 Punkte und 3 Darts.')]
     public float $scoreAverage;
 
     /**

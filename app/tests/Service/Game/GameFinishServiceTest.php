@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Service;
 
 use App\Dto\GameSummaryResponseDto;
+use App\Dto\ParticipantTotalsDto;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
-use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Game\GameFinishService;
 use App\Service\Security\GameAccessServiceInterface;
@@ -56,20 +56,15 @@ final class GameFinishServiceTest extends TestCase
             ->willReturn(1);
 
         $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
-        $roundThrowsRepository->method('getRoundsPlayedForGame')
-            ->with(42)
-            ->willReturn([1 => 5, 2 => 5]);
-        $roundThrowsRepository->method('getTotalScoreForGame')
-            ->with(42)
-            ->willReturn([1 => 301.0, 2 => 291.0]);
-
-        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
-        $roundRepository->method('countFinishedRounds')
-            ->with(42)
-            ->willReturn(5);
+        $roundThrowsRepository->method('getParticipantTotalsForGames')
+            ->with([42])
+            ->willReturn([42 => [
+                1 => new ParticipantTotalsDto(turns: 5, dartsThrown: 15, totalScore: 301.0),
+                2 => new ParticipantTotalsDto(turns: 5, dartsThrown: 15, totalScore: 291.0),
+            ]]);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $service = $this->createService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $roundRepository);
+        $service = $this->createService($entityManager, $gamePlayersRepository, $roundThrowsRepository);
 
         $summary = $service->finishGame($game);
 
@@ -90,7 +85,7 @@ final class GameFinishServiceTest extends TestCase
         self::assertSame(1, $summary->winner?->id);
         self::assertSame('Player 1', $summary->winner?->username);
         self::assertSame(5, $summary->winnerRoundsPlayed);
-        self::assertSame(301.0 / 5.0, $summary->winnerRoundAverage);
+        self::assertSame(60.2, $summary->winnerRoundAverage);
 
         $firstFinished = $summary->finishedPlayers[0];
         self::assertSame(1, $firstFinished->playerId);
@@ -98,13 +93,13 @@ final class GameFinishServiceTest extends TestCase
         self::assertSame(2, $firstFinished->position);
         self::assertSame(1, $firstFinished->placement);
         self::assertSame(5, $firstFinished->roundsPlayed);
-        self::assertSame(301.0 / 5.0, $firstFinished->roundAverage);
+        self::assertSame(60.2, $firstFinished->roundAverage);
     }
 
     /**
      * @throws ReflectionException
      */
-    public function testRoundsPerPlayerReflectEarlyWinnerAndLaterFinisher(): void
+    public function testEachParticipantGetsTheirOwnTurnsAndThreeDartAverage(): void
     {
         $game = new Game();
         $this->setPrivateProperty($game, 'gameId', 99);
@@ -140,49 +135,28 @@ final class GameFinishServiceTest extends TestCase
         $gamePlayersRepository->method('countFinishedPlayers')
             ->willReturn(1);
 
-        $roundsPlayedMap = [
-            1 => 5,  // winner finished on round 5
-            2 => 10, // finalist finished on round 10
-            3 => 10, // lost to finalist on round 10 -> should match 10
-        ];
-        $totalsMap = [
-            1 => 301.0,
-            2 => 301.0,
-            3 => 300.0,
-        ];
-
         $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
-        $roundThrowsRepository->method('getRoundsPlayedForGame')
-            ->with(99)
-            ->willReturn($roundsPlayedMap);
-        $roundThrowsRepository->method('getTotalScoreForGame')
-            ->with(99)
-            ->willReturn($totalsMap);
-        $roundThrowsRepository->method('getLastRoundNumberForGame')
-            ->with(99)
-            ->willReturn([
-                1 => 5,
-                2 => 10,
-                3 => 10,
-            ]);
-
-        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
-        $roundRepository->method('countFinishedRounds')
-            ->with(99)
-            ->willReturn(10);
+        $roundThrowsRepository->method('getParticipantTotalsForGames')
+            ->with([99])
+            ->willReturn([99 => [
+                1 => new ParticipantTotalsDto(turns: 5, dartsThrown: 13, totalScore: 260.0),
+                2 => new ParticipantTotalsDto(turns: 10, dartsThrown: 30, totalScore: 291.0),
+            ]]);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
 
-        $service = $this->createService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $roundRepository);
+        $service = $this->createService($entityManager, $gamePlayersRepository, $roundThrowsRepository);
 
         $summary = $service->getGameStats($game);
 
         self::assertInstanceOf(GameSummaryResponseDto::class, $summary);
         self::assertSame(5, $summary->winnerRoundsPlayed);
-        self::assertSame(3, count($summary->finishedPlayers));
-        self::assertSame(5, $summary->finishedPlayers[0]->roundsPlayed);
-        self::assertSame(10, $summary->finishedPlayers[1]->roundsPlayed);
-        self::assertSame(10, $summary->finishedPlayers[2]->roundsPlayed);
+        self::assertSame(60.0, $summary->winnerRoundAverage);
+        self::assertCount(3, $summary->finishedPlayers);
+        self::assertSame([5, 10, 0], array_map(static fn($player): ?int => $player->roundsPlayed, $summary->finishedPlayers));
+        self::assertSame(29.1, $summary->finishedPlayers[1]->roundAverage);
+        // A participant who threw nothing averages 0.
+        self::assertSame(0.0, $summary->finishedPlayers[2]->roundAverage);
     }
 
     /**
@@ -212,23 +186,15 @@ final class GameFinishServiceTest extends TestCase
             ->willReturn([$winner, $second]);
 
         $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
-        $roundThrowsRepository->method('getRoundsPlayedForGame')
-            ->with(77)
-            ->willReturn([1 => 6, 2 => 6]);
-        $roundThrowsRepository->method('getTotalScoreForGame')
-            ->with(77)
-            ->willReturn([1 => 301.0, 2 => 277.0]);
-        $roundThrowsRepository->method('getLastRoundNumberForGame')
-            ->with(77)
-            ->willReturn([1 => 6, 2 => 6]);
-
-        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
-        $roundRepository->method('countFinishedRounds')
-            ->with(77)
-            ->willReturn(6);
+        $roundThrowsRepository->method('getParticipantTotalsForGames')
+            ->with([77])
+            ->willReturn([77 => [
+                1 => new ParticipantTotalsDto(turns: 6, dartsThrown: 17, totalScore: 301.0),
+                2 => new ParticipantTotalsDto(turns: 6, dartsThrown: 18, totalScore: 277.0),
+            ]]);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $service = $this->createService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $roundRepository);
+        $service = $this->createService($entityManager, $gamePlayersRepository, $roundThrowsRepository);
         $finishedAt = new \DateTimeImmutable('2026-03-10T12:00:00+00:00');
 
         $finishSummary = $service->finishGame($game, $finishedAt);
@@ -251,8 +217,7 @@ final class GameFinishServiceTest extends TestCase
     private function createService(
         EntityManagerInterface $entityManager,
         GamePlayersRepositoryInterface $gamePlayersRepository,
-        RoundThrowsRepositoryInterface $roundThrowsRepository,
-        RoundRepositoryInterface $roundRepository
+        RoundThrowsRepositoryInterface $roundThrowsRepository
     ): GameFinishService {
         $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $callback): mixed => $callback());
         $access = $this->createMock(GameAccessServiceInterface::class);
@@ -262,7 +227,6 @@ final class GameFinishServiceTest extends TestCase
             $entityManager,
             $gamePlayersRepository,
             $roundThrowsRepository,
-            $roundRepository,
             $access,
             $this->createStub(GameRepositoryInterface::class)
         );

@@ -9,15 +9,12 @@ declare(strict_types=1);
 
 namespace App\Service\Player;
 
-use App\Dto\ParticipantTotalsDto;
 use App\Dto\PlayerProfileGameDto;
 use App\Dto\PlayerProfileParticipantDto;
 use App\Dto\PlayerProfileResponseDto;
-use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
-use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Game\GameStatisticsServiceInterface;
 use App\Service\Game\ParticipantResult;
@@ -40,7 +37,6 @@ final readonly class PlayerProfileService implements PlayerProfileServiceInterfa
      * @param GameStatisticsServiceInterface $gameStatisticsService
      * @param GameRepositoryInterface        $gameRepository
      * @param GamePlayersRepositoryInterface $gamePlayersRepository
-     * @param RoundRepositoryInterface       $roundRepository
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
      * @param EntityManagerInterface         $entityManager
      */
@@ -48,7 +44,6 @@ final readonly class PlayerProfileService implements PlayerProfileServiceInterfa
         private GameStatisticsServiceInterface $gameStatisticsService,
         private GameRepositoryInterface $gameRepository,
         private GamePlayersRepositoryInterface $gamePlayersRepository,
-        private RoundRepositoryInterface $roundRepository,
         private RoundThrowsRepositoryInterface $roundThrowsRepository,
         private EntityManagerInterface $entityManager,
     ) {
@@ -95,7 +90,6 @@ final readonly class PlayerProfileService implements PlayerProfileServiceInterfa
 
         $gameIds = array_map(static fn(array $game): int => $game['gameId'], $games);
         $seatsByGameId = $this->gamePlayersRepository->findByGameIds($gameIds);
-        $finishedRoundsByGameId = $this->roundRepository->countFinishedRoundsByGameIds($gameIds);
         $totalsByGameId = $this->roundThrowsRepository->getParticipantTotalsForGames($gameIds);
 
         $recentGames = [];
@@ -125,40 +119,12 @@ final readonly class PlayerProfileService implements PlayerProfileServiceInterfa
                 gameId: $gameId,
                 finishedAt: $game['finishedAt']?->format(DateTimeInterface::ATOM),
                 placement: $ownSeat?->getPlacement(),
-                roundAverage: null !== $ownSeat
-                    ? $this->ownRoundAverage($ownSeat, $playerId, $finishedRoundsByGameId[$gameId] ?? 0, $totals)
-                    : 0.0,
+                roundAverage: ParticipantResult::roundAverage($totals[$playerId] ?? null),
                 participantsCount: count($participants),
                 participants: $participants,
             );
         }
 
         return $recentGames;
-    }
-
-    /**
-     * The player's round average in one game, computed like the game summary does.
-     *
-     * @param GamePlayers                      $ownSeat
-     * @param int                              $playerId
-     * @param int                              $finishedRounds
-     * @param array<int, ParticipantTotalsDto> $totals         per player id
-     *
-     * @return float
-     */
-    private function ownRoundAverage(GamePlayers $ownSeat, int $playerId, int $finishedRounds, array $totals): float
-    {
-        $maxRoundNumber = ParticipantResult::maxRoundNumber(
-            $finishedRounds,
-            array_map(static fn(ParticipantTotalsDto $total): int => $total->lastRound, $totals)
-        );
-        $ownTotals = $totals[$playerId] ?? null;
-        $roundsPlayed = ParticipantResult::roundsPlayed(
-            $ownSeat->getScore(),
-            $ownTotals?->roundsPlayed,
-            $maxRoundNumber
-        );
-
-        return ParticipantResult::roundAverage($ownTotals?->totalScore ?? 0.0, $roundsPlayed);
     }
 }

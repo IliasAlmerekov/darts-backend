@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace App\Service\Game;
 
 use App\Dto\GameSummaryResponseDto;
+use App\Dto\ParticipantTotalsDto;
 use App\Entity\Game;
 use DateTimeInterface;
 
@@ -49,19 +50,17 @@ interface GameFinishServiceInterface
     /**
      * Build the list of finished players for a game.
      *
-     * @param int                    $gameId
-     * @param int|null               $finishedRounds
-     * @param array<int, int>|null   $roundsPlayedMap
-     * @param array<int, float>|null $totalScoresMap
+     * @param int                                   $gameId
+     * @param array<int, ParticipantTotalsDto>|null $totals per player id, loaded when omitted
      *
      * @return list<array{
      *     playerId:int|null,
      *     username:string|null,
      *     position:int|null,
      *     placement:int|null,
-     *     roundsPlayed:int|null,
+     *     roundsPlayed:int,
      *     roundAverage:float
      * }>
      */
-    public function buildFinishedPlayersList(int $gameId, ?int $finishedRounds = null, ?array $roundsPlayedMap = null, ?array $totalScoresMap = null): array;
+    public function buildFinishedPlayersList(int $gameId, ?array $totals = null): array;
 }

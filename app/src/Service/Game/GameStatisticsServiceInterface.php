@@ -25,7 +25,7 @@ interface GameStatisticsServiceInterface
 
     /**
      * The same statistics row as getPlayerStats() for one player, or null when the player
-     * has no finished round in a finished game.
+     * threw nothing in a finished game.
      *
      * @param int $playerId
      *

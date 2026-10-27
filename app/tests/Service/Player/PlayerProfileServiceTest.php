@@ -18,7 +18,6 @@ use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
-use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Game\GameStatisticsServiceInterface;
 use App\Service\Player\PlayerProfileService;
@@ -36,7 +35,6 @@ final class PlayerProfileServiceTest extends TestCase
     private GameStatisticsServiceInterface&Stub $gameStatisticsService;
     private GameRepositoryInterface&Stub $gameRepository;
     private GamePlayersRepositoryInterface&Stub $gamePlayersRepository;
-    private RoundRepositoryInterface&Stub $roundRepository;
     private RoundThrowsRepositoryInterface&Stub $roundThrowsRepository;
     private EntityManagerInterface&Stub $entityManager;
     private bool $inTransaction = false;
@@ -47,7 +45,6 @@ final class PlayerProfileServiceTest extends TestCase
         $this->gameStatisticsService = $this->createStub(GameStatisticsServiceInterface::class);
         $this->gameRepository = $this->createStub(GameRepositoryInterface::class);
         $this->gamePlayersRepository = $this->createStub(GamePlayersRepositoryInterface::class);
-        $this->roundRepository = $this->createStub(RoundRepositoryInterface::class);
         $this->roundThrowsRepository = $this->createStub(RoundThrowsRepositoryInterface::class);
         $this->entityManager = $this->createStub(EntityManagerInterface::class);
         $this->entityManager->method('wrapInTransaction')->willReturnCallback(function (callable $operation): mixed {
@@ -108,11 +105,10 @@ final class PlayerProfileServiceTest extends TestCase
             $this->createSeat($tom, 3, 100),
             $this->createSeat($mia, 1, 0),
         ]]);
-        $this->roundRepository->method('countFinishedRoundsByGameIds')->willReturn([42 => 2]);
         $this->roundThrowsRepository->method('getParticipantTotalsForGames')->willReturn([42 => [
-            self::PLAYER_ID => new ParticipantTotalsDto(lastRound: 2, roundsPlayed: 2, totalScore: 90.0),
-            2 => new ParticipantTotalsDto(lastRound: 2, roundsPlayed: 2, totalScore: 301.0),
-            3 => new ParticipantTotalsDto(lastRound: 1, roundsPlayed: 1, totalScore: 10.0),
+            self::PLAYER_ID => new ParticipantTotalsDto(turns: 2, dartsThrown: 5, totalScore: 101.0),
+            2 => new ParticipantTotalsDto(turns: 2, dartsThrown: 6, totalScore: 301.0),
+            3 => new ParticipantTotalsDto(turns: 1, dartsThrown: 3, totalScore: 10.0),
         ]]);
 
         self::assertEquals(
@@ -122,7 +118,7 @@ final class PlayerProfileServiceTest extends TestCase
                     gameId: 42,
                     finishedAt: '2026-10-18T17:42:00+00:00',
                     placement: 2,
-                    roundAverage: 45.0,
+                    roundAverage: 60.6,
                     participantsCount: 3,
                     participants: [
                         new PlayerProfileParticipantDto(playerId: 2, displayName: 'mia', placement: 1, isSelf: false),
@@ -141,7 +137,6 @@ final class PlayerProfileServiceTest extends TestCase
         $player = $this->createUser(self::PLAYER_ID, 'ilias');
         $this->gameRepository->method('findRecentFinishedForPlayer')->willReturn([['gameId' => 42, 'finishedAt' => null]]);
         $this->gamePlayersRepository->method('findByGameIds')->willReturn([42 => [$this->createSeat($player, 1, 301)]]);
-        $this->roundRepository->method('countFinishedRoundsByGameIds')->willReturn([]);
         $this->roundThrowsRepository->method('getParticipantTotalsForGames')->willReturn([]);
 
         $game = $this->service->getProfile($player)->recentGames[0];
@@ -156,7 +151,6 @@ final class PlayerProfileServiceTest extends TestCase
             $this->gameStatisticsService,
             $this->gameRepository,
             $gamePlayersRepository,
-            $this->roundRepository,
             $this->roundThrowsRepository,
             $this->entityManager,
         );

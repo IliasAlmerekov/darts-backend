@@ -12,6 +12,7 @@ namespace App\Service\Game;
 use App\Dto\GameSummaryFinishedPlayerDto;
 use App\Dto\GameSummaryResponseDto;
 use App\Dto\GameSummaryWinnerDto;
+use App\Dto\ParticipantTotalsDto;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Enum\GameStatus;
@@ -19,7 +20,6 @@ use App\Exception\Game\GameFinishNotAllowedException;
 use App\Exception\Game\GameNotFinishedException;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
-use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use DateTimeImmutable;
@@ -36,11 +36,10 @@ final readonly class GameFinishService implements GameFinishServiceInterface
      * @param EntityManagerInterface         $entityManager
      * @param GamePlayersRepositoryInterface $gamePlayersRepository
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
-     * @param RoundRepositoryInterface       $roundRepository
      * @param GameAccessServiceInterface     $gameAccessService
      * @param GameRepositoryInterface        $gameRepository
      */
-    public function __construct(private EntityManagerInterface $entityManager, private GamePlayersRepositoryInterface $gamePlayersRepository, private RoundThrowsRepositoryInterface $roundThrowsRepository, private RoundRepositoryInterface $roundRepository, private GameAccessServiceInterface $gameAccessService, private GameRepositoryInterface $gameRepository)
+    public function __construct(private EntityManagerInterface $entityManager, private GamePlayersRepositoryInterface $gamePlayersRepository, private RoundThrowsRepositoryInterface $roundThrowsRepository, private GameAccessServiceInterface $gameAccessService, private GameRepositoryInterface $gameRepository)
     {
     }
 
@@ -107,50 +106,36 @@ final readonly class GameFinishService implements GameFinishServiceInterface
     }
 
     /**
-     * @param int                    $gameId
-     * @param int|null               $finishedRounds
-     * @param array<int, int>|null   $roundsPlayedMap
-     * @param array<int, float>|null $totalScoresMap
+     * @param int                                   $gameId
+     * @param array<int, ParticipantTotalsDto>|null $totals per player id, loaded when omitted
      *
      * @return list<array{
      *     playerId:int|null,
      *     username:string|null,
      *     position:int|null,
      *     placement:int|null,
-     *     roundsPlayed:int|null,
+     *     roundsPlayed:int,
      *     roundAverage:float
      * }>
      */
     #[\Override]
-    public function buildFinishedPlayersList(int $gameId, ?int $finishedRounds = null, ?array $roundsPlayedMap = null, ?array $totalScoresMap = null): array
+    public function buildFinishedPlayersList(int $gameId, ?array $totals = null): array
     {
-        $maxRoundNumber = ParticipantResult::maxRoundNumber(
-            $finishedRounds,
-            $this->roundThrowsRepository->getLastRoundNumberForGame($gameId)
-        );
-        $roundsPlayedMap ??= $this->roundThrowsRepository->getRoundsPlayedForGame($gameId);
-        $totalScoresMap ??= $this->roundThrowsRepository->getTotalScoreForGame($gameId);
+        $totals ??= $this->roundThrowsRepository->getParticipantTotalsForGames([$gameId])[$gameId] ?? [];
         $players = $this->gamePlayersRepository->findByGameId($gameId);
         usort($players, ParticipantResult::compareByPlacement(...));
         $result = [];
         foreach ($players as $player) {
             $user = $player->getPlayer();
             $playerId = $user?->getId();
-            $playerRounds = null !== $playerId && array_key_exists($playerId, $roundsPlayedMap)
-                ? $roundsPlayedMap[$playerId]
-                : null;
-            $roundsPlayed = ParticipantResult::roundsPlayed($player->getScore(), $playerRounds, $maxRoundNumber);
-            $totalScore = null !== $playerId
-                ? ($totalScoresMap[$playerId] ?? 0.0)
-                : 0.0;
-            $roundAverage = ParticipantResult::roundAverage((float) $totalScore, $roundsPlayed);
+            $ownTotals = null !== $playerId ? ($totals[$playerId] ?? null) : null;
             $result[] = [
                 'playerId' => $playerId,
                 'username' => ParticipantResult::displayName($player),
                 'position' => $player->getPosition(),
                 'placement' => $player->getPlacement(),
-                'roundsPlayed' => $roundsPlayed,
-                'roundAverage' => $roundAverage,
+                'roundsPlayed' => $ownTotals?->turns ?? 0,
+                'roundAverage' => ParticipantResult::roundAverage($ownTotals),
             ];
         }
 
@@ -197,43 +182,24 @@ final readonly class GameFinishService implements GameFinishServiceInterface
     private function buildGameSummary(Game $game): GameSummaryResponseDto
     {
         $gameId = (int) $game->getGameId();
-        $finishedRounds = $this->roundRepository->countFinishedRounds($gameId);
-        $roundsPlayedMap = $this->roundThrowsRepository->getRoundsPlayedForGame($gameId);
-        $totalScoresMap = $this->roundThrowsRepository->getTotalScoreForGame($gameId);
-
-        return $this->createGameSummaryResponseDto($game, $finishedRounds, $roundsPlayedMap, $totalScoresMap);
-    }
-
-    /**
-        * @param Game              $game
-        * @param int|null          $finishedRounds
-        * @param array<int, int>   $roundsPlayedMap
-        * @param array<int, float> $totalScoresMap
-     *
-     * @return GameSummaryResponseDto
-     */
-    private function createGameSummaryResponseDto(Game $game, ?int $finishedRounds, array $roundsPlayedMap, array $totalScoresMap): GameSummaryResponseDto
-    {
-        $gameId = (int) $game->getGameId();
-        $finishedPlayers = $this->buildFinishedPlayersList($gameId, $finishedRounds, $roundsPlayedMap, $totalScoresMap);
+        $finishedPlayers = $this->buildFinishedPlayersList($gameId);
         $winner = $this->resolveWinner($game, $gameId);
         $winnerId = $winner?->getId();
         $winnerRounds = 0;
+        $winnerAverage = 0.0;
         $winnerName = null;
 
         if (null !== $winnerId) {
             foreach ($finishedPlayers as $finishedPlayer) {
                 if ($finishedPlayer['playerId'] === $winnerId) {
-                    $winnerRounds = $finishedPlayer['roundsPlayed'] ?? 0;
+                    $winnerRounds = $finishedPlayer['roundsPlayed'];
+                    $winnerAverage = $finishedPlayer['roundAverage'];
                     $winnerName = $finishedPlayer['username'];
 
                     break;
                 }
             }
         }
-
-        $winnerTotal = null !== $winnerId ? ($totalScoresMap[$winnerId] ?? 0.0) : 0.0;
-        $winnerAverage = $winnerRounds > 0 ? (float) $winnerTotal / (float) $winnerRounds : 0.0;
 
         return new GameSummaryResponseDto(
             gameId: $gameId,

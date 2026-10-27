@@ -15,6 +15,7 @@ use App\Entity\Round;
 use App\Entity\GamePlayers;
 use App\Entity\RoundThrows;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -274,91 +275,9 @@ SQL,
     }
 
     /**
-     * Counts how many distinct rounds each player has played in a game.
-     *
-     * @param int $gameId
-     *
-     * @return array<int, int>
-     */
-    #[\Override]
-    public function getRoundsPlayedForGame(int $gameId): array
-    {
-        $rows = $this->createQueryBuilder('rt')
-            ->select('IDENTITY(rt.player) AS playerId', 'COUNT(DISTINCT r.roundNumber) AS roundsPlayed')
-            ->innerJoin('rt.round', 'r')
-            ->andWhere('IDENTITY(rt.game) = :gameId')
-            ->setParameter('gameId', $gameId)
-            ->groupBy('playerId')
-            ->getQuery()
-            ->getArrayResult();
-
-        $map = [];
-        foreach ($rows as $row) {
-            $map[(int) $row['playerId']] = (int) $row['roundsPlayed'];
-        }
-
-        return $map;
-    }
-
-    /**
-     * Returns the last round number each player participated in for a game.
-     *
-     * @param int $gameId
-     *
-     * @return array<int,int>
-     */
-    #[\Override]
-    public function getLastRoundNumberForGame(int $gameId): array
-    {
-        $rows = $this->createQueryBuilder('rt')
-            ->select('IDENTITY(rt.player) AS playerId', 'MAX(r.roundNumber) AS lastRound')
-            ->innerJoin('rt.round', 'r')
-            ->andWhere('IDENTITY(rt.game) = :gameId')
-            ->setParameter('gameId', $gameId)
-            ->groupBy('playerId')
-            ->getQuery()
-            ->getArrayResult();
-
-        $map = [];
-        foreach ($rows as $row) {
-            $map[(int) $row['playerId']] = (int) $row['lastRound'];
-        }
-
-        return $map;
-    }
-
-    /**
-     * Sum of thrown values per player in a game.
-     *
-     * @param int $gameId
-     *
-     * @return array<int, float>
-     */
-    #[\Override]
-    public function getTotalScoreForGame(int $gameId): array
-    {
-        $rows = $this->createQueryBuilder('rt')
-            ->select(
-                'IDENTITY(rt.player) AS playerId',
-                "SUM(CASE WHEN rt.isBust = TRUE THEN 0 ELSE rt.value END) AS totalValue"
-            )
-            ->andWhere('IDENTITY(rt.game) = :gameId')
-            ->setParameter('gameId', $gameId)
-            ->groupBy('playerId')
-            ->getQuery()
-            ->getArrayResult();
-
-        $map = [];
-        foreach ($rows as $row) {
-            $map[(int) $row['playerId']] = (float) $row['totalValue'];
-        }
-
-        return $map;
-    }
-
-    /**
-     * getLastRoundNumberForGame(), getRoundsPlayedForGame() and getTotalScoreForGame() for
-     * several games in one query.
+     * Each participant's turns, darts thrown and points in several games. A turn is one
+     * participant's throws within one round. A turn with a bust scores 0 and counts as 3 darts;
+     * any other turn counts the darts actually thrown.
      *
      * @param list<int> $gameIds
      *
@@ -371,27 +290,37 @@ SQL,
             return [];
         }
 
-        /** @var list<array{gameId:int|string,playerId:int|string,lastRound:int|string,roundsPlayed:int|string,totalValue:int|string|null}> $rows */
-        $rows = $this->createQueryBuilder('rt')
-            ->select(
-                'IDENTITY(rt.game) AS gameId',
-                'IDENTITY(rt.player) AS playerId',
-                'MAX(r.roundNumber) AS lastRound',
-                'COUNT(DISTINCT r.roundNumber) AS roundsPlayed',
-                'SUM(CASE WHEN rt.isBust = TRUE THEN 0 ELSE rt.value END) AS totalValue'
-            )
-            ->innerJoin('rt.round', 'r')
-            ->andWhere('rt.game IN (:gameIds)')
-            ->setParameter('gameIds', $gameIds)
-            ->groupBy('gameId', 'playerId')
-            ->getQuery()
-            ->getArrayResult();
+        /** @var list<array{gameId:int|string,playerId:int|string,turns:int|string,dartsThrown:int|string,totalValue:int|string|null}> $rows */
+        $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
+            <<<'SQL'
+SELECT
+    turn.gameId AS gameId,
+    turn.playerId AS playerId,
+    COUNT(*) AS turns,
+    SUM(CASE WHEN turn.hasBust THEN 3 ELSE turn.darts END) AS dartsThrown,
+    SUM(CASE WHEN turn.hasBust THEN 0 ELSE turn.points END) AS totalValue
+FROM (
+    SELECT
+        rt.game_id AS gameId,
+        rt.player_id AS playerId,
+        MAX(rt.is_bust) AS hasBust,
+        COUNT(*) AS darts,
+        SUM(rt.value) AS points
+    FROM round_throws rt
+    WHERE rt.game_id IN (:gameIds)
+    GROUP BY rt.game_id, rt.player_id, rt.round_id
+) turn
+GROUP BY turn.gameId, turn.playerId
+SQL,
+            ['gameIds' => $gameIds],
+            ['gameIds' => ArrayParameterType::INTEGER],
+        );
 
         $map = [];
         foreach ($rows as $row) {
             $map[(int) $row['gameId']][(int) $row['playerId']] = new ParticipantTotalsDto(
-                lastRound: (int) $row['lastRound'],
-                roundsPlayed: (int) $row['roundsPlayed'],
+                turns: (int) $row['turns'],
+                dartsThrown: (int) $row['dartsThrown'],
                 totalScore: (float) $row['totalValue'],
             );
         }
@@ -400,7 +329,8 @@ SQL,
     }
 
     /**
-     * Aggregated player statistics over finished games and finished rounds.
+     * Aggregated player statistics over the turns of finished games: the three-dart average per
+     * registered player.
      *
      * @param int    $limit
      * @param int    $offset
@@ -412,7 +342,7 @@ SQL,
      *     username:string,
      *     gamesPlayed:string,
      *     totalValue:string,
-     *     roundsFinished:string,
+     *     dartsThrown:string,
      *     scoreAverage:string|null
      * }>
      */
@@ -423,8 +353,8 @@ SQL,
     }
 
     /**
-     * The getPlayerStatistics() row of one player, or null when the player has no finished
-     * round in a finished game.
+     * The getPlayerStatistics() row of one player, or null when the player threw nothing in a
+     * finished game.
      *
      * @param int $playerId
      *
@@ -433,7 +363,7 @@ SQL,
      *     username:string,
      *     gamesPlayed:string,
      *     totalValue:string,
-     *     roundsFinished:string,
+     *     dartsThrown:string,
      *     scoreAverage:string|null
      * }|null
      */
@@ -445,7 +375,7 @@ SQL,
 
     /**
      * Every throw of the player, oldest first, in the games getPlayerStatisticsForPlayer()
-     * counts: finished games in which the player has a finished round. Each row carries its
+     * counts: finished games in which the player threw. Each row carries its
      * game's start score, out rule and the player's placement in that game.
      *
      * shortcut: loads every throw of the player on each Profile read, so the payload grows with
@@ -470,12 +400,8 @@ SQL,
     #[\Override]
     public function findThrowsInCountedGamesForPlayer(int $playerId): array
     {
-        $connection = $this->getEntityManager()->getConnection();
-        $roundTable = $connection->getDatabasePlatform()->quoteSingleIdentifier('round');
-
-        $rows = $connection->fetchAllAssociative(
-            sprintf(
-                <<<'SQL'
+        $rows = $this->getEntityManager()->getConnection()->fetchAllAssociative(
+            <<<'SQL'
 SELECT
     rt.game_id AS gameId,
     rt.round_id AS roundId,
@@ -493,18 +419,8 @@ INNER JOIN game g ON g.game_id = rt.game_id
 LEFT JOIN game_players gp ON gp.game_id = rt.game_id AND gp.player_id = rt.player_id
 WHERE rt.player_id = :playerId
   AND g.status = :status
-  AND EXISTS (
-      SELECT 1
-      FROM round_throws finished_throw
-      INNER JOIN %s r ON r.round_id = finished_throw.round_id
-      WHERE finished_throw.game_id = rt.game_id
-        AND finished_throw.player_id = rt.player_id
-        AND r.finished_at IS NOT NULL
-  )
 ORDER BY rt.throw_id ASC
 SQL,
-                $roundTable,
-            ),
             ['playerId' => $playerId, 'status' => GameStatus::Finished->value],
             ['playerId' => ParameterType::INTEGER, 'status' => ParameterType::STRING],
         );
@@ -525,28 +441,26 @@ SQL,
     }
 
     /**
-     * Counts distinct players who have finished rounds in finished games.
+     * Counts distinct registered players who threw in finished games.
      *
      * @return int
      */
     #[\Override]
-    public function countPlayersWithFinishedRounds(): int
+    public function countPlayersWithStatistics(): int
     {
         return (int) $this->createQueryBuilder('rt')
             ->select('COUNT(DISTINCT u.id)')
             ->innerJoin('rt.player', 'u')
             ->innerJoin('rt.game', 'g')
-            ->innerJoin('rt.round', 'r')
             ->andWhere('g.status = :status')
             ->andWhere('u.isGuest = false')
-            ->andWhere('r.finishedAt IS NOT NULL')
             ->setParameter('status', GameStatus::Finished)
             ->getQuery()
             ->getSingleScalarResult();
     }
 
     /**
-     * Aggregates finished rounds of finished games per registered player. Both public
+     * Aggregates the turns of finished games per registered player. Both public
      * statistics reads share this query, so the admin list and a player's Profile agree.
      *
      * @param int|null $playerId  only this player's row, or every player's
@@ -560,7 +474,7 @@ SQL,
      *     username:string,
      *     gamesPlayed:string,
      *     totalValue:string,
-     *     roundsFinished:string,
+     *     dartsThrown:string,
      *     scoreAverage:string|null
      * }>
      */
@@ -589,42 +503,38 @@ SQL,
         }
 
         $connection = $this->getEntityManager()->getConnection();
-        $roundTable = $connection->getDatabasePlatform()->quoteSingleIdentifier('round');
         $userTable = $connection->getDatabasePlatform()->quoteSingleIdentifier('user');
         $sql = sprintf(
             <<<'SQL'
 SELECT
-    player_rounds.playerId AS playerId,
-    player_rounds.username AS username,
-    COUNT(DISTINCT player_rounds.gameId) AS gamesPlayed,
-    SUM(player_rounds.roundTotal) AS totalValue,
-    COUNT(*) AS roundsFinished,
+    player_turns.playerId AS playerId,
+    player_turns.username AS username,
+    COUNT(DISTINCT player_turns.gameId) AS gamesPlayed,
+    SUM(player_turns.turnTotal) AS totalValue,
+    SUM(player_turns.turnDarts) AS dartsThrown,
     (
-        SUM(player_rounds.roundTotal) /
-        NULLIF(COUNT(*), 0)
+        SUM(player_turns.turnTotal) * 3 /
+        NULLIF(SUM(player_turns.turnDarts), 0)
     ) AS scoreAverage
 FROM (
     SELECT
         rt.player_id AS playerId,
         u.display_name AS username,
         rt.game_id AS gameId,
-        rt.round_id AS roundId,
-        SUM(CASE WHEN rt.is_bust = TRUE THEN 0 ELSE rt.value END) AS roundTotal
+        CASE WHEN MAX(rt.is_bust) THEN 0 ELSE SUM(rt.value) END AS turnTotal,
+        CASE WHEN MAX(rt.is_bust) THEN 3 ELSE COUNT(*) END AS turnDarts
     FROM round_throws rt
     INNER JOIN game g ON g.game_id = rt.game_id
-    INNER JOIN %s r ON r.round_id = rt.round_id
     INNER JOIN %s u ON u.id = rt.player_id
     WHERE g.status = :status
       AND u.is_guest = FALSE
-      AND r.finished_at IS NOT NULL
       %s
     GROUP BY rt.player_id, u.display_name, rt.game_id, rt.round_id
-) player_rounds
-GROUP BY player_rounds.playerId, player_rounds.username
+) player_turns
+GROUP BY player_turns.playerId, player_turns.username
 ORDER BY %s %s
 %s
 SQL,
-            $roundTable,
             $userTable,
             $playerFilter,
             $orderColumn,
@@ -637,7 +547,7 @@ SQL,
          *     username:string,
          *     gamesPlayed:string,
          *     totalValue:string,
-         *     roundsFinished:string,
+         *     dartsThrown:string,
          *     scoreAverage:string|null
          * }> $rows
          */
