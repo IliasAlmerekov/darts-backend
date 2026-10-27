@@ -88,6 +88,10 @@ _Avoid_: Blocked score, unfinishable score
 Up to three darts one participant throws in a row. A bust or a checkout ends the turn early.
 _Avoid_: Visit, throw (for the whole turn)
 
+**Bust**:
+A dart that leaves a negative score, a dead score, or zero without the dart the out rule asks for. The whole turn then scores nothing and the participant's score returns to where the turn began (WDF rule 2.05).
+_Avoid_: Overthrow, no score
+
 **Profile**:
 The page a player lands on when they open the app without an invitation and without a current game. It shows their own recent finished games and statistics.
 _Avoid_: Dashboard, home page
@@ -117,3 +121,7 @@ _Avoid_: Double attempt, finish attempt
 **Finish**:
 The turn that ends with a checkout. Its value is the participant's remaining score when the turn began; the highest finish is the one with the greatest value.
 _Avoid_: Checkout (for the whole turn), high out
+
+**Three-dart average**:
+The points a participant scored divided by the darts they threw, times three. A bust turn counts as three darts and no points; any other turn counts only the darts actually thrown, so a checkout or a manual end can cut it short.
+_Avoid_: Round average, score average, points per turn
