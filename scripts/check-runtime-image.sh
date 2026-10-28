@@ -118,11 +118,17 @@ done
 
 # Every process in the container. Runs once nginx answers: the nginx and FPM masters start
 # a few seconds after supervisord, and a root master must not slip through.
-root_processes="$(docker exec "${container}" ps -o user=,args= | awk '$1 == "root" || $1 == "0"')"
-if [ -z "${root_processes}" ]; then
-    echo "ok: no process runs as root"
+if processes="$(docker exec "${container}" ps -o user=,args=)"; then
+    root_processes="$(printf '%s\n' "${processes}" | awk '$1 == "root" || $1 == "0"')"
+    if ! printf '%s\n' "${processes}" | grep -q 'php-fpm: master' || ! printf '%s\n' "${processes}" | grep -q 'nginx: master'; then
+        fail "ps did not list both the php-fpm and the nginx master: ${processes}"
+    elif [ -z "${root_processes}" ]; then
+        echo "ok: no process runs as root"
+    else
+        fail "root processes: ${root_processes}"
+    fi
 else
-    fail "root processes: ${root_processes}"
+    fail "ps failed in the container."
 fi
 
 status_for() {
