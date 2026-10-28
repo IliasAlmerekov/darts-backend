@@ -13,6 +13,7 @@ use Doctrine\DBAL\Connection;
 use Monolog\Handler\TestHandler;
 use Monolog\Level;
 use Monolog\Logger;
+use Monolog\LogRecord;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
@@ -59,7 +60,6 @@ final class ReadinessEndpointTest extends WebTestCase
     public function testFailedProbeWritesOneErrorLevelLogLine(): void
     {
         $client = static::createClient();
-        $client->disableReboot();
         $connection = $this->createStub(Connection::class);
         $connection->method('fetchOne')->willThrowException(new RuntimeException(self::SECRET_DETAIL));
         static::getContainer()->set('doctrine.dbal.default_connection', $connection);
@@ -74,7 +74,11 @@ final class ReadinessEndpointTest extends WebTestCase
         $client->request('GET', self::URI);
 
         // The HEALTHCHECK probes every 30 s: the controller logs the cause, the framework must not repeat it.
-        $records = array_filter($handler->getRecords(), static fn ($record): bool => $record->level->value >= Level::Error->value);
+        $records = array_values(array_filter(
+            $handler->getRecords(),
+            static fn (LogRecord $record): bool => $record->level->value >= Level::Error->value,
+        ));
         self::assertCount(1, $records);
+        self::assertSame('Readiness check failed: database unavailable.', $records[0]->message);
     }
 }

@@ -26,8 +26,9 @@ framework:
             allow_extra_attributes: false
             collect_extra_attributes_errors: true
 
-    # The HEALTHCHECK probes /api/ready every 30 s. The controller already logs the cause at
-    # error level, so the framework's own critical line for the 503 would only repeat it.
+    # The HEALTHCHECK probes /api/ready every 30 s. The controller logs the cause at error
+    # level; the framework's line for the 503 drops from critical to info, so each failed
+    # probe has one error-level line (prod's fingers_crossed still writes the info line).
     exceptions:
         App\Exception\Health\DatabaseUnavailableException:
             log_level: info
