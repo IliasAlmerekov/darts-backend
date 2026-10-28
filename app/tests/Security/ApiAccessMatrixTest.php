@@ -97,6 +97,7 @@ final class ApiAccessMatrixTest extends WebTestCase
             self::entry('app_register', Request::METHOD_POST, self::ACCESS_PUBLIC, payload: ['email' => 'matrix-register@db-n.com', 'username' => 'matrix_register', 'plainPassword' => 'matrix-secret'], expected: Response::HTTP_CREATED),
             self::entry('app_csrf_tokens', Request::METHOD_GET, self::ACCESS_PUBLIC, expected: Response::HTTP_OK),
             self::entry('api_health', Request::METHOD_GET, self::ACCESS_PUBLIC, expected: Response::HTTP_OK),
+            self::entry('api_ready', Request::METHOD_GET, self::ACCESS_PUBLIC, expected: Response::HTTP_OK),
             self::entry('join_invitation', Request::METHOD_GET, self::ACCESS_PUBLIC, ['uuid' => self::FIXTURE_INVITATION], expected: Response::HTTP_FOUND),
 
             // Players
