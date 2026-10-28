@@ -96,10 +96,21 @@ final class RequestValidationErrorEndpointTest extends WebTestCase
         );
     }
 
-    private function post(string $uri, string $body): void
+    public function testInvalidXmlKeepsTheGenericBadRequestBody(): void
+    {
+        $this->post('/api/room/create', '<request><startScore>', 'application/xml');
+
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST, (string) $this->client->getResponse()->getContent());
+        self::assertSame(
+            ['success' => false, 'error' => 'HTTP_ERROR', 'message' => 'Bad Request'],
+            $this->payload(),
+        );
+    }
+
+    private function post(string $uri, string $body, string $contentType = 'application/json'): void
     {
         $this->client->loginUser($this->admin);
-        $this->client->request(Request::METHOD_POST, $uri, [], [], ['CONTENT_TYPE' => 'application/json'], $body);
+        $this->client->request(Request::METHOD_POST, $uri, [], [], ['CONTENT_TYPE' => $contentType], $body);
     }
 
     /**

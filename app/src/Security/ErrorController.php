@@ -10,6 +10,7 @@ use App\Exception\Request\InvalidJsonBodyException;
 use App\Http\ViolationCode;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -23,19 +24,21 @@ use Throwable;
 final class ErrorController extends AbstractController
 {
     /**
-     * @param Throwable $exception
+     * @param Throwable    $exception
+     * @param Request|null $request
      *
      * @return Response
      */
-    public function show(Throwable $exception): Response
+    public function show(Throwable $exception, ?Request $request = null): Response
     {
         $previous = $exception->getPrevious();
         if ($exception instanceof HttpExceptionInterface && $previous instanceof ValidationFailedException) {
             return $this->validationFailed($exception, $previous);
         }
 
-        // The request payload resolver wraps a body it cannot decode in a 400.
-        if ($exception instanceof HttpExceptionInterface && $previous instanceof NotEncodableValueException) {
+        // The request payload resolver wraps a body it cannot decode in a 400. Only a JSON
+        // body is answered as invalid JSON; another format keeps the generic 400.
+        if ($exception instanceof HttpExceptionInterface && $previous instanceof NotEncodableValueException && 'json' === $request?->getContentTypeFormat()) {
             $exception = new InvalidJsonBodyException();
         }
 
