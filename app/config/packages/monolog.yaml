@@ -51,6 +51,14 @@ when@prod:
                 path: php://stderr
                 level: debug
                 formatter: monolog.formatter.json
+            # The fingers_crossed handler above drops warnings unless the request also logs an
+            # error. Login failures log their cause on this channel and must always reach stderr.
+            security:
+                type: stream
+                path: php://stderr
+                level: warning
+                channels: [security]
+                formatter: monolog.formatter.json
             console:
                 type: console
                 process_psr_3_messages: false

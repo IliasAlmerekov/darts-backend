@@ -7,6 +7,7 @@ namespace App\Security;
 use App\Exception\ApiHttpException;
 use App\Exception\Security\LoginInvalidCredentialsException;
 use App\Exception\Security\LoginRateLimitedException;
+use Monolog\Attribute\WithMonologChannel;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -22,6 +23,7 @@ use Symfony\Component\Security\Http\Authentication\AuthenticationFailureHandlerI
  *
  * @psalm-suppress UnusedClass Wired via Symfony security configuration
  */
+#[WithMonologChannel('security')]
 final readonly class ApiAuthenticationFailureHandler implements AuthenticationFailureHandlerInterface
 {
     /**
@@ -43,6 +45,7 @@ final readonly class ApiAuthenticationFailureHandler implements AuthenticationFa
     {
         $this->logger->warning('Login failed.', [
             'exception_class' => $exception::class,
+            'previous_class' => null === $exception->getPrevious() ? null : $exception->getPrevious()::class,
             'reason' => '' !== $exception->getMessage() ? $exception->getMessage() : $exception->getMessageKey(),
         ]);
 

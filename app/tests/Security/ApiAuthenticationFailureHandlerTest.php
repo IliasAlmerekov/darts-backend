@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use Symfony\Component\Security\Core\Exception\BadCredentialsException;
+use Symfony\Component\Security\Core\Exception\UserNotFoundException;
 use Symfony\Component\Security\Core\Exception\TooManyLoginAttemptsAuthenticationException;
 
 final class ApiAuthenticationFailureHandlerTest extends TestCase
@@ -50,6 +51,25 @@ final class ApiAuthenticationFailureHandlerTest extends TestCase
         $request = Request::create('/api/login', 'POST', ['_username' => 'alice@example.com', '_password' => 'hunter2']);
 
         $handler->onAuthenticationFailure($request, new BadCredentialsException('The presented password is invalid.'));
+    }
+
+    public function testUnknownEmailLogsThePreviousExceptionClassAndNothingPersonal(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->once())
+            ->method('warning')
+            ->with(
+                $this->anything(),
+                $this->callback(static fn (array $context): bool => BadCredentialsException::class === $context['exception_class']
+                    && UserNotFoundException::class === $context['previous_class']
+                    && ['exception_class', 'previous_class', 'reason'] === array_keys($context)
+                    && !str_contains((string) json_encode($context), 'alice@example.com')
+                    && !str_contains((string) json_encode($context), 'hunter2')),
+            );
+        $handler = new ApiAuthenticationFailureHandler($this->createStub(UrlGeneratorInterface::class), $logger);
+        $request = Request::create('/api/login', 'POST', ['_username' => 'alice@example.com', '_password' => 'hunter2'], [], [], ['REMOTE_ADDR' => '203.0.113.9']);
+
+        $handler->onAuthenticationFailure($request, new BadCredentialsException('Bad credentials.', 0, new UserNotFoundException()));
     }
 
     public function testTooManyLoginAttemptsReturns429WithRetryAfter(): void
