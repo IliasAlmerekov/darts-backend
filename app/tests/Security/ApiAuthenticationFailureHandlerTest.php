@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use Symfony\Component\Security\Core\Exception\BadCredentialsException;
+use Symfony\Component\Security\Core\Exception\InvalidCsrfTokenException;
 use Symfony\Component\Security\Core\Exception\TooManyLoginAttemptsAuthenticationException;
 use Symfony\Component\Security\Core\Exception\UserNotFoundException;
 
@@ -70,6 +71,19 @@ final class ApiAuthenticationFailureHandlerTest extends TestCase
         $request = Request::create('/api/login', 'POST', ['_username' => 'alice@example.com', '_password' => 'hunter2'], [], [], ['REMOTE_ADDR' => '203.0.113.9']);
 
         $handler->onAuthenticationFailure($request, new BadCredentialsException('Bad credentials.', 0, new UserNotFoundException()));
+    }
+
+    public function testInvalidCsrfTokenReturns403CrossOriginRequest(): void
+    {
+        $handler = new ApiAuthenticationFailureHandler($this->createStub(UrlGeneratorInterface::class), $this->createStub(LoggerInterface::class));
+
+        $response = $handler->onAuthenticationFailure(Request::create('/api/login', 'POST'), new InvalidCsrfTokenException());
+
+        self::assertSame(Response::HTTP_FORBIDDEN, $response->getStatusCode());
+        self::assertSame(
+            '{"success":false,"error":"CROSS_ORIGIN_REQUEST","message":"Cross-origin request rejected"}',
+            $response->getContent(),
+        );
     }
 
     public function testTooManyLoginAttemptsReturns429WithRetryAfter(): void

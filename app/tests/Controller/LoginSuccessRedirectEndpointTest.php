@@ -14,6 +14,7 @@ use App\Entity\GamePlayers;
 use App\Entity\Invitation;
 use App\Entity\User;
 use App\Enum\GameStatus;
+use App\Tests\Support\SameOriginLogin;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
@@ -121,10 +122,7 @@ final class LoginSuccessRedirectEndpointTest extends WebTestCase
         $player->setPassword($hasher->hashPassword($player, 'correct-password'));
         $gameId = $this->createGame(GameStatus::Lobby, $player);
 
-        $client->request(Request::METHOD_POST, '/api/login', [
-            '_username' => $player->getEmail(),
-            '_password' => 'correct-password',
-        ]);
+        SameOriginLogin::post($client, (string) $player->getEmail(), 'correct-password');
 
         $payload = $this->decodeLoginSuccess($client);
         self::assertSame('/joined', parse_url($payload['redirect'], PHP_URL_PATH));

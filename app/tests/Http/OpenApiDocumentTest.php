@@ -192,6 +192,17 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertArrayHasKey('suggestions', $paths['/api/room/{id}/guest']['post']['responses']['409']['content']['application/json']['schema']['properties']);
     }
 
+    public function testCsrfEndpointIsGoneAndTheCrossOriginCodeIsDocumented(): void
+    {
+        $document = $this->document();
+
+        self::assertArrayNotHasKey('/api/csrf', $document['paths']);
+        self::assertStringContainsString('`CROSS_ORIGIN_REQUEST`', (string) $document['components']['schemas']['ApiError']['properties']['error']['description']);
+        $loginSchema = $document['paths']['/api/login']['post']['requestBody']['content']['application/x-www-form-urlencoded']['schema'];
+        self::assertSame('csrf-token', $loginSchema['properties']['_csrf_token']['enum'][0] ?? null);
+        self::assertSame(['_username', '_password', '_csrf_token'], $loginSchema['required'] ?? null);
+    }
+
     public function testEveryForbiddenResponseNamesAccessDeniedAndUsesTheErrorSchema(): void
     {
         $checked = 0;

@@ -13,6 +13,7 @@ use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\Invitation;
 use App\Enum\GameStatus;
+use App\Tests\Support\SameOriginLogin;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
@@ -190,10 +191,7 @@ final class LoginSuccessInvitationEndpointTest extends WebTestCase
         $game->setStatus(GameStatus::Started);
         $entityManager->flush();
 
-        $client->request(Request::METHOD_POST, '/api/login', [
-            '_username' => $player->getEmail(),
-            '_password' => 'correct-password',
-        ]);
+        SameOriginLogin::post($client, (string) $player->getEmail(), 'correct-password');
 
         self::assertResponseStatusCodeSame(Response::HTTP_OK, (string) $client->getResponse()->getContent());
         $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);

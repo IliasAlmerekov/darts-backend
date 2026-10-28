@@ -9,10 +9,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Security;
 
+use App\Tests\Support\SameOriginLogin;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Security\Core\Exception\UserNotFoundException;
 
 /**
@@ -29,7 +29,7 @@ final class LoginLoggerWiringTest extends WebTestCase
         $handler = new TestHandler();
         $logger->pushHandler($handler);
 
-        $client->request(Request::METHOD_POST, '/api/login', ['_username' => 'nobody@example.invalid', '_password' => 'x'], [], ['REMOTE_ADDR' => '203.0.113.41']);
+        SameOriginLogin::post($client, 'nobody@example.invalid', 'x', ['REMOTE_ADDR' => '203.0.113.41']);
 
         $records = array_values(array_filter($handler->getRecords(), static fn ($record): bool => 'Login failed.' === $record->message));
         self::assertCount(1, $records);

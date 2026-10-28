@@ -51,6 +51,7 @@ enum ErrorCode: string
     case LoginRateLimited = 'LOGIN_RATE_LIMITED';
     case AuthenticationRequired = 'AUTHENTICATION_REQUIRED';
     case AccessDenied = 'ACCESS_DENIED';
+    case CrossOriginRequest = 'CROSS_ORIGIN_REQUEST';
     case UsernameTaken = 'USERNAME_TAKEN';
     case DatabaseUnavailable = 'DATABASE_UNAVAILABLE';
 }

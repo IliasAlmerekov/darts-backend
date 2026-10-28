@@ -16,6 +16,7 @@ use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\UserRepository;
+use App\Tests\Support\SameOriginLogin;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
 use DateTimeImmutable;
@@ -583,7 +584,7 @@ final class RegistrationEndpointTest extends WebTestCase
         if (null !== $invitation) {
             $this->scanInvitation($client, $invitation);
         }
-        $client->request(Request::METHOD_POST, '/api/login', ['_username' => $body['email'], '_password' => $body['plainPassword']]);
+        SameOriginLogin::post($client, $body['email'], $body['plainPassword']);
         self::assertResponseStatusCodeSame(Response::HTTP_OK, (string) $client->getResponse()->getContent());
         $payload = json_decode((string) $client->getResponse()->getContent(), true, flags: JSON_THROW_ON_ERROR);
         self::assertSame(null !== $invitation, isset($payload['gameId']));

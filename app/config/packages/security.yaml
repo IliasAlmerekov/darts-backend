@@ -26,7 +26,7 @@ security:
             form_login:
                 login_path: app_login
                 check_path: app_login
-                enable_csrf: false
+                enable_csrf: true
                 default_target_path: login_success
                 success_handler: App\Security\ApiAuthenticationSuccessHandler
                 failure_handler: App\Security\ApiAuthenticationFailureHandler
@@ -60,7 +60,6 @@ security:
         - { path: ^/api/login$, roles: PUBLIC_ACCESS }
         - { path: ^/api/login/success$, roles: PUBLIC_ACCESS }
         - { path: ^/api/register$, roles: PUBLIC_ACCESS }
-        - { path: ^/api/csrf$, roles: PUBLIC_ACCESS }
         - { path: ^/api/health$, roles: PUBLIC_ACCESS }
         - { path: ^/api/ready$, roles: PUBLIC_ACCESS }
         - { path: ^/api/logout$, roles: PUBLIC_ACCESS }

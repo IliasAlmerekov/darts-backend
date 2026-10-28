@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Security;
 
 use App\Entity\User;
+use App\Tests\Support\SameOriginLogin;
 use App\Tests\Support\TestUserFactory;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -137,7 +138,7 @@ final class RememberedLoginTest extends WebTestCase
         $client = static::createClient();
         $admin = $this->createUser('adminparam', ['ROLE_ADMIN']);
 
-        $client->request(Request::METHOD_POST, '/api/login', [
+        SameOriginLogin::postFields($client, [
             '_username' => $admin->getEmail(),
             '_password' => self::LOGIN_PASSWORD,
             '_remember_me' => '1',
@@ -221,10 +222,7 @@ final class RememberedLoginTest extends WebTestCase
 
     private function logIn(KernelBrowser $client, User $user): void
     {
-        $client->request(Request::METHOD_POST, '/api/login', [
-            '_username' => $user->getEmail(),
-            '_password' => self::LOGIN_PASSWORD,
-        ]);
+        SameOriginLogin::post($client, (string) $user->getEmail(), self::LOGIN_PASSWORD);
         self::assertResponseIsSuccessful((string) $client->getResponse()->getContent());
     }
 
