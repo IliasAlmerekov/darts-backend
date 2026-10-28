@@ -33,7 +33,7 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
  *
  * @psalm-suppress UnusedClass Registered via Symfony service container autoconfiguration
  */
-final readonly class UnknownFieldValidationSubscriber implements EventSubscriberInterface
+final readonly class ValidatePayloadNextToUnknownFieldsSubscriber implements EventSubscriberInterface
 {
     /**
      * @param ValidatorInterface $validator
