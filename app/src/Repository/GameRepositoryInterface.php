@@ -22,8 +22,8 @@ interface GameRepositoryInterface
         *
      * @return list<array{
      *     id:int,
-     *     date:string|null,
-     *     finishedAt:string|null,
+     *     date:DateTimeImmutable|null,
+     *     finishedAt:DateTimeImmutable|null,
      *     playersCount:int,
      *     winnerName:string|null,
      *     winnerId:int|null,

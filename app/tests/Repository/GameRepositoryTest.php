@@ -131,10 +131,11 @@ final class GameRepositoryTest extends KernelTestCase
         $result = $this->repository->findFinishedOverview(limit: 10, offset: 0);
 
         self::assertCount(1, $result);
+        self::assertSame('2026-03-09T00:00:00+00:00', $result[0]['date']?->format(\DateTimeInterface::ATOM));
+        self::assertSame('2026-03-09T12:34:56+00:00', $result[0]['finishedAt']?->format(\DateTimeInterface::ATOM));
+        unset($result[0]['date'], $result[0]['finishedAt']);
         self::assertSame([
             'id' => $finishedGame->getGameId(),
-            'date' => '2026-03-09T00:00:00+00:00',
-            'finishedAt' => '2026-03-09T12:34:56+00:00',
             'playersCount' => 2,
             'winnerName' => 'Winner Snapshot',
             'winnerId' => $winner->getId(),

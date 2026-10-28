@@ -114,7 +114,7 @@ value concatenated into a query string is a P0.
 
 ### Information disclosure
 
-`App\Security\ErrorController` answers every exception that does not implement
+`App\Controller\ErrorController` answers every exception that does not implement
 `ApiExceptionInterface` with a generic body. The message of an `ApiHttpException` reaches
 the client, so it carries no SQL, file path, stack trace, or another user's email. A
 leak of that kind is a P1. Profiler, Swagger UI, or any debug route reachable outside the

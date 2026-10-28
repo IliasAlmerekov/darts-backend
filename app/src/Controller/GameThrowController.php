@@ -17,7 +17,7 @@ use App\Entity\Game;
 use App\Exception\Game\GameNotFoundException;
 use App\Http\Attribute\ApiResponse;
 use App\Service\Game\GameDeltaServiceInterface;
-use App\Service\Game\GameServiceInterface;
+use App\Service\Game\GameStateViewBuilderInterface;
 use App\Service\Game\GameThrowServiceInterface;
 use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
@@ -38,10 +38,10 @@ final class GameThrowController extends AbstractController
     /**
      * Records a throw for the current player.
      *
-     * @param Game                      $game
-     * @param GameThrowServiceInterface $gameThrowService
-     * @param GameServiceInterface      $gameService
-     * @param ThrowRequest              $dto
+     * @param Game                          $game
+     * @param GameThrowServiceInterface     $gameThrowService
+     * @param GameStateViewBuilderInterface $gameStateViewBuilder
+     * @param ThrowRequest                  $dto
      *
      * @return JsonResponse
      */
@@ -62,11 +62,11 @@ final class GameThrowController extends AbstractController
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht.', content: new OA\JsonContent(ref: '#/components/schemas/RequestValidationFailed'))]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme (`ACCESS_DENIED`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[Route('/api/game/{gameId}/throw', name: 'app_game_throw', methods: ['POST'], format: 'json')]
-    public function throw(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameServiceInterface $gameService, #[MapRequestPayload] ThrowRequest $dto): JsonResponse
+    public function throw(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameStateViewBuilderInterface $gameStateViewBuilder, #[MapRequestPayload] ThrowRequest $dto): JsonResponse
     {
         $gameThrowService->recordThrow($game, $dto);
 
-        $gameDto = $gameService->createGameDto($game);
+        $gameDto = $gameStateViewBuilder->createGameDto($game);
 
         $response = $this->json($gameDto);
         $response->headers->set('Deprecation', 'true');
@@ -115,9 +115,9 @@ final class GameThrowController extends AbstractController
     /**
      * Undoes the last recorded throw.
      *
-     * @param Game                      $game
-     * @param GameThrowServiceInterface $gameThrowService
-     * @param GameServiceInterface      $gameService
+     * @param Game                          $game
+     * @param GameThrowServiceInterface     $gameThrowService
+     * @param GameStateViewBuilderInterface $gameStateViewBuilder
      *
      * @return JsonResponse
      */
@@ -132,10 +132,10 @@ final class GameThrowController extends AbstractController
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme (`ACCESS_DENIED`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Das Spiel ist in der Lobby oder abgebrochen (`GAME_THROW_NOT_ALLOWED`); es wird nichts gelöscht. Oder der letzte Wurf hat das Spiel beendet, und das Spiel ist nicht das neueste Spiel (`GAME_NOT_NEWEST`). Das Rückgängigmachen würde das laufende Spiel abbrechen.')]
     #[Route('/api/game/{gameId}/throw', name: 'app_game_throw_undo', methods: ['DELETE'], format: 'json')]
-    public function undoThrow(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameServiceInterface $gameService): JsonResponse
+    public function undoThrow(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameStateViewBuilderInterface $gameStateViewBuilder): JsonResponse
     {
         $gameThrowService->undoLastThrow($game);
-        $gameDto = $gameService->createGameDto($game);
+        $gameDto = $gameStateViewBuilder->createGameDto($game);
 
         $response = $this->json($gameDto);
         $response->headers->set('Deprecation', 'true');

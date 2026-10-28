@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -8,11 +13,11 @@ use App\Dto\GameResponseDto;
 use App\Entity\Game;
 
 /**
- * Interface for game service operations.
+ * Builds the game state view: the game response DTO, the active player, and the state version.
  *
  * @phpstan-type RoundStateSnapshot array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}>
  */
-interface GameServiceInterface
+interface GameStateViewBuilderInterface
 {
     /**
      * Calculate and return the id of the active player for the given game.

@@ -34,12 +34,12 @@ final readonly class GameDeltaService implements GameDeltaServiceInterface
 {
     /**
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
-     * @param GameServiceInterface           $gameService
+     * @param GameStateViewBuilderInterface  $gameStateViewBuilder
      * @param GamePlayersRepositoryInterface $gamePlayersRepository
      */
     public function __construct(
         private RoundThrowsRepositoryInterface $roundThrowsRepository,
-        private GameServiceInterface $gameService,
+        private GameStateViewBuilderInterface $gameStateViewBuilder,
         private GamePlayersRepositoryInterface $gamePlayersRepository,
     ) {
     }
@@ -63,7 +63,7 @@ final readonly class GameDeltaService implements GameDeltaServiceInterface
         $gameStatePlayers = $this->gamePlayersRepository->findGameStatePlayersByGameId($gameId);
         $throwDto = $this->toThrowDelta($latestThrow, $this->indexGameStatePlayersByPlayerId($gameStatePlayers));
         $knownLatestThrowId = $this->extractLatestThrowId($latestThrow);
-        $stateVersion = $this->gameService->buildStateVersion($game, $knownLatestThrowId);
+        $stateVersion = $this->gameStateViewBuilder->buildStateVersion($game, $knownLatestThrowId);
 
         $throwPlayerId = null;
         $throwIsBust = null;
@@ -73,8 +73,8 @@ final readonly class GameDeltaService implements GameDeltaServiceInterface
         }
 
         $activePlayerId = null === $currentRoundStateSnapshot
-            ? $this->gameService->calculateActivePlayer($game)
-            : $this->gameService->calculateActivePlayer($game, $currentRoundStateSnapshot);
+            ? $this->gameStateViewBuilder->calculateActivePlayer($game)
+            : $this->gameStateViewBuilder->calculateActivePlayer($game, $currentRoundStateSnapshot);
         $scoreboardDelta = $this->buildScoreboardDelta(
             $game,
             $activePlayerId,
@@ -109,8 +109,8 @@ final readonly class GameDeltaService implements GameDeltaServiceInterface
         }
 
         $gameStatePlayers = $this->gamePlayersRepository->findGameStatePlayersByGameId($gameId);
-        $stateVersion = $this->gameService->buildStateVersion($game);
-        $activePlayerId = $this->gameService->calculateActivePlayer($game);
+        $stateVersion = $this->gameStateViewBuilder->buildStateVersion($game);
+        $activePlayerId = $this->gameStateViewBuilder->calculateActivePlayer($game);
         $scoreboardDelta = $this->buildScoreboardDelta(
             $game,
             $activePlayerId,

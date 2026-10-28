@@ -25,7 +25,7 @@ use Override;
  *
  * @psalm-suppress UnusedClass Reason: service is auto-wired by the container and used through DI.
  */
-final readonly class GameService implements GameServiceInterface
+final readonly class GameStateViewBuilder implements GameStateViewBuilderInterface
 {
     /**
      * @param GamePlayersRepositoryInterface   $gamePlayersRepository

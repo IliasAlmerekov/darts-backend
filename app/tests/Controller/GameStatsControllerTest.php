@@ -46,8 +46,8 @@ final class GameStatsControllerTest extends TestCase
             ->willReturn([
                 [
                     'id' => 1,
-                    'date' => '2026-03-10T00:00:00+00:00',
-                    'finishedAt' => '2026-03-10T12:34:56+00:00',
+                    'date' => new DateTimeImmutable('2026-03-10 00:00:00+00:00'),
+                    'finishedAt' => new DateTimeImmutable('2026-03-10 12:34:56+00:00'),
                     'playersCount' => 2,
                     'winnerName' => 'winner',
                     'winnerId' => 7,
@@ -62,6 +62,8 @@ final class GameStatsControllerTest extends TestCase
         $this->assertInstanceOf(GameOverviewResponseDto::class, $response);
         $this->assertCount(1, $response->items);
         $this->assertSame(1, $response->items[0]->id);
+        $this->assertSame('2026-03-10T00:00:00+00:00', $response->items[0]->date);
+        $this->assertSame('2026-03-10T12:34:56+00:00', $response->items[0]->finishedAt);
         $this->assertSame('winner', $response->items[0]->winnerName);
         $this->assertSame(3, $response->items[0]->winnerRounds);
     }

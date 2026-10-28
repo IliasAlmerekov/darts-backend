@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-namespace App\Security;
+namespace App\Controller;
 
 use App\Exception\ApiExceptionInterface;
 use App\Exception\ErrorCode;

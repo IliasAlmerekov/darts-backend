@@ -12,7 +12,7 @@ use App\Enum\GameStatus;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Game\GameDeltaService;
-use App\Service\Game\GameServiceInterface;
+use App\Service\Game\GameStateViewBuilderInterface;
 use PHPUnit\Framework\TestCase;
 use ReflectionException;
 use ReflectionProperty;
@@ -57,17 +57,17 @@ final class GameDeltaServiceTest extends TestCase
                 ],
             ]);
 
-        $gameService = $this->createMock(GameServiceInterface::class);
-        $gameService->expects(self::once())
+        $gameStateViewBuilder = $this->createMock(GameStateViewBuilderInterface::class);
+        $gameStateViewBuilder->expects(self::once())
             ->method('buildStateVersion')
             ->with($game, 501)
             ->willReturn('state-v2');
-        $gameService->expects(self::once())
+        $gameStateViewBuilder->expects(self::once())
             ->method('calculateActivePlayer')
             ->with($game)
             ->willReturn(10);
 
-        $service = new GameDeltaService($roundThrowsRepository, $gameService, $gamePlayersRepository);
+        $service = new GameDeltaService($roundThrowsRepository, $gameStateViewBuilder, $gamePlayersRepository);
         $ack = $service->buildThrowAck($game, [
             'id' => 501,
             'playerId' => 10,
@@ -142,12 +142,12 @@ final class GameDeltaServiceTest extends TestCase
         $roundThrowsRepository->expects(self::never())
             ->method('findCurrentRoundThrowsForGamePlayers');
 
-        $gameService = $this->createMock(GameServiceInterface::class);
-        $gameService->expects(self::once())
+        $gameStateViewBuilder = $this->createMock(GameStateViewBuilderInterface::class);
+        $gameStateViewBuilder->expects(self::once())
             ->method('buildStateVersion')
             ->with($game, 701)
             ->willReturn('state-v4');
-        $gameService->expects(self::once())
+        $gameStateViewBuilder->expects(self::once())
             ->method('calculateActivePlayer')
             ->with($game, $roundStateSnapshot)
             ->willReturn(11);
@@ -175,7 +175,7 @@ final class GameDeltaServiceTest extends TestCase
                 ],
             ]);
 
-        $service = new GameDeltaService($roundThrowsRepository, $gameService, $gamePlayersRepository);
+        $service = new GameDeltaService($roundThrowsRepository, $gameStateViewBuilder, $gamePlayersRepository);
         $ack = $service->buildThrowAck(
             $game,
             [
@@ -232,12 +232,12 @@ final class GameDeltaServiceTest extends TestCase
             ->with(55)
             ->willReturn(null);
 
-        $gameService = $this->createMock(GameServiceInterface::class);
-        $gameService->expects(self::once())
+        $gameStateViewBuilder = $this->createMock(GameStateViewBuilderInterface::class);
+        $gameStateViewBuilder->expects(self::once())
             ->method('buildStateVersion')
             ->with($game)
             ->willReturn('state-v3');
-        $gameService->expects(self::once())
+        $gameStateViewBuilder->expects(self::once())
             ->method('calculateActivePlayer')
             ->with($game)
             ->willReturn(10);
@@ -257,7 +257,7 @@ final class GameDeltaServiceTest extends TestCase
                 ],
             ]);
 
-        $service = new GameDeltaService($roundThrowsRepository, $gameService, $gamePlayersRepository);
+        $service = new GameDeltaService($roundThrowsRepository, $gameStateViewBuilder, $gamePlayersRepository);
         $undoneThrow = new ThrowDeltaDto(
             id: 901,
             playerId: 10,
@@ -326,17 +326,17 @@ final class GameDeltaServiceTest extends TestCase
                 ],
             ]);
 
-        $gameService = $this->createMock(GameServiceInterface::class);
-        $gameService->expects(self::once())
+        $gameStateViewBuilder = $this->createMock(GameStateViewBuilderInterface::class);
+        $gameStateViewBuilder->expects(self::once())
             ->method('buildStateVersion')
             ->with($game, 801)
             ->willReturn('state-v5');
-        $gameService->expects(self::once())
+        $gameStateViewBuilder->expects(self::once())
             ->method('calculateActivePlayer')
             ->with($game)
             ->willReturn(10);
 
-        $service = new GameDeltaService($roundThrowsRepository, $gameService, $gamePlayersRepository);
+        $service = new GameDeltaService($roundThrowsRepository, $gameStateViewBuilder, $gamePlayersRepository);
         $ack = $service->buildThrowAck($game, [
             'id' => 801,
             'playerId' => 10,
@@ -402,17 +402,17 @@ final class GameDeltaServiceTest extends TestCase
                 ],
             ]);
 
-        $gameService = $this->createMock(GameServiceInterface::class);
-        $gameService->expects(self::once())
+        $gameStateViewBuilder = $this->createMock(GameStateViewBuilderInterface::class);
+        $gameStateViewBuilder->expects(self::once())
             ->method('buildStateVersion')
             ->with($game, 901)
             ->willReturn('state-v6');
-        $gameService->expects(self::once())
+        $gameStateViewBuilder->expects(self::once())
             ->method('calculateActivePlayer')
             ->with($game)
             ->willReturn(31);
 
-        $service = new GameDeltaService($roundThrowsRepository, $gameService, $gamePlayersRepository);
+        $service = new GameDeltaService($roundThrowsRepository, $gameStateViewBuilder, $gamePlayersRepository);
         $ack = $service->buildThrowAck($game, [
             'id' => 901,
             'playerId' => 31,
