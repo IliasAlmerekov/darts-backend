@@ -286,11 +286,18 @@ final class RegistrationEndpointTest extends WebTestCase
         self::assertNull(static::getContainer()->get(UserRepository::class)->findOneBy(['email' => $body['email']]));
     }
 
-    public function testUnknownFieldsAreIgnored(): void
+    public function testUnknownFieldsAreRejected(): void
     {
         $client = static::createClient();
+        $body = ['_csrf_token' => 'token', 'agreeTerms' => true] + $this->validBody();
 
-        $this->postRegistration($client, ['_csrf_token' => 'token', 'agreeTerms' => true] + $this->validBody(), Response::HTTP_CREATED);
+        $payload = $this->postRegistration($client, $body, Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        $this->assertValidationFailed($payload, [
+            ['_csrf_token', 'UNKNOWN_FIELD', 'This attribute was not expected.'],
+            ['agreeTerms', 'UNKNOWN_FIELD', 'This attribute was not expected.'],
+        ]);
+        self::assertNull(static::getContainer()->get(UserRepository::class)->findOneBy(['email' => $body['email']]));
     }
 
     public function testEmailAndUsernameAreSavedTrimmed(): void
@@ -361,17 +368,22 @@ final class RegistrationEndpointTest extends WebTestCase
     }
 
     /**
-     * @return iterable<string, array{string}>
+     * The serializer reads a scalar or a list as an array, so its keys count as undeclared.
+     *
+     * @return iterable<string, array{string, list<string>}>
      */
     public static function nonObjectJsonBodies(): iterable
     {
-        yield 'string' => ['"alice"'];
-        yield 'number' => ['123'];
-        yield 'list' => ['[1,2]'];
+        yield 'string' => ['"alice"', ['0']];
+        yield 'number' => ['123', ['0']];
+        yield 'list' => ['[1,2]', ['0', '1']];
     }
 
+    /**
+     * @param list<string> $undeclaredKeys
+     */
     #[DataProvider('nonObjectJsonBodies')]
-    public function testJsonThatIsNotAnObjectReportsEveryFieldAsMissing(string $content): void
+    public function testJsonThatIsNotAnObjectReportsEveryFieldAsMissing(string $content, array $undeclaredKeys): void
     {
         $client = static::createClient();
 
@@ -379,7 +391,8 @@ final class RegistrationEndpointTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY, (string) $client->getResponse()->getContent());
         $payload = json_decode((string) $client->getResponse()->getContent(), true, flags: JSON_THROW_ON_ERROR);
-        $this->assertValidationFailed($payload, [['email', 'REQUIRED', 'Please enter an email address'], ['username', 'REQUIRED', 'Please enter a username'], ['plainPassword', 'REQUIRED', 'Please enter a password']]);
+        $unknown = array_map(static fn (string $key): array => [$key, 'UNKNOWN_FIELD', 'This attribute was not expected.'], $undeclaredKeys);
+        $this->assertValidationFailed($payload, [...$unknown, ['email', 'REQUIRED', 'Please enter an email address'], ['username', 'REQUIRED', 'Please enter a username'], ['plainPassword', 'REQUIRED', 'Please enter a password']]);
     }
 
     /**

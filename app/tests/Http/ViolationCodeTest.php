@@ -74,9 +74,16 @@ final class ViolationCodeTest extends TestCase
         self::assertSame('INVALID_TYPE', ViolationCode::of($violation));
     }
 
-    public function testAViolationWithoutConstraintIsInvalid(): void
+    public function testAnAttributeTheDtoDoesNotDeclareIsAnUnknownField(): void
     {
         $violation = new ConstraintViolation('This attribute was not expected.', 'This attribute was not expected.', [], null, 'extra', null);
+
+        self::assertSame('UNKNOWN_FIELD', ViolationCode::of($violation));
+    }
+
+    public function testAnyOtherViolationWithoutConstraintIsInvalid(): void
+    {
+        $violation = new ConstraintViolation('Something else.', 'Something else.', [], null, 'extra', null);
 
         self::assertSame('INVALID', ViolationCode::of($violation));
     }

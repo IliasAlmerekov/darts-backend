@@ -19,6 +19,7 @@ A request body that fails validation answers 422 with `error: "REQUEST_VALIDATIO
 | `Range`, `Positive`, `PositiveOrZero`, `Count` | `OUT_OF_RANGE` |
 | `Type`, and a value the serializer cannot map to the property's type | `INVALID_TYPE` |
 | `Unique` | `DUPLICATE` |
+| a key the DTO does not declare (no constraint, one violation per key, `field` is the key) | `UNKNOWN_FIELD` |
 | any other constraint | `INVALID` |
 
 Nested constraints (`Sequentially`, `All`, `Collection`) report the inner constraint; a field that `Collection` misses reports `REQUIRED`. A constraint overrides the table with `payload: ['code' => '<CODE>']`, for example `EMAIL_DOMAIN_NOT_ALLOWED`. A body that is not valid JSON answers 400 `REQUEST_INVALID_JSON_BODY`.

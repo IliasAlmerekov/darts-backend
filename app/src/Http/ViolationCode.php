@@ -27,6 +27,12 @@ final class ViolationCode
     ];
 
     /**
+     * Template of the violation the request payload resolver adds, without a constraint,
+     * for each key the DTO does not declare.
+     */
+    private const string UNKNOWN_FIELD_TEMPLATE = 'This attribute was not expected.';
+
+    /**
      * @param ConstraintViolationInterface $violation
      *
      * @return string
@@ -35,7 +41,13 @@ final class ViolationCode
     {
         $constraint = $violation->getConstraint();
         if (null === $constraint) {
-            return in_array($violation->getMessageTemplate(), self::TYPE_TEMPLATES, true) ? 'INVALID_TYPE' : 'INVALID';
+            $template = $violation->getMessageTemplate();
+
+            return match (true) {
+                self::UNKNOWN_FIELD_TEMPLATE === $template => 'UNKNOWN_FIELD',
+                in_array($template, self::TYPE_TEMPLATES, true) => 'INVALID_TYPE',
+                default => 'INVALID',
+            };
         }
 
         $payloadCode = is_array($constraint->payload) ? ($constraint->payload['code'] ?? null) : null;

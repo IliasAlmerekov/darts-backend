@@ -18,6 +18,14 @@ framework:
             limit: 20
             interval: '1 hour'
 
+    # A request body with a key its DTO does not declare answers 422 UNKNOWN_FIELD (#90).
+    # Both keys are needed: without collect_extra_attributes_errors the serializer throws a
+    # bare ExtraAttributesException that RequestPayloadValueResolver does not catch.
+    serializer:
+        default_context:
+            allow_extra_attributes: false
+            collect_extra_attributes_errors: true
+
     #esi: true
     #fragments: true
 

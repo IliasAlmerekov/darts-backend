@@ -36,7 +36,8 @@ nelmio_api_doc:
                                         type: string
                                         description: >-
                                             `REQUIRED`, `TOO_SHORT`, `TOO_LONG`, `INVALID_EMAIL`, `INVALID_CHOICE`,
-                                            `OUT_OF_RANGE`, `INVALID_TYPE`, `DUPLICATE` or `INVALID`, unless the
+                                            `OUT_OF_RANGE`, `INVALID_TYPE`, `DUPLICATE`, `UNKNOWN_FIELD` (a key the body
+                                            must not contain) or `INVALID`, unless the
                                             constraint names its own code.
                                         example: INVALID_CHOICE
                                     message:
