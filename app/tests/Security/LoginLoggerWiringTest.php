@@ -13,6 +13,7 @@ use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Security\Core\Exception\UserNotFoundException;
 
 /**
  * The failure handler logs on the security channel, which prod ships to stderr at warning level.
@@ -33,6 +34,6 @@ final class LoginLoggerWiringTest extends WebTestCase
         $records = array_values(array_filter($handler->getRecords(), static fn ($record): bool => 'Login failed.' === $record->message));
         self::assertCount(1, $records);
         self::assertSame('security', $records[0]->channel);
-        self::assertSame('Symfony\Component\Security\Core\Exception\UserNotFoundException', $records[0]->context['previous_class']);
+        self::assertSame(UserNotFoundException::class, $records[0]->context['previous_class']);
     }
 }
