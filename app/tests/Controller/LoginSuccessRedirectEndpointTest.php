@@ -9,12 +9,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller;
 
-use App\Tests\Support\SameOriginLogin;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\Invitation;
 use App\Entity\User;
 use App\Enum\GameStatus;
+use App\Tests\Support\SameOriginLogin;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;

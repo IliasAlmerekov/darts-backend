@@ -24,9 +24,10 @@ use Symfony\Component\HttpKernel\KernelEvents;
  * browsers send at least one on every unsafe request and server-side clients send none.
  *
  * It runs on kernel.request at priority 16: after the router (32), before the firewall (8).
- * A hostile request is refused before authentication and login throttling, and the check
- * touches neither the database nor the session. It covers /api/login too, so a cross-origin
- * login never reaches the throttler.
+ * A hostile request is refused before authentication and login throttling, and this check
+ * touches neither the database nor the session. It covers /api/login too, so a foreign-origin
+ * login never reaches the throttler. The login token check is separate (form_login,
+ * SameOriginCsrfTokenManager): it runs after the throttler and may use the session.
  *
  * @psalm-suppress UnusedClass Registered via Symfony service container autoconfiguration
  */
@@ -63,7 +64,8 @@ final readonly class CrossOriginRequestSubscriber implements EventSubscriberInte
         if (!$event->isMainRequest() || !in_array($request->getMethod(), self::UNSAFE_METHODS, true)) {
             return;
         }
-        if (!str_starts_with($request->getPathInfo(), '/api')) {
+        $path = $request->getPathInfo();
+        if ('/api' !== $path && !str_starts_with($path, '/api/')) {
             return;
         }
 

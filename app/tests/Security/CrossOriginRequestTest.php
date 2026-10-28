@@ -94,6 +94,7 @@ final class CrossOriginRequestTest extends WebTestCase
 
         $client->request(Request::METHOD_POST, '/api/login', ['_username' => $user->getEmail(), '_password' => 'secret', '_csrf_token' => 'x'], [], SameOriginLogin::SERVER);
 
+        self::assertSame(self::CROSS_ORIGIN_BODY, $client->getResponse()->getContent());
         self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
     }
 
@@ -174,6 +175,15 @@ final class CrossOriginRequestTest extends WebTestCase
         $client = static::createClient();
 
         $client->request(Request::METHOD_POST, '/not-the-api', [], [], ['HTTP_ORIGIN' => 'https://evil.example']);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
+    }
+
+    public function testPathsThatOnlyStartWithApiAreNotChecked(): void
+    {
+        $client = static::createClient();
+
+        $client->request(Request::METHOD_POST, '/apix', [], [], ['HTTP_ORIGIN' => 'https://evil.example']);
 
         self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
     }

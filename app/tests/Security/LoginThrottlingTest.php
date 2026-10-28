@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Security;
 
-use App\Tests\Support\SameOriginLogin;
 use App\Entity\User;
+use App\Tests\Support\SameOriginLogin;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
