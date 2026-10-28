@@ -10,6 +10,9 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use Doctrine\DBAL\Connection;
+use Monolog\Handler\TestHandler;
+use Monolog\Level;
+use Monolog\Logger;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
@@ -51,5 +54,27 @@ final class ReadinessEndpointTest extends WebTestCase
             json_decode($body, true, 512, JSON_THROW_ON_ERROR),
         );
         self::assertStringNotContainsString('secret', $body);
+    }
+
+    public function testFailedProbeWritesOneErrorLevelLogLine(): void
+    {
+        $client = static::createClient();
+        $client->disableReboot();
+        $connection = $this->createStub(Connection::class);
+        $connection->method('fetchOne')->willThrowException(new RuntimeException(self::SECRET_DETAIL));
+        static::getContainer()->set('doctrine.dbal.default_connection', $connection);
+        $handler = new TestHandler();
+        // The controller logs on the app channel, the framework's error listener on the request channel.
+        foreach (['logger', 'monolog.logger.request'] as $channel) {
+            $logger = static::getContainer()->get($channel);
+            self::assertInstanceOf(Logger::class, $logger);
+            $logger->pushHandler($handler);
+        }
+
+        $client->request('GET', self::URI);
+
+        // The HEALTHCHECK probes every 30 s: the controller logs the cause, the framework must not repeat it.
+        $records = array_filter($handler->getRecords(), static fn ($record): bool => $record->level->value >= Level::Error->value);
+        self::assertCount(1, $records);
     }
 }

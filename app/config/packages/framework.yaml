@@ -26,6 +26,12 @@ framework:
             allow_extra_attributes: false
             collect_extra_attributes_errors: true
 
+    # The HEALTHCHECK probes /api/ready every 30 s. The controller already logs the cause at
+    # error level, so the framework's own critical line for the 503 would only repeat it.
+    exceptions:
+        App\Exception\Health\DatabaseUnavailableException:
+            log_level: info
+
     #esi: true
     #fragments: true
 
