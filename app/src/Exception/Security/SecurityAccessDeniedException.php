@@ -24,7 +24,7 @@ final class SecurityAccessDeniedException extends ApiHttpException
     public function __construct()
     {
         parent::__construct(
-            ErrorCode::SecurityAccessDenied,
+            ErrorCode::AccessDenied,
             Response::HTTP_FORBIDDEN,
             'Access denied'
         );

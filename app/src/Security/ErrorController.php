@@ -53,7 +53,7 @@ final class ErrorController extends AbstractController
                     'success' => false,
                     'error' => $exception->getErrorCode(),
                     'message' => $exception->getMessage(),
-                ],
+                ] + $exception->getExtraFields(),
                 $exception->getStatusCode(),
                 $exception->getHeaders()
             );
@@ -74,7 +74,8 @@ final class ErrorController extends AbstractController
             $statusCode = $exception->getStatusCode();
             $statusText = Response::$statusTexts[$statusCode] ?? 'HTTP Error';
             $errorCode = match ($statusCode) {
-                Response::HTTP_FORBIDDEN => 'ACCESS_DENIED',
+                Response::HTTP_UNAUTHORIZED => ErrorCode::AuthenticationRequired->value,
+                Response::HTTP_FORBIDDEN => ErrorCode::AccessDenied->value,
                 Response::HTTP_METHOD_NOT_ALLOWED => 'METHOD_NOT_ALLOWED',
                 default => 'HTTP_ERROR',
             };

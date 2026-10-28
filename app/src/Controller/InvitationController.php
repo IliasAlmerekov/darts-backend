@@ -110,7 +110,7 @@ final class InvitationController extends AbstractController
     )]
     #[OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Unbekannte Spiel-ID (`NOT_FOUND`, schon vom Entity-Resolver). Meldet der Service ein fehlendes Spiel, antwortet der Endpoint mit `GAME_NOT_FOUND`.', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[ApiResponse(headers: ['X-Accel-Buffering' => 'no'])]
-    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
+    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme (`ACCESS_DENIED`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[Route('/api/invite/create/{id}', name: 'create_invitation', methods: ['POST'], format: 'json')]
     public function createInvitation(#[MapEntity(id: 'id')] Game $game, InvitationServiceInterface $invitationService): array
     {

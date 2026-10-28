@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Security;
 
+use App\Exception\ErrorCode;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -37,7 +38,7 @@ final readonly class ApiAuthenticationEntryPoint implements AuthenticationEntryP
             return new JsonResponse(
                 [
                     'success' => false,
-                    'error' => 'AUTHENTICATION_REQUIRED',
+                    'error' => ErrorCode::AuthenticationRequired->value,
                     'message' => 'Unauthorized',
                 ],
                 Response::HTTP_UNAUTHORIZED

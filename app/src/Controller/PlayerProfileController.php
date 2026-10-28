@@ -39,7 +39,7 @@ final class PlayerProfileController extends AbstractController
         content: new OA\JsonContent(ref: new Model(type: PlayerProfileResponseDto::class))
     )]
     #[OA\Response(response: 401, description: 'Nicht angemeldet.')]
-    #[OA\Response(response: 403, description: 'Angemeldet ohne `ROLE_PLAYER` (z. B. der Admin).')]
+    #[OA\Response(response: 403, description: 'Angemeldet ohne `ROLE_PLAYER` (z. B. der Admin) (`ACCESS_DENIED`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[ApiResponse]
     #[Route('/api/player/profile', name: 'app_player_profile', methods: ['GET'], format: 'json')]
     public function profile(PlayerProfileServiceInterface $playerProfileService): PlayerProfileResponseDto

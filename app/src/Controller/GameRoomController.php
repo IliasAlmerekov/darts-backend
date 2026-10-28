@@ -19,7 +19,6 @@ use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\PlayerNotFoundInGameException;
-use App\Exception\Request\UsernameAlreadyTakenException;
 use App\Exception\Request\PlayerIdRequiredException;
 use App\Http\Attribute\ApiResponse;
 use App\Service\Game\GameRoomServiceInterface;
@@ -101,7 +100,7 @@ final class GameRoomController extends AbstractController
     #[ApiResponse]
     #[OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Der Request-Body ist kein gültiges JSON (`REQUEST_INVALID_JSON_BODY`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht, oder das Spiel hätte danach `doubleOut` und `tripleOut` zugleich (`GAME_CONFLICTING_OUT_RULES`). Das Spiel bleibt unverändert.', content: new OA\JsonContent(anyOf: [new OA\Schema(ref: '#/components/schemas/RequestValidationFailed'), new OA\Schema(ref: '#/components/schemas/ApiError')]))]
-    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Angemeldet ohne `ROLE_ADMIN` (z. B. ein Spieler).')]
+    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Angemeldet ohne `ROLE_ADMIN` (z. B. ein Spieler) (`ACCESS_DENIED`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Eine ID in `playerIds` gehört zu keinem Benutzer (`PLAYER_NOT_FOUND`). Es wird keine Lobby angelegt.')]
     #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Die neue Lobby hätte mehr als 10 Spieler (`GAME_ROOM_FULL`). Es wird keine Lobby angelegt. Eine offene Lobby ignoriert `playerIds`.')]
     #[Route(path: '/api/room/create', name: 'room_create', methods: ['POST'], format: 'json')]
@@ -240,16 +239,7 @@ final class GameRoomController extends AbstractController
             throw new GameNotFoundException();
         }
 
-        try {
-            $player = $this->guestPlayerService->createGuestPlayer($game, (string) $dto->username);
-        } catch (UsernameAlreadyTakenException $exception) {
-            return $this->json([
-                'success' => false,
-                'error' => 'USERNAME_TAKEN',
-                'message' => 'The name is already taken',
-                'suggestions' => $exception->getSuggestions(),
-            ], Response::HTTP_CONFLICT);
-        }
+        $player = $this->guestPlayerService->createGuestPlayer($game, (string) $dto->username);
 
         return $this->json([
             'success' => true,
@@ -364,7 +354,7 @@ final class GameRoomController extends AbstractController
     )]
     #[OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Vorheriges Spiel nicht gefunden (`GAME_NOT_FOUND`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[ApiResponse(status: Response::HTTP_CREATED)]
-    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
+    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme (`ACCESS_DENIED`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Das alte Spiel ist nicht das neueste Spiel, oder es ist weder beendet noch abgebrochen (`GAME_NOT_NEWEST`). Eine offene Lobby ist immer das neueste Spiel.')]
     #[Route(path: '/api/room/{id}/rematch', name: 'room_rematch', methods: ['POST'])]
     public function rematch(int $id): array

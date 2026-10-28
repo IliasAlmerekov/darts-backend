@@ -50,6 +50,7 @@ enum ErrorCode: string
     case RegistrationAccountExists = 'REGISTRATION_ACCOUNT_EXISTS';
     case LoginInvalidCredentials = 'LOGIN_INVALID_CREDENTIALS';
     case LoginRateLimited = 'LOGIN_RATE_LIMITED';
-    case SecurityUserNotAuthenticated = 'SECURITY_USER_NOT_AUTHENTICATED';
-    case SecurityAccessDenied = 'SECURITY_ACCESS_DENIED';
+    case AuthenticationRequired = 'AUTHENTICATION_REQUIRED';
+    case AccessDenied = 'ACCESS_DENIED';
+    case UsernameTaken = 'USERNAME_TAKEN';
 }
