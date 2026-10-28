@@ -35,6 +35,7 @@ final class SecurityController extends AbstractController
         content: new OA\MediaType(
             mediaType: 'application/x-www-form-urlencoded',
             schema: new OA\Schema(
+                required: ['_username', '_password', '_csrf_token'],
                 type: 'object',
                 properties: [
                     new OA\Property(property: '_username', type: 'string', example: 'alice@example.com'),
