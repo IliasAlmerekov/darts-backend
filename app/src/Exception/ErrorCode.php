@@ -52,4 +52,5 @@ enum ErrorCode: string
     case AuthenticationRequired = 'AUTHENTICATION_REQUIRED';
     case AccessDenied = 'ACCESS_DENIED';
     case UsernameTaken = 'USERNAME_TAKEN';
+    case DatabaseUnavailable = 'DATABASE_UNAVAILABLE';
 }

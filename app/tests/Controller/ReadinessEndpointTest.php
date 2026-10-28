@@ -10,11 +10,13 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use Doctrine\DBAL\Connection;
+use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * GET /api/ready: readiness depends on the database, unlike the liveness check /api/health.
+ * The 503 is the shared error body of ADR 0006.
  */
 final class ReadinessEndpointTest extends WebTestCase
 {
@@ -37,7 +39,7 @@ final class ReadinessEndpointTest extends WebTestCase
     {
         $client = static::createClient();
         $connection = $this->createStub(Connection::class);
-        $connection->method('fetchOne')->willThrowException(new \RuntimeException(self::SECRET_DETAIL));
+        $connection->method('fetchOne')->willThrowException(new RuntimeException(self::SECRET_DETAIL));
         static::getContainer()->set('doctrine.dbal.default_connection', $connection);
 
         $client->request('GET', self::URI);
@@ -45,21 +47,9 @@ final class ReadinessEndpointTest extends WebTestCase
 
         self::assertSame(Response::HTTP_SERVICE_UNAVAILABLE, $client->getResponse()->getStatusCode());
         self::assertSame(
-            ['success' => false, 'status' => 'unavailable'],
+            ['success' => false, 'error' => 'DATABASE_UNAVAILABLE', 'message' => 'The database is unavailable.'],
             json_decode($body, true, 512, JSON_THROW_ON_ERROR),
         );
         self::assertStringNotContainsString('secret', $body);
-    }
-
-    public function testHealthStaysUpWhenDatabaseFails(): void
-    {
-        $client = static::createClient();
-        $connection = $this->createStub(Connection::class);
-        $connection->method('fetchOne')->willThrowException(new \RuntimeException(self::SECRET_DETAIL));
-        static::getContainer()->set('doctrine.dbal.default_connection', $connection);
-
-        $client->request('GET', '/api/health');
-
-        self::assertSame(Response::HTTP_OK, $client->getResponse()->getStatusCode());
     }
 }

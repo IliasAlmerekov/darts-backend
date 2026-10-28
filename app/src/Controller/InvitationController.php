@@ -12,6 +12,7 @@ namespace App\Controller;
 use App\Entity\Game;
 use App\Entity\Invitation;
 use App\Exception\Game\GameNotFoundException;
+use App\Exception\Health\DatabaseUnavailableException;
 use App\Http\Attribute\ApiResponse;
 use App\Service\Invitation\InvitationServiceInterface;
 use Doctrine\DBAL\Connection;
@@ -80,6 +81,8 @@ final class InvitationController extends AbstractController
      * @param Connection $connection
      *
      * @return JsonResponse
+     *
+     * @throws DatabaseUnavailableException
      */
     #[OA\Response(
         response: Response::HTTP_OK,
@@ -93,18 +96,7 @@ final class InvitationController extends AbstractController
             ]
         )
     )]
-    #[OA\Response(
-        response: Response::HTTP_SERVICE_UNAVAILABLE,
-        description: 'The database check failed. The body carries no error details.',
-        content: new OA\JsonContent(
-            type: 'object',
-            required: ['success', 'status'],
-            properties: [
-                new OA\Property(property: 'success', type: 'boolean', example: false),
-                new OA\Property(property: 'status', type: 'string', example: 'unavailable'),
-            ]
-        )
-    )]
+    #[OA\Response(response: Response::HTTP_SERVICE_UNAVAILABLE, description: 'Die Datenbankprüfung ist fehlgeschlagen (`DATABASE_UNAVAILABLE`), ohne Fehlerdetails.', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[Security(name: null)]
     #[Route('/api/ready', name: 'api_ready', methods: ['GET'], format: 'json')]
     public function ready(Connection $connection): JsonResponse
@@ -112,10 +104,10 @@ final class InvitationController extends AbstractController
         try {
             $connection->fetchOne('SELECT 1');
         } catch (Throwable $exception) {
-            // The body stays generic: exception text can carry the DSN or host.
+            // Only the log gets the cause: its text can carry the DSN or host.
             $this->logger->error('Readiness check failed: database unavailable.', ['exception' => $exception]);
 
-            return $this->json(['success' => false, 'status' => 'unavailable'], Response::HTTP_SERVICE_UNAVAILABLE);
+            throw new DatabaseUnavailableException();
         }
 
         return $this->json(['success' => true, 'status' => 'ready']);
