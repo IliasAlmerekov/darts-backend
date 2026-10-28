@@ -115,7 +115,8 @@ final class ErrorController extends AbstractController
                 'message' => 'The request body failed validation.',
                 'violations' => $violations,
             ],
-            $exception->getStatusCode()
+            $exception->getStatusCode(),
+            $exception->getHeaders()
         );
     }
 }

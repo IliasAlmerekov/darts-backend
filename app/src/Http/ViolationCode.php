@@ -58,13 +58,13 @@ final class ViolationCode
 
         // Nested constraints (Sequentially, All, Collection) never get here for a nested
         // failure: its violation carries the inner constraint.
-        return match ($constraint::class) {
-            Assert\NotBlank::class, Assert\NotNull::class => 'REQUIRED',
-            Assert\Email::class => 'INVALID_EMAIL',
-            Assert\Choice::class => 'INVALID_CHOICE',
-            Assert\Range::class, Assert\Positive::class, Assert\PositiveOrZero::class, Assert\Count::class => 'OUT_OF_RANGE',
-            Assert\Type::class => 'INVALID_TYPE',
-            Assert\Unique::class => 'DUPLICATE',
+        return match (true) {
+            $constraint instanceof Assert\NotBlank, $constraint instanceof Assert\NotNull => 'REQUIRED',
+            $constraint instanceof Assert\Email => 'INVALID_EMAIL',
+            $constraint instanceof Assert\Choice => 'INVALID_CHOICE',
+            $constraint instanceof Assert\Range, $constraint instanceof Assert\Positive, $constraint instanceof Assert\PositiveOrZero, $constraint instanceof Assert\Count => 'OUT_OF_RANGE',
+            $constraint instanceof Assert\Type => 'INVALID_TYPE',
+            $constraint instanceof Assert\Unique => 'DUPLICATE',
             default => 'INVALID',
         };
     }

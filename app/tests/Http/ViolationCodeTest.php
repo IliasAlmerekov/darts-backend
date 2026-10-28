@@ -38,6 +38,13 @@ final class ViolationCodeTest extends TestCase
         yield 'Count' => [[1], new Assert\Count(min: 2), 'OUT_OF_RANGE'];
         yield 'Type' => ['1', new Assert\Type('integer'), 'INVALID_TYPE'];
         yield 'Unique' => [[1, 1], new Assert\Unique(), 'DUPLICATE'];
+        yield 'a subclass of a table constraint' => ['', new class () extends Assert\NotBlank {
+            #[\Override]
+            public function validatedBy(): string
+            {
+                return Assert\NotBlankValidator::class;
+            }
+        }, 'REQUIRED'];
         yield 'any other constraint' => ['x', new Assert\Regex('/^\d+$/'), 'INVALID'];
         yield 'Sequentially reports the inner constraint' => ['', new Assert\Sequentially([new Assert\NotBlank(), new Assert\Email()]), 'REQUIRED'];
         yield 'All reports the inner constraint' => [[0], new Assert\All([new Assert\Positive()]), 'OUT_OF_RANGE'];
