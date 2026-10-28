@@ -608,13 +608,6 @@ final class RegistrationEndpointTest extends WebTestCase
     }
 
     /**
-     * Asserts the status before decoding, so a 500 error page fails on the status, not on the JSON.
-     *
-     * @param array<string, mixed> $body
-     *
-     * @return array<array-key, mixed>
-     */
-    /**
      * @param array<array-key, mixed>        $payload
      * @param list<array{string, string}>    $expected field and code pairs, in order
      */
@@ -622,14 +615,21 @@ final class RegistrationEndpointTest extends WebTestCase
     {
         self::assertFalse($payload['success']);
         self::assertSame('REQUEST_VALIDATION_FAILED', $payload['error']);
+        self::assertSame('The request body failed validation.', $payload['message']);
         self::assertArrayNotHasKey('errors', $payload);
-        self::assertStringNotContainsString('Registrierung', (string) $payload['message']);
         self::assertSame($expected, array_map(
             static fn (array $violation): array => [$violation['field'], $violation['code']],
             $payload['violations'],
         ));
     }
 
+    /**
+     * Asserts the status before decoding, so a 500 error page fails on the status, not on the JSON.
+     *
+     * @param array<string, mixed> $body
+     *
+     * @return array<array-key, mixed>
+     */
     private function postRegistration(KernelBrowser $client, array $body, int $expectedStatus): array
     {
         $client->request(Request::METHOD_POST, '/api/register', [], [], ['CONTENT_TYPE' => 'application/json'], json_encode($body, JSON_THROW_ON_ERROR));
