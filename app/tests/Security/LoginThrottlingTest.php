@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Security;
 
+use App\Tests\Support\SameOriginLogin;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -82,7 +83,7 @@ final class LoginThrottlingTest extends WebTestCase
 
     private function login(KernelBrowser $client, string $email, string $password): void
     {
-        $client->request(Request::METHOD_POST, '/api/login', ['_username' => $email, '_password' => $password], [], ['REMOTE_ADDR' => self::IP]);
+        SameOriginLogin::post($client, $email, $password, ['REMOTE_ADDR' => self::IP]);
     }
 
     private function createUser(string $label): User

@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Security;
 
+use App\Tests\Support\SameOriginLogin;
 use App\Tests\Support\TestUserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -30,9 +31,9 @@ final class LoginFailureResponseTest extends WebTestCase
         $known = TestUserFactory::create($entityManager, 'loginfail', 'known', ['ROLE_PLAYER']);
         $entityManager->flush();
 
-        $client->request(Request::METHOD_POST, '/api/login', ['_username' => $known->getEmail(), '_password' => 'wrong-password'], [], ['REMOTE_ADDR' => '203.0.113.31', 'HTTP_ACCEPT' => 'application/json']);
+        SameOriginLogin::post($client, (string) $known->getEmail(), 'wrong-password', ['REMOTE_ADDR' => '203.0.113.31', 'HTTP_ACCEPT' => 'application/json']);
         $knownResponse = $client->getResponse();
-        $client->request(Request::METHOD_POST, '/api/login', ['_username' => 'nobody-'.bin2hex(random_bytes(4)).'@example.invalid', '_password' => 'wrong-password'], [], ['REMOTE_ADDR' => '203.0.113.32', 'HTTP_ACCEPT' => 'application/json']);
+        SameOriginLogin::post($client, 'nobody-'.bin2hex(random_bytes(4)).'@example.invalid', 'wrong-password', ['REMOTE_ADDR' => '203.0.113.32', 'HTTP_ACCEPT' => 'application/json']);
         $unknownResponse = $client->getResponse();
 
         self::assertSame(Response::HTTP_UNAUTHORIZED, $knownResponse->getStatusCode());

@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller;
 
+use App\Tests\Support\SameOriginLogin;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\Invitation;
@@ -121,10 +122,7 @@ final class LoginSuccessRedirectEndpointTest extends WebTestCase
         $player->setPassword($hasher->hashPassword($player, 'correct-password'));
         $gameId = $this->createGame(GameStatus::Lobby, $player);
 
-        $client->request(Request::METHOD_POST, '/api/login', [
-            '_username' => $player->getEmail(),
-            '_password' => 'correct-password',
-        ]);
+        SameOriginLogin::post($client, (string) $player->getEmail(), 'correct-password');
 
         $payload = $this->decodeLoginSuccess($client);
         self::assertSame('/joined', parse_url($payload['redirect'], PHP_URL_PATH));

@@ -1,6 +1,8 @@
-# Enable stateless CSRF protection for forms and logins/logouts
+# Stateless CSRF protection by origin (SameOriginCsrfTokenManager): login, logout and forms.
+# The token is the fixed value `csrf-token`; Sec-Fetch-Site / Origin decide (docs/adr/0007).
 framework:
     csrf_protection:
         stateless_token_ids:
             - submit
+            - authenticate
             - logout

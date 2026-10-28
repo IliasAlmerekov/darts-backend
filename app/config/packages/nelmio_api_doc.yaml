@@ -53,6 +53,10 @@ nelmio_api_doc:
                             enum: [false]
                         error:
                             type: string
+                            description: >-
+                                Machine-readable error code. `CROSS_ORIGIN_REQUEST` (403): an unsafe `/api` request
+                                (`POST`, `PUT`, `PATCH`, `DELETE`) whose `Sec-Fetch-Site` is not `same-origin`, or whose
+                                `Origin` differs from the API's own, and a login without the fixed `_csrf_token`.
                         message:
                             type: string
             securitySchemes:

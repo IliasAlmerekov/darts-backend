@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Security;
 
+use App\Tests\Support\SameOriginLogin;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\Invitation;
@@ -95,7 +96,6 @@ final class ApiAccessMatrixTest extends WebTestCase
             self::entry('login_success', Request::METHOD_GET, self::ACCESS_PUBLIC, expected: ['*' => Response::HTTP_OK, self::PERSONA_ANONYMOUS => Response::HTTP_UNAUTHORIZED]),
             self::entry('app_logout', Request::METHOD_POST, self::ACCESS_PUBLIC, expected: Response::HTTP_NO_CONTENT),
             self::entry('app_register', Request::METHOD_POST, self::ACCESS_PUBLIC, payload: ['email' => 'matrix-register@db-n.com', 'username' => 'matrix_register', 'plainPassword' => 'matrix-secret'], expected: Response::HTTP_CREATED),
-            self::entry('app_csrf_tokens', Request::METHOD_GET, self::ACCESS_PUBLIC, expected: Response::HTTP_OK),
             self::entry('api_health', Request::METHOD_GET, self::ACCESS_PUBLIC, expected: Response::HTTP_OK),
             self::entry('join_invitation', Request::METHOD_GET, self::ACCESS_PUBLIC, ['uuid' => self::FIXTURE_INVITATION], expected: Response::HTTP_FOUND),
 
@@ -290,7 +290,7 @@ final class ApiAccessMatrixTest extends WebTestCase
     private function sendRequest(KernelBrowser $client, string $method, string $uri, string $body, array $payload, string $loginEmail): void
     {
         if (self::BODY_LOGIN_FORM === $body) {
-            $client->request($method, $uri, ['_username' => $loginEmail, '_password' => self::LOGIN_PASSWORD]);
+            SameOriginLogin::post($client, $loginEmail, self::LOGIN_PASSWORD);
 
             return;
         }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Security;
 
 use App\Exception\ApiHttpException;
+use App\Exception\Security\CrossOriginRequestException;
 use App\Exception\Security\LoginInvalidCredentialsException;
 use App\Exception\Security\LoginRateLimitedException;
 use Monolog\Attribute\WithMonologChannel;
@@ -15,6 +16,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
+use Symfony\Component\Security\Core\Exception\InvalidCsrfTokenException;
 use Symfony\Component\Security\Core\Exception\TooManyLoginAttemptsAuthenticationException;
 use Symfony\Component\Security\Http\Authentication\AuthenticationFailureHandlerInterface;
 
@@ -73,6 +75,10 @@ final readonly class ApiAuthenticationFailureHandler implements AuthenticationFa
      */
     private function toApiException(AuthenticationException $exception): ApiHttpException
     {
+        if ($exception instanceof InvalidCsrfTokenException) {
+            return new CrossOriginRequestException();
+        }
+
         if (!$exception instanceof TooManyLoginAttemptsAuthenticationException) {
             return new LoginInvalidCredentialsException();
         }
