@@ -133,7 +133,8 @@ lacks `eol=lf` in `.gitattributes` or is committed with CRLF.
 upload progress on, or a multipart request that nginx passes to PHP (#146). It also fails
 (#56) on a root process, an `X-Powered-By` header, a cold `var/cache/prod`, a production ini
 value that differs, `pdo_pgsql`, a HEALTHCHECK that does not call `/api/ready`, or an
-`/api/ready` that does not answer 503 without a database. Run it after a
+`/api/ready` that does not answer 503 with the `DATABASE_UNAVAILABLE` body without a
+database. Run it after a
 change to `app/Dockerfile` or `app/docker/`; raise its `MIN_PHP_VERSION` with each PHP
 security release.
 
