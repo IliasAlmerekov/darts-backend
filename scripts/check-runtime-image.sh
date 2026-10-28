@@ -93,8 +93,9 @@ else
 fi
 
 healthcheck="$(docker inspect --format '{{json .Config.Healthcheck.Test}}' "${IMAGE}")"
+# Match the whole URL up to its closing quote, so /api/readyz or /api/ready/extra fails.
 case "${healthcheck}" in
-    */api/ready*) echo "ok: HEALTHCHECK calls /api/ready" ;;
+    *':${PORT}/api/ready\"'*) echo "ok: HEALTHCHECK calls /api/ready" ;;
     *) fail "HEALTHCHECK is ${healthcheck}, expected it to call /api/ready." ;;
 esac
 
