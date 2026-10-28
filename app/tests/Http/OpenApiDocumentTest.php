@@ -210,8 +210,23 @@ final class OpenApiDocumentTest extends WebTestCase
 
         self::assertStringContainsString('`db-n.com`', $email['description']);
         self::assertSame('alice@db-n.com', $email['example']);
-        self::assertStringContainsString('`db-n.com`', $responses['400']['description']);
+        self::assertStringContainsString('EMAIL_DOMAIN_NOT_ALLOWED', $responses['422']['description']);
+        self::assertStringContainsString('EMAIL_DOMAIN_NOT_ALLOWED', $email['description']);
         self::assertSame('alice@db-n.com', $responses['201']['content']['application/json']['schema']['properties']['email']['example']);
+    }
+
+    public function testRegisterDocumentsErrorsInTheSharedBody(): void
+    {
+        $responses = $this->document()['paths']['/api/register']['post']['responses'];
+
+        self::assertSame('#/components/schemas/RequestValidationFailed', $responses['422']['content']['application/json']['schema']['$ref']);
+        self::assertSame('#/components/schemas/ApiError', $responses['400']['content']['application/json']['schema']['$ref']);
+        self::assertStringContainsString('REQUEST_INVALID_JSON_BODY', $responses['400']['description']);
+        foreach (['409', '429'] as $status) {
+            $schema = $responses[$status]['content']['application/json']['schema'];
+            self::assertSame(['success', 'error', 'message'], $schema['required']);
+            self::assertDoesNotMatchRegularExpression('/[äöüß]/u', $schema['properties']['message']['example']);
+        }
     }
 
     public function testRegisterDocumentsTheUnsupportedMediaType(): void

@@ -29,7 +29,7 @@ final class RegistrationAccountExistsException extends ApiHttpException
         parent::__construct(
             ErrorCode::RegistrationAccountExists,
             Response::HTTP_CONFLICT,
-            'Ein Konto mit diesen Daten existiert bereits.',
+            'An account with these details already exists.',
             $previous,
         );
     }

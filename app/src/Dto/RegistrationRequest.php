@@ -23,14 +23,14 @@ use Symfony\Component\Validator\Constraints as Assert;
 final class RegistrationRequest
 {
     #[OA\Property(
-        description: 'Nur Adressen der Domain `db-n.com` werden angenommen, ohne Beachtung der Groß- und Kleinschreibung und nach Entfernen der Leerzeichen am Rand. Subdomains und andere Domains ergeben 400 mit `errors.email`.',
+        description: 'Nur Adressen der Domain `db-n.com` werden angenommen, ohne Beachtung der Groß- und Kleinschreibung und nach Entfernen der Leerzeichen am Rand. Subdomains und andere Domains ergeben 422 mit dem Code `EMAIL_DOMAIN_NOT_ALLOWED`.',
         format: 'email',
         example: 'alice@db-n.com',
     )]
     #[Assert\Sequentially([
         new Assert\NotBlank(message: 'Please enter an email address', normalizer: 'trim'),
         new Assert\Email(message: 'Please enter a valid email address', normalizer: 'trim'),
-        new Assert\Regex(pattern: '/@db-n\.com$/i', message: 'Please register with your @db-n.com email address', normalizer: 'trim'),
+        new Assert\Regex(pattern: '/@db-n\.com$/i', message: 'Please register with your @db-n.com email address', normalizer: 'trim', payload: ['code' => 'EMAIL_DOMAIN_NOT_ALLOWED']),
     ])]
     public string $email;
 

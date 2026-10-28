@@ -115,7 +115,7 @@ final class RegistrationServiceTest extends TestCase
         } catch (RegistrationAccountExistsException $exception) {
             self::assertSame(Response::HTTP_CONFLICT, $exception->getStatusCode());
             self::assertSame('REGISTRATION_ACCOUNT_EXISTS', $exception->getErrorCode());
-            self::assertSame('Ein Konto mit diesen Daten existiert bereits.', $exception->getMessage());
+            self::assertSame('An account with these details already exists.', $exception->getMessage());
         }
     }
 
