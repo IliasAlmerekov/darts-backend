@@ -10,22 +10,20 @@ declare(strict_types=1);
 namespace App\EventSubscriber;
 
 use App\Controller\RegistrationController;
-use App\Exception\Request\InvalidJsonBodyException;
 use Override;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
-use Symfony\Component\Serializer\Exception\NotEncodableValueException;
 use Symfony\Component\Validator\Exception\ValidationFailedException;
 
 /**
  * Renders the registration payload failures in the registration error format.
  *
- * Invalid fields answer 400 with the field errors per field. A body that cannot be decoded
- * as JSON answers like InvalidJsonBodyException. Other DTO endpoints keep the default 422
- * handling.
+ * Invalid fields answer 400 with the field errors per field. Other DTO endpoints answer
+ * 422 REQUEST_VALIDATION_FAILED from ErrorController, which also renders a body that cannot
+ * be decoded as JSON.
  *
  * @psalm-suppress UnusedClass Registered via Symfony service container autoconfiguration
  */
@@ -65,13 +63,6 @@ final class RegistrationErrorSubscriber implements EventSubscriberInterface
                 ],
                 Response::HTTP_BAD_REQUEST,
             ));
-
-            return;
-        }
-
-        // The payload resolver wraps a body it cannot decode in a 400.
-        if ($previous instanceof NotEncodableValueException) {
-            $event->setThrowable(new InvalidJsonBodyException());
         }
     }
 

@@ -26,7 +26,7 @@ final class InvalidJsonBodyException extends ApiHttpException
         parent::__construct(
             ErrorCode::RequestInvalidJsonBody,
             Response::HTTP_BAD_REQUEST,
-            'Ungültiger JSON-Body. Bitte überprüfe das Datenformat.'
+            'The request body is not valid JSON.'
         );
     }
 }

@@ -338,7 +338,7 @@ final class RegistrationEndpointTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST, (string) $client->getResponse()->getContent());
         $payload = json_decode((string) $client->getResponse()->getContent(), true, flags: JSON_THROW_ON_ERROR);
-        self::assertSame(['success' => false, 'error' => 'REQUEST_INVALID_JSON_BODY', 'message' => 'Ungültiger JSON-Body. Bitte überprüfe das Datenformat.'], $payload);
+        self::assertSame(['success' => false, 'error' => 'REQUEST_INVALID_JSON_BODY', 'message' => 'The request body is not valid JSON.'], $payload);
     }
 
     /**

@@ -100,6 +100,8 @@ final class StartSettingsKeysEndpointTest extends WebTestCase
         $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
         self::assertIsArray($payload);
         self::assertSame('REQUEST_CONFLICTING_SETTING_KEYS', $payload['error'] ?? null);
+        [$camelCaseKey, $legacyKey] = array_keys($body);
+        self::assertSame(sprintf('The keys "%s" and "%s" have different values. Send only "%1$s".', $camelCaseKey, $legacyKey), $payload['message'] ?? null);
     }
 
     /**

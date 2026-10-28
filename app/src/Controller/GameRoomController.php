@@ -99,7 +99,8 @@ final class GameRoomController extends AbstractController
         )
     )]
     #[ApiResponse]
-    #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht, oder das Spiel hätte danach `doubleOut` und `tripleOut` zugleich (`GAME_CONFLICTING_OUT_RULES`). Das Spiel bleibt unverändert.')]
+    #[OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Der Request-Body ist kein gültiges JSON (`REQUEST_INVALID_JSON_BODY`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
+    #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht, oder das Spiel hätte danach `doubleOut` und `tripleOut` zugleich (`GAME_CONFLICTING_OUT_RULES`). Das Spiel bleibt unverändert.', content: new OA\JsonContent(anyOf: [new OA\Schema(ref: '#/components/schemas/RequestValidationFailed'), new OA\Schema(ref: '#/components/schemas/ApiError')]))]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Angemeldet ohne `ROLE_ADMIN` (z. B. ein Spieler).')]
     #[OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Eine ID in `playerIds` gehört zu keinem Benutzer (`PLAYER_NOT_FOUND`). Es wird keine Lobby angelegt.')]
     #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Die neue Lobby hätte mehr als 10 Spieler (`GAME_ROOM_FULL`). Es wird keine Lobby angelegt. Eine offene Lobby ignoriert `playerIds`.')]
@@ -152,11 +153,11 @@ final class GameRoomController extends AbstractController
         description: 'Spieler wurde aus dem Spiel entfernt.',
         content: new OA\JsonContent(ref: new Model(type: SuccessMessageDto::class))
     )]
-    #[OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'playerId fehlt oder ist ungültig.')]
+    #[OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'playerId fehlt oder ist ungültig. Ist der Request-Body kein gültiges JSON, antwortet der Endpoint ebenfalls mit 400 (`REQUEST_INVALID_JSON_BODY`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Spieler wurde im Spiel nicht gefunden.')]
     #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Das Spiel ist nicht mehr in der Lobby (`GAME_SEATS_NOT_EDITABLE`). Der Spieler bleibt im Spiel.')]
     #[ApiResponse]
-    #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht. Das wird vor dem Status geprüft, also auch außerhalb der Lobby mit 422 statt 409 beantwortet.')]
+    #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht. Das wird vor dem Status geprüft, also auch außerhalb der Lobby mit 422 statt 409 beantwortet.', content: new OA\JsonContent(ref: '#/components/schemas/RequestValidationFailed'))]
     #[Route(path: '/api/room/{id}', name: 'room_player_leave', methods: ['DELETE'], format: 'json')]
     public function playerLeave(int $id, #[MapQueryParameter] ?int $playerId = null, #[MapRequestPayload] ?PlayerIdPayload $payload = null): SuccessMessageDto
     {
@@ -229,7 +230,8 @@ final class GameRoomController extends AbstractController
         )
     )]
     #[ApiResponse]
-    #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht. Das wird vor dem Status geprüft, also auch außerhalb der Lobby mit 422 statt 409 beantwortet.')]
+    #[OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Der Request-Body ist kein gültiges JSON (`REQUEST_INVALID_JSON_BODY`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
+    #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht. Das wird vor dem Status geprüft, also auch außerhalb der Lobby mit 422 statt 409 beantwortet.', content: new OA\JsonContent(ref: '#/components/schemas/RequestValidationFailed'))]
     #[Route(path: '/api/room/{id}/guest', name: 'room_player_guest_add', methods: ['POST'], format: 'json')]
     public function addGuestPlayer(int $id, #[MapRequestPayload] GuestPlayerRequest $dto): Response
     {
@@ -283,7 +285,8 @@ final class GameRoomController extends AbstractController
     #[OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Spiel nicht gefunden.')]
     #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Das Spiel ist nicht mehr in der Lobby (`GAME_SEATS_NOT_EDITABLE`), auch bei leerem `positions`. Die Positionen bleiben unverändert.')]
     #[ApiResponse]
-    #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht. Das wird vor dem Status geprüft, also auch außerhalb der Lobby mit 422 statt 409 beantwortet.')]
+    #[OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Der Request-Body ist kein gültiges JSON (`REQUEST_INVALID_JSON_BODY`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
+    #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht. Das wird vor dem Status geprüft, also auch außerhalb der Lobby mit 422 statt 409 beantwortet.', content: new OA\JsonContent(ref: '#/components/schemas/RequestValidationFailed'))]
     #[Route(path: '/api/room/{id}/positions', name: 'room_update_player_positions', methods: ['POST'], format: 'json')]
     public function updatePlayerOrder(int $id, #[MapRequestPayload] UpdatePlayerOrderRequest $dto): array
     {
