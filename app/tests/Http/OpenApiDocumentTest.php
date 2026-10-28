@@ -110,7 +110,8 @@ final class OpenApiDocumentTest extends WebTestCase
     }
 
     /**
-     * A payload operation answers a body that is not valid JSON with 400 REQUEST_INVALID_JSON_BODY.
+     * A payload operation answers a body that is not valid JSON with 400 REQUEST_INVALID_JSON_BODY,
+     * and its 400 documents the error body.
      */
     public function testEveryRequestPayloadOperationDocumentsTheInvalidJsonCode(): void
     {
@@ -121,7 +122,8 @@ final class OpenApiDocumentTest extends WebTestCase
                 continue;
             }
             $description = $operation['responses']['400']['description'] ?? '';
-            if (!is_string($description) || !str_contains($description, 'REQUEST_INVALID_JSON_BODY')) {
+            $schema = $operation['responses']['400']['content']['application/json']['schema'] ?? [];
+            if (!is_string($description) || !str_contains($description, 'REQUEST_INVALID_JSON_BODY') || [] === $schema) {
                 $offences[] = strtoupper($method).' '.$path;
             }
         }
