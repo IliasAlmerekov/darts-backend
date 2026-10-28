@@ -33,11 +33,10 @@ final class LoginThrottlingTest extends WebTestCase
 
         $response = $client->getResponse();
         self::assertSame(Response::HTTP_TOO_MANY_REQUESTS, $response->getStatusCode());
-        $payload = json_decode((string) $response->getContent(), true, flags: JSON_THROW_ON_ERROR);
-        self::assertFalse($payload['success']);
-        self::assertSame(Response::HTTP_TOO_MANY_REQUESTS, $payload['status']);
-        self::assertSame($email, $payload['last_username']);
-        self::assertIsString($payload['error']);
+        self::assertSame(
+            '{"success":false,"error":"LOGIN_RATE_LIMITED","message":"Too many failed login attempts. Try again later."}',
+            $response->getContent(),
+        );
         self::assertGreaterThan(0, (int) $response->headers->get('Retry-After'));
     }
 

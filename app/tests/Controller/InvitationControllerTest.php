@@ -103,6 +103,17 @@ final class InvitationControllerTest extends TestCase
         $this->assertEquals($gameId, $response['gameId']);
     }
 
+    public function testCreateInvitationThrowsGameNotFoundWhenServiceReportsFailure(): void
+    {
+        // Not reachable over HTTP: a persisted game always has an id, so this is a controller test.
+        $invitationService = $this->createMock(InvitationServiceInterface::class);
+        $invitationService->method('getInvitationPayload')->willReturn(['success' => false, 'message' => 'Game not found']);
+
+        $this->expectException(GameNotFoundException::class);
+
+        $this->controller->createInvitation($this->createMock(Game::class), $invitationService);
+    }
+
     public function testJoinInvitationThrowsWhenGameIdMissing(): void
     {
         $invitation = $this->createMock(Invitation::class);

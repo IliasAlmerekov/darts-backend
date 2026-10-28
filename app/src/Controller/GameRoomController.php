@@ -362,7 +362,7 @@ final class GameRoomController extends AbstractController
             type: 'object'
         )
     )]
-    #[OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Vorheriges Spiel nicht gefunden.')]
+    #[OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Vorheriges Spiel nicht gefunden (`GAME_NOT_FOUND`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[ApiResponse(status: Response::HTTP_CREATED)]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme.')]
     #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Das alte Spiel ist nicht das neueste Spiel, oder es ist weder beendet noch abgebrochen (`GAME_NOT_NEWEST`). Eine offene Lobby ist immer das neueste Spiel.')]
@@ -372,7 +372,7 @@ final class GameRoomController extends AbstractController
         $result = $this->transaction->run(fn (): array => $this->rematchService->createRematch($id));
 
         if (!($result['success'] ?? false)) {
-            $result['status'] = Response::HTTP_NOT_FOUND;
+            throw new GameNotFoundException();
         }
 
         return $result;

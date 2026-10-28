@@ -85,4 +85,28 @@ final class ApiViewSubscriberTest extends TestCase
         $this->assertSame(Response::HTTP_OK, $response->getStatusCode());
         $this->assertSame('{"limit":20,"offset":0,"total":0,"items":[]}', $response->getContent());
     }
+
+    public function testOnKernelViewLeavesAnIntegerStatusKeyInTheBodyAndTheHttpStatusAlone(): void
+    {
+        $data = ['success' => true, 'status' => 418];
+        $serializer = $this->createMock(SerializerInterface::class);
+        $serializer->expects($this->once())
+            ->method('serialize')
+            ->with($data, 'json', [])
+            ->willReturn('{"success":true,"status":418}');
+        $subscriber = new ApiViewSubscriber($serializer);
+        $event = new ViewEvent(
+            $this->createStub(HttpKernelInterface::class),
+            Request::create('/api/anything', 'GET'),
+            HttpKernelInterface::MAIN_REQUEST,
+            $data,
+        );
+
+        $subscriber->onKernelView($event);
+
+        $response = $event->getResponse();
+        $this->assertInstanceOf(JsonResponse::class, $response);
+        $this->assertSame(Response::HTTP_OK, $response->getStatusCode());
+        $this->assertSame('{"success":true,"status":418}', $response->getContent());
+    }
 }

@@ -49,9 +49,6 @@ final class OpenApiDocumentTest extends WebTestCase
         'create_invitation',
     ];
 
-    /** @var list<array{string, string}> */
-    private const array LOGIN_FAILURES = [['/api/login', '401'], ['/api/login', '429']];
-
     /** @var array<string, mixed>|null */
     private ?array $document = null;
 
@@ -74,22 +71,13 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertSame([], $offences, 'Operations that no route with explicit methods accepts.');
     }
 
-    public function testNoResponseDocumentsAStrippedStatusField(): void
+    public function testRematchAndInvitationDocumentTheSharedNotFoundBody(): void
     {
-        $offences = [];
-        foreach ($this->operations() as [$path, $method, $operation]) {
-            foreach ($operation['responses'] ?? [] as $code => $response) {
-                $schema = $response['content']['application/json']['schema'] ?? [];
-                // The subscriber strips only an int status; the health probe's string "ok" stays.
-                // A failed login is answered by ApiAuthenticationFailureHandler, which bypasses
-                // the subscriber, so its 401 body really carries "status". The GET variant shares the schema.
-                if (!in_array([$path, (string) $code], self::LOGIN_FAILURES, true) && 'integer' === ($schema['properties']['status']['type'] ?? null)) {
-                    $offences[] = strtoupper($method).' '.$path.' '.$code;
-                }
-            }
-        }
+        $paths = $this->document()['paths'];
 
-        self::assertSame([], $offences, 'Responses documenting a body "status" that the API moves into the HTTP code.');
+        foreach ([$paths['/api/room/{id}/rematch']['post'], $paths['/api/invite/create/{id}']['post']] as $operation) {
+            self::assertSame('#/components/schemas/ApiError', $operation['responses']['404']['content']['application/json']['schema']['$ref'] ?? null);
+        }
     }
 
     /**
@@ -184,8 +172,14 @@ final class OpenApiDocumentTest extends WebTestCase
     {
         $paths = $this->document()['paths'];
 
-        self::assertArrayHasKey('401', $paths['/api/login']['post']['responses']);
-        self::assertArrayHasKey('429', $paths['/api/login']['post']['responses']);
+        foreach ([['post', '401'], ['post', '429'], ['get', '401']] as [$method, $code]) {
+            self::assertSame(
+                '#/components/schemas/ApiError',
+                $paths['/api/login'][$method]['responses'][$code]['content']['application/json']['schema']['$ref'] ?? null,
+                strtoupper($method).' /api/login '.$code,
+            );
+        }
+        self::assertStringNotContainsString('last_username', (string) json_encode($paths['/api/login']['post']['responses']['401']));
         self::assertArrayHasKey('429', $paths['/api/register']['post']['responses']);
         self::assertArrayHasKey('responses', $paths['/api/logout']['post']);
         self::assertArrayNotHasKey('default', $paths['/api/logout']['post']['responses']);
