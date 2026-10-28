@@ -67,7 +67,7 @@ final class RegistrationController extends AbstractController
     )]
     #[OA\Response(
         response: Response::HTTP_BAD_REQUEST,
-        description: 'Validierungsfehler. Eine E-Mail-Adresse außerhalb der Domain `db-n.com` ergibt eine Meldung unter `errors.email`.',
+        description: 'Validierungsfehler. Eine E-Mail-Adresse außerhalb der Domain `db-n.com` ergibt eine Meldung unter `errors.email`. Ist der Body kein gültiges JSON, ist `error` `REQUEST_INVALID_JSON_BODY` und `errors` fehlt.',
         content: new OA\JsonContent(
             type: 'object',
             required: ['success', 'message'],

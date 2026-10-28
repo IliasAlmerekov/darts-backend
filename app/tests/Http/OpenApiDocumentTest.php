@@ -110,6 +110,26 @@ final class OpenApiDocumentTest extends WebTestCase
     }
 
     /**
+     * A payload operation answers a body that is not valid JSON with 400 REQUEST_INVALID_JSON_BODY.
+     */
+    public function testEveryRequestPayloadOperationDocumentsTheInvalidJsonCode(): void
+    {
+        $offences = [];
+        foreach ($this->operations() as [$path, $method, $operation]) {
+            $route = $this->routeFor($path, $method);
+            if (null === $route || null === $this->payloadValidationStatus($route['controller'])) {
+                continue;
+            }
+            $description = $operation['responses']['400']['description'] ?? '';
+            if (!is_string($description) || !str_contains($description, 'REQUEST_INVALID_JSON_BODY')) {
+                $offences[] = strtoupper($method).' '.$path;
+            }
+        }
+
+        self::assertSame([], $offences);
+    }
+
+    /**
      * ADR 0006: the 422 body is documented once and every payload operation references it.
      */
     public function testEveryRequestPayloadOperationReferencesTheValidationBody(): void
