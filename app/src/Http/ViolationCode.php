@@ -17,6 +17,8 @@ use Symfony\Component\Validator\ConstraintViolationInterface;
  */
 final class ViolationCode
 {
+    public const string UNKNOWN_FIELD = 'UNKNOWN_FIELD';
+
     /**
      * Templates of the violations the request payload resolver adds, without a constraint,
      * for a value the serializer cannot map to the property's type.
@@ -44,7 +46,7 @@ final class ViolationCode
             $template = $violation->getMessageTemplate();
 
             return match (true) {
-                self::UNKNOWN_FIELD_TEMPLATE === $template => 'UNKNOWN_FIELD',
+                self::UNKNOWN_FIELD_TEMPLATE === $template => self::UNKNOWN_FIELD,
                 in_array($template, self::TYPE_TEMPLATES, true) => 'INVALID_TYPE',
                 default => 'INVALID',
             };
@@ -64,8 +66,13 @@ final class ViolationCode
             return (int) $parameters['{{ value_length }}'] > (int) $parameters['{{ limit }}'] ? 'TOO_LONG' : 'TOO_SHORT';
         }
 
-        if ($constraint instanceof Assert\Collection && Assert\Collection::MISSING_FIELD_ERROR === $violation->getCode()) {
-            return 'REQUIRED';
+        if ($constraint instanceof Assert\Collection) {
+            if (Assert\Collection::MISSING_FIELD_ERROR === $violation->getCode()) {
+                return 'REQUIRED';
+            }
+            if (Assert\Collection::NO_SUCH_FIELD_ERROR === $violation->getCode()) {
+                return self::UNKNOWN_FIELD;
+            }
         }
 
         // Nested constraints (Sequentially, All, Collection) never get here for a nested

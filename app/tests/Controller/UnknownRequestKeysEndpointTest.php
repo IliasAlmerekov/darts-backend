@@ -81,6 +81,13 @@ final class UnknownRequestKeysEndpointTest extends WebTestCase
         $this->assertViolations([['field' => 'bogus', 'code' => 'UNKNOWN_FIELD', 'message' => 'This attribute was not expected.']]);
     }
 
+    public function testAnUnknownKeyInsideAPositionsItemIsRejectedAtItsPath(): void
+    {
+        $this->send('POST', '/api/room/{id}/positions', ['positions' => [['playerId' => 1, 'position' => 0, 'bogus' => 1]]]);
+
+        $this->assertViolations([['field' => 'positions[0][bogus]', 'code' => 'UNKNOWN_FIELD', 'message' => 'This field was not expected.']]);
+    }
+
     public function testRegistrationRejectsAnUnknownKey(): void
     {
         $this->client->request(

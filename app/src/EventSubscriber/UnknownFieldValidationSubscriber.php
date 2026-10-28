@@ -71,7 +71,8 @@ final readonly class UnknownFieldValidationSubscriber implements EventSubscriber
         }
 
         foreach ($failure->getViolations() as $violation) {
-            if ('UNKNOWN_FIELD' !== ViolationCode::of($violation)) {
+            // A violation with a constraint comes from the validator, which already ran.
+            if (null !== $violation->getConstraint() || ViolationCode::UNKNOWN_FIELD !== ViolationCode::of($violation)) {
                 return;
             }
         }
