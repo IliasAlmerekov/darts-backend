@@ -22,7 +22,7 @@ A request body that fails validation answers 422 with `error: "REQUEST_VALIDATIO
 | a key the DTO does not declare (no constraint, one violation per key, `field` is the key) | `UNKNOWN_FIELD` |
 | any other constraint | `INVALID` |
 
-Nested constraints (`Sequentially`, `All`, `Collection`) report the inner constraint; a field that `Collection` misses reports `REQUIRED`. A constraint overrides the table with `payload: ['code' => '<CODE>']`, for example `EMAIL_DOMAIN_NOT_ALLOWED`. A body that is not valid JSON answers 400 `REQUEST_INVALID_JSON_BODY`.
+Nested constraints (`Sequentially`, `All`, `Collection`) report the inner constraint; a field that `Collection` misses reports `REQUIRED`. A constraint overrides the table with `payload: ['code' => '<CODE>']`, for example `EMAIL_DOMAIN_NOT_ALLOWED`. A body whose only serializer violations are unknown keys is still validated, so constraint violations appear next to `UNKNOWN_FIELD`; a body with a type error is not, because its object is only partly mapped. A body that is not valid JSON answers 400 `REQUEST_INVALID_JSON_BODY`.
 
 ## Considered Options
 
