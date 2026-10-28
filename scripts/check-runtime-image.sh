@@ -24,7 +24,8 @@ container="$(docker run -d --rm -p 127.0.0.1::10000 \
     -e MESSENGER_TRANSPORT_DSN=sync:// \
     -e FRONTEND_URL=http://localhost \
     "${IMAGE}")"
-trap 'docker stop "${container}" > /dev/null' EXIT
+ready_file="$(mktemp)"
+trap 'docker stop "${container}" > /dev/null; rm -f "${ready_file}"' EXIT
 port="$(docker port "${container}" 10000/tcp | sed -n 's/^127\.0\.0\.1:\([0-9]*\)$/\1/p' | head -n 1)"
 base_url="http://127.0.0.1:${port}"
 
@@ -76,7 +77,7 @@ check_fpm_ini opcache.validate_timestamps Off
 # php.ini-production sets 128M and 4096; the override wins (SSE needs no buffering, shown as 'no value').
 check_fpm_ini memory_limit 64M
 check_fpm_ini output_buffering 'no value'
-# Production error_reporting: E_ALL & ~E_DEPRECATED & ~E_STRICT.
+# Production error_reporting: E_ALL & ~E_DEPRECATED (22527 on PHP 8.4).
 check_fpm_ini error_reporting 22527
 
 modules="$(docker exec "${container}" php -m)"
@@ -97,14 +98,6 @@ case "${healthcheck}" in
     *) fail "HEALTHCHECK is ${healthcheck}, expected it to call /api/ready." ;;
 esac
 
-# Every process in the container, including supervisord and the nginx and FPM masters.
-root_processes="$(docker exec "${container}" ps -o user=,args= | awk '$1 == "root" || $1 == "0"')"
-if [ -z "${root_processes}" ]; then
-    echo "ok: no process runs as root"
-else
-    fail "root processes: ${root_processes}"
-fi
-
 # Checked before the first request, so the cache comes from the build.
 if docker exec "${container}" sh -c 'ls /app/var/cache/prod/*KernelProdContainer.php > /dev/null 2>&1'; then
     echo "ok: var/cache/prod holds a compiled container"
@@ -123,8 +116,17 @@ until curl -s -o /dev/null "${base_url}/"; do
     sleep 1
 done
 
+# Every process in the container. Runs once nginx answers: the nginx and FPM masters start
+# a few seconds after supervisord, and a root master must not slip through.
+root_processes="$(docker exec "${container}" ps -o user=,args= | awk '$1 == "root" || $1 == "0"')"
+if [ -z "${root_processes}" ]; then
+    echo "ok: no process runs as root"
+else
+    fail "root processes: ${root_processes}"
+fi
+
 status_for() {
-    curl -s -o /dev/null -w '%{http_code}' -X POST -H "Content-Type: $1" --data 'a=b' "${base_url}/api/login"
+    curl -s -o /dev/null -w '%{http_code}' -X POST -H "Content-Type: $1" --data 'a=b' "${base_url}/api/login" || true
 }
 
 for content_type in 'multipart/form-data; boundary=x' 'Multipart/Mixed; boundary=x'; do
@@ -146,7 +148,7 @@ for content_type in 'application/x-www-form-urlencoded' 'application/json'; do
     fi
 done
 
-headers="$(curl -s -D - -o /dev/null "${base_url}/api/health")"
+headers="$(curl -s -D - -o /dev/null "${base_url}/api/health" || true)"
 if printf '%s' "${headers}" | head -n 1 | grep -q ' 200'; then
     echo "ok: /api/health answers 200 without a database"
 else
@@ -158,13 +160,12 @@ else
     echo "ok: no X-Powered-By header"
 fi
 
-ready_status="$(curl -s -o /tmp/check-runtime-ready.$$ -w '%{http_code}' "${base_url}/api/ready")"
-ready_body="$(cat /tmp/check-runtime-ready.$$)"
-rm -f /tmp/check-runtime-ready.$$
-if [ "${ready_status}" = "503" ] && [ "${ready_body}" = '{"success":false,"status":"unavailable"}' ]; then
+ready_status="$(curl -s -o "${ready_file}" -w '%{http_code}' "${base_url}/api/ready" || true)"
+ready_body="$(cat "${ready_file}")"
+if [ "${ready_status}" = "503" ] && [ "${ready_body}" = '{"success":false,"error":"DATABASE_UNAVAILABLE","message":"The database is unavailable."}' ]; then
     echo "ok: /api/ready answers 503 without a database"
 else
-    fail "/api/ready got ${ready_status} ${ready_body}, expected 503 with the unavailable body."
+    fail "/api/ready got ${ready_status} ${ready_body}, expected 503 with the DATABASE_UNAVAILABLE body."
 fi
 
 exit "${failed}"
