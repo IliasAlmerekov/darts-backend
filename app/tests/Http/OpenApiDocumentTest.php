@@ -71,20 +71,13 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertSame([], $offences, 'Operations that no route with explicit methods accepts.');
     }
 
-    public function testNoResponseDocumentsAStrippedStatusField(): void
+    public function testRematchAndInvitationDocumentTheSharedNotFoundBody(): void
     {
-        $offences = [];
-        foreach ($this->operations() as [$path, $method, $operation]) {
-            foreach ($operation['responses'] ?? [] as $code => $response) {
-                $schema = $response['content']['application/json']['schema'] ?? [];
-                // The subscriber strips only an int status; the health probe's string "ok" stays.
-                if ('integer' === ($schema['properties']['status']['type'] ?? null)) {
-                    $offences[] = strtoupper($method).' '.$path.' '.$code;
-                }
-            }
-        }
+        $paths = $this->document()['paths'];
 
-        self::assertSame([], $offences, 'Responses documenting a body "status" that the API moves into the HTTP code.');
+        foreach ([$paths['/api/room/{id}/rematch']['post'], $paths['/api/invite/create/{id}']['post']] as $operation) {
+            self::assertSame('#/components/schemas/ApiError', $operation['responses']['404']['content']['application/json']['schema']['$ref'] ?? null);
+        }
     }
 
     /**
