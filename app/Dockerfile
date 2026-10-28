@@ -17,16 +17,13 @@ WORKDIR /app
 
 RUN apk add --no-cache \
         icu-libs \
-        libpq \
     && apk add --no-cache --virtual .build-deps \
         $PHPIZE_DEPS \
         icu-dev \
-        libpq-dev \
     && docker-php-ext-install -j"$(nproc)" \
         intl \
         opcache \
         pdo_mysql \
-        pdo_pgsql \
     && apk del --no-network .build-deps \
     && addgroup -S -g 10001 symfony \
     && adduser -S -D -H -u 10001 -G symfony -h /app symfony
@@ -101,6 +98,8 @@ RUN apk add --no-cache \
         nginx \
         supervisor
 
+# php.ini-production is the base php.ini; the project override loads after it from conf.d.
+RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 COPY app/docker/php.ini "$PHP_INI_DIR/conf.d/zz-darts.ini"
 COPY app/docker/php-fpm.zz-darts.conf /usr/local/etc/php-fpm.d/zz-darts.conf
 COPY app/docker/nginx.conf /etc/nginx/nginx.conf
@@ -128,6 +127,6 @@ USER symfony
 EXPOSE 10000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD wget -q -O /dev/null "http://127.0.0.1:${PORT}/api/health" || exit 1
+    CMD wget -q -O /dev/null "http://127.0.0.1:${PORT}/api/ready" || exit 1
 
 CMD ["/usr/local/bin/start-container"]
