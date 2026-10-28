@@ -12,8 +12,10 @@ namespace App\Controller;
 use App\Entity\Game;
 use App\Entity\Invitation;
 use App\Exception\Game\GameNotFoundException;
+use App\Exception\Health\DatabaseUnavailableException;
 use App\Http\Attribute\ApiResponse;
 use App\Service\Invitation\InvitationServiceInterface;
+use Doctrine\DBAL\Connection;
 use Nelmio\ApiDocBundle\Attribute\Security;
 use OpenApi\Attributes as OA;
 use Psr\Log\LoggerInterface;
@@ -71,6 +73,44 @@ final class InvitationController extends AbstractController
             'success' => true,
             'status' => 'ok',
         ]);
+    }
+
+    /**
+     * Readiness endpoint: answers 200 only while the database answers a trivial query.
+     *
+     * @param Connection $connection
+     *
+     * @return JsonResponse
+     *
+     * @throws DatabaseUnavailableException
+     */
+    #[OA\Response(
+        response: Response::HTTP_OK,
+        description: 'The database answers; the backend can serve API traffic.',
+        content: new OA\JsonContent(
+            type: 'object',
+            required: ['success', 'status'],
+            properties: [
+                new OA\Property(property: 'success', type: 'boolean', example: true),
+                new OA\Property(property: 'status', type: 'string', example: 'ready'),
+            ]
+        )
+    )]
+    #[OA\Response(response: Response::HTTP_SERVICE_UNAVAILABLE, description: 'Die Datenbankprüfung ist fehlgeschlagen (`DATABASE_UNAVAILABLE`), ohne Fehlerdetails.', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
+    #[Security(name: null)]
+    #[Route('/api/ready', name: 'api_ready', methods: ['GET'], format: 'json')]
+    public function ready(Connection $connection): JsonResponse
+    {
+        try {
+            $connection->fetchOne('SELECT 1');
+        } catch (Throwable $exception) {
+            // Only the log gets the cause: its text can carry the DSN or host.
+            $this->logger->error('Readiness check failed: database unavailable.', ['exception' => $exception]);
+
+            throw new DatabaseUnavailableException();
+        }
+
+        return $this->json(['success' => true, 'status' => 'ready']);
     }
 
     /**
