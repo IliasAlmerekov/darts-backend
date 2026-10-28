@@ -49,7 +49,7 @@ final class RequestValidationPayloadCodeEndpointTest extends WebTestCase
                     ['field' => 'email', 'code' => 'EMAIL_DOMAIN_NOT_ALLOWED', 'message' => 'This value is not a valid email address.'],
                 ],
             ],
-            json_decode((string) $client->getResponse()->getContent(), true),
+            json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR),
         );
     }
 }
