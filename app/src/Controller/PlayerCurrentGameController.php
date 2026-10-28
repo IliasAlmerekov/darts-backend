@@ -45,7 +45,7 @@ final class PlayerCurrentGameController extends AbstractController
         )
     )]
     #[OA\Response(response: 401, description: 'Nicht angemeldet.')]
-    #[OA\Response(response: 403, description: 'Angemeldet ohne `ROLE_PLAYER` (z. B. der Admin).')]
+    #[OA\Response(response: 403, description: 'Angemeldet ohne `ROLE_PLAYER` (z. B. der Admin) (`ACCESS_DENIED`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[ApiResponse]
     #[Route('/api/player/current-game', name: 'app_player_current_game', methods: ['GET'], format: 'json')]
     public function currentGame(GamePlayersRepositoryInterface $gamePlayersRepository): CurrentGameResponseDto

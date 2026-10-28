@@ -45,7 +45,7 @@ final class TabletGameController extends AbstractController
         )
     )]
     #[OA\Response(response: 401, description: 'Nicht angemeldet.')]
-    #[OA\Response(response: 403, description: 'Angemeldet ohne `ROLE_ADMIN` (z. B. ein Spieler).')]
+    #[OA\Response(response: 403, description: 'Angemeldet ohne `ROLE_ADMIN` (z. B. ein Spieler) (`ACCESS_DENIED`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[ApiResponse]
     #[Route('/api/tablet/game', name: 'app_tablet_game', methods: ['GET'], format: 'json')]
     public function tabletGame(GameRepositoryInterface $gameRepository): TabletGameResponseDto

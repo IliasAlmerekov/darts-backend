@@ -192,6 +192,24 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertArrayHasKey('suggestions', $paths['/api/room/{id}/guest']['post']['responses']['409']['content']['application/json']['schema']['properties']);
     }
 
+    public function testEveryForbiddenResponseNamesAccessDeniedAndUsesTheErrorSchema(): void
+    {
+        $checked = 0;
+        foreach ($this->document()['paths'] as $path => $operations) {
+            foreach ($operations as $method => $operation) {
+                $forbidden = $operation['responses']['403'] ?? null;
+                if (null === $forbidden) {
+                    continue;
+                }
+                ++$checked;
+                $label = strtoupper((string) $method).' '.$path;
+                self::assertStringContainsString('`ACCESS_DENIED`', (string) $forbidden['description'], $label);
+                self::assertSame('#/components/schemas/ApiError', $forbidden['content']['application/json']['schema']['$ref'] ?? null, $label);
+            }
+        }
+        self::assertGreaterThan(0, $checked);
+    }
+
     public function testRegisterDocumentsTheRequestDtoAndTheSixCharacterPasswordMinimum(): void
     {
         $document = $this->document();
