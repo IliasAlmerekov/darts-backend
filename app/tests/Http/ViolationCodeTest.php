@@ -50,7 +50,7 @@ final class ViolationCodeTest extends TestCase
         yield 'All reports the inner constraint' => [[0], new Assert\All([new Assert\Positive()]), 'OUT_OF_RANGE'];
         yield 'Collection reports the inner constraint' => [['a' => 'x'], new Assert\Collection(['a' => new Assert\Type('integer')]), 'INVALID_TYPE'];
         yield 'a field Collection misses' => [[], new Assert\Collection(['a' => new Assert\NotNull()]), 'REQUIRED'];
-        yield 'a field Collection does not expect' => [['b' => 1], new Assert\Collection([]), 'INVALID'];
+        yield 'a field Collection does not expect' => [['b' => 1], new Assert\Collection([]), 'UNKNOWN_FIELD'];
         yield 'payload overrides the table' => ['nope', new Assert\Email(payload: ['code' => 'EMAIL_DOMAIN_NOT_ALLOWED']), 'EMAIL_DOMAIN_NOT_ALLOWED'];
     }
 
@@ -74,9 +74,16 @@ final class ViolationCodeTest extends TestCase
         self::assertSame('INVALID_TYPE', ViolationCode::of($violation));
     }
 
-    public function testAViolationWithoutConstraintIsInvalid(): void
+    public function testAnAttributeTheDtoDoesNotDeclareIsAnUnknownField(): void
     {
         $violation = new ConstraintViolation('This attribute was not expected.', 'This attribute was not expected.', [], null, 'extra', null);
+
+        self::assertSame('UNKNOWN_FIELD', ViolationCode::of($violation));
+    }
+
+    public function testAnyOtherViolationWithoutConstraintIsInvalid(): void
+    {
+        $violation = new ConstraintViolation('Something else.', 'Something else.', [], null, 'extra', null);
 
         self::assertSame('INVALID', ViolationCode::of($violation));
     }

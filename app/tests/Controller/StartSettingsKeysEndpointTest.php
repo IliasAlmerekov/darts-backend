@@ -25,7 +25,8 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Game start and rematch start accept camelCase and legacy lowercase settings keys.
+ * Game start and rematch start accept the camelCase settings keys only; the old lowercase
+ * keys are unknown fields (#90).
  */
 final class StartSettingsKeysEndpointTest extends WebTestCase
 {
@@ -38,34 +39,32 @@ final class StartSettingsKeysEndpointTest extends WebTestCase
      */
     public static function acceptedBodies(): iterable
     {
-        $camel = ['startScore' => 501, 'doubleOut' => true, 'tripleOut' => false];
-        $lower = ['startscore' => 501, 'doubleout' => true, 'tripleout' => false];
-        $mixed = ['startScore' => 501, 'doubleout' => true, 'tripleOut' => false];
-        $agreeing = $camel + $lower;
-
         foreach (['start', 'rematch'] as $endpoint) {
-            yield $endpoint . ' camelCase' => [$endpoint, $camel];
-            yield $endpoint . ' lowercase' => [$endpoint, $lower];
-            yield $endpoint . ' mixed per setting' => [$endpoint, $mixed];
-            yield $endpoint . ' both spellings, same values' => [$endpoint, $agreeing];
+            yield $endpoint . ' camelCase' => [$endpoint, ['startScore' => 501, 'doubleOut' => true, 'tripleOut' => false]];
         }
     }
 
     /**
-     * @return iterable<string, array{string, array<string, mixed>}>
+     * @return iterable<string, array{string, string, array<string, mixed>}>
      */
-    public static function conflictingBodies(): iterable
+    public static function lowercaseBodies(): iterable
     {
+        $bodies = [
+            'startscore' => ['startscore' => 501],
+            'doubleout' => ['doubleout' => true],
+            'tripleout' => ['tripleout' => true],
+            'all three' => ['startscore' => 501, 'doubleout' => true, 'tripleout' => false],
+            'next to the camelCase key' => ['startScore' => 501, 'startscore' => 501],
+        ];
         foreach (['start', 'rematch'] as $endpoint) {
-            yield $endpoint . ' startScore' => [$endpoint, ['startScore' => 501, 'startscore' => 301]];
-            yield $endpoint . ' doubleOut' => [$endpoint, ['doubleOut' => true, 'doubleout' => false]];
-            yield $endpoint . ' tripleOut' => [$endpoint, ['tripleOut' => true, 'tripleout' => false]];
+            foreach ($bodies as $name => $body) {
+                yield $endpoint . ' ' . $name => [$endpoint, $name, $body];
+            }
         }
     }
 
     /**
      * @param array<string, mixed> $body
-     *
      */
     #[DataProvider('acceptedBodies')]
     public function testSettingsAreApplied(string $endpoint, array $body): void
@@ -87,8 +86,8 @@ final class StartSettingsKeysEndpointTest extends WebTestCase
     /**
      * @param array<string, mixed> $body
      */
-    #[DataProvider('conflictingBodies')]
-    public function testConflictingSpellingsAreRejected(string $endpoint, array $body): void
+    #[DataProvider('lowercaseBodies')]
+    public function testLowercaseKeysAreUnknownFields(string $endpoint, string $name, array $body): void
     {
         $client = static::createClient();
         $game = $this->createGame($endpoint);
@@ -96,12 +95,38 @@ final class StartSettingsKeysEndpointTest extends WebTestCase
 
         $this->post($client, $endpoint, $gameId, $body);
 
-        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST, (string) $client->getResponse()->getContent());
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY, (string) $client->getResponse()->getContent());
         $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
         self::assertIsArray($payload);
-        self::assertSame('REQUEST_CONFLICTING_SETTING_KEYS', $payload['error'] ?? null);
-        [$camelCaseKey, $legacyKey] = array_keys($body);
-        self::assertSame(sprintf('The keys "%s" and "%s" have different values. Send only "%1$s".', $camelCaseKey, $legacyKey), $payload['message'] ?? null);
+        self::assertSame('REQUEST_VALIDATION_FAILED', $payload['error'] ?? null);
+        $expected = [];
+        foreach (array_keys($body) as $key) {
+            if (in_array($key, ['startscore', 'doubleout', 'tripleout'], true)) {
+                $expected[] = ['field' => $key, 'code' => 'UNKNOWN_FIELD'];
+            }
+        }
+        $actual = array_map(
+            static fn (array $violation): array => ['field' => $violation['field'], 'code' => $violation['code']],
+            $payload['violations'] ?? [],
+        );
+        self::assertEqualsCanonicalizing($expected, $actual);
+
+        $entityManager = static::getContainer()->get(EntityManagerInterface::class);
+        $entityManager->clear();
+        $unchanged = $entityManager->find(Game::class, $gameId);
+        self::assertInstanceOf(Game::class, $unchanged);
+        self::assertSame('start' === $endpoint ? GameStatus::Lobby : GameStatus::Finished, $unchanged->getStatus());
+        self::assertSame(301, $unchanged->getStartScore());
+        self::assertFalse($unchanged->isDoubleOut());
+        self::assertFalse($unchanged->isTripleOut());
+        self::assertSame(1, (int) $entityManager->getRepository(Game::class)->count(['gameId' => $gameId]));
+        $newer = $entityManager->getRepository(Game::class)->createQueryBuilder('g')
+            ->select('COUNT(g.gameId)')
+            ->andWhere('g.gameId > :id')
+            ->setParameter('id', $gameId)
+            ->getQuery()
+            ->getSingleScalarResult();
+        self::assertSame(0, (int) $newer);
     }
 
     /**

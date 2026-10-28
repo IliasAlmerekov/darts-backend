@@ -407,13 +407,22 @@ final class OpenApiDocumentTest extends WebTestCase
         }
     }
 
-    public function testGameStartAndRematchStartDocument400ForConflictingSettingKeys(): void
+    public function testGameStartAndRematchStartDocumentNoConflictingSettingKeys(): void
     {
         $paths = $this->document()['paths'];
 
         foreach (['/api/game/{gameId}/start', '/api/game/{gameId}/rematch/start'] as $path) {
-            self::assertArrayHasKey('400', $paths[$path]['post']['responses'], $path);
+            $description = $paths[$path]['post']['responses']['400']['description'] ?? '';
+            self::assertStringNotContainsString('REQUEST_CONFLICTING_SETTING_KEYS', $description, $path);
+            self::assertStringContainsString('REQUEST_INVALID_JSON_BODY', $description, $path);
         }
+    }
+
+    public function testRequestValidationFailedSchemaDocumentsUnknownField(): void
+    {
+        $schema = $this->document()['components']['schemas']['RequestValidationFailed'];
+
+        self::assertStringContainsString('UNKNOWN_FIELD', $schema['properties']['violations']['items']['properties']['code']['description']);
     }
 
     public function testGameStartAndRematchStartDocumentTheGameStateAsTheirSuccessBody(): void
