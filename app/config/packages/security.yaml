@@ -62,6 +62,7 @@ security:
         - { path: ^/api/register$, roles: PUBLIC_ACCESS }
         - { path: ^/api/csrf$, roles: PUBLIC_ACCESS }
         - { path: ^/api/health$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/ready$, roles: PUBLIC_ACCESS }
         - { path: ^/api/logout$, roles: PUBLIC_ACCESS }
         - { path: ^/api/invite/join/[^/]+$, roles: PUBLIC_ACCESS }
         - { path: ^/api/invite/process$, roles: ROLE_PLAYER }
