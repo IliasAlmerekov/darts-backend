@@ -29,7 +29,7 @@ final class RegistrationRateLimitedException extends ApiHttpException
         parent::__construct(
             ErrorCode::RegistrationRateLimited,
             Response::HTTP_TOO_MANY_REQUESTS,
-            'Zu viele Registrierungsversuche. Bitte versuche es später erneut.',
+            'Too many registration attempts. Try again later.',
             null,
             ['Retry-After' => (string) $seconds],
         );

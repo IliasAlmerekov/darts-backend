@@ -184,7 +184,7 @@ final class RegistrationEndpointTest extends WebTestCase
         $this->scanInvitation($client, $invitation);
         $body = ['plainPassword' => '12345'] + $this->validBody();
 
-        $this->postRegistration($client, $body, Response::HTTP_BAD_REQUEST);
+        $this->postRegistration($client, $body, Response::HTTP_UNPROCESSABLE_ENTITY);
 
         self::assertNull(static::getContainer()->get(UserRepository::class)->findOneBy(['email' => $body['email']]));
         self::assertNull($client->getCookieJar()->get(self::REMEMBER_COOKIE));
@@ -195,25 +195,22 @@ final class RegistrationEndpointTest extends WebTestCase
         self::assertFalse($payload['success']);
     }
 
-    public function testBlankPayloadReturnsFieldErrors(): void
+    public function testBlankPayloadReportsEveryFieldAsRequired(): void
     {
         $client = static::createClient();
 
-        $payload = $this->postRegistration($client, ['email' => '', 'username' => '', 'plainPassword' => ''], Response::HTTP_BAD_REQUEST);
+        $payload = $this->postRegistration($client, ['email' => '', 'username' => '', 'plainPassword' => ''], Response::HTTP_UNPROCESSABLE_ENTITY);
 
-        self::assertFalse($payload['success']);
-        self::assertSame(['Please enter an email address'], $payload['errors']['email'] ?? null);
-        self::assertSame(['Please enter a username'], $payload['errors']['username'] ?? null);
-        self::assertSame(['Please enter a password'], $payload['errors']['plainPassword'] ?? null);
+        $this->assertValidationFailed($payload, [['email', 'REQUIRED'], ['username', 'REQUIRED'], ['plainPassword', 'REQUIRED']]);
     }
 
-    public function testInvalidEmailReturnsFieldError(): void
+    public function testInvalidEmailReportsInvalidEmail(): void
     {
         $client = static::createClient();
 
-        $payload = $this->postRegistration($client, ['email' => 'not-an-email'] + $this->validBody(), Response::HTTP_BAD_REQUEST);
+        $payload = $this->postRegistration($client, ['email' => 'abc'] + $this->validBody(), Response::HTTP_UNPROCESSABLE_ENTITY);
 
-        self::assertSame(['Please enter a valid email address'], $payload['errors']['email'] ?? null);
+        $this->assertValidationFailed($payload, [['email', 'INVALID_EMAIL']]);
     }
 
     /**
@@ -253,42 +250,39 @@ final class RegistrationEndpointTest extends WebTestCase
         $client = static::createClient();
         $body = ['email' => $email] + $this->validBody();
 
-        $payload = $this->postRegistration($client, $body, Response::HTTP_BAD_REQUEST);
+        $payload = $this->postRegistration($client, $body, Response::HTTP_UNPROCESSABLE_ENTITY);
 
-        self::assertSame(['email' => ['Please register with your @db-n.com email address']], $payload['errors']);
+        $this->assertValidationFailed($payload, [['email', 'EMAIL_DOMAIN_NOT_ALLOWED']]);
         self::assertNull(static::getContainer()->get(UserRepository::class)->findOneBy(['username' => $body['username']]));
     }
 
-    public function testShortPasswordReturnsFieldError(): void
+    public function testShortPasswordReportsTooShort(): void
     {
         $client = static::createClient();
 
-        $payload = $this->postRegistration($client, ['plainPassword' => '12345'] + $this->validBody(), Response::HTTP_BAD_REQUEST);
+        $payload = $this->postRegistration($client, ['plainPassword' => 'abc'] + $this->validBody(), Response::HTTP_UNPROCESSABLE_ENTITY);
 
-        self::assertSame(['Your password should be at least 6 characters long.'], $payload['errors']['plainPassword'] ?? null);
+        $this->assertValidationFailed($payload, [['plainPassword', 'TOO_SHORT']]);
     }
 
     public function testFiveCharacterPasswordIsRejectedAndSixIsAccepted(): void
     {
         $client = static::createClient();
 
-        $rejected = $this->postRegistration($client, ['plainPassword' => '12345'] + $this->validBody(), Response::HTTP_BAD_REQUEST);
+        $rejected = $this->postRegistration($client, ['plainPassword' => '12345'] + $this->validBody(), Response::HTTP_UNPROCESSABLE_ENTITY);
         $this->postRegistration($client, ['plainPassword' => '123456'] + $this->validBody(), Response::HTTP_CREATED);
 
-        self::assertSame(['Your password should be at least 6 characters long.'], $rejected['errors']['plainPassword'] ?? null);
+        $this->assertValidationFailed($rejected, [['plainPassword', 'TOO_SHORT']]);
     }
 
-    public function testWrongTypedFieldReturnsFieldError(): void
+    public function testWrongTypedFieldReportsInvalidType(): void
     {
         $client = static::createClient();
         $body = ['username' => 123] + $this->validBody();
 
-        $payload = $this->postRegistration($client, $body, Response::HTTP_BAD_REQUEST);
+        $payload = $this->postRegistration($client, $body, Response::HTTP_UNPROCESSABLE_ENTITY);
 
-        self::assertFalse($payload['success']);
-        self::assertSame('Registrierung fehlgeschlagen. Bitte überprüfe deine Eingaben.', $payload['message']);
-        self::assertArrayNotHasKey('status', $payload);
-        self::assertSame(['username' => ['This value should be of type string.']], $payload['errors']);
+        $this->assertValidationFailed($payload, [['username', 'INVALID_TYPE']]);
         self::assertNull(static::getContainer()->get(UserRepository::class)->findOneBy(['email' => $body['email']]));
     }
 
@@ -315,9 +309,9 @@ final class RegistrationEndpointTest extends WebTestCase
     {
         $client = static::createClient();
 
-        $payload = $this->postRegistration($client, ['username' => '   '] + $this->validBody(), Response::HTTP_BAD_REQUEST);
+        $payload = $this->postRegistration($client, ['username' => '   '] + $this->validBody(), Response::HTTP_UNPROCESSABLE_ENTITY);
 
-        self::assertSame(['username' => ['Please enter a username']], $payload['errors']);
+        $this->assertValidationFailed($payload, [['username', 'REQUIRED']]);
     }
 
     /**
@@ -383,16 +377,9 @@ final class RegistrationEndpointTest extends WebTestCase
 
         $client->request(Request::METHOD_POST, '/api/register', [], [], ['CONTENT_TYPE' => 'application/json'], $content);
 
-        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST, (string) $client->getResponse()->getContent());
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY, (string) $client->getResponse()->getContent());
         $payload = json_decode((string) $client->getResponse()->getContent(), true, flags: JSON_THROW_ON_ERROR);
-        self::assertSame(
-            [
-                'email' => ['Please enter an email address'],
-                'username' => ['Please enter a username'],
-                'plainPassword' => ['Please enter a password'],
-            ],
-            $payload['errors'],
-        );
+        $this->assertValidationFailed($payload, [['email', 'REQUIRED'], ['username', 'REQUIRED'], ['plainPassword', 'REQUIRED']]);
     }
 
     /**
@@ -417,7 +404,7 @@ final class RegistrationEndpointTest extends WebTestCase
         $payload = $this->postRegistration($client, $body, Response::HTTP_CONFLICT);
 
         self::assertSame(
-            ['success' => false, 'error' => 'REGISTRATION_ACCOUNT_EXISTS', 'message' => 'Ein Konto mit diesen Daten existiert bereits.'],
+            ['success' => false, 'error' => 'REGISTRATION_ACCOUNT_EXISTS', 'message' => 'An account with these details already exists.'],
             $payload,
         );
         self::assertNull($client->getCookieJar()->get(self::REMEMBER_COOKIE));
@@ -435,7 +422,7 @@ final class RegistrationEndpointTest extends WebTestCase
         for ($i = 1; $i <= 20; ++$i) {
             $content = 0 === $i % 2 ? '{"email":' : json_encode(['email' => 'not-an-email'], JSON_THROW_ON_ERROR);
             $client->request(Request::METHOD_POST, '/api/register', [], [], $server, $content);
-            self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST, 'Request '.$i);
+            self::assertResponseStatusCodeSame(0 === $i % 2 ? Response::HTTP_BAD_REQUEST : Response::HTTP_UNPROCESSABLE_ENTITY, 'Request '.$i);
         }
 
         $client->request(Request::METHOD_POST, '/api/register', [], [], $server, json_encode($this->validBody(), JSON_THROW_ON_ERROR));
@@ -465,6 +452,8 @@ final class RegistrationEndpointTest extends WebTestCase
         $payload = json_decode((string) $response->getContent(), true, flags: JSON_THROW_ON_ERROR);
         self::assertFalse($payload['success']);
         self::assertSame('REGISTRATION_RATE_LIMITED', $payload['error']);
+        self::assertSame('Too many registration attempts. Try again later.', $payload['message']);
+        self::assertArrayNotHasKey('errors', $payload);
         self::assertStringNotContainsString('Exception', (string) $response->getContent());
         self::assertNull(static::getContainer()->get(UserRepository::class)->findOneBy(['email' => $body['email']]));
     }
@@ -481,7 +470,7 @@ final class RegistrationEndpointTest extends WebTestCase
 
         $client->request(Request::METHOD_POST, '/api/register', [], [], ['CONTENT_TYPE' => 'application/json', 'REMOTE_ADDR' => '203.0.113.9'], $payload);
 
-        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 
     public function testForwardedForEntriesAddedByTheClientDoNotOpenAFreshBucket(): void
@@ -509,7 +498,7 @@ final class RegistrationEndpointTest extends WebTestCase
                 'REMOTE_ADDR' => '172.18.0.5',
                 'HTTP_X_FORWARDED_FOR' => '93.184.216.35',
             ], $payload);
-            self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+            self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
         } finally {
             Request::setTrustedProxies($trustedProxies, $trustedHeaderSet);
         }
@@ -625,6 +614,22 @@ final class RegistrationEndpointTest extends WebTestCase
      *
      * @return array<array-key, mixed>
      */
+    /**
+     * @param array<array-key, mixed>        $payload
+     * @param list<array{string, string}>    $expected field and code pairs, in order
+     */
+    private function assertValidationFailed(array $payload, array $expected): void
+    {
+        self::assertFalse($payload['success']);
+        self::assertSame('REQUEST_VALIDATION_FAILED', $payload['error']);
+        self::assertArrayNotHasKey('errors', $payload);
+        self::assertStringNotContainsString('Registrierung', (string) $payload['message']);
+        self::assertSame($expected, array_map(
+            static fn (array $violation): array => [$violation['field'], $violation['code']],
+            $payload['violations'],
+        ));
+    }
+
     private function postRegistration(KernelBrowser $client, array $body, int $expectedStatus): array
     {
         $client->request(Request::METHOD_POST, '/api/register', [], [], ['CONTENT_TYPE' => 'application/json'], json_encode($body, JSON_THROW_ON_ERROR));

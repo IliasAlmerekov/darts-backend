@@ -31,7 +31,7 @@ final class RegistrationController extends AbstractController
      * Registers a player from JSON payload and logs them in.
      *
      * RegistrationRateLimitSubscriber counts the request before the payload is mapped, and
-     * RegistrationErrorSubscriber renders mapping and validation failures.
+     * ErrorController renders mapping and validation failures.
      *
      * @param RegistrationRequest          $payload
      * @param RegistrationServiceInterface $registrationService
@@ -67,21 +67,13 @@ final class RegistrationController extends AbstractController
     )]
     #[OA\Response(
         response: Response::HTTP_BAD_REQUEST,
-        description: 'Validierungsfehler. Eine E-Mail-Adresse außerhalb der Domain `db-n.com` ergibt eine Meldung unter `errors.email`. Ist der Body kein gültiges JSON, ist `error` `REQUEST_INVALID_JSON_BODY` und `errors` fehlt.',
-        content: new OA\JsonContent(
-            type: 'object',
-            required: ['success', 'message'],
-            properties: [
-                new OA\Property(property: 'success', type: 'boolean', example: false),
-                new OA\Property(property: 'error', type: 'string', example: 'REQUEST_INVALID_JSON_BODY', description: 'Nur wenn der Body kein gültiges JSON ist.'),
-                new OA\Property(property: 'message', type: 'string'),
-                new OA\Property(
-                    property: 'errors',
-                    type: 'object',
-                    additionalProperties: new OA\AdditionalProperties(type: 'array', items: new OA\Items(type: 'string'))
-                ),
-            ]
-        )
+        description: 'Der Request-Body ist kein gültiges JSON (`REQUEST_INVALID_JSON_BODY`).',
+        content: new OA\JsonContent(ref: '#/components/schemas/ApiError')
+    )]
+    #[OA\Response(
+        response: Response::HTTP_UNPROCESSABLE_ENTITY,
+        description: 'Der Request-Body ist ungültig und besteht die Validierung nicht. Eine E-Mail-Adresse außerhalb der Domain `db-n.com` ergibt die Verletzung `EMAIL_DOMAIN_NOT_ALLOWED` auf `email`.',
+        content: new OA\JsonContent(ref: '#/components/schemas/RequestValidationFailed')
     )]
     #[OA\Response(
         response: Response::HTTP_CONFLICT,
@@ -92,7 +84,7 @@ final class RegistrationController extends AbstractController
             properties: [
                 new OA\Property(property: 'success', type: 'boolean', example: false),
                 new OA\Property(property: 'error', type: 'string', example: 'REGISTRATION_ACCOUNT_EXISTS'),
-                new OA\Property(property: 'message', type: 'string', example: 'Ein Konto mit diesen Daten existiert bereits.'),
+                new OA\Property(property: 'message', type: 'string', example: 'An account with these details already exists.'),
             ]
         )
     )]
@@ -121,7 +113,7 @@ final class RegistrationController extends AbstractController
             properties: [
                 new OA\Property(property: 'success', type: 'boolean', example: false),
                 new OA\Property(property: 'error', type: 'string', example: 'REGISTRATION_RATE_LIMITED'),
-                new OA\Property(property: 'message', type: 'string'),
+                new OA\Property(property: 'message', type: 'string', example: 'Too many registration attempts. Try again later.'),
             ]
         )
     )]
@@ -129,7 +121,7 @@ final class RegistrationController extends AbstractController
     #[ApiResponse]
     #[Route('/api/register', name: self::ROUTE, methods: ['POST'], format: 'json')]
     public function register(
-        #[MapRequestPayload(acceptFormat: 'json', validationFailedStatusCode: Response::HTTP_BAD_REQUEST)]
+        #[MapRequestPayload(acceptFormat: 'json')]
         RegistrationRequest $payload,
         RegistrationServiceInterface $registrationService,
     ): Response {
