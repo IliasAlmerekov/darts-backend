@@ -183,6 +183,13 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertArrayHasKey('429', $paths['/api/register']['post']['responses']);
         self::assertArrayHasKey('responses', $paths['/api/logout']['post']);
         self::assertArrayNotHasKey('default', $paths['/api/logout']['post']['responses']);
+        self::assertSame([204], array_keys($paths['/api/logout']['post']['responses']));
+        self::assertArrayNotHasKey('content', $paths['/api/logout']['post']['responses']['204']);
+        self::assertSame(
+            '#/components/schemas/ApiError',
+            $paths['/api/login/success']['get']['responses']['401']['content']['application/json']['schema']['$ref'] ?? null,
+        );
+        self::assertArrayHasKey('suggestions', $paths['/api/room/{id}/guest']['post']['responses']['409']['content']['application/json']['schema']['properties']);
     }
 
     public function testRegisterDocumentsTheRequestDtoAndTheSixCharacterPasswordMinimum(): void

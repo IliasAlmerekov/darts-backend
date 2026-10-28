@@ -24,9 +24,9 @@ final class UserNotAuthenticatedException extends ApiHttpException
     public function __construct()
     {
         parent::__construct(
-            ErrorCode::SecurityUserNotAuthenticated,
+            ErrorCode::AuthenticationRequired,
             Response::HTTP_UNAUTHORIZED,
-            'User not authenticated'
+            'Unauthorized'
         );
     }
 }

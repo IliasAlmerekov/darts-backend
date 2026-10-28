@@ -92,8 +92,8 @@ final class ApiAccessMatrixTest extends WebTestCase
             // Public
             self::entry('app_login', Request::METHOD_GET, self::ACCESS_PUBLIC, expected: ['*' => Response::HTTP_OK, self::PERSONA_ANONYMOUS => Response::HTTP_UNAUTHORIZED]),
             self::entry('app_login', Request::METHOD_POST, self::ACCESS_PUBLIC, body: self::BODY_LOGIN_FORM, expected: Response::HTTP_OK),
-            self::entry('login_success', Request::METHOD_GET, self::ACCESS_PUBLIC, expected: Response::HTTP_OK),
-            self::entry('app_logout', Request::METHOD_POST, self::ACCESS_PUBLIC, expected: Response::HTTP_FOUND),
+            self::entry('login_success', Request::METHOD_GET, self::ACCESS_PUBLIC, expected: ['*' => Response::HTTP_OK, self::PERSONA_ANONYMOUS => Response::HTTP_UNAUTHORIZED]),
+            self::entry('app_logout', Request::METHOD_POST, self::ACCESS_PUBLIC, expected: Response::HTTP_NO_CONTENT),
             self::entry('app_register', Request::METHOD_POST, self::ACCESS_PUBLIC, payload: ['email' => 'matrix-register@db-n.com', 'username' => 'matrix_register', 'plainPassword' => 'matrix-secret'], expected: Response::HTTP_CREATED),
             self::entry('app_csrf_tokens', Request::METHOD_GET, self::ACCESS_PUBLIC, expected: Response::HTTP_OK),
             self::entry('api_health', Request::METHOD_GET, self::ACCESS_PUBLIC, expected: Response::HTTP_OK),

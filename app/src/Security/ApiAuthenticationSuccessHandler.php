@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Security;
 
 use App\Entity\User;
+use App\Exception\Security\UserNotAuthenticatedException;
 use App\Service\Security\SecurityServiceInterface;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -44,11 +44,7 @@ final readonly class ApiAuthenticationSuccessHandler implements AuthenticationSu
             $user = $token->getUser();
 
             if (!$user instanceof User) {
-                return new JsonResponse([
-                    'success' => false,
-                    'error' => 'USER_NOT_AUTHENTICATED',
-                    'message' => 'User not authenticated',
-                ], Response::HTTP_UNAUTHORIZED);
+                throw new UserNotAuthenticatedException();
             }
 
             return $this->securityService->buildLoginSuccessResponse($user, $request->getSession());

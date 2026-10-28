@@ -19,7 +19,6 @@ use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\PlayerNotFoundInGameException;
-use App\Exception\Request\UsernameAlreadyTakenException;
 use App\Exception\Request\PlayerIdRequiredException;
 use App\Http\Attribute\ApiResponse;
 use App\Service\Game\GameRoomServiceInterface;
@@ -240,16 +239,7 @@ final class GameRoomController extends AbstractController
             throw new GameNotFoundException();
         }
 
-        try {
-            $player = $this->guestPlayerService->createGuestPlayer($game, (string) $dto->username);
-        } catch (UsernameAlreadyTakenException $exception) {
-            return $this->json([
-                'success' => false,
-                'error' => 'USERNAME_TAKEN',
-                'message' => 'The name is already taken',
-                'suggestions' => $exception->getSuggestions(),
-            ], Response::HTTP_CONFLICT);
-        }
+        $player = $this->guestPlayerService->createGuestPlayer($game, (string) $dto->username);
 
         return $this->json([
             'success' => true,

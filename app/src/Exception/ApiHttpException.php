@@ -21,6 +21,7 @@ class ApiHttpException extends HttpException implements ApiExceptionInterface
      * @param Throwable|null        $previous
      * @param array<string, string> $headers
      * @param int                   $code
+     * @param array<string, mixed>  $extraFields
      */
     public function __construct(
         ErrorCode|string $errorCode,
@@ -28,7 +29,8 @@ class ApiHttpException extends HttpException implements ApiExceptionInterface
         string $message = '',
         ?Throwable $previous = null,
         array $headers = [],
-        int $code = 0
+        int $code = 0,
+        private readonly array $extraFields = [],
     ) {
         $this->errorCode = $errorCode instanceof ErrorCode ? $errorCode->value : $errorCode;
         parent::__construct($statusCode, $message, $previous, $headers, $code);
@@ -41,5 +43,14 @@ class ApiHttpException extends HttpException implements ApiExceptionInterface
     public function getErrorCode(): string
     {
         return $this->errorCode;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    #[\Override]
+    public function getExtraFields(): array
+    {
+        return $this->extraFields;
     }
 }

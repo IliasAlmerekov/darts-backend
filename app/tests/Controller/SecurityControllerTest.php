@@ -96,7 +96,7 @@ class SecurityControllerTest extends TestCase
     }
 
     /**
-     * Test: Login - User nicht eingeloggt -> 401 SECURITY_USER_NOT_AUTHENTICATED
+     * Test: Login - User nicht eingeloggt -> 401 AUTHENTICATION_REQUIRED
      */
     public function testLoginThrowsNotAuthenticatedWhenUserNotLoggedIn(): void
     {

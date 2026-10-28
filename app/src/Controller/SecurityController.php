@@ -64,7 +64,7 @@ final class SecurityController extends AbstractController
     )]
     #[OA\Response(
         response: Response::HTTP_UNAUTHORIZED,
-        description: 'Bei POST: Anmeldung fehlgeschlagen (`LOGIN_INVALID_CREDENTIALS`), für jede Ursache gleich, auch bei unbekannter E-Mail. Bei GET ohne Session: `SECURITY_USER_NOT_AUTHENTICATED`.',
+        description: 'Bei POST: Anmeldung fehlgeschlagen (`LOGIN_INVALID_CREDENTIALS`), für jede Ursache gleich, auch bei unbekannter E-Mail. Bei GET ohne Session: `AUTHENTICATION_REQUIRED`.',
         content: new OA\JsonContent(ref: '#/components/schemas/ApiError')
     )]
     #[OA\Response(
@@ -127,17 +127,13 @@ final class SecurityController extends AbstractController
             ]
         )
     )]
-    #[OA\Response(response: Response::HTTP_UNAUTHORIZED, description: 'User ist nicht authentifiziert.')]
+    #[OA\Response(response: Response::HTTP_UNAUTHORIZED, description: 'Keine Session (`AUTHENTICATION_REQUIRED`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[Route('/api/login/success', name: 'login_success', methods: ['GET'], format: 'json')]
     public function loginSuccess(Request $request, SecurityServiceInterface $securityService): Response
     {
         $user = $this->getUser();
         if (!$user instanceof User) {
-            return $this->json([
-                'success' => false,
-                'error' => 'USER_NOT_AUTHENTICATED',
-                'message' => 'User not authenticated',
-            ], Response::HTTP_OK);
+            throw new UserNotAuthenticatedException();
         }
 
         return $securityService->buildLoginSuccessResponse($user, $request->getSession());
@@ -150,7 +146,7 @@ final class SecurityController extends AbstractController
      *
      * @psalm-suppress PossiblyUnusedMethod Handled by Symfony firewall logout
      */
-    #[OA\Response(response: Response::HTTP_FOUND, description: 'Abgemeldet. Weiterleitung auf `/`.')]
+    #[OA\Response(response: Response::HTTP_NO_CONTENT, description: 'Abgemeldet, die Session ist beendet. Die Antwort hat keinen Body.')]
     #[Route(path: '/api/logout', name: 'app_logout', methods: ['POST'])]
     public function logout(): void
     {

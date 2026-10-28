@@ -49,7 +49,7 @@ final class LoginFailureResponseTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
         self::assertSame(
-            '{"success":false,"error":"SECURITY_USER_NOT_AUTHENTICATED","message":"User not authenticated"}',
+            '{"success":false,"error":"AUTHENTICATION_REQUIRED","message":"Unauthorized"}',
             $client->getResponse()->getContent(),
         );
     }

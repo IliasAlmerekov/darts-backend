@@ -9,20 +9,27 @@ declare(strict_types=1);
 
 namespace App\Exception\Request;
 
-use RuntimeException;
+use App\Exception\ApiHttpException;
+use App\Exception\ErrorCode;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Thrown when a username is already taken.
+ * Thrown when a username is already taken. The body carries the documented `suggestions` field.
  */
-final class UsernameAlreadyTakenException extends RuntimeException
+final class UsernameAlreadyTakenException extends ApiHttpException
 {
     /**
      * @param string       $username
      * @param list<string> $suggestions
      */
-    public function __construct(private readonly string $username, private readonly array $suggestions)
+    public function __construct(private readonly string $username, array $suggestions)
     {
-        parent::__construct('Username already taken');
+        parent::__construct(
+            ErrorCode::UsernameTaken,
+            Response::HTTP_CONFLICT,
+            'The name is already taken',
+            extraFields: ['suggestions' => $suggestions],
+        );
     }
 
     /**
@@ -33,13 +40,5 @@ final class UsernameAlreadyTakenException extends RuntimeException
     public function getUsername(): string
     {
         return $this->username;
-    }
-
-    /**
-     * @return list<string>
-     */
-    public function getSuggestions(): array
-    {
-        return $this->suggestions;
     }
 }

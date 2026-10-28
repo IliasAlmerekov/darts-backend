@@ -129,7 +129,7 @@ final class GuestPlayerServiceTest extends TestCase
             self::fail('Expected exception was not thrown.');
         } catch (UsernameAlreadyTakenException $exception) {
             self::assertSame('Alex', $exception->getUsername());
-            self::assertSame([], $exception->getSuggestions());
+            self::assertSame(['suggestions' => []], $exception->getExtraFields());
         }
     }
 
