@@ -130,7 +130,10 @@ MySQL root password; put the matching `DATABASE_URL` in `app/.env.test.local` to
 `check-image-eol.sh` fails when a shell script, a Dockerfile, or a file under `app/docker/`
 lacks `eol=lf` in `.gitattributes` or is committed with CRLF.
 `check-runtime-image.sh` boots a built runtime image and fails on PHP older than 8.4.27,
-upload progress on, or a multipart request that nginx passes to PHP (#146). Run it after a
+upload progress on, or a multipart request that nginx passes to PHP (#146). It also fails
+(#56) on a root process, an `X-Powered-By` header, a cold `var/cache/prod`, a production ini
+value that differs, `pdo_pgsql`, a HEALTHCHECK that does not call `/api/ready`, or an
+`/api/ready` that does not answer 503 without a database. Run it after a
 change to `app/Dockerfile` or `app/docker/`; raise its `MIN_PHP_VERSION` with each PHP
 security release.
 
