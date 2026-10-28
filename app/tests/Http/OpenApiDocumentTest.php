@@ -109,6 +109,36 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertSame([], $offences);
     }
 
+    /**
+     * ADR 0006: the 422 body is documented once and every payload operation references it.
+     */
+    public function testEveryRequestPayloadOperationReferencesTheValidationBody(): void
+    {
+        $ref = '#/components/schemas/RequestValidationFailed';
+        $offences = [];
+        $seen = 0;
+        foreach ($this->operations() as [$path, $method, $operation]) {
+            $route = $this->routeFor($path, $method);
+            if (null === $route || Response::HTTP_UNPROCESSABLE_ENTITY !== $this->payloadValidationStatus($route['controller'])) {
+                continue;
+            }
+            ++$seen;
+            $schema = $operation['responses']['422']['content']['application/json']['schema'] ?? [];
+            $refs = [$schema['$ref'] ?? null, ...array_column($schema['anyOf'] ?? [], '$ref')];
+            if (!in_array($ref, $refs, true)) {
+                $offences[] = strtoupper($method).' '.$path;
+            }
+        }
+
+        self::assertSame([], $offences);
+        self::assertGreaterThan(0, $seen);
+
+        $body = $this->document()['components']['schemas']['RequestValidationFailed'];
+        self::assertSame(['success', 'error', 'message', 'violations'], $body['required']);
+        self::assertSame(['REQUEST_VALIDATION_FAILED'], $body['properties']['error']['enum']);
+        self::assertSame(['field', 'code', 'message'], $body['properties']['violations']['items']['required']);
+    }
+
     public function testEveryGuardedOperationDocuments403(): void
     {
         $offences = [];

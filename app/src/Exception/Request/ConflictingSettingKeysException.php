@@ -27,7 +27,7 @@ final class ConflictingSettingKeysException extends ApiHttpException
         parent::__construct(
             ErrorCode::RequestConflictingSettingKeys,
             Response::HTTP_BAD_REQUEST,
-            sprintf('Die Schlüssel "%s" und "%s" haben unterschiedliche Werte. Bitte nur "%s" senden.', $camelCaseKey, $legacyKey, $camelCaseKey)
+            sprintf('The keys "%s" and "%s" have different values. Send only "%s".', $camelCaseKey, $legacyKey, $camelCaseKey)
         );
     }
 }

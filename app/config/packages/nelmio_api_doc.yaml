@@ -5,6 +5,55 @@ nelmio_api_doc:
             description: This is an awesome app!
             version: 1.0.0
         components:
+            schemas:
+                # ADR 0006: the body of every #[MapRequestPayload] validation failure.
+                RequestValidationFailed:
+                    type: object
+                    required: [success, error, message, violations]
+                    properties:
+                        success:
+                            type: boolean
+                            enum: [false]
+                        error:
+                            type: string
+                            enum: [REQUEST_VALIDATION_FAILED]
+                        message:
+                            type: string
+                            description: English, for developers only.
+                            example: The request body failed validation.
+                        violations:
+                            type: array
+                            description: One entry per violation.
+                            items:
+                                type: object
+                                required: [field, code, message]
+                                properties:
+                                    field:
+                                        type: string
+                                        description: Property path of the violation, `""` for a class-level violation.
+                                        example: startScore
+                                    code:
+                                        type: string
+                                        description: >-
+                                            `REQUIRED`, `TOO_SHORT`, `TOO_LONG`, `INVALID_EMAIL`, `INVALID_CHOICE`,
+                                            `OUT_OF_RANGE`, `INVALID_TYPE`, `DUPLICATE` or `INVALID`, unless the
+                                            constraint names its own code.
+                                        example: INVALID_CHOICE
+                                    message:
+                                        type: string
+                                        description: English, for developers only.
+                                        example: The value you selected is not a valid choice.
+                ApiError:
+                    type: object
+                    required: [success, error, message]
+                    properties:
+                        success:
+                            type: boolean
+                            enum: [false]
+                        error:
+                            type: string
+                        message:
+                            type: string
             securitySchemes:
                 SessionCookie:
                     type: apiKey

@@ -38,6 +38,7 @@ enum ErrorCode: string
     case PlayerNotFound = 'PLAYER_NOT_FOUND';
     case GameIdMissing = 'GAME_ID_MISSING';
     case RequestInvalidJsonBody = 'REQUEST_INVALID_JSON_BODY';
+    case RequestValidationFailed = 'REQUEST_VALIDATION_FAILED';
     case RequestConflictingSettingKeys = 'REQUEST_CONFLICTING_SETTING_KEYS';
     case RequestPlayerIdRequired = 'REQUEST_PLAYER_ID_REQUIRED';
     case RegistrationRateLimited = 'REGISTRATION_RATE_LIMITED';

@@ -16,7 +16,11 @@ use App\Security\ErrorController;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Exception\ValidationFailedException;
+use Symfony\Component\Validator\Validation;
 
 final class ErrorControllerTest extends TestCase
 {
@@ -124,5 +128,31 @@ final class ErrorControllerTest extends TestCase
 
         $data = json_decode((string) $response->getContent(), true);
         self::assertSame('INTERNAL_SERVER_ERROR', $data['error'] ?? null);
+    }
+
+    public function testRendersAPayloadCodeAndAClassLevelViolation(): void
+    {
+        $value = ['email' => 'nope'];
+        $violations = Validation::createValidator()->validate($value, [
+            new Assert\Collection(['email' => new Assert\Email(payload: ['code' => 'EMAIL_DOMAIN_NOT_ALLOWED'])]),
+            new Assert\Expression('false', message: 'The body is inconsistent.'),
+        ]);
+        $exception = new HttpException(Response::HTTP_UNPROCESSABLE_ENTITY, 'joined messages', new ValidationFailedException($value, $violations));
+
+        $response = (new ErrorController())->show($exception);
+
+        self::assertSame(Response::HTTP_UNPROCESSABLE_ENTITY, $response->getStatusCode());
+        self::assertSame(
+            [
+                'success' => false,
+                'error' => 'REQUEST_VALIDATION_FAILED',
+                'message' => 'The request body failed validation.',
+                'violations' => [
+                    ['field' => '[email]', 'code' => 'EMAIL_DOMAIN_NOT_ALLOWED', 'message' => 'This value is not a valid email address.'],
+                    ['field' => '', 'code' => 'INVALID', 'message' => 'The body is inconsistent.'],
+                ],
+            ],
+            json_decode((string) $response->getContent(), true),
+        );
     }
 }
