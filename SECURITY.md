@@ -33,10 +33,10 @@ rule below gives the severity of a break. P0 is Critical, P1 is High, and P2 is 
   never ship.
 - Local development defaults in `app/.env`, such as the empty `APP_SECRET` and the SQLite
   `DATABASE_URL`.
-- The three `GET` routes that write, listed under `### CSRF and CORS`, unless a diff widens
+- The two `GET` routes that write, listed under `### CSRF and CORS`, unless a diff widens
   what they write.
-- Login CSRF on `POST /api/login` and the invitation UUID in the logs of
-  `InvitationController`, both described below, unless a diff widens them.
+- The invitation UUID in the logs of `InvitationController`, described below, unless a diff
+  widens it.
 - Swagger UI and `/api/doc.json` in the dev environment.
 
 ### Access control
@@ -60,38 +60,37 @@ another player's data is a P0.
 
 ### CSRF and CORS
 
-The API validates no CSRF token: `form_login` sets `enable_csrf: false`, and nothing checks
-the tokens `GET /api/csrf` hands out. Most write endpoints take no body or bind it with
+The API issues no CSRF tokens. Most write endpoints take no body or bind it with
 `#[MapRequestPayload]` without `acceptFormat`, which also accepts form bodies, so CORS
 preflight does not stop a cross-site write. The defences are:
 
+- `CrossOriginRequestSubscriber` answers 403 `CROSS_ORIGIN_REQUEST` to every `POST`, `PUT`,
+  `PATCH`, or `DELETE` under `/api` whose `Sec-Fetch-Site` is present and not `same-origin`,
+  or, without that header, whose `Origin` differs from the request's own scheme and host
+  (ADR 0007). A request with neither header passes: browsers send at least one on every
+  unsafe request. `form_login` checks the same origin through `SameOriginCsrfTokenManager`
+  (`enable_csrf: true`, the fixed field `_csrf_token=csrf-token`). Unlike `SameSite`, this
+  also stops a page on a sibling subdomain and a cross-site login;
 - the session and remember-me cookies are `SameSite=Lax` in prod, so a cross-site `POST`,
   `PUT`, `PATCH`, or `DELETE` arrives without them. This does not cover login, below;
 - `GET` and `HEAD` never change state, because `Lax` still sends cookies on a top-level
   cross-site `GET`;
 - CORS lets only origins matching `CORS_ALLOW_ORIGIN` read responses with credentials.
 
-A change that weakens one of them is a P0: `samesite: none` or no `samesite` on either
-cookie, a new `GET` route that writes to the database or the session, or a broader CORS
-origin. Three `GET` routes write today:
+A change that weakens one of them is a P0: removing or narrowing the origin check (the
+subscriber, `form_login.enable_csrf`, or `authenticate` in `stateless_token_ids`),
+`samesite: none` or no `samesite` on either cookie, a new `GET` route that writes to the
+database or the session, or a broader CORS origin. Two `GET` routes write today:
 
 - `/api/invite/join/{uuid}` stores the invitation in the session;
-- `/api/login/success` joins the player to that invitation's game;
-- `/api/csrf` creates the `authenticate` and `user_registration` tokens in the session,
-  because `config/packages/csrf.yaml` lists only `submit` and `logout` as stateless. It
-  writes nothing else, and CORS keeps another site from reading the tokens.
+- `/api/login/success` joins the player to that invitation's game.
 
 `CORS_ALLOW_ORIGIN` is a regex; a committed value without `^` and `$` anchors, or one that
 matches any host, is a P0.
 
-Login CSRF is a known exposure. A hostile site can send a top-level form `POST /api/login`
-with the credentials of a player account the attacker owns. The request needs no cookie
-from the victim. `form_login` accepts form data with CSRF off, and the browser stores the
-`Lax` cookies the response sets. The victim's browser is then logged in as the attacker's
-player, for 7 days through remember-me. That player sees only their own profile and
-current game. A change that lets this reach more, such as an admin login or a player route
-that stores what the victim enters, is a P1. A fix needs an origin check or a CSRF token on
-`/api/login`.
+A request that sends neither `Sec-Fetch-Site` nor `Origin` passes the origin check on every
+route except login, which fails without them. Browsers always send one of the two on an
+unsafe request, so only a non-browser client can omit both, and it holds no victim's cookies.
 
 ### Authentication and sessions
 

@@ -15,11 +15,9 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **CI**: Dependabot öffnet wöchentlich Update-PRs für Composer, GitHub Actions und die Docker-Basisimages. Minor- und Patch-Updates von Composer kommen gebündelt in einem PR, Actions-Updates ebenso. `symfony/*` bekommt nur Patch-Updates, das `php`-Image bleibt auf 8.4 (#138)
 - **Agenten**: `AGENTS.md` hat einen Abschnitt `## Review guidelines` mit den Schweregraden P0 bis P2 und den Prüfungen, die kein Werkzeug übernimmt. Das neue `SECURITY.md` erklärt, wie man Schwachstellen privat meldet, und enthält das Bedrohungsmodell für Security-Reviews (#136)
 - **Spielerprofil**: Neuer Endpunkt `GET /api/player/profile` liefert dem angemeldeten Spieler seine Statistik und seine 10 letzten beendeten Spiele mit Platzierung, Rundendurchschnitt und allen Teilnehmern (#115)
-- **CSRF-Schutz**: Neue Route `/api/csrf` für öffentlichen Zugriff hinzugefügt. CSRF-Tokens werden nun in Registrierungs- und Login-Formularen verwendet, um Anfragen vor Manipulation zu schützen.
 - **GameAccessService**: Neuer Service zur Durchsetzung von Spiel-Autorisierungsregeln. Überprüft, ob Benutzer authentifiziert, Administrator oder Spieler in einem Spiel sind.
 - **SecurityAccessDeniedException**: Neue Ausnahme für Zugriffsverweigerung, die bei fehlenden Berechtigungen ausgelöst wird.
 - **ErrorCode**: Neuer Fehlercode `SecurityAccessDenied` für API-Fehlerbehandlung.
-- **CSRF-Tokens-Endpunkt**: Neuer Endpunkt `/api/csrf` in `SecurityController`, der CSRF-Tokens für Authentifizierungsflüsse bereitstellt.
 
 ### Geändert
 - **Dev-nginx**: Die Dev-Konfiguration `etc/docker/nginx/nginx.conf` reicht nur noch das Front-Controller-Skript `index.php` an PHP-FPM weiter, wie das Produktions-Template. Jeder andere Pfad auf `.php` antwortet mit 404, auch wenn die Datei unter `public/` existiert; `index.php` ist nur über den `try_files`-Fallback erreichbar (#34)
@@ -37,8 +35,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **Agenten**: `AGENTS.md` beschreibt den Ablauf ohne Worktrees, einen schnellen Testlauf, den Fehlervertrag, Migrationen, Test-Helfer und eine Scope-Regel (#120)
 - **GameLifecycleController**: Methode `finished` in zwei separate Methoden aufgeteilt: `finish` (POST zum Beenden des Spiels) und `finished` (GET zum Anzeigen der Endergebnisse ohne Statusänderung).
 - **InvitationController**: `processInvitation` nun explizit auf POST-Methoden beschränkt.
-- **RegistrationController**: `_csrf_token` als erforderliches Feld in der Registrierungs-API hinzugefügt.
-- **SecurityController**: Login-Antwort enthält nun `email` und `username` zusätzlich zu `id`. CSRF-Tokens werden in Login- und Registrierungsformularen verwendet.
+- **SecurityController**: Login-Antwort enthält nun `email` und `username` zusätzlich zu `id`.
 - **RegistrationFormType**: E-Mail-Validierung hinzugefügt, um gültige E-Mail-Adressen sicherzustellen.
 - **SecurityService**: Antwort bei erfolgreichem Login enthält nun vollständige Benutzerdetails (`email`, `username`).
 - **Verschiedene Services**: Integration von `GameAccessService` in `GameAbortService`, `GameFinishService`, `GameRoomService`, `GameSettingsService`, `GameStartService`, `GameThrowService`, `RematchService` und `InvitationService` für Zugriffskontrollen vor Spielaktionen.
@@ -73,6 +70,6 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **PHP-Entwicklung und CI**: Der `php`-Dienst in `docker-compose.yaml` und die GitLab-CI-Jobs nutzen `registry.deepblue.technology/library/php` in Version `8.4.27-0` statt `8.4.11-0`, also auch lokal und in der CI ein PHP mit den Fixes für CVE-2026-109618 und CVE-2026-109619 (#148)
 - **PHP-Laufzeit**: Das Laufzeit-Image baut auf `php:8.4.27-fpm-alpine` und schließt damit CVE-2026-109618 und CVE-2026-109619. Zusätzlich schaltet es `session.upload_progress.enabled` ab, und nginx beantwortet `multipart/*`-Anfragen mit 415, bevor PHP sie parst. Der neue CI-Job `Runtime image` startet das Image mit `scripts/check-runtime-image.sh` und prüft alle drei Punkte (#146)
 - **Verbesserte Autorisierung**: Spielaktionen sind nun durch rollenbasierte Zugriffsprüfungen geschützt, um Missbrauch zu verhindern.
-- **CSRF-Schutz**: Schutz vor Cross-Site Request Forgery-Angriffen durch Token-Validierung.
+- **CSRF-Schutz**: Jede `POST`-, `PUT`-, `PATCH`- oder `DELETE`-Anfrage unter `/api` antwortet mit 403 `CROSS_ORIGIN_REQUEST`, wenn `Sec-Fetch-Site` vorhanden und nicht `same-origin` ist oder, ohne diesen Header, `Origin` nicht zur eigenen Herkunft der API passt; Anfragen ohne beide Header laufen durch. `POST /api/login` prüft dieselbe Herkunft über `SameOriginCsrfTokenManager` (`enable_csrf: true`) und verlangt das feste Feld `_csrf_token=csrf-token`; ohne das Feld oder von fremder Herkunft antwortet er mit 403 `CROSS_ORIGIN_REQUEST`, bevor die Drosselung zählt. Das schließt Login-CSRF und Anfragen von Schwester-Subdomains. `GET /api/csrf` entfällt (404); die Tokens prüfte nie ein Endpunkt. ADR 0007 hält die Entscheidung fest. BREAKING CHANGE: das Frontend muss `_csrf_token` beim Login senden (IliasAlmerekov/darts#371 und Folge-Issue), deployen erst danach (#135)
 
 Diese Änderungen stärken die Sicherheit des Darts-Backends, indem sie Autorisierung und Anfrageschutz implementieren.
