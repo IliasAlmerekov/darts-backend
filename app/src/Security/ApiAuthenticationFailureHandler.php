@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Security;
 
+use App\Exception\ApiHttpException;
+use App\Exception\Security\LoginInvalidCredentialsException;
+use App\Exception\Security\LoginRateLimitedException;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -22,8 +26,9 @@ final readonly class ApiAuthenticationFailureHandler implements AuthenticationFa
 {
     /**
      * @param UrlGeneratorInterface $urlGenerator
+     * @param LoggerInterface       $logger
      */
-    public function __construct(private UrlGeneratorInterface $urlGenerator)
+    public function __construct(private UrlGeneratorInterface $urlGenerator, private LoggerInterface $logger)
     {
     }
 
@@ -36,30 +41,42 @@ final readonly class ApiAuthenticationFailureHandler implements AuthenticationFa
     #[\Override]
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): Response
     {
+        $this->logger->warning('Login failed.', [
+            'exception_class' => $exception::class,
+            'reason' => '' !== $exception->getMessage() ? $exception->getMessage() : $exception->getMessageKey(),
+        ]);
+
         if ($this->isApiRequest($request)) {
-            $tooManyAttempts = $exception instanceof TooManyLoginAttemptsAuthenticationException;
-            $status = $tooManyAttempts ? Response::HTTP_TOO_MANY_REQUESTS : Response::HTTP_UNAUTHORIZED;
-            $response = new JsonResponse([
-                'success' => false,
-                'last_username' => (string) $request->request->get('_username', ''),
-                // The throttling exception keeps %minutes% in its message; fill it in.
-                'error' => $tooManyAttempts
-                    ? strtr($exception->getMessageKey(), $exception->getMessageData())
-                    : $exception->getMessage(),
-                'status' => $status,
-            ], $status);
+            $error = $this->toApiException($exception);
 
-            if ($tooManyAttempts) {
-                $minutes = $exception->getMessageData()['%minutes%'];
-                if (is_int($minutes) && $minutes > 0) {
-                    $response->headers->set('Retry-After', (string) ($minutes * 60));
-                }
-            }
-
-            return $response;
+            return new JsonResponse(
+                [
+                    'success' => false,
+                    'error' => $error->getErrorCode(),
+                    'message' => $error->getMessage(),
+                ],
+                $error->getStatusCode(),
+                $error->getHeaders()
+            );
         }
 
         return new RedirectResponse($this->urlGenerator->generate('app_login'));
+    }
+
+    /**
+     * @param AuthenticationException $exception
+     *
+     * @return ApiHttpException
+     */
+    private function toApiException(AuthenticationException $exception): ApiHttpException
+    {
+        if (!$exception instanceof TooManyLoginAttemptsAuthenticationException) {
+            return new LoginInvalidCredentialsException();
+        }
+
+        $minutes = $exception->getMessageData()['%minutes%'] ?? null;
+
+        return new LoginRateLimitedException(is_int($minutes) ? $minutes * 60 : null);
     }
 
     /**

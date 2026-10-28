@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Exception\Security\UserNotAuthenticatedException;
 use App\Http\Attribute\ApiResponse;
 use App\Service\Security\SecurityServiceInterface;
 use LogicException;
@@ -13,7 +14,6 @@ use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -26,9 +26,7 @@ use Symfony\Component\HttpFoundation\Request;
 final class SecurityController extends AbstractController
 {
     /**
-     * Returns login state or last error for API clients.
-     *
-     * @param AuthenticationUtils $authenticationUtils
+     * Returns the login state of a logged-in user; without a session it answers 401.
      *
      * @return array<array-key, mixed>
      */
@@ -61,46 +59,26 @@ final class SecurityController extends AbstractController
                 new OA\Property(property: 'redirect', type: 'string', nullable: true, example: 'http://localhost:5173/playerprofile', description: 'Nach POST das Frontend-Ziel wie bei `/api/login/success` (`/start`, `/joined` oder `/playerprofile`). Nach GET mit bestehender Session: `/api/login/success`.'),
                 new OA\Property(property: 'gameId', type: 'integer', example: 42, description: 'Nur nach POST mit Redirect auf `/joined`: ID des beigetretenen oder des aktuellen Spiels.'),
                 new OA\Property(property: 'invitationError', type: 'string', enum: ['GAME_ALREADY_STARTED', 'GAME_JOIN_NOT_ALLOWED', 'GAME_ROOM_FULL', 'GAME_NOT_FOUND'], example: 'GAME_ALREADY_STARTED', description: 'Nur wenn die gespeicherte Einladung nicht mehr nutzbar ist. Der Login war erfolgreich, `gameId` fehlt in diesem Fall.'),
-                new OA\Property(property: 'last_username', type: 'string', nullable: true, example: 'alice'),
-                new OA\Property(property: 'error', type: 'string', nullable: true, example: 'Ungültige Zugangsdaten.'),
             ]
         )
     )]
     #[OA\Response(
         response: Response::HTTP_UNAUTHORIZED,
-        description: 'Anmeldung fehlgeschlagen.',
-        content: new OA\JsonContent(
-            type: 'object',
-            required: ['success', 'error'],
-            properties: [
-                new OA\Property(property: 'success', type: 'boolean', example: false),
-                new OA\Property(property: 'last_username', type: 'string', nullable: true, example: 'alice'),
-                new OA\Property(property: 'error', type: 'string', example: 'Ungültige Zugangsdaten.'),
-                new OA\Property(property: 'status', type: 'integer', example: 401, description: 'Nur bei POST: ApiAuthenticationFailureHandler antwortet direkt und lässt `status` im Body.'),
-            ]
-        )
+        description: 'Bei POST: Anmeldung fehlgeschlagen (`LOGIN_INVALID_CREDENTIALS`), für jede Ursache gleich, auch bei unbekannter E-Mail. Bei GET ohne Session: `SECURITY_USER_NOT_AUTHENTICATED`.',
+        content: new OA\JsonContent(ref: '#/components/schemas/ApiError')
     )]
     #[OA\Response(
         response: Response::HTTP_TOO_MANY_REQUESTS,
-        description: 'Zu viele fehlgeschlagene Anmeldungen (5 pro Minute je E-Mail und IP-Adresse, dazu ein weiteres Limit pro IP). Nur bei POST.',
+        description: 'Zu viele fehlgeschlagene Anmeldungen (`LOGIN_RATE_LIMITED`; 5 pro Minute je E-Mail und IP-Adresse, dazu ein weiteres Limit pro IP). Nur bei POST.',
         headers: [
             new OA\Header(header: 'Retry-After', description: 'Sekunden bis zum nächsten erlaubten Versuch, wenn der Limiter sie nennt.', schema: new OA\Schema(type: 'integer')),
         ],
-        content: new OA\JsonContent(
-            type: 'object',
-            required: ['success', 'error', 'status'],
-            properties: [
-                new OA\Property(property: 'success', type: 'boolean', example: false),
-                new OA\Property(property: 'last_username', type: 'string', nullable: true, example: 'alice@example.com'),
-                new OA\Property(property: 'error', type: 'string', example: 'Too many failed login attempts, please try again in 1 minute.'),
-                new OA\Property(property: 'status', type: 'integer', example: 429, description: 'Nur bei POST: ApiAuthenticationFailureHandler antwortet direkt und lässt `status` im Body.'),
-            ]
-        )
+        content: new OA\JsonContent(ref: '#/components/schemas/ApiError')
     )]
     #[Security(name: null)]
     #[ApiResponse]
     #[Route(path: '/api/login', name: 'app_login', methods: ['GET', 'POST'], format: 'json')]
-    public function login(AuthenticationUtils $authenticationUtils): array
+    public function login(): array
     {
         $user = $this->getUser();
         if ($user) {
@@ -118,15 +96,7 @@ final class SecurityController extends AbstractController
             ];
         }
 
-        $error = $authenticationUtils->getLastAuthenticationError();
-        $lastUsername = $authenticationUtils->getLastUsername();
-
-        return [
-            'success' => false,
-            'last_username' => $lastUsername,
-            'error' => $error?->getMessage(),
-            'status' => $error ? Response::HTTP_UNAUTHORIZED : Response::HTTP_OK,
-        ];
+        throw new UserNotAuthenticatedException();
     }
 
     /**

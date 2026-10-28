@@ -83,11 +83,6 @@ final class ApiViewSubscriber implements EventSubscriberInterface
 
         $headers = array_merge($headers, $this->resolveRequestScopedHeaders($request));
 
-        if (is_array($data) && isset($data['status']) && is_int($data['status'])) {
-            $status = $data['status'];
-            unset($data['status']);
-        }
-
         if (Response::HTTP_NO_CONTENT === $status) {
             $event->setResponse(new Response('', $status, $headers));
 

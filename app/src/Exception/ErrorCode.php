@@ -48,6 +48,8 @@ enum ErrorCode: string
     case RequestPlayerIdRequired = 'REQUEST_PLAYER_ID_REQUIRED';
     case RegistrationRateLimited = 'REGISTRATION_RATE_LIMITED';
     case RegistrationAccountExists = 'REGISTRATION_ACCOUNT_EXISTS';
+    case LoginInvalidCredentials = 'LOGIN_INVALID_CREDENTIALS';
+    case LoginRateLimited = 'LOGIN_RATE_LIMITED';
     case SecurityUserNotAuthenticated = 'SECURITY_USER_NOT_AUTHENTICATED';
     case SecurityAccessDenied = 'SECURITY_ACCESS_DENIED';
 }

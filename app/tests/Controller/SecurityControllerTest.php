@@ -6,6 +6,7 @@ namespace App\Tests\Controller;
 
 use App\Controller\SecurityController;
 use App\Entity\User;
+use App\Exception\Security\UserNotAuthenticatedException;
 use Override;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -13,7 +14,6 @@ use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
-use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 
 #[AllowMockObjectsWithoutExpectations]
 class SecurityControllerTest extends TestCase
@@ -73,8 +73,6 @@ class SecurityControllerTest extends TestCase
         $user = $this->createUserMock(1, 'testuser', 'testuser@example.com');
         $tokenStorage = $this->createTokenStorageWithUser($user);
 
-        $authenticationUtils = $this->createMock(AuthenticationUtils::class);
-
         // Container Konfiguration
         $this->container->method('has')->willReturnCallback(function ($service) {
             return $service === 'security.token_storage';
@@ -87,7 +85,7 @@ class SecurityControllerTest extends TestCase
             };
         });
 
-        $response = $this->controller->login($authenticationUtils);
+        $response = $this->controller->login();
 
         $this->assertIsArray($response);
         $this->assertTrue($response['success']);
@@ -98,18 +96,12 @@ class SecurityControllerTest extends TestCase
     }
 
     /**
-     * Test: Login - User nicht eingeloggt -> Returns JSON with error info
+     * Test: Login - User nicht eingeloggt -> 401 SECURITY_USER_NOT_AUTHENTICATED
      */
-    public function testLoginRendersFormWhenUserNotLoggedIn(): void
+    public function testLoginThrowsNotAuthenticatedWhenUserNotLoggedIn(): void
     {
-        // Arrange
         $tokenStorage = $this->createTokenStorageWithUser(null);
 
-        $authenticationUtils = $this->createMock(AuthenticationUtils::class);
-        $authenticationUtils->method('getLastAuthenticationError')->willReturn(null);
-        $authenticationUtils->method('getLastUsername')->willReturn('john@example.com');
-
-        // Container Konfiguration
         $this->container->method('has')->willReturnCallback(function ($service) {
             return $service === 'security.token_storage';
         });
@@ -121,11 +113,8 @@ class SecurityControllerTest extends TestCase
             };
         });
 
-        $response = $this->controller->login($authenticationUtils);
+        $this->expectException(UserNotAuthenticatedException::class);
 
-        $this->assertIsArray($response);
-        $this->assertFalse($response['success']);
-        $this->assertEquals('john@example.com', $response['last_username']);
-        $this->assertNull($response['error']);
+        $this->controller->login();
     }
 }
