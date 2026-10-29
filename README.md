@@ -1,5 +1,11 @@
 # Darts Backend
 
+## Project layout
+
+The [architecture guide](docs/architecture.md) describes the application layers. See the [glossary](GLOSSARY.md) for domain terms and [ADRs](docs/adr/) for design decisions.
+
+`etc/docker/` contains the development configuration used by the root `docker-compose.yaml`. `app/docker/` contains the production configuration copied into the image by `app/Dockerfile`.
+
 ## Local secrets setup
 
 This project keeps secrets out of VCS. Use a local env file instead.
