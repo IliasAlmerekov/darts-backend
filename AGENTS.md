@@ -9,8 +9,10 @@ repository and consumes this API.
 
 Before changing game, lobby, or login behaviour, read `GLOSSARY.md` and the ADRs in
 `docs/adr/` that touch the area. They record rules the code enforces, such as one open
-lobby and one started game. Game logic lives in `app/src/Service/Game/`, one service per
-use case behind an interface.
+lobby and one started game.
+
+Before adding a class or moving code between controller, service, repository, and entity,
+read `docs/architecture.md`. It says which layer owns what and where new code goes.
 
 ## Scope
 
