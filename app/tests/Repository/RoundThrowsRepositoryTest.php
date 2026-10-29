@@ -9,13 +9,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
-use App\Dto\ParticipantTotalsDto;
 use App\Entity\Game;
 use App\Entity\Round;
 use App\Entity\RoundThrows;
 use App\Entity\User;
 use App\Enum\GameStatus;
-use App\Repository\PlayerStatisticsRepository;
 use App\Repository\RoundThrowsRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -276,7 +274,7 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
         ], $rows);
     }
 
-    public function testAggregateHelpers(): void
+    public function testGetRoundAveragesForGameAveragesEachPlayersThrowsPerRound(): void
     {
         $game = $this->createGame(GameStatus::Started);
         $round1 = $this->createRound($game, 1, finished: true);
@@ -297,7 +295,6 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
         $this->em->flush();
 
         $averages = $this->repo->getRoundAveragesForGame($game->getGameId());
-        $totals = static::getContainer()->get(PlayerStatisticsRepository::class)->getParticipantTotalsForGames([(int) $game->getGameId()])[(int) $game->getGameId()];
 
         $averages = array_map(
             static fn(array $row): array => [
@@ -316,10 +313,6 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
             ['playerId' => $player1->getId(), 'roundNumber' => 2, 'average' => 27.5],
             ['playerId' => $player2->getId(), 'roundNumber' => 2, 'average' => 40.0],
         ], $averages);
-
-        // Player 1's second turn holds a bust, so it scores 0 and counts as 3 darts.
-        self::assertEquals(new ParticipantTotalsDto(turns: 2, dartsThrown: 5, totalScore: 30.0), $totals[(int) $player1->getId()]);
-        self::assertEquals(new ParticipantTotalsDto(turns: 2, dartsThrown: 2, totalScore: 70.0), $totals[(int) $player2->getId()]);
     }
 
     private function createGame(GameStatus $status): Game

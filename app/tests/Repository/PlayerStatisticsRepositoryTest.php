@@ -37,6 +37,33 @@ final class PlayerStatisticsRepositoryTest extends KernelTestCase
         $this->em->close();
     }
 
+    public function testGetParticipantTotalsForGamesCountsABustTurnAsThreeDartsAndNoPoints(): void
+    {
+        $game = $this->createGame(GameStatus::Started);
+        $round1 = $this->createRound($game, 1, finished: true);
+        $round2 = $this->createRound($game, 2, finished: true);
+
+        $player1 = $this->createUser('u1');
+        $player2 = $this->createUser('u2');
+
+        // Player 1: round 1 -> 10, 20 (two darts); round 2 -> a bust dart, then 5
+        $this->createThrow($game, $round1, $player1, 1, 10, 10);
+        $this->createThrow($game, $round1, $player1, 2, 20, 30);
+        $this->createThrow($game, $round2, $player1, 1, 50, 30, isBust: true);
+        $this->createThrow($game, $round2, $player1, 2, 5, 35);
+
+        // Player 2: round 1 -> 30; round 2 -> 40
+        $this->createThrow($game, $round1, $player2, 1, 30, 30);
+        $this->createThrow($game, $round2, $player2, 1, 40, 70);
+        $this->em->flush();
+
+        $totals = $this->repo->getParticipantTotalsForGames([(int) $game->getGameId()])[(int) $game->getGameId()];
+
+        // Player 1's second turn holds a bust, so it scores 0 and counts as 3 darts.
+        self::assertEquals(new ParticipantTotalsDto(turns: 2, dartsThrown: 5, totalScore: 30.0), $totals[(int) $player1->getId()]);
+        self::assertEquals(new ParticipantTotalsDto(turns: 2, dartsThrown: 2, totalScore: 70.0), $totals[(int) $player2->getId()]);
+    }
+
     public function testGetPlayerStatisticsAggregatesTheThreeDartAveragePerPlayer(): void
     {
         $finishedGameA = $this->createGame(GameStatus::Finished);
