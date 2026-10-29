@@ -10,10 +10,10 @@ use App\Enum\GameStatus;
 use App\Util\SqlResultValueAccessor;
 use DateTime;
 use DateTimeImmutable;
-use DateTimeInterface;
 use Doctrine\DBAL\LockMode;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
+use Doctrine\DBAL\Types\Type;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\Query;
@@ -43,8 +43,8 @@ final class GameRepository extends ServiceEntityRepository implements GameReposi
      *
      * @return list<array{
      *     id:int,
-     *     date:string|null,
-     *     finishedAt:string|null,
+     *     date:DateTimeImmutable|null,
+     *     finishedAt:DateTimeImmutable|null,
      *     playersCount:int,
      *     winnerName:string|null,
      *     winnerId:int|null,
@@ -102,15 +102,19 @@ SQL,
             $rows
         ));
 
-        return array_map(function (array $row) use ($winnerRoundsByGameId): array {
+        $platform = $connection->getDatabasePlatform();
+        $dateType = Type::getType(Types::DATE_IMMUTABLE);
+        $dateTimeType = Type::getType(Types::DATETIME_IMMUTABLE);
+
+        return array_map(static function (array $row) use ($winnerRoundsByGameId, $platform, $dateType, $dateTimeType): array {
             $gameId = (int) (SqlResultValueAccessor::find($row, ['id']) ?? 0);
             $winnerId = SqlResultValueAccessor::find($row, ['winnerId']);
             $winnerName = SqlResultValueAccessor::find($row, ['winnerName']);
 
             return [
                 'id' => $gameId,
-                'date' => $this->formatDateTimeValue(SqlResultValueAccessor::find($row, ['date'])),
-                'finishedAt' => $this->formatDateTimeValue(SqlResultValueAccessor::find($row, ['finishedAt'])),
+                'date' => $dateType->convertToPHPValue(SqlResultValueAccessor::find($row, ['date']), $platform),
+                'finishedAt' => $dateTimeType->convertToPHPValue(SqlResultValueAccessor::find($row, ['finishedAt']), $platform),
                 'playersCount' => (int) (SqlResultValueAccessor::find($row, ['playersCount']) ?? 0),
                 'winnerName' => null !== $winnerName ? (string) $winnerName : null,
                 'winnerId' => null !== $winnerId ? (int) $winnerId : null,
@@ -433,28 +437,6 @@ SQL,
         }
 
         return $winnerRoundsByGameId;
-    }
-
-    /**
-     * @param mixed $value
-     *
-     * @return string|null
-     */
-    private function formatDateTimeValue(mixed $value): ?string
-    {
-        if ($value instanceof DateTimeInterface) {
-            return $value->format(DateTimeInterface::ATOM);
-        }
-
-        if (null === $value || '' === $value) {
-            return null;
-        }
-
-        try {
-            return (new DateTimeImmutable((string) $value))->format(DateTimeInterface::ATOM);
-        } catch (\Exception) {
-            return null;
-        }
     }
 
     /**

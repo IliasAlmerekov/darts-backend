@@ -33,7 +33,7 @@
 
 ## Notes
 
-- The lightweight endpoint avoids `GameService::createGameDto()` and returns only settings-focused data.
+- The lightweight endpoint avoids `GameStateViewBuilder::createGameDto()` and returns only settings-focused data.
 - Payload size is measured as raw response body bytes from the functional response content.
 - SQL count should remain flat across started scenarios because the lightweight endpoint reads only the game plus access-related data, not throw history.
 

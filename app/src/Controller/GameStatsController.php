@@ -72,8 +72,8 @@ final class GameStatsController extends AbstractController
         $items = array_map(
             static fn(array $overviewRow): GameOverviewItemDto => new GameOverviewItemDto(
                 id: $overviewRow['id'],
-                date: $overviewRow['date'],
-                finishedAt: $overviewRow['finishedAt'],
+                date: $overviewRow['date']?->format(DateTimeInterface::ATOM),
+                finishedAt: $overviewRow['finishedAt']?->format(DateTimeInterface::ATOM),
                 playersCount: $overviewRow['playersCount'],
                 winnerName: $overviewRow['winnerName'],
                 winnerId: $overviewRow['winnerId'],

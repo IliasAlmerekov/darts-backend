@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Security;
+namespace App\Tests\Controller;
 
 use App\Exception\Game\PlayerAlreadyThrewThreeTimesException;
 use App\Exception\Game\GameIdMissingException;
@@ -17,7 +17,7 @@ use App\Exception\Game\InvalidPlayerOrderException;
 use App\Exception\Game\GameRoomFullException;
 use App\Exception\Game\GameStartNotAllowedException;
 use App\Enum\GameStatus;
-use App\Security\ErrorController;
+use App\Controller\ErrorController;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;

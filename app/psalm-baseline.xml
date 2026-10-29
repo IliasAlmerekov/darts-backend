@@ -100,7 +100,7 @@
       <code><![CDATA[ApiAuthenticationEntryPoint]]></code>
     </UnusedClass>
   </file>
-  <file src="src/Security/ErrorController.php">
+  <file src="src/Controller/ErrorController.php">
     <UnusedClass>
       <code><![CDATA[ErrorController]]></code>
     </UnusedClass>

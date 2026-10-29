@@ -15,7 +15,7 @@ use App\Enum\GameStatus;
 use App\Exception\Request\UsernameAlreadyTakenException;
 use App\Exception\Security\SecurityAccessDeniedException;
 use App\Exception\Security\UserNotAuthenticatedException;
-use App\Security\ErrorController;
+use App\Controller\ErrorController;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;

@@ -8,27 +8,19 @@ use App\Controller\GameLifecycleController;
 use App\Dto\GameSummaryFinishedPlayerDto;
 use App\Dto\GameSummaryResponseDto;
 use App\Dto\GameSummaryWinnerDto;
-use App\Dto\GameSettingsResponseDto;
-use App\Dto\GameSettingsRequest;
 use App\Dto\StartGameRequest;
 use App\Dto\GameResponseDto;
 use App\Dto\PlayerResponseDto;
 use App\Dto\ThrowResponseDto;
 use App\Entity\Game;
-use App\Enum\GameStatus;
 use App\EventSubscriber\ApiViewSubscriber;
-use App\Exception\Game\GameIdMissingException;
 use App\Exception\Game\GameMustHaveValidPlayerCountException;
-use App\Exception\Game\NoSettingsProvidedException;
 use App\Service\Game\GameFinishServiceInterface;
 use App\Service\Game\GameReopenServiceInterface;
-use App\Service\Game\GameRoomServiceInterface;
-use App\Service\Game\GameServiceInterface;
-use App\Service\Game\GameSettingsServiceInterface;
+use App\Service\Game\GameStateViewBuilderInterface;
 use App\Service\Game\GameStartServiceInterface;
 use App\Service\Game\RematchStartServiceInterface;
 use App\Service\Security\GameAccessServiceInterface;
-use OpenApi\Attributes as OA;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -62,16 +54,16 @@ final class GameLifecycleControllerTest extends TestCase
         $dto = new StartGameRequest();
         $startService = $this->createMock(GameStartServiceInterface::class);
         $startService->expects($this->once())->method('start')->with($game, $dto);
-        $gameService = $this->createMock(GameServiceInterface::class);
-        $gameService->expects($this->once())
+        $gameStateViewBuilder = $this->createMock(GameStateViewBuilderInterface::class);
+        $gameStateViewBuilder->expects($this->once())
             ->method('buildStateVersion')
             ->with($game)
             ->willReturn('state-v1');
         $gameDto = $this->dummyGameDto();
-        $gameService->expects($this->once())->method('createGameDto')->with($game)->willReturn($gameDto);
+        $gameStateViewBuilder->expects($this->once())->method('createGameDto')->with($game)->willReturn($gameDto);
         $request = new Request();
 
-        $response = $this->controller->start($game, $startService, $gameService, $this->gameRepositoryFinding($game), $this->runningTransaction(), $request, $dto);
+        $response = $this->controller->start($game, $startService, $gameStateViewBuilder, $this->gameRepositoryFinding($game), $this->runningTransaction(), $request, $dto);
 
         $this->assertSame($gameDto, $response);
         $this->assertSame([
@@ -88,11 +80,11 @@ final class GameLifecycleControllerTest extends TestCase
         $dto = new StartGameRequest();
         $startService = $this->createMock(GameStartServiceInterface::class);
         $startService->method('start')->willThrowException(new GameMustHaveValidPlayerCountException());
-        $gameService = $this->createMock(GameServiceInterface::class);
+        $gameStateViewBuilder = $this->createMock(GameStateViewBuilderInterface::class);
         $request = new Request();
 
         $this->expectException(GameMustHaveValidPlayerCountException::class);
-        $this->controller->start($game, $startService, $gameService, $this->gameRepositoryFinding($game), $this->runningTransaction(), $request, $dto);
+        $this->controller->start($game, $startService, $gameStateViewBuilder, $this->gameRepositoryFinding($game), $this->runningTransaction(), $request, $dto);
     }
 
     public function testStartRetriedAfterADeadlockStartsTheReloadedGame(): void
@@ -111,15 +103,15 @@ final class GameLifecycleControllerTest extends TestCase
                     throw $deadlock;
                 }
             });
-        $gameService = $this->createMock(GameServiceInterface::class);
-        $gameService->expects($this->once())->method('buildStateVersion')->with($reloadedGame)->willReturn('state-v2');
+        $gameStateViewBuilder = $this->createMock(GameStateViewBuilderInterface::class);
+        $gameStateViewBuilder->expects($this->once())->method('buildStateVersion')->with($reloadedGame)->willReturn('state-v2');
         $gameDto = $this->dummyGameDto();
-        $gameService->expects($this->once())->method('createGameDto')->with($reloadedGame)->willReturn($gameDto);
+        $gameStateViewBuilder->expects($this->once())->method('createGameDto')->with($reloadedGame)->willReturn($gameDto);
         $entityManager = $this->createStub(EntityManagerInterface::class);
         $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $operation): mixed => $operation());
         $transaction = new RetryingTransaction($entityManager, $this->createStub(ManagerRegistry::class));
 
-        $response = $this->controller->start($routeGame, $startService, $gameService, $gameRepository, $transaction, new Request(), new StartGameRequest());
+        $response = $this->controller->start($routeGame, $startService, $gameStateViewBuilder, $gameRepository, $transaction, new Request(), new StartGameRequest());
 
         $this->assertSame($gameDto, $response);
     }
@@ -140,161 +132,12 @@ final class GameLifecycleControllerTest extends TestCase
             ->willReturnCallback(static fn (callable $operation): mixed => $operation());
         $transaction = new RetryingTransaction($entityManager, $this->createStub(ManagerRegistry::class));
         $gameDto = $this->dummyGameDto();
-        $gameService = $this->createMock(GameServiceInterface::class);
-        $gameService->expects($this->once())->method('createGameDto')->with($game)->willReturn($gameDto);
+        $gameStateViewBuilder = $this->createMock(GameStateViewBuilderInterface::class);
+        $gameStateViewBuilder->expects($this->once())->method('createGameDto')->with($game)->willReturn($gameDto);
 
-        $response = $this->controller->createAndStartRematch($gameId, $rematchStartService, $gameService, $transaction, $dto);
+        $response = $this->controller->createAndStartRematch($gameId, $rematchStartService, $gameStateViewBuilder, $transaction, $dto);
 
         $this->assertSame($gameDto, $response);
-    }
-
-    public function testCreateSettingsCreatesGame(): void
-    {
-        $dto = new GameSettingsRequest();
-        $game = $this->createMock(Game::class);
-
-        $roomService = $this->createMock(GameRoomServiceInterface::class);
-        $roomService->method('openRoom')->willReturn($game);
-
-        $settingsService = $this->createMock(GameSettingsServiceInterface::class);
-        $settingsService->expects($this->once())->method('updateSettings')->with($game, $dto);
-
-        $gameService = $this->createMock(GameServiceInterface::class);
-        $gameService->method('createGameDto')->willReturn($this->dummyGameDto());
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->expects($this->once())
-            ->method('wrapInTransaction')
-            ->willReturnCallback(static fn(callable $func) => $func());
-
-        $response = $this->controller->createSettings($roomService, $settingsService, $gameService, new RetryingTransaction($entityManager, $this->createStub(ManagerRegistry::class)), $dto);
-
-        $this->assertInstanceOf(GameResponseDto::class, $response);
-    }
-
-    public function testCreateSettingsIsDocumentedAsDeprecatedLegacyFlow(): void
-    {
-        $operation = (new \ReflectionMethod(GameLifecycleController::class, 'createSettings'))
-            ->getAttributes(OA\Post::class)[0]
-            ->newInstance();
-
-        $this->assertTrue($operation->deprecated);
-        $this->assertStringContainsString('Deprecated.', (string) $operation->description);
-        $this->assertStringContainsString('/api/room/create', (string) $operation->description);
-        $this->assertStringContainsString('/api/game/{gameId}/settings', (string) $operation->description);
-    }
-
-    public function testUpdateSettingsReturnsBadRequestOnError(): void
-    {
-        $dto = new GameSettingsRequest();
-        $game = $this->createMock(Game::class);
-        $settingsService = $this->createMock(GameSettingsServiceInterface::class);
-        $settingsService->method('updateSettings')->willThrowException(new NoSettingsProvidedException());
-
-        $this->expectException(NoSettingsProvidedException::class);
-        $this->controller->updateSettings($game, $settingsService, $dto);
-    }
-
-    public function testUpdateSettingsReturnsLightweightSettingsPayload(): void
-    {
-        $dto = new GameSettingsRequest();
-        $dto->startScore = 501;
-        $dto->doubleOut = true;
-
-        $game = $this->createMock(Game::class);
-        $game->expects($this->once())
-            ->method('getGameId')
-            ->willReturn(55);
-        $game->expects($this->once())
-            ->method('getStartScore')
-            ->willReturn(501);
-        $game->expects($this->once())
-            ->method('isDoubleOut')
-            ->willReturn(true);
-        $game->expects($this->once())
-            ->method('isTripleOut')
-            ->willReturn(false);
-        $game->expects($this->once())
-            ->method('getStatus')
-            ->willReturn(GameStatus::Lobby);
-
-        $settingsService = $this->createMock(GameSettingsServiceInterface::class);
-        $settingsService->expects($this->once())
-            ->method('updateSettings')
-            ->with($game, $dto);
-
-        $response = $this->controller->updateSettings($game, $settingsService, $dto);
-
-        $this->assertInstanceOf(GameSettingsResponseDto::class, $response);
-        $this->assertSame(55, $response->gameId);
-        $this->assertSame(501, $response->startScore);
-        $this->assertTrue($response->doubleOut);
-        $this->assertFalse($response->tripleOut);
-        $this->assertSame('lobby', $response->status);
-    }
-
-    public function testGetSettingsReturnsLightweightSettingsPayload(): void
-    {
-        $game = $this->createMock(Game::class);
-        $game->expects($this->once())
-            ->method('getGameId')
-            ->willReturn(55);
-        $game->expects($this->once())
-            ->method('getStartScore')
-            ->willReturn(301);
-        $game->expects($this->once())
-            ->method('isDoubleOut')
-            ->willReturn(true);
-        $game->expects($this->once())
-            ->method('isTripleOut')
-            ->willReturn(false);
-        $game->expects($this->once())
-            ->method('getStatus')
-            ->willReturn(GameStatus::Started);
-
-        $gameAccessService = $this->createMock(GameAccessServiceInterface::class);
-        $gameAccessService->expects($this->once())
-            ->method('assertPlayerInGameOrAdmin')
-            ->with($game);
-
-        $response = $this->controller->getSettings($game, $gameAccessService);
-
-        $this->assertInstanceOf(GameSettingsResponseDto::class, $response);
-        $this->assertSame(55, $response->gameId);
-        $this->assertSame(301, $response->startScore);
-        $this->assertTrue($response->doubleOut);
-        $this->assertFalse($response->tripleOut);
-        $this->assertSame('started', $response->status);
-    }
-
-    public function testCompactSettingsOperationsAreDocumentedAsPreferredFlow(): void
-    {
-        $updateOperation = (new \ReflectionMethod(GameLifecycleController::class, 'updateSettings'))
-            ->getAttributes(OA\Patch::class)[0]
-            ->newInstance();
-        $readOperation = (new \ReflectionMethod(GameLifecycleController::class, 'getSettings'))
-            ->getAttributes(OA\Get::class)[0]
-            ->newInstance();
-
-        $this->assertStringContainsString('Bevorzugter Settings-Flow', (string) $updateOperation->description);
-        $this->assertStringContainsString('GameSettingsResponseDto', (string) $updateOperation->description);
-        $this->assertStringContainsString('Bevorzugter Read-Flow', (string) $readOperation->description);
-        $this->assertStringContainsString('vollständigen Spielzustand', (string) $readOperation->description);
-    }
-
-    public function testGetSettingsThrowsWhenGameIdIsMissing(): void
-    {
-        $game = $this->createMock(Game::class);
-        $game->expects($this->once())
-            ->method('getGameId')
-            ->willReturn(null);
-
-        $gameAccessService = $this->createMock(GameAccessServiceInterface::class);
-        $gameAccessService->expects($this->once())
-            ->method('assertPlayerInGameOrAdmin')
-            ->with($game);
-
-        $this->expectException(GameIdMissingException::class);
-        $this->controller->getSettings($game, $gameAccessService);
     }
 
     public function testFinishReturnsUnifiedSummaryPayload(): void
@@ -330,10 +173,10 @@ final class GameLifecycleControllerTest extends TestCase
         $reopenService = $this->createMock(GameReopenServiceInterface::class);
         $reopenService->expects($this->once())->method('reopen')->with($game);
 
-        $gameService = $this->createMock(GameServiceInterface::class);
-        $gameService->method('createGameDto')->willReturn($this->dummyGameDto());
+        $gameStateViewBuilder = $this->createMock(GameStateViewBuilderInterface::class);
+        $gameStateViewBuilder->method('createGameDto')->willReturn($this->dummyGameDto());
 
-        $response = $this->controller->reopen($game, $reopenService, $gameService, $this->gameRepositoryFinding($game), $this->runningTransaction());
+        $response = $this->controller->reopen($game, $reopenService, $gameStateViewBuilder, $this->gameRepositoryFinding($game), $this->runningTransaction());
 
         $this->assertInstanceOf(GameResponseDto::class, $response);
     }
@@ -345,18 +188,18 @@ final class GameLifecycleControllerTest extends TestCase
         $gameAccessService->expects($this->once())
             ->method('assertPlayerInGameOrAdmin')
             ->with($game);
-        $gameService = $this->createMock(GameServiceInterface::class);
-        $gameService->expects($this->once())
+        $gameStateViewBuilder = $this->createMock(GameStateViewBuilderInterface::class);
+        $gameStateViewBuilder->expects($this->once())
             ->method('buildStateVersion')
             ->with($game)
             ->willReturn('state-v1');
-        $gameService->expects($this->once())
+        $gameStateViewBuilder->expects($this->once())
             ->method('createGameDto')
             ->with($game)
             ->willReturn($this->dummyGameDto());
 
         $request = new Request();
-        $response = $this->controller->getGameState($game, $gameAccessService, $gameService, $request);
+        $response = $this->controller->getGameState($game, $gameAccessService, $gameStateViewBuilder, $request);
 
         $this->assertInstanceOf(Response::class, $response);
         $this->assertSame(Response::HTTP_OK, $response->getStatusCode());
@@ -372,17 +215,17 @@ final class GameLifecycleControllerTest extends TestCase
             ->method('assertPlayerInGameOrAdmin')
             ->with($game);
 
-        $gameService = $this->createMock(GameServiceInterface::class);
-        $gameService->expects($this->once())
+        $gameStateViewBuilder = $this->createMock(GameStateViewBuilderInterface::class);
+        $gameStateViewBuilder->expects($this->once())
             ->method('buildStateVersion')
             ->with($game)
             ->willReturn('state-contract');
-        $gameService->expects($this->once())
+        $gameStateViewBuilder->expects($this->once())
             ->method('createGameDto')
             ->with($game)
             ->willReturn($this->complexGameDto());
 
-        $response = $this->controller->getGameState($game, $gameAccessService, $gameService, new Request());
+        $response = $this->controller->getGameState($game, $gameAccessService, $gameStateViewBuilder, new Request());
 
         $payload = json_decode((string) $response->getContent(), true, flags: JSON_THROW_ON_ERROR);
 
@@ -469,16 +312,16 @@ final class GameLifecycleControllerTest extends TestCase
         $gameAccessService->expects($this->once())
             ->method('assertPlayerInGameOrAdmin')
             ->with($game);
-        $gameService = $this->createMock(GameServiceInterface::class);
-        $gameService->expects($this->once())
+        $gameStateViewBuilder = $this->createMock(GameStateViewBuilderInterface::class);
+        $gameStateViewBuilder->expects($this->once())
             ->method('buildStateVersion')
             ->with($game)
             ->willReturn('state-v1');
-        $gameService->expects($this->never())
+        $gameStateViewBuilder->expects($this->never())
             ->method('createGameDto');
 
         $request = new Request();
-        $response = $this->controller->getGameState($game, $gameAccessService, $gameService, $request, 'state-v1');
+        $response = $this->controller->getGameState($game, $gameAccessService, $gameStateViewBuilder, $request, 'state-v1');
 
         $this->assertSame(Response::HTTP_NOT_MODIFIED, $response->getStatusCode());
         $this->assertSame('state-v1', $response->headers->get('X-Game-State-Version'));
@@ -491,18 +334,18 @@ final class GameLifecycleControllerTest extends TestCase
         $gameAccessService->expects($this->once())
             ->method('assertPlayerInGameOrAdmin')
             ->with($game);
-        $gameService = $this->createMock(GameServiceInterface::class);
-        $gameService->expects($this->once())
+        $gameStateViewBuilder = $this->createMock(GameStateViewBuilderInterface::class);
+        $gameStateViewBuilder->expects($this->once())
             ->method('buildStateVersion')
             ->with($game)
             ->willReturn('state-v1');
-        $gameService->expects($this->never())
+        $gameStateViewBuilder->expects($this->never())
             ->method('createGameDto');
 
         $request = new Request();
         $request->headers->set('If-None-Match', '"state-v1"');
 
-        $response = $this->controller->getGameState($game, $gameAccessService, $gameService, $request);
+        $response = $this->controller->getGameState($game, $gameAccessService, $gameStateViewBuilder, $request);
 
         $this->assertSame(Response::HTTP_NOT_MODIFIED, $response->getStatusCode());
     }

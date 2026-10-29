@@ -54,7 +54,7 @@ services:
     App\Service\Game\GameSettingsServiceInterface: '@App\Service\Game\GameSettingsService'
     App\Service\Game\GameRoomServiceInterface: '@App\Service\Game\GameRoomService'
     App\Service\Game\GameThrowServiceInterface: '@App\Service\Game\GameThrowService'
-    App\Service\Game\GameServiceInterface: '@App\Service\Game\GameService'
+    App\Service\Game\GameStateViewBuilderInterface: '@App\Service\Game\GameStateViewBuilder'
     App\Service\Game\ActivePlayerResolverInterface: '@App\Service\Game\ActivePlayerResolver'
     App\Service\Game\GameStateVersionServiceInterface: '@App\Service\Game\GameStateVersionService'
     App\Service\Game\GameDeltaServiceInterface: '@App\Service\Game\GameDeltaService'

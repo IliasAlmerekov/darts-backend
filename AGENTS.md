@@ -64,7 +64,7 @@ conventions no tool checks:
   request binding.
 - An error the client should see is an exception that extends
   `App\Exception\ApiHttpException` (or implements `ApiExceptionInterface` and Symfony's
-  `HttpExceptionInterface`) with a code from `ErrorCode`. `App\Security\ErrorController`
+  `HttpExceptionInterface`) with a code from `ErrorCode`. `App\Controller\ErrorController`
   renders its code, message, and status, and hides other exceptions behind a generic body.
 - Optional `UserInterface` methods are guarded with `method_exists(...)` unless the code
   already depends on `App\Entity\User`.

@@ -16,7 +16,7 @@ use App\Entity\Game;
 use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\PlayerAlreadyThrewThreeTimesException;
 use App\Service\Game\GameDeltaServiceInterface;
-use App\Service\Game\GameServiceInterface;
+use App\Service\Game\GameStateViewBuilderInterface;
 use App\Service\Game\GameThrowServiceInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -50,10 +50,10 @@ final class GameThrowControllerTest extends TestCase
             ->with($game, $dto)
             ->willReturn($this->dummyThrowRecordingResultDto($game));
 
-        $gameService = $this->createMock(GameServiceInterface::class);
-        $gameService->method('createGameDto')->willReturn($this->dummyGameDto());
+        $gameStateViewBuilder = $this->createMock(GameStateViewBuilderInterface::class);
+        $gameStateViewBuilder->method('createGameDto')->willReturn($this->dummyGameDto());
 
-        $response = $this->controller->throw($game, $throwService, $gameService, $dto);
+        $response = $this->controller->throw($game, $throwService, $gameStateViewBuilder, $dto);
 
         $this->assertInstanceOf(JsonResponse::class, $response);
         $this->assertSame('true', $response->headers->get('Deprecation'));
@@ -67,10 +67,10 @@ final class GameThrowControllerTest extends TestCase
         $dto = new ThrowRequest();
         $throwService = $this->createMock(GameThrowServiceInterface::class);
         $throwService->method('recordThrow')->willThrowException(new PlayerAlreadyThrewThreeTimesException());
-        $gameService = $this->createMock(GameServiceInterface::class);
+        $gameStateViewBuilder = $this->createMock(GameStateViewBuilderInterface::class);
 
         $this->expectException(PlayerAlreadyThrewThreeTimesException::class);
-        $this->controller->throw($game, $throwService, $gameService, $dto);
+        $this->controller->throw($game, $throwService, $gameStateViewBuilder, $dto);
     }
 
     public function testUndoThrowSuccess(): void
@@ -79,13 +79,13 @@ final class GameThrowControllerTest extends TestCase
         $throwService = $this->createMock(GameThrowServiceInterface::class);
         $throwService->expects($this->once())->method('undoLastThrow')->with($game);
 
-        $gameService = $this->createMock(GameServiceInterface::class);
-        $gameService->expects(self::once())
+        $gameStateViewBuilder = $this->createMock(GameStateViewBuilderInterface::class);
+        $gameStateViewBuilder->expects(self::once())
             ->method('createGameDto')
             ->with($game)
             ->willReturn($this->dummyGameDto());
 
-        $response = $this->controller->undoThrow($game, $throwService, $gameService);
+        $response = $this->controller->undoThrow($game, $throwService, $gameStateViewBuilder);
 
         $this->assertInstanceOf(JsonResponse::class, $response);
         $this->assertSame('true', $response->headers->get('Deprecation'));
