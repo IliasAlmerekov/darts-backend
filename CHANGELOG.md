@@ -23,7 +23,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **ErrorCode**: Neuer Fehlercode `SecurityAccessDenied` für API-Fehlerbehandlung.
 
 ### Geändert
-- **Statistik**: Die Statistikabfragen liegen in `PlayerStatisticsRepository`, `RoundThrowsRepository` enthält nur noch Würfe. Die Namensregel für Spieler steht als `PlayerDisplayNameExpression` an einer Stelle. Die Spielerstatistik nennt einen Spieler, dessen Anzeigename leer ist oder nur aus Leerzeichen besteht, jetzt mit seinem Benutzernamen und sortiert nach `name` auch so (#169).
+- **Statistik**: Die Statistikabfragen liegen in `PlayerStatisticsRepository`, `RoundThrowsRepository` enthält nur noch Würfe. Die Namensregel für Spieler steht als `PlayerDisplayNameExpression` an einer Stelle (#169).
 - **Spiel**: Regeln zum Rückgängigmachen von Würfen und zum Wiederöffnen aufgeteilt (#193).
 - **Spiel**: Die Out-Regel wird in einer Spalte gespeichert; bestehende Einstellungen und API-Felder bleiben erhalten (#192).
 - **Spiel**: Wurfwertung und Checkout-Verarbeitung in eigene Zuständigkeiten aufgeteilt (#168).
@@ -63,6 +63,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **Einladungen**: BREAKING CHANGE: `POST /api/invite/process` entfällt mitsamt der OpenAPI-Doku und der `access_control`-Regel und antwortet jetzt mit 404. Das Frontend ruft den Endpunkt nicht auf; der Beitritt über eine Einladung läuft weiter über die Login-Antwort (`GET /api/login/success`, `POST /api/login`, `POST /api/register`) (#167)
 
 ### Behoben
+- **Spielerstatistik**: `GET /api/players/stats` nennt einen Spieler, dessen Anzeigename leer ist oder nur aus Leerzeichen besteht, mit seinem Benutzernamen und sortiert ihn bei `sort=name` auch unter diesem Namen (#169).
 - **Fehlerformat**: Ein Request-Body, der an einem `#[MapRequestPayload]`-Endpunkt die Validierung nicht besteht, beantwortet die API mit 422 `REQUEST_VALIDATION_FAILED` und `violations: [{field, code, message}]`, ein Eintrag pro Verstoß, statt mit `HTTP_ERROR` ohne Felder. `code` kommt aus einer Tabelle je Constraint (`App\Http\ViolationCode`), ein Constraint kann ihn mit `payload: ['code' => …]` überschreiben. Ungültiges JSON beantwortet jeder dieser Endpunkte mit 400 `REQUEST_INVALID_JSON_BODY`; die Meldungen von `REQUEST_INVALID_JSON_BODY` und `REQUEST_CONFLICTING_SETTING_KEYS` sind englisch. Die OpenAPI-Doku beschreibt den 422-Body einmal als Schema `RequestValidationFailed`, ADR 0006 hält das Format fest. Die Registrierung behält vorerst ihren 400-Body (#175)
 - **Einladung**: `POST /api/invite/create/{id}` verschluckt keinen Fehler mehr beim Laden der Teilnehmer. Statt `success: true` mit leerer `users`-Liste antwortet die API mit dem Fehler; die Einladung selbst bleibt gespeichert, ein erneuter Aufruf liefert dieselbe (#171)
 - **Spielerstatistik**: `GET /api/players/stats` akzeptiert `sort=name:asc|desc` und sortiert alle Spieler mit Statistik vor `LIMIT`/`OFFSET` nach Anzeigenamen, sodass Seite 2 dort weitergeht, wo Seite 1 endet. Bisher fiel `name` still auf `average` zurück. Jede Sortierung bricht Gleichstände nach Spieler-ID, damit beim Blättern keine Zeile doppelt kommt oder fehlt. Die OpenAPI-Doku nennt `name:asc|desc` (#47)
