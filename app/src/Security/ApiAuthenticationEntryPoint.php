@@ -11,10 +11,12 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
+use Symfony\Component\Security\Core\Exception\InsufficientAuthenticationException;
+use Symfony\Component\Security\Core\Authentication\Token\RememberMeToken;
 use Symfony\Component\Security\Http\EntryPoint\AuthenticationEntryPointInterface;
 
 /**
- * Returns JSON 401 for API requests and keeps redirect flow for non-API routes.
+ * Returns JSON for API requests and keeps redirect flow for non-API routes.
  */
 final readonly class ApiAuthenticationEntryPoint implements AuthenticationEntryPointInterface
 {
@@ -35,6 +37,17 @@ final readonly class ApiAuthenticationEntryPoint implements AuthenticationEntryP
     public function start(Request $request, ?AuthenticationException $authException = null): Response
     {
         if ($this->isApiRequest($request)) {
+            if ($authException instanceof InsufficientAuthenticationException && $authException->getToken() instanceof RememberMeToken) {
+                return new JsonResponse(
+                    [
+                        'success' => false,
+                        'error' => ErrorCode::AccessDenied->value,
+                        'message' => 'Forbidden',
+                    ],
+                    Response::HTTP_FORBIDDEN
+                );
+            }
+
             return new JsonResponse(
                 [
                     'success' => false,
