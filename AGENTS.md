@@ -129,6 +129,8 @@ The `scripts/` checks run on the host, because the container mounts only `app/`.
 MySQL root password; put the matching `DATABASE_URL` in `app/.env.test.local` to fix it.
 `check-image-eol.sh` fails when a shell script, a Dockerfile, or a file under `app/docker/`
 lacks `eol=lf` in `.gitattributes` or is committed with CRLF.
+`check-gitlab-dockerfiles.sh` checks that Dockerfile paths in GitLab build commands exist.
+`test-ci-checks.sh` tests the secret scan and GitLab Dockerfile path check in temporary directories.
 `check-runtime-image.sh` boots a built runtime image and fails on PHP older than 8.4.27,
 upload progress on, or a multipart request that nginx passes to PHP (#146). It also fails
 (#56) on a root process, an `X-Powered-By` header, a cold `var/cache/prod`, a production ini
