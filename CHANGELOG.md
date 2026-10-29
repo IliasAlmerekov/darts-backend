@@ -45,6 +45,9 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **SecurityService**: Antwort bei erfolgreichem Login enthält nun vollständige Benutzerdetails (`email`, `username`).
 - **Verschiedene Services**: Integration von `GameAccessService` in `GameAbortService`, `GameFinishService`, `GameRoomService`, `GameSettingsService`, `GameStartService`, `GameThrowService`, `RematchService` und `InvitationService` für Zugriffskontrollen vor Spielaktionen.
 
+### Entfernt
+- **Einladungen**: BREAKING CHANGE: `POST /api/invite/process` entfällt mitsamt der OpenAPI-Doku und der `access_control`-Regel und antwortet jetzt mit 404. Das Frontend ruft den Endpunkt nicht auf; der Beitritt über eine Einladung läuft weiter über die Login-Antwort (`GET /api/login/success`, `POST /api/login`, `POST /api/register`) (#167)
+
 ### Behoben
 - **Fehlerformat**: Ein Request-Body, der an einem `#[MapRequestPayload]`-Endpunkt die Validierung nicht besteht, beantwortet die API mit 422 `REQUEST_VALIDATION_FAILED` und `violations: [{field, code, message}]`, ein Eintrag pro Verstoß, statt mit `HTTP_ERROR` ohne Felder. `code` kommt aus einer Tabelle je Constraint (`App\Http\ViolationCode`), ein Constraint kann ihn mit `payload: ['code' => …]` überschreiben. Ungültiges JSON beantwortet jeder dieser Endpunkte mit 400 `REQUEST_INVALID_JSON_BODY`; die Meldungen von `REQUEST_INVALID_JSON_BODY` und `REQUEST_CONFLICTING_SETTING_KEYS` sind englisch. Die OpenAPI-Doku beschreibt den 422-Body einmal als Schema `RequestValidationFailed`, ADR 0006 hält das Format fest. Die Registrierung behält vorerst ihren 400-Body (#175)
 - **Einladung**: `POST /api/invite/create/{id}` verschluckt keinen Fehler mehr beim Laden der Teilnehmer. Statt `success: true` mit leerer `users`-Liste antwortet die API mit dem Fehler; die Einladung selbst bleibt gespeichert, ein erneuter Aufruf liefert dieselbe (#171)

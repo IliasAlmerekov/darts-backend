@@ -12,6 +12,7 @@ namespace App\Tests\Controller;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\Invitation;
+use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Tests\Support\SameOriginLogin;
 use App\Tests\Support\TestUserFactory;
@@ -54,16 +55,8 @@ final class LoginSuccessInvitationEndpointTest extends WebTestCase
         $client->loginUser($player);
         $client->request(Request::METHOD_GET, '/api/login/success');
 
-        self::assertResponseStatusCodeSame(Response::HTTP_OK, (string) $client->getResponse()->getContent());
-        $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
-        self::assertTrue($payload['success']);
-        self::assertSame($player->getStoredRoles(), $payload['roles']);
-        self::assertSame($player->getId(), $payload['id']);
-        self::assertSame($player->getEmail(), $payload['email']);
-        self::assertSame($player->getUsername(), $payload['username']);
-        self::assertSame($gameId, $payload['gameId']);
-        self::assertSame('/joined', parse_url($payload['redirect'], PHP_URL_PATH));
-        self::assertArrayNotHasKey('profile', $payload);
+        self::assertSame(self::loginBody($player, '/joined', ['gameId' => $gameId]), $this->decodeLoginSuccess($client));
+        self::assertInvitationCleared($client);
     }
 
     public function testStaleInvitationAfterGameStartDoesNotBlockLoginSuccess(): void
@@ -82,7 +75,7 @@ final class LoginSuccessInvitationEndpointTest extends WebTestCase
         $entityManager->flush();
 
         $client->loginUser($player);
-        $this->assertLoginSucceedsWithInvitationError($client, 'GAME_ALREADY_STARTED');
+        $this->assertLoginSucceedsWithInvitationError($client, $player, 'GAME_ALREADY_STARTED');
     }
 
     public function testStaleInvitationForFullRoomDoesNotBlockLoginSuccess(): void
@@ -110,7 +103,7 @@ final class LoginSuccessInvitationEndpointTest extends WebTestCase
         $entityManager->flush();
 
         $client->loginUser($player);
-        $this->assertLoginSucceedsWithInvitationError($client, 'GAME_ROOM_FULL');
+        $this->assertLoginSucceedsWithInvitationError($client, $player, 'GAME_ROOM_FULL');
     }
 
     public function testStaleInvitationForDeletedGameDoesNotBlockLoginSuccess(): void
@@ -129,7 +122,7 @@ final class LoginSuccessInvitationEndpointTest extends WebTestCase
         $entityManager->flush();
 
         $client->loginUser($player);
-        $this->assertLoginSucceedsWithInvitationError($client, 'GAME_NOT_FOUND');
+        $this->assertLoginSucceedsWithInvitationError($client, $player, 'GAME_NOT_FOUND');
     }
 
     public function testInvitationToStartedGameJoinedBeforeLoginReportsGameAlreadyStarted(): void
@@ -146,7 +139,7 @@ final class LoginSuccessInvitationEndpointTest extends WebTestCase
         self::assertSame((string) $invitation->getUuid(), $client->getRequest()->getSession()->get('invitation_uuid'));
 
         $client->loginUser($player);
-        $this->assertLoginSucceedsWithInvitationError($client, 'GAME_ALREADY_STARTED');
+        $this->assertLoginSucceedsWithInvitationError($client, $player, 'GAME_ALREADY_STARTED');
     }
 
     public function testInvitationToAbortedGameReportsJoinNotAllowed(): void
@@ -162,7 +155,7 @@ final class LoginSuccessInvitationEndpointTest extends WebTestCase
         self::assertResponseStatusCodeSame(Response::HTTP_FOUND);
 
         $client->loginUser($player);
-        $this->assertLoginSucceedsWithInvitationError($client, 'GAME_JOIN_NOT_ALLOWED');
+        $this->assertLoginSucceedsWithInvitationError($client, $player, 'GAME_JOIN_NOT_ALLOWED');
     }
 
     public function testUnknownInvitationUuidReturnsNotFound(): void
@@ -193,13 +186,11 @@ final class LoginSuccessInvitationEndpointTest extends WebTestCase
 
         SameOriginLogin::post($client, (string) $player->getEmail(), 'correct-password');
 
-        self::assertResponseStatusCodeSame(Response::HTTP_OK, (string) $client->getResponse()->getContent());
-        $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
-        self::assertTrue($payload['success']);
-        self::assertSame($player->getId(), $payload['id']);
-        self::assertSame('/playerprofile', parse_url($payload['redirect'], PHP_URL_PATH));
-        self::assertSame('GAME_ALREADY_STARTED', $payload['invitationError']);
-        self::assertArrayNotHasKey('gameId', $payload);
+        self::assertSame(
+            self::loginBody($player, '/playerprofile', ['invitationError' => 'GAME_ALREADY_STARTED']),
+            $this->decodeLoginSuccess($client),
+        );
+        self::assertInvitationCleared($client);
 
         $client->request(Request::METHOD_GET, '/api/login/success');
         self::assertResponseStatusCodeSame(Response::HTTP_OK);
@@ -220,31 +211,25 @@ final class LoginSuccessInvitationEndpointTest extends WebTestCase
         $client->loginUser($admin);
         $client->request(Request::METHOD_GET, '/api/login/success');
 
-        self::assertResponseStatusCodeSame(Response::HTTP_OK);
-        $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
-        self::assertSame('/start', parse_url($payload['redirect'], PHP_URL_PATH));
-        self::assertArrayNotHasKey('invitationError', $payload);
-        self::assertArrayNotHasKey('gameId', $payload);
+        self::assertSame(self::loginBody($admin, '/start'), $this->decodeLoginSuccess($client));
     }
 
-    public function testProcessInvitationForStartedGameFailsAndClearsSession(): void
+    /**
+     * The login response joins the invitation, so the separate process route is gone.
+     */
+    public function testProcessInvitationRouteIsGone(): void
     {
         $client = static::createClient();
         $entityManager = static::getContainer()->get(EntityManagerInterface::class);
 
         $player = TestUserFactory::create($entityManager, self::USER_PREFIX, 'proc', ['ROLE_PLAYER']);
-        $game = $this->createGame($entityManager, GameStatus::Started);
-        $invitation = $this->createInvitation($entityManager, $game);
+        $invitation = $this->createInvitation($entityManager, $this->createGame($entityManager, GameStatus::Lobby));
 
         $client->request(Request::METHOD_GET, sprintf('/api/invite/join/%s', $invitation->getUuid()));
         $client->loginUser($player);
         $client->request(Request::METHOD_POST, '/api/invite/process');
 
-        self::assertResponseStatusCodeSame(Response::HTTP_CONFLICT);
-        $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
-        self::assertSame('GAME_ALREADY_STARTED', $payload['error']);
-        self::assertNull($client->getRequest()->getSession()->get('invitation_uuid'));
-        self::assertNull($client->getRequest()->getSession()->get('game_id'));
+        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
     }
 
     private function createGame(EntityManagerInterface $entityManager, GameStatus $status): Game
@@ -270,15 +255,14 @@ final class LoginSuccessInvitationEndpointTest extends WebTestCase
         return $invitation;
     }
 
-    private function assertLoginSucceedsWithInvitationError(KernelBrowser $client, string $errorCode): void
+    private function assertLoginSucceedsWithInvitationError(KernelBrowser $client, User $player, string $errorCode): void
     {
         $client->request(Request::METHOD_GET, '/api/login/success');
-        self::assertResponseStatusCodeSame(Response::HTTP_OK, (string) $client->getResponse()->getContent());
-        $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
-        self::assertTrue($payload['success']);
-        self::assertSame($errorCode, $payload['invitationError']);
-        self::assertSame('/playerprofile', parse_url($payload['redirect'], PHP_URL_PATH));
-        self::assertArrayNotHasKey('gameId', $payload);
+        self::assertSame(
+            self::loginBody($player, '/playerprofile', ['invitationError' => $errorCode]),
+            $this->decodeLoginSuccess($client),
+        );
+        self::assertInvitationCleared($client);
 
         // The failed join consumed the invitation: the next call is a plain login success.
         $client->request(Request::METHOD_GET, '/api/login/success');
@@ -286,6 +270,45 @@ final class LoginSuccessInvitationEndpointTest extends WebTestCase
         $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
         self::assertTrue($payload['success']);
         self::assertArrayNotHasKey('invitationError', $payload);
+    }
+
+    /**
+     * Every login success answers 200 and disables nginx buffering.
+     *
+     * @return array<string, mixed>
+     */
+    private function decodeLoginSuccess(KernelBrowser $client): array
+    {
+        self::assertResponseStatusCodeSame(Response::HTTP_OK, (string) $client->getResponse()->getContent());
+        self::assertResponseHeaderSame('X-Accel-Buffering', 'no');
+        $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($payload);
+
+        return $payload;
+    }
+
+    /**
+     * The login success body, every field in response order.
+     *
+     * @param array<string, int|string> $extra fields after `redirect`
+     *
+     * @return array<string, mixed>
+     */
+    private static function loginBody(User $user, string $frontendPath, array $extra = []): array
+    {
+        return [
+            'success' => true,
+            'roles' => $user->getStoredRoles(),
+            'id' => $user->getId(),
+            'email' => $user->getEmail(),
+            'username' => $user->getUsername(),
+            'redirect' => 'http://localhost:5173'.$frontendPath,
+            ...$extra,
+        ];
+    }
+
+    private static function assertInvitationCleared(KernelBrowser $client): void
+    {
         self::assertNull($client->getRequest()->getSession()->get('invitation_uuid'));
         self::assertNull($client->getRequest()->getSession()->get('game_id'));
     }
