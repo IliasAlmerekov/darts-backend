@@ -46,11 +46,8 @@ class Game
     #[ORM\Column(options: ['default' => 301])]
     private int $startScore = 301;
 
-    #[ORM\Column(options: ['default' => false])]
-    private bool $doubleOut = false;
-
-    #[ORM\Column(options: ['default' => false])]
-    private bool $tripleOut = false;
+    #[ORM\Column(enumType: OutRule::class, options: ['default' => OutRule::Single->value])]
+    private OutRule $outRule = OutRule::Single;
 
     #[ORM\Column(enumType: GameStatus::class, options: ['default' => GameStatus::Lobby->value])]
     private GameStatus $status = GameStatus::Lobby;
@@ -184,52 +181,34 @@ class Game
         return $this;
     }
 
-    /**
-     * @return OutRule
-     */
+    /** @return OutRule */
     public function outRule(): OutRule
     {
-        return $this->isDoubleOut() ? OutRule::Double : ($this->isTripleOut() ? OutRule::Triple : OutRule::Single);
+        return $this->outRule;
     }
 
     /**
-     * @return bool
+     * @param OutRule $outRule
+     *
+     * @return static
      */
+    public function setOutRule(OutRule $outRule): static
+    {
+        $this->outRule = $outRule;
+
+        return $this;
+    }
+
+    /** @return bool */
     public function isDoubleOut(): bool
     {
-        return $this->doubleOut;
+        return OutRule::Double === $this->outRule;
     }
 
-    /**
-     * @param bool $doubleOut
-     *
-     * @return static
-     */
-    public function setDoubleOut(bool $doubleOut): static
-    {
-        $this->doubleOut = $doubleOut;
-
-        return $this;
-    }
-
-    /**
-     * @return bool
-     */
+    /** @return bool */
     public function isTripleOut(): bool
     {
-        return $this->tripleOut;
-    }
-
-    /**
-     * @param bool $tripleOut
-     *
-     * @return static
-     */
-    public function setTripleOut(bool $tripleOut): static
-    {
-        $this->tripleOut = $tripleOut;
-
-        return $this;
+        return OutRule::Triple === $this->outRule;
     }
 
     /**

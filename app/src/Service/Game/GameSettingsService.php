@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace App\Service\Game;
 
+use App\Enum\OutRule;
+
 use App\Dto\GameSettingsRequest;
 use App\Entity\Game;
 use App\Exception\Game\ConflictingOutRulesException;
@@ -135,8 +137,7 @@ final readonly class GameSettingsService implements GameSettingsServiceInterface
         if (null !== $dto->startScore) {
             $game->setStartScore($dto->startScore);
         }
-        $game->setDoubleOut($doubleOut);
-        $game->setTripleOut($tripleOut);
+        $game->setOutRule($doubleOut ? OutRule::Double : ($tripleOut ? OutRule::Triple : OutRule::Single));
 
         $this->entityManager->flush();
     }

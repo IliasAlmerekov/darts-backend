@@ -1809,7 +1809,7 @@ final class GameThrowServiceTest extends TestCase
             [$doubleOut, $tripleOut, $score, $value, $double, $triple, $expected, $bust] = $case;
             $earlierPoints = $case[8] ?? 0;
             $game = (new Game())->setStartScore(301)->setRound(1)->setStatus(GameStatus::Started)
-                ->setDoubleOut($doubleOut)->setTripleOut($tripleOut);
+                ->setOutRule($doubleOut ? \App\Enum\OutRule::Double : ($tripleOut ? \App\Enum\OutRule::Triple : \App\Enum\OutRule::Single));
             $this->setPrivateProperty($game, 'gameId', 10);
             $user = (new User())->setUsername('Player');
             $this->setPrivateProperty($user, 'id', 1);

@@ -220,7 +220,7 @@ final class PlayerProfileEndpointTest extends WebTestCase
         self::assertNotNull($other);
         foreach ([GameStatus::Aborted, GameStatus::Started, GameStatus::Lobby] as $status) {
             $game = $this->createGame($status, [$player, $other]);
-            $game->setDoubleOut(true);
+            $game->setOutRule(\App\Enum\OutRule::Double);
             // recordRound() stores score 0 without a bust, which reads like a checkout.
             $this->recordRound($game, 1, [[$player, [40, 60, 50]]]);
             $this->settle($game, null, [[$player, 1, 0], [$other, 2, 301]]);
@@ -459,8 +459,7 @@ final class PlayerProfileEndpointTest extends WebTestCase
     ): Game {
         $game = $this->createGame(GameStatus::Started, [$first, $second]);
         $game->setStartScore($startScore)
-            ->setDoubleOut('double' === $outRule)
-            ->setTripleOut('triple' === $outRule)
+            ->setOutRule(\App\Enum\OutRule::from($outRule.'out'))
             ->setRound(1);
         foreach ($game->getGamePlayers() as $seat) {
             $seat->setScore($startScore);

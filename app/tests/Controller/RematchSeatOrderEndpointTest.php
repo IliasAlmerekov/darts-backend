@@ -104,7 +104,7 @@ final class RematchSeatOrderEndpointTest extends WebTestCase
      */
     private function createGame(GameStatus $status, array $seats): int
     {
-        $game = (new Game())->setDate(new DateTime())->setStartScore(301)->setDoubleOut(false)->setTripleOut(false)->setStatus($status);
+        $game = (new Game())->setDate(new DateTime())->setStartScore(301)->setOutRule(\App\Enum\OutRule::Single)->setStatus($status);
         if (GameStatus::Finished === $status) {
             $game->setFinishedAt(new DateTimeImmutable());
         }

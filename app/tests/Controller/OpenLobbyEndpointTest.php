@@ -170,7 +170,7 @@ final class OpenLobbyEndpointTest extends WebTestCase
         $anna = $this->createPlayer('anna');
         $lobby = $this->createGame(GameStatus::Lobby, [$vanya, $anna]);
         $finished = $this->createGame(GameStatus::Finished, [$bob, $vanya]);
-        $finished->setStartScore(501)->setDoubleOut(true)->setTripleOut(true)->setType(2);
+        $finished->setStartScore(501)->setOutRule(\App\Enum\OutRule::Double)->setType(2);
         $this->entityManager->flush();
         $gameCount = $this->countGames();
 
@@ -185,7 +185,7 @@ final class OpenLobbyEndpointTest extends WebTestCase
         self::assertSame([$vanya->getId(), $anna->getId(), $bob->getId()], $this->seatedPlayerIds($reloaded));
         self::assertSame(501, $reloaded->getStartScore());
         self::assertTrue($reloaded->isDoubleOut());
-        self::assertTrue($reloaded->isTripleOut());
+        self::assertFalse($reloaded->isTripleOut());
         self::assertSame(2, $reloaded->getType());
     }
 
@@ -232,7 +232,7 @@ final class OpenLobbyEndpointTest extends WebTestCase
         $bob = $this->createPlayer('bob');
         $vanya = $this->createPlayer('vanya');
         $finished = $this->createGame(GameStatus::Finished, [$bob, $vanya]);
-        $finished->setStartScore(501)->setDoubleOut(true);
+        $finished->setStartScore(501)->setOutRule(\App\Enum\OutRule::Double);
         $this->entityManager->flush();
         $gameCount = $this->countGames();
 
@@ -256,7 +256,7 @@ final class OpenLobbyEndpointTest extends WebTestCase
         $anna = $this->createPlayer('anna');
         $lobby = $this->createGame(GameStatus::Lobby, [$bob, $anna]);
         $finished = $this->createGame(GameStatus::Finished, [$bob, $vanya]);
-        $finished->setStartScore(501)->setDoubleOut(true);
+        $finished->setStartScore(501)->setOutRule(\App\Enum\OutRule::Double);
         $this->entityManager->flush();
         $gameCount = $this->countGames();
 

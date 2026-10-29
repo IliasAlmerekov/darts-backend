@@ -328,8 +328,7 @@ final class GameEndpointsBaselineTest extends WebTestCase
         $game = (new Game())
             ->setDate(new \DateTime())
             ->setStartScore(501)
-            ->setDoubleOut(false)
-            ->setTripleOut(false)
+            ->setOutRule(\App\Enum\OutRule::Single)
             ->setStatus($status);
 
         $entityManager->persist($game);

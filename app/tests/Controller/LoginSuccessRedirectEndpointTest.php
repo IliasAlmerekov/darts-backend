@@ -221,8 +221,7 @@ final class LoginSuccessRedirectEndpointTest extends WebTestCase
         $game = (new Game())
             ->setDate(new DateTime())
             ->setStartScore(301)
-            ->setDoubleOut(false)
-            ->setTripleOut(false)
+            ->setOutRule(\App\Enum\OutRule::Single)
             ->setStatus($status);
         $entityManager->persist($game);
 

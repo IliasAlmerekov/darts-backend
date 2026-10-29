@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace App\Service\Game;
 
+use App\Enum\OutRule;
+
 use App\Dto\StartGameRequest;
 use App\Entity\Game;
 use App\Entity\Round;
@@ -76,8 +78,7 @@ final readonly class GameStartService implements GameStartServiceInterface
             $game->setStartScore($dto->startScore);
         }
 
-        $game->setDoubleOut($doubleOut);
-        $game->setTripleOut($tripleOut);
+        $game->setOutRule($doubleOut ? OutRule::Double : ($tripleOut ? OutRule::Triple : OutRule::Single));
 
         // Initialize the first round if none exists
         if (!$this->hasExistingRounds($game)) {

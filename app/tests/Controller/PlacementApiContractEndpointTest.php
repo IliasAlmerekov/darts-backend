@@ -107,7 +107,7 @@ final class PlacementApiContractEndpointTest extends WebTestCase
      */
     private function createGame(GameStatus $status, array $seats): int
     {
-        $game = (new Game())->setDate(new DateTime())->setStartScore(301)->setDoubleOut(false)->setTripleOut(false)->setStatus($status)->setRound(1);
+        $game = (new Game())->setDate(new DateTime())->setStartScore(301)->setOutRule(\App\Enum\OutRule::Single)->setStatus($status)->setRound(1);
         if (GameStatus::Finished === $status) {
             $game->setFinishedAt(new DateTimeImmutable());
         }
