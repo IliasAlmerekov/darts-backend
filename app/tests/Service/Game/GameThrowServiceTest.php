@@ -1283,6 +1283,257 @@ final class GameThrowServiceTest extends TestCase
     /**
      * @throws ReflectionException
      */
+    public function testUndoCheckoutKeepsEarlierWinnerPlacement(): void
+    {
+        $game = new Game();
+        $this->setPrivateProperty($game, 'gameId', 10);
+        $game->setStartScore(301);
+        $game->setRound(5);
+        $game->setStatus(GameStatus::Finished);
+        $game->setFinishedAt(new DateTimeImmutable());
+
+        $winnerUser = (new User())->setUsername('Winner');
+        $this->setPrivateProperty($winnerUser, 'id', 1);
+        $otherUser = (new User())->setUsername('Other');
+        $this->setPrivateProperty($otherUser, 'id', 2);
+
+        $winnerPlayer = (new GamePlayers())
+            ->setPlayer($winnerUser)
+            ->setScore(0)
+            ->setPosition(1)
+            ->setPlacement(1)
+            ->setIsWinner(true);
+        $otherPlayer = (new GamePlayers())
+            ->setPlayer($otherUser)
+            ->setScore(120)
+            ->setPosition(2)
+            ->setIsWinner(false);
+        $thirdUser = (new User())->setUsername('Earlier winner');
+        $this->setPrivateProperty($thirdUser, 'id', 3);
+        $thirdPlayer = (new GamePlayers())->setPlayer($thirdUser)->setScore(0)->setPlacement(1)->setIsWinner(true);
+        $winnerPlayer->setPlacement(2)->setIsWinner(false);
+        $otherPlayer->setPlacement(3);
+        $game->addGamePlayer($thirdPlayer);
+        $game->setWinner($thirdUser);
+        $game->addGamePlayer($winnerPlayer);
+        $game->addGamePlayer($otherPlayer);
+
+        $round = (new Round())
+            ->setGame($game)
+            ->setRoundNumber(5);
+        $lastThrow = (new RoundThrows())
+            ->setGame($game)
+            ->setRound($round)
+            ->setPlayer($winnerUser)
+            ->setThrowNumber(3)
+            ->setThrowId(103)
+            ->setValue(40)
+            ->setScore(0)
+            ->setTimestamp(new DateTime());
+        $previousThrow = (new RoundThrows())
+            ->setGame($game)
+            ->setRound($round)
+            ->setPlayer($winnerUser)
+            ->setThrowNumber(2)
+            ->setThrowId(102)
+            ->setValue(20)
+            ->setScore(40)
+            ->setTimestamp(new DateTime());
+
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+
+        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
+
+        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository->method('findEntityLatestForGame')
+            ->with(10)
+            ->willReturn($lastThrow);
+        $roundThrowsRepository->method('findLatestForGameAndPlayerBeforeThrow')
+            ->with(10, 1, 103)
+            ->willReturn($previousThrow);
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::once())
+            ->method('wrapInTransaction')
+            ->with(self::isInstanceOf(\Closure::class))
+            ->willReturnCallback(static fn (callable $callback): mixed => $callback());
+        $entityManager->expects(self::once())
+            ->method('contains')
+            ->with($game)
+            ->willReturn(true);
+        $entityManager->expects(self::once())->method('remove')->with($lastThrow);
+        $entityManager->expects(self::once())->method('flush');
+
+        $gameRepository = $this->createMock(GameRepositoryInterface::class);
+        $gameRepository->expects(self::once())->method('refreshWithSeatsForUpdate')->with($game);
+
+        $service = new GameThrowService(
+            $gamePlayersRepository,
+            $roundRepository,
+            $roundThrowsRepository,
+            $entityManager,
+            $this->createAccessService(),
+            $gameRepository,
+            $this->createNewestGameGuard(10),
+            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+        );
+
+        $undoneThrow = $service->undoLastThrow($game);
+
+        self::assertSame(GameStatus::Started, $game->getStatus());
+        self::assertNull($game->getFinishedAt());
+        self::assertSame(40, $winnerPlayer->getScore());
+        self::assertSame(1, $winnerPlayer->getPosition());
+        self::assertSame(2, $otherPlayer->getPosition());
+        self::assertNull($winnerPlayer->getPlacement());
+        self::assertNull($otherPlayer->getPlacement());
+        self::assertSame($thirdUser, $game->getWinner());
+        self::assertSame(1, $thirdPlayer->getPlacement());
+        self::assertTrue((bool) $thirdPlayer->isWinner());
+        self::assertFalse((bool) $winnerPlayer->isWinner());
+        self::assertFalse((bool) $otherPlayer->isWinner());
+        self::assertSame(5, $game->getRound());
+        self::assertNotNull($undoneThrow);
+        self::assertSame(40, $undoneThrow->value);
+        self::assertSame(1, $undoneThrow->playerId);
+        self::assertSame(5, $undoneThrow->roundNumber);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    public function testUndoRejectsOlderFinishedGameWithoutChangingState(): void
+    {
+        $game = new Game();
+        $this->setPrivateProperty($game, 'gameId', 10);
+        $game->setStartScore(301);
+        $game->setRound(5);
+        $game->setStatus(GameStatus::Finished);
+        $game->setFinishedAt(new DateTimeImmutable());
+
+        $winnerUser = (new User())->setUsername('Winner');
+        $this->setPrivateProperty($winnerUser, 'id', 1);
+        $otherUser = (new User())->setUsername('Other');
+        $this->setPrivateProperty($otherUser, 'id', 2);
+
+        $winnerPlayer = (new GamePlayers())
+            ->setPlayer($winnerUser)
+            ->setScore(0)
+            ->setPosition(1)
+            ->setPlacement(1)
+            ->setIsWinner(true);
+        $otherPlayer = (new GamePlayers())
+            ->setPlayer($otherUser)
+            ->setScore(120)
+            ->setPosition(2)
+            ->setIsWinner(false);
+        $game->setWinner($winnerUser);
+        $game->addGamePlayer($winnerPlayer);
+        $game->addGamePlayer($otherPlayer);
+
+        $round = (new Round())
+            ->setGame($game)
+            ->setRoundNumber(5);
+        $lastThrow = (new RoundThrows())
+            ->setGame($game)
+            ->setRound($round)
+            ->setPlayer($winnerUser)
+            ->setThrowNumber(3)
+            ->setThrowId(103)
+            ->setValue(40)
+            ->setScore(0)
+            ->setTimestamp(new DateTime());
+        $previousThrow = (new RoundThrows())
+            ->setGame($game)
+            ->setRound($round)
+            ->setPlayer($winnerUser)
+            ->setThrowNumber(2)
+            ->setThrowId(102)
+            ->setValue(20)
+            ->setScore(40)
+            ->setTimestamp(new DateTime());
+
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+
+        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
+
+        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository->method('findEntityLatestForGame')
+            ->with(10)
+            ->willReturn($lastThrow);
+        $roundThrowsRepository->method('findLatestForGameAndPlayerBeforeThrow')
+            ->with(10, 1, 103)
+            ->willReturn($previousThrow);
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::once())
+            ->method('wrapInTransaction')
+            ->with(self::isInstanceOf(\Closure::class))
+            ->willReturnCallback(static fn (callable $callback): mixed => $callback());
+        $entityManager->expects(self::once())
+            ->method('contains')
+            ->with($game)
+            ->willReturn(true);
+        $entityManager->expects(self::never())->method('remove');
+        $entityManager->expects(self::never())->method('flush');
+
+        $gameRepository = $this->createMock(GameRepositoryInterface::class);
+        $gameRepository->expects(self::once())->method('refreshWithSeatsForUpdate')->with($game);
+
+        $service = new GameThrowService(
+            $gamePlayersRepository,
+            $roundRepository,
+            $roundThrowsRepository,
+            $entityManager,
+            $this->createAccessService(),
+            $gameRepository,
+            $this->createNewestGameGuard(11),
+            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+        );
+
+        try {
+            $service->undoLastThrow($game);
+            self::fail('Expected the newest game guard to reject undo.');
+        } catch (\App\Exception\Game\GameNotNewestException) {
+            self::assertSame(GameStatus::Finished, $game->getStatus());
+            self::assertNotNull($game->getFinishedAt());
+            self::assertSame(0, $winnerPlayer->getScore());
+            self::assertSame(1, $winnerPlayer->getPlacement());
+            self::assertSame($winnerUser, $game->getWinner());
+            self::assertSame(5, $game->getRound());
+        }
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    public function testUndoFinishedGameWithoutThrowsChangesNothing(): void
+    {
+        $game = new Game();
+        $this->setPrivateProperty($game, 'gameId', 10);
+        $game->setStatus(GameStatus::Finished);
+        $finishedAt = new DateTimeImmutable();
+        $game->setFinishedAt($finishedAt);
+        $seats = $this->createMock(GamePlayersRepositoryInterface::class);
+        $rounds = $this->createMock(RoundRepositoryInterface::class);
+        $throws = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $throws->method('findEntityLatestForGame')->willReturn(null);
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->method('wrapInTransaction')->willReturnCallback(static fn (callable $callback): mixed => $callback());
+        $em->expects(self::never())->method('remove');
+        $em->expects(self::never())->method('flush');
+        $repository = $this->createMock(GameRepositoryInterface::class);
+        $repository->expects(self::never())->method('abortStartedGames');
+        $service = new GameThrowService($seats, $rounds, $throws, $em, $this->createAccessService(), $repository, $this->createNewestGameGuard(11), new GameFinishService($em, $seats, $throws, $this->createAccessService(), $repository));
+
+        self::assertNull($service->undoLastThrow($game));
+        self::assertSame(GameStatus::Finished, $game->getStatus());
+        self::assertSame($finishedAt, $game->getFinishedAt());
+    }
+
+    /**
+     * @throws ReflectionException
+     */
     public function testUndoLastBustRestoresPlayerScoreWithoutExtraRoundQuery(): void
     {
         $game = new Game();
