@@ -11,6 +11,7 @@ namespace App\Service\Game;
 
 use App\Dto\GameSummaryResponseDto;
 use App\Entity\Game;
+use App\Entity\GamePlayers;
 use DateTimeInterface;
 
 /**
@@ -18,6 +19,14 @@ use DateTimeInterface;
  */
 interface GameFinishServiceInterface
 {
+    /**
+     * @param Game        $game
+     * @param GamePlayers $seat
+     *
+     * @return void
+     */
+    public function recordCheckout(Game $game, GamePlayers $seat): void;
+
     /**
     * Finish a game and return the normalized summary.
      *

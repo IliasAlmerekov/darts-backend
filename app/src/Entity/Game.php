@@ -185,13 +185,16 @@ class Game
     }
 
     /**
-     * @return bool
+     * @return OutRule
      */
     public function outRule(): OutRule
     {
         return $this->isDoubleOut() ? OutRule::Double : ($this->isTripleOut() ? OutRule::Triple : OutRule::Single);
     }
 
+    /**
+     * @return bool
+     */
     public function isDoubleOut(): bool
     {
         return $this->doubleOut;

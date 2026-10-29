@@ -251,6 +251,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
             $access,
             $openLobbyService,
             new NewestGameGuard($gameRepository),
+            $this->finishService(),
             $gameRepository,
         );
 
@@ -676,6 +677,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
             $access,
             $gameRepository,
             new NewestGameGuard($gameRepository),
+            $this->finishService(),
         );
     }
 

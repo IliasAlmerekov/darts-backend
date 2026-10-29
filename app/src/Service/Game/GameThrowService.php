@@ -50,6 +50,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      * @param GameAccessServiceInterface     $gameAccessService
      * @param GameRepositoryInterface        $gameRepository
      * @param NewestGameGuardInterface       $newestGameGuard
+     * @param GameFinishServiceInterface     $gameFinishService
      * @param ActivePlayerResolverInterface  $activePlayerResolver
      *
      * @psalm-suppress PossiblyUnusedMethod
@@ -62,6 +63,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         private GameAccessServiceInterface $gameAccessService,
         private GameRepositoryInterface $gameRepository,
         private NewestGameGuardInterface $newestGameGuard,
+        private GameFinishServiceInterface $gameFinishService,
         private ?ActivePlayerResolverInterface $activePlayerResolver = null,
     ) {
     }
@@ -197,33 +199,8 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         $player->setScore($newScore);
         if (!$isBust) {
             // Check whether the player has won
-            if (0 === $newScore && $currentScore > 0) {
-                $finishedPlayers = $this->gamePlayersRepository->countFinishedPlayers((int) $game->getGameId());
-                $player->setPlacement($finishedPlayers + 1);
-                if (0 === $finishedPlayers) {
-                    $game->setWinner($player->getPlayer());
-                    $player->setIsWinner(true);
-                    foreach ($game->getGamePlayers() as $gamePlayer) {
-                        if ($gamePlayer !== $player) {
-                            $gamePlayer->setIsWinner(false);
-                        }
-                    }
-                } else {
-                    $player->setIsWinner(false);
-                }
-
-                $activePlayers = 0;
-                foreach ($game->getGamePlayers() as $gamePlayer) {
-                    $playerScore = $gamePlayer->getScore() ?? $game->getStartScore();
-                    if ($playerScore > 0) {
-                        $activePlayers++;
-                    }
-                }
-                if ($activePlayers <= 1) {
-                    $game->setStatus(GameStatus::Finished);
-                    $game->setFinishedAt(new DateTimeImmutable());
-                    $this->normalizeFinishedGamePlacements($game);
-                }
+            if (0 === $newScore) {
+                $this->gameFinishService->recordCheckout($game, $player);
             }
         }
 
@@ -444,48 +421,6 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         }
 
         throw new GamePlayerNotActiveException($requestedPlayerId, $activePlayerId);
-    }
-
-    /**
-     * Give every seat a unique placement (1..N) when the game ends.
-     * Seats that checked out keep their order of placement, then the seats with score left
-     * follow in turn order. Position stays untouched.
-     *
-     * @param Game $game
-     *
-     * @return void
-     */
-    private function normalizeFinishedGamePlacements(Game $game): void
-    {
-        $finishedPlayers = [];
-        $unfinishedPlayers = [];
-        foreach ($game->getGamePlayers() as $gamePlayer) {
-            $score = $gamePlayer->getScore() ?? $game->getStartScore();
-            if (0 === $score) {
-                $finishedPlayers[] = $gamePlayer;
-
-                continue;
-            }
-
-            $unfinishedPlayers[] = $gamePlayer;
-        }
-
-        usort($finishedPlayers, ParticipantResult::compareByPlacement(...));
-        usort($unfinishedPlayers, TurnOrder::compare(...));
-
-        $placement = 1;
-        foreach ([...$finishedPlayers, ...$unfinishedPlayers] as $gamePlayer) {
-            $gamePlayer->setPlacement($placement);
-            $placement++;
-        }
-
-        if ([] !== $finishedPlayers) {
-            $winnerPlayer = $finishedPlayers[0];
-            $game->setWinner($winnerPlayer->getPlayer());
-            foreach ($game->getGamePlayers() as $gamePlayer) {
-                $gamePlayer->setIsWinner($gamePlayer === $winnerPlayer);
-            }
-        }
     }
 
     /**

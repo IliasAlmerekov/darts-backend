@@ -13,8 +13,19 @@ namespace App\Service\Game;
 use App\Enum\OutRule;
 use App\Exception\Game\InvalidThrowException;
 
+/** Calculates the score after one dart. */
 final class ThrowScoring
 {
+    /**
+     * @param int     $score
+     * @param int     $earlierPoints
+     * @param int     $baseValue
+     * @param bool    $isDouble
+     * @param bool    $isTriple
+     * @param OutRule $rule
+     *
+     * @return ThrowScore
+     */
     public static function score(int $score, int $earlierPoints, int $baseValue, bool $isDouble, bool $isTriple, OutRule $rule): ThrowScore
     {
         if ($isDouble && $isTriple) {

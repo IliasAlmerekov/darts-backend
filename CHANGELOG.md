@@ -22,6 +22,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **ErrorCode**: Neuer Fehlercode `SecurityAccessDenied` für API-Fehlerbehandlung.
 
 ### Geändert
+- **Spiel**: Wurfwertung und Checkout-Verarbeitung in eigene Zuständigkeiten aufgeteilt (#168).
 - **Konsistenz**: Kommentare und Routen vereinheitlicht, den SSE-Header aus Einladungs- und Loginantworten entfernt und Benchmarkberichte verschoben (#173).
 - **CI**: Runtime-Image-Build und Repository-Prüfungen in GitHub und GitLab abgestimmt (#54).
 - **Registrierung**: `RegistrationService::register()` legt den Spieler an und gibt ihn zurück; `RegistrationController` meldet ihn mit Remember-me an und setzt 201. `POST /api/register` antwortet weiter mit 201 und dem Login-Body, mit und ohne Einladung (#167)
