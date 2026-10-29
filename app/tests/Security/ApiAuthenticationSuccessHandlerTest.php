@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Security;
 
+use App\Dto\LoginSuccessDto;
 use App\Entity\User;
 use App\Exception\Security\UserNotAuthenticatedException;
 use App\Security\ApiAuthenticationSuccessHandler;
+use App\Security\LoginSuccessResponder;
 use App\Service\Security\SecurityServiceInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
@@ -22,28 +23,41 @@ final class ApiAuthenticationSuccessHandlerTest extends TestCase
     /**
      * @return void
      */
-    public function testApiRequestReturnsJsonResponseFromSecurityService(): void
+    public function testApiRequestTakesTheInvitationAndAnswersWithTheLoginBody(): void
     {
         $securityService = $this->createMock(SecurityServiceInterface::class);
-        $urlGenerator = $this->createStub(UrlGeneratorInterface::class);
-        $handler = new ApiAuthenticationSuccessHandler($securityService, $urlGenerator);
+        $handler = new ApiAuthenticationSuccessHandler(
+            $securityService,
+            new LoginSuccessResponder('http://frontend.test/'),
+            $this->createStub(UrlGeneratorInterface::class),
+        );
 
         $request = Request::create('/api/login', 'POST');
-        $request->setSession(new Session(new MockArraySessionStorage()));
+        $session = new Session(new MockArraySessionStorage());
+        $session->set('invitation_uuid', 'uuid');
+        $session->set('game_id', 42);
+        $request->setSession($session);
 
-        $user = $this->createStub(User::class);
+        $user = (new User())->setUsername('alice')->setEmail('alice@test.dev')->setRoles(['ROLE_PLAYER']);
         $token = $this->createStub(TokenInterface::class);
         $token->method('getUser')->willReturn($user);
 
-        $expectedResponse = new JsonResponse(['success' => true, 'redirect' => '/joined']);
-
         $securityService
             ->expects($this->once())
-            ->method('buildLoginSuccessResponse')
-            ->with($user, $request->getSession())
-            ->willReturn($expectedResponse);
+            ->method('resolveLoginSuccess')
+            ->with($user, 42)
+            ->willReturn(new LoginSuccessDto($user, '/joined', gameId: 42));
 
-        self::assertSame($expectedResponse, $handler->onAuthenticationSuccess($request, $token));
+        $response = $handler->onAuthenticationSuccess($request, $token);
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertSame('no', $response->headers->get('X-Accel-Buffering'));
+        self::assertSame(
+            ['success' => true, 'roles' => ['ROLE_PLAYER'], 'id' => null, 'email' => 'alice@test.dev', 'username' => 'alice', 'redirect' => 'http://frontend.test/joined', 'gameId' => 42],
+            json_decode((string) $response->getContent(), true, 512, JSON_THROW_ON_ERROR),
+        );
+        self::assertFalse($session->has('invitation_uuid'));
+        self::assertFalse($session->has('game_id'));
     }
 
     /**
@@ -53,7 +67,7 @@ final class ApiAuthenticationSuccessHandlerTest extends TestCase
     {
         $securityService = $this->createStub(SecurityServiceInterface::class);
         $urlGenerator = $this->createMock(UrlGeneratorInterface::class);
-        $handler = new ApiAuthenticationSuccessHandler($securityService, $urlGenerator);
+        $handler = new ApiAuthenticationSuccessHandler($securityService, new LoginSuccessResponder('http://frontend.test'), $urlGenerator);
 
         $request = Request::create('/login', 'POST');
         $token = $this->createStub(TokenInterface::class);
@@ -76,6 +90,7 @@ final class ApiAuthenticationSuccessHandlerTest extends TestCase
     {
         $handler = new ApiAuthenticationSuccessHandler(
             $this->createStub(SecurityServiceInterface::class),
+            new LoginSuccessResponder('http://frontend.test'),
             $this->createStub(UrlGeneratorInterface::class),
         );
         $token = $this->createStub(TokenInterface::class);

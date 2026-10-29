@@ -109,14 +109,15 @@ final class RegistrationEndpointTest extends WebTestCase
 
         $user = static::getContainer()->get(UserRepository::class)->findOneBy(['email' => $body['email']]);
         self::assertInstanceOf(User::class, $user);
-        self::assertTrue($payload['success']);
-        self::assertSame($user->getId(), $payload['id']);
-        self::assertSame($body['email'], $payload['email']);
-        self::assertSame($body['username'], $payload['username']);
-        self::assertSame(['ROLE_PLAYER'], $payload['roles']);
-        self::assertArrayNotHasKey('gameId', $payload);
-        self::assertArrayNotHasKey('invitationError', $payload);
-        self::assertSame('/playerprofile', parse_url($payload['redirect'], PHP_URL_PATH));
+        self::assertResponseHeaderSame('X-Accel-Buffering', 'no');
+        self::assertSame([
+            'success' => true,
+            'roles' => ['ROLE_PLAYER'],
+            'id' => $user->getId(),
+            'email' => $body['email'],
+            'username' => $body['username'],
+            'redirect' => 'http://localhost:5173/playerprofile',
+        ], $payload);
         self::assertSame($this->loginRedirect($client, $body, null), $payload['redirect']);
     }
 
@@ -134,9 +135,16 @@ final class RegistrationEndpointTest extends WebTestCase
         $user = static::getContainer()->get(UserRepository::class)->findOneBy(['email' => $body['email']]);
         self::assertInstanceOf(User::class, $user);
         self::assertTrue(static::getContainer()->get(GamePlayersRepositoryInterface::class)->isPlayerInGame($gameId, (int) $user->getId()));
-        self::assertSame($gameId, $payload['gameId']);
-        self::assertSame($user->getId(), $payload['id']);
-        self::assertArrayNotHasKey('invitationError', $payload);
+        self::assertResponseHeaderSame('X-Accel-Buffering', 'no');
+        self::assertSame([
+            'success' => true,
+            'roles' => ['ROLE_PLAYER'],
+            'id' => $user->getId(),
+            'email' => $body['email'],
+            'username' => $body['username'],
+            'redirect' => 'http://localhost:5173/joined',
+            'gameId' => $gameId,
+        ], $payload);
         $this->assertInvitationCleared($client);
         // At most one game is in the lobby, so the first room starts before the next one opens.
         $entityManager->getConnection()->update('game', ['status' => GameStatus::Started->value], ['game_id' => $gameId]);
