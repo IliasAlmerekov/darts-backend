@@ -15,7 +15,8 @@ use App\Entity\User;
 /**
  * The display name of a participant: the seat snapshot, else the user's display name, else the
  * username. Each value is trimmed of spaces and a blank one counts as missing. Only spaces are
- * trimmed, as SQL TRIM() does, so the SQL name expressions in the repositories compute the same rule.
+ * trimmed, as SQL TRIM() does, so App\Repository\PlayerDisplayNameExpression, the same rule as a
+ * query expression, computes the same name. Change both classes together.
  */
 final class PlayerDisplayName
 {

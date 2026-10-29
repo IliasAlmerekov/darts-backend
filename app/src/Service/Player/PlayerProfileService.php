@@ -15,7 +15,7 @@ use App\Dto\PlayerProfileResponseDto;
 use App\Entity\User;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
-use App\Repository\RoundThrowsRepositoryInterface;
+use App\Repository\PlayerStatisticsRepositoryInterface;
 use App\Service\Game\GameStatisticsServiceInterface;
 use App\Service\Game\ParticipantResult;
 use DateTimeInterface;
@@ -34,17 +34,17 @@ final readonly class PlayerProfileService implements PlayerProfileServiceInterfa
     private const int RECENT_GAMES_LIMIT = 10;
 
     /**
-     * @param GameStatisticsServiceInterface $gameStatisticsService
-     * @param GameRepositoryInterface        $gameRepository
-     * @param GamePlayersRepositoryInterface $gamePlayersRepository
-     * @param RoundThrowsRepositoryInterface $roundThrowsRepository
-     * @param EntityManagerInterface         $entityManager
+     * @param GameStatisticsServiceInterface      $gameStatisticsService
+     * @param GameRepositoryInterface             $gameRepository
+     * @param GamePlayersRepositoryInterface      $gamePlayersRepository
+     * @param PlayerStatisticsRepositoryInterface $playerStatisticsRepository
+     * @param EntityManagerInterface              $entityManager
      */
     public function __construct(
         private GameStatisticsServiceInterface $gameStatisticsService,
         private GameRepositoryInterface $gameRepository,
         private GamePlayersRepositoryInterface $gamePlayersRepository,
-        private RoundThrowsRepositoryInterface $roundThrowsRepository,
+        private PlayerStatisticsRepositoryInterface $playerStatisticsRepository,
         private EntityManagerInterface $entityManager,
     ) {
     }
@@ -68,7 +68,7 @@ final readonly class PlayerProfileService implements PlayerProfileServiceInterfa
                 stats: PlayerThrowStatistics::build(
                     $stats?->gamesPlayed ?? 0,
                     $stats?->scoreAverage,
-                    $this->roundThrowsRepository->findThrowsInCountedGamesForPlayer($playerId),
+                    $this->playerStatisticsRepository->findThrowsInCountedGamesForPlayer($playerId),
                 ),
                 recentGames: $this->buildRecentGames($playerId),
                 registeredAt: $player->getRegisteredAt()?->format(DateTimeInterface::ATOM),
@@ -90,7 +90,7 @@ final readonly class PlayerProfileService implements PlayerProfileServiceInterfa
 
         $gameIds = array_map(static fn(array $game): int => $game['gameId'], $games);
         $seatsByGameId = $this->gamePlayersRepository->findByGameIds($gameIds);
-        $totalsByGameId = $this->roundThrowsRepository->getParticipantTotalsForGames($gameIds);
+        $totalsByGameId = $this->playerStatisticsRepository->getParticipantTotalsForGames($gameIds);
 
         $recentGames = [];
         foreach ($games as $game) {

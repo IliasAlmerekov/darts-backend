@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Game;
 
 use App\Dto\PlayerStatsDto;
-use App\Repository\RoundThrowsRepositoryInterface;
+use App\Repository\PlayerStatisticsRepositoryInterface;
 use App\Util\SqlResultValueAccessor;
 use Override;
 
@@ -15,9 +15,9 @@ use Override;
 final readonly class GameStatisticsService implements GameStatisticsServiceInterface
 {
     /**
-     * @param RoundThrowsRepositoryInterface $roundThrowsRepository
+     * @param PlayerStatisticsRepositoryInterface $playerStatisticsRepository
      */
-    public function __construct(private RoundThrowsRepositoryInterface $roundThrowsRepository)
+    public function __construct(private PlayerStatisticsRepositoryInterface $playerStatisticsRepository)
     {
     }
 
@@ -32,7 +32,7 @@ final readonly class GameStatisticsService implements GameStatisticsServiceInter
     #[Override]
     public function getPlayerStats(int $limit, int $offset, string $sortField, string $sortDirection): array
     {
-        $rows = $this->roundThrowsRepository->getPlayerStatistics($limit, $offset, $sortField, $sortDirection);
+        $rows = $this->playerStatisticsRepository->getPlayerStatistics($limit, $offset, $sortField, $sortDirection);
 
         return array_map(self::createPlayerStatsDto(...), $rows);
     }
@@ -45,7 +45,7 @@ final readonly class GameStatisticsService implements GameStatisticsServiceInter
     #[Override]
     public function getPlayerStatsForPlayer(int $playerId): ?PlayerStatsDto
     {
-        $row = $this->roundThrowsRepository->getPlayerStatisticsForPlayer($playerId);
+        $row = $this->playerStatisticsRepository->getPlayerStatisticsForPlayer($playerId);
 
         return null !== $row ? self::createPlayerStatsDto($row) : null;
     }

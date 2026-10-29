@@ -23,6 +23,7 @@ use App\Exception\Game\SettingsNotEditableException;
 use App\Repository\GamePlayersRepository;
 use App\Repository\GameRepository;
 use App\Repository\InvitationRepository;
+use App\Repository\PlayerStatisticsRepository;
 use App\Repository\RoundRepository;
 use App\Repository\RoundThrowsRepository;
 use App\Repository\UserRepositoryInterface;
@@ -689,7 +690,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         return new GameFinishService(
             $this->entityManager,
             $this->gamePlayersRepository,
-            new RoundThrowsRepository($this->registry()),
+            new PlayerStatisticsRepository($this->entityManager),
             $access,
             new GameRepository($this->registry()),
         );

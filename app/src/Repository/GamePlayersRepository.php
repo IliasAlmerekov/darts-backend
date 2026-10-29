@@ -47,7 +47,7 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
         $players = $this->createSeatsQueryBuilder($gameId)
             ->select(
                 'u.id as id',
-                "COALESCE(NULLIF(TRIM(gp.displayNameSnapshot), ''), NULLIF(TRIM(u.displayName), ''), TRIM(u.username)) as name",
+                PlayerDisplayNameExpression::dql('gp', 'u').' as name',
                 'gp.position as position',
                 'gp.placement as placement',
                 'u.isGuest as isGuest'
@@ -196,18 +196,11 @@ SELECT 1
 FROM game_players gp
 INNER JOIN %s u ON u.id = gp.player_id
 WHERE gp.game_id = :gameId
-    AND LOWER(
-        TRIM(
-            COALESCE(
-                NULLIF(TRIM(gp.display_name_snapshot), ''),
-                NULLIF(TRIM(u.display_name), ''),
-                TRIM(u.username)
-            )
-        )
-    ) = :name
+    AND LOWER(TRIM(%s)) = :name
 LIMIT 1
 SQL,
                 $userTable,
+                PlayerDisplayNameExpression::sql('gp', 'u'),
             ),
             [
                 'gameId' => $gameId,
@@ -262,7 +255,7 @@ SQL,
         $rows = $this->createSeatsQueryBuilder($gameId)
             ->select(
                 'player.id AS playerId',
-                "COALESCE(NULLIF(TRIM(gp.displayNameSnapshot), ''), NULLIF(TRIM(player.displayName), ''), TRIM(player.username)) AS name",
+                PlayerDisplayNameExpression::dql('gp', 'player').' AS name',
                 'gp.position AS position',
                 'gp.placement AS placement',
                 'gp.score AS score',
