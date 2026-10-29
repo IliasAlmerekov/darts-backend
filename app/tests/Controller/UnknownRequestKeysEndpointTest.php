@@ -61,7 +61,6 @@ final class UnknownRequestKeysEndpointTest extends WebTestCase
         yield 'settings (GameSettingsRequest)' => ['PATCH', '/api/game/{id}/settings', ['startScore' => 501]];
         yield 'room create (RoomCreateRequest)' => ['POST', '/api/room/create', ['startScore' => 501]];
         yield 'game start (StartGameRequest)' => ['POST', '/api/game/{id}/start', ['startScore' => 501]];
-        yield 'rematch start (StartGameRequest)' => ['POST', '/api/game/{id}/rematch/start', ['startScore' => 501]];
         yield 'throw (ThrowRequest)' => ['POST', '/api/game/{id}/throw', ['playerId' => 1, 'value' => 20]];
         yield 'throw delta (ThrowRequest)' => ['POST', '/api/game/{id}/throw/delta', ['playerId' => 1, 'value' => 20]];
         yield 'player order (UpdatePlayerOrderRequest)' => ['POST', '/api/room/{id}/positions', ['positions' => [['playerId' => 1, 'position' => 0]]]];

@@ -152,7 +152,7 @@ final class PlayerProfileEndpointTest extends WebTestCase
         ]], $this->getProfile($client)['recentGames']);
 
         $client->loginUser($admin);
-        $client->request(Request::METHOD_GET, sprintf('/api/games/%d', $game->getGameId()));
+        $client->request(Request::METHOD_GET, sprintf('/api/game/%d/finished', $game->getGameId()));
         self::assertResponseIsSuccessful();
         $summary = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
         self::assertIsArray($summary);

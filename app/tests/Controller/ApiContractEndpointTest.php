@@ -91,7 +91,6 @@ final class ApiContractEndpointTest extends WebTestCase
     {
         return [
             'singular route' => ['/api/game/%d/finished'],
-            'plural route' => ['/api/games/%d/finished'],
         ];
     }
 

@@ -54,6 +54,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **Verschiedene Services**: Integration von `GameAccessService` in `GameAbortService`, `GameFinishService`, `GameRoomService`, `GameSettingsService`, `GameStartService`, `GameThrowService`, `RematchService` und `InvitationService` für Zugriffskontrollen vor Spielaktionen.
 
 ### Entfernt
+- **Spiel-API**: BREAKING CHANGE: `POST /api/game/settings`, `POST /api/game/{gameId}/rematch/start`, `GET /api/games/{gameId}` und `GET /api/games/{gameId}/finished` entfallen mitsamt ihrer OpenAPI-Doku und antworten wie jede unbekannte Route mit 404 oder 405. Das Frontend ruft sie nicht auf; es nutzt `POST /api/room/create` mit `PATCH /api/game/{gameId}/settings`, `POST /api/room/{id}/rematch` mit `POST /api/game/{gameId}/start` und `GET /api/game/{gameId}/finished`. `RematchStartService` und `GameFinishServiceInterface::getGameStats()` entfallen mit ihnen (#50)
 - **Statistik**: Die ungenutzte Entity `PlayerStats` mit Repository, Interface und Test entfällt; eine Migration löscht die Tabelle `player_stats`, ihr `down()` legt sie wieder an. Spielerstatistiken kommen weiter aus den Würfen; Routen und Antworten bleiben gleich (#200)
 - **Einladungen**: BREAKING CHANGE: `POST /api/invite/process` entfällt mitsamt der OpenAPI-Doku und der `access_control`-Regel und antwortet jetzt mit 404. Das Frontend ruft den Endpunkt nicht auf; der Beitritt über eine Einladung läuft weiter über die Login-Antwort (`GET /api/login/success`, `POST /api/login`, `POST /api/register`) (#167)
 
