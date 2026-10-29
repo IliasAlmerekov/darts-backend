@@ -1670,6 +1670,71 @@ final class GameThrowServiceTest extends TestCase
         self::assertSame([4, 1, 2, 3], [$normalLast->getPosition(), $guestWinner->getPosition(), $guestSecond->getPosition(), $normalThird->getPosition()]);
     }
 
+    public function testScoringAndBustRulesThroughRecordThrow(): void
+    {
+        // Each row is double out, triple out, score, value, double, triple, expected score, bust.
+        $cases = [
+            [false, false, 20, 20, false, false, 0, false],
+            [false, false, 21, 20, false, false, 1, false],
+            [false, false, 22, 20, false, false, 2, false],
+            [false, false, 19, 20, false, false, 19, true],
+            [true, false, 20, 10, true, false, 0, false],
+            [true, false, 20, 20, false, false, 20, true],
+            [true, false, 21, 20, false, false, 21, true],
+            [true, false, 22, 20, false, false, 2, false],
+            [true, false, 19, 20, false, false, 19, true],
+            [false, true, 18, 6, false, true, 0, false],
+            [false, true, 20, 20, false, false, 20, true],
+            [false, true, 21, 20, false, false, 21, true],
+            [false, true, 22, 20, false, false, 22, true],
+            [false, true, 19, 20, false, false, 19, true],
+            [true, false, 21, 20, false, false, 41, true, 20],
+        ];
+        foreach ($cases as $case) {
+            [$doubleOut, $tripleOut, $score, $value, $double, $triple, $expected, $bust] = $case;
+            $earlierPoints = $case[8] ?? 0;
+            $game = (new Game())->setStartScore(301)->setRound(1)->setStatus(GameStatus::Started)
+                ->setDoubleOut($doubleOut)->setTripleOut($tripleOut);
+            $this->setPrivateProperty($game, 'gameId', 10);
+            $user = (new User())->setUsername('Player');
+            $this->setPrivateProperty($user, 'id', 1);
+            $seat = (new GamePlayers())->setPlayer($user)->setScore($score)->setPosition(1);
+            $game->addGamePlayer($seat);
+            foreach ([2, 3] as $id) {
+                $other = (new User())->setUsername('Player ' . $id);
+                $this->setPrivateProperty($other, 'id', $id);
+                $game->addGamePlayer((new GamePlayers())->setPlayer($other)->setScore(100)->setPosition($id));
+            }
+            $round = (new Round())->setGame($game)->setRoundNumber(1);
+            $dto = new ThrowRequest();
+            $dto->playerId = 1;
+            $dto->value = $value;
+            $dto->isDouble = $double;
+            $dto->isTriple = $triple;
+            $seats = $this->createMock(GamePlayersRepositoryInterface::class);
+            $seats->method('findOneBy')->willReturn($seat);
+            $rounds = $this->createMock(RoundRepositoryInterface::class);
+            $rounds->method('findOneBy')->willReturn($round);
+            $throws = $this->createMock(RoundThrowsRepositoryInterface::class);
+            $throws->method('findCurrentRoundStateSnapshot')->willReturn($earlierPoints ? [1 => ['throwsCount' => 1, 'lastThrowNumber' => 1, 'lastThrowValue' => $earlierPoints, 'lastThrowBust' => false]] : []);
+            $throws->method('findBy')->willReturn($earlierPoints ? [(new RoundThrows())->setValue($earlierPoints)->setIsBust(false)] : []);
+            $persisted = null;
+            $em = $this->createMock(EntityManagerInterface::class);
+            $em->method('wrapInTransaction')->willReturnCallback(static fn (\Closure $fn) => $fn());
+            $em->method('persist')->willReturnCallback(static function (object $entity) use (&$persisted): void { $persisted = $entity; });
+            $service = new GameThrowService($seats, $rounds, $throws, $em, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class), $this->createNewestGameGuard());
+            $service->recordThrow($game, $dto);
+            self::assertSame($expected, $seat->getScore());
+            self::assertInstanceOf(RoundThrows::class, $persisted);
+            self::assertSame($bust, $persisted->isBust());
+            if (!$bust && 0 === $expected) {
+                self::assertSame(1, $seat->getPlacement());
+                self::assertSame($user, $game->getWinner());
+                self::assertSame(GameStatus::Started, $game->getStatus());
+            }
+        }
+    }
+
     /**
      * @throws ReflectionException
      */
