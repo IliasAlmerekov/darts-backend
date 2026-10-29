@@ -52,6 +52,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      * @param NewestGameGuardInterface       $newestGameGuard
      * @param GameFinishServiceInterface     $gameFinishService
      * @param ActivePlayerResolverInterface  $activePlayerResolver
+     * @param GameReopenServiceInterface     $gameReopenService
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
@@ -65,6 +66,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         private NewestGameGuardInterface $newestGameGuard,
         private GameFinishServiceInterface $gameFinishService,
         private ?ActivePlayerResolverInterface $activePlayerResolver = null,
+        private ?GameReopenServiceInterface $gameReopenService = null,
     ) {
     }
 
@@ -247,84 +249,31 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             return null;
         }
 
-        // Undo in a finished game makes it started again and aborts the other started games.
-        if (GameStatus::Finished === $game->getStatus()) {
-            $this->newestGameGuard->assertNewest($game, [GameStatus::Finished]);
+        $reopenService = $this->gameReopenService ?? new GameReopenService(
+            $this->entityManager,
+            $this->gameAccessService,
+            $this->gameRepository,
+            $this->newestGameGuard,
+        );
+        $finished = GameStatus::Finished === $status;
+        if ($finished) {
+            $reopenService->assertCanReopen($game);
         }
 
-        $player = $lastThrow->getPlayer();
-        $playerId = $player?->getId();
-        $lastThrowRoundNumber = $lastThrow->getRound()?->getRoundNumber() ?? $game->getRound();
-        $lastThrowId = $lastThrow->getThrowId();
-        $previousPlayerThrow = null;
-        if (null !== $lastThrowId) {
-            if (null !== $playerId) {
-                $previousPlayerThrow = $this->roundThrowsRepository->findLatestForGameAndPlayerBeforeThrow($gameId, $playerId, $lastThrowId);
-            }
-        } elseif (null !== $playerId) {
-            $previousPlayerThrow = $this->roundThrowsRepository->findLatestForGameAndPlayer($gameId, $playerId);
+        $seat = UndoThrowRules::findSeat($game, $lastThrow);
+        $undoneThrow = $this->createThrowDeltaFromEntity($lastThrow, $seat);
+        UndoThrowRules::restoreScore($game, $lastThrow, $seat, $this->roundThrowsRepository);
+        if ($finished) {
+            $reopenService->reopenFinished($game);
+        } else {
+            $game->takeBackPlacementsFromSeatsWithScoreLeft();
         }
 
-        $gamePlayersByPlayerId = [];
-        foreach ($game->getGamePlayers() as $gamePlayer) {
-            $gamePlayerId = $gamePlayer->getPlayer()?->getId();
-            if (null !== $gamePlayerId) {
-                $gamePlayersByPlayerId[$gamePlayerId] = $gamePlayer;
-            }
-        }
-        $undoneThrow = $this->createThrowDeltaFromEntity($lastThrow, null !== $playerId ? ($gamePlayersByPlayerId[$playerId] ?? null) : null);
-
-        if (null !== $playerId && isset($gamePlayersByPlayerId[$playerId])) {
-            $restoredScore = $previousPlayerThrow?->getScore() ?? $game->getStartScore();
-            $gamePlayersByPlayerId[$playerId]->setScore($restoredScore);
-        }
-
-        // Undoing the last throw in a finished game must make it playable again.
-        if (GameStatus::Finished === $game->getStatus()) {
-            // The tablet runs one game at a time (ADR 0004).
-            $this->gameRepository->abortStartedGames($gameId);
-            $game->setStatus(GameStatus::Started);
-            $game->setFinishedAt(null);
-        }
-
-        $game->takeBackPlacementsFromSeatsWithScoreLeft();
-
-        $game->setRound($lastThrowRoundNumber);
-        $this->reopenRound($game, $lastThrow->getRound());
-
+        UndoThrowRules::reopenRound($game, $lastThrow, $this->roundRepository, $this->entityManager);
         $this->entityManager->remove($lastThrow);
         $this->entityManager->flush();
 
         return $undoneThrow;
-    }
-
-    /**
-     * Undoing the throw that completed a round deletes the empty round that throw opened
-     * and marks the completed round unfinished again, so the next throw advances once.
-     *
-     * @param Game       $game
-     * @param Round|null $round The round of the undone throw
-     *
-     * @return void
-     */
-    private function reopenRound(Game $game, ?Round $round): void
-    {
-        $roundNumber = $round?->getRoundNumber();
-        if (null === $round || null === $roundNumber) {
-            return;
-        }
-
-        $nextRound = $this->roundRepository->findOneBy([
-            'game' => $game,
-            'roundNumber' => $roundNumber + 1,
-        ]);
-        if (!$nextRound instanceof Round || !$nextRound->getRoundThrows()->isEmpty()) {
-            return;
-        }
-
-        $game->removeRound($nextRound);
-        $this->entityManager->remove($nextRound);
-        $round->setFinishedAt(null);
     }
 
     /**
