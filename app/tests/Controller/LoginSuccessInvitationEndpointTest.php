@@ -14,6 +14,7 @@ use App\Entity\GamePlayers;
 use App\Entity\Invitation;
 use App\Entity\User;
 use App\Enum\GameStatus;
+use App\Repository\GamePlayersRepositoryInterface;
 use App\Tests\Support\SameOriginLogin;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
@@ -212,6 +213,8 @@ final class LoginSuccessInvitationEndpointTest extends WebTestCase
         $client->request(Request::METHOD_GET, '/api/login/success');
 
         self::assertSame(self::loginBody($admin, '/start'), $this->decodeLoginSuccess($client));
+        // The admin does not join, but the login still spends the invitation.
+        self::assertInvitationCleared($client);
     }
 
     public function testInvitationUuidWithoutGameIdIsNoInvitation(): void
@@ -232,6 +235,31 @@ final class LoginSuccessInvitationEndpointTest extends WebTestCase
 
         self::assertSame(self::loginBody($player, '/playerprofile'), $this->decodeLoginSuccess($client));
         self::assertInvitationCleared($client);
+    }
+
+    public function testGameIdWithoutInvitationUuidIsNoInvitation(): void
+    {
+        $client = static::createClient();
+        $entityManager = static::getContainer()->get(EntityManagerInterface::class);
+
+        $player = TestUserFactory::create($entityManager, self::USER_PREFIX, 'leftover', ['ROLE_PLAYER']);
+        $game = $this->createGame($entityManager, GameStatus::Lobby);
+        $gameId = (int) $game->getGameId();
+        $invitation = $this->createInvitation($entityManager, $game);
+
+        $client->request(Request::METHOD_GET, sprintf('/api/invite/join/%s', $invitation->getUuid()));
+        $session = $client->getRequest()->getSession();
+        $session->remove('invitation_uuid');
+        $session->save();
+
+        $client->loginUser($player);
+        $client->request(Request::METHOD_GET, '/api/login/success');
+
+        self::assertSame(self::loginBody($player, '/playerprofile'), $this->decodeLoginSuccess($client));
+        self::assertInvitationCleared($client);
+        self::assertFalse(
+            static::getContainer()->get(GamePlayersRepositoryInterface::class)->isPlayerInGame($gameId, (int) $player->getId()),
+        );
     }
 
     /**

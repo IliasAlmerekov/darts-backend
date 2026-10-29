@@ -7,6 +7,8 @@ namespace App\Controller;
 use App\Entity\User;
 use App\Exception\Security\UserNotAuthenticatedException;
 use App\Http\Attribute\ApiResponse;
+use App\Security\InvitationSession;
+use App\Security\LoginSuccessResponder;
 use App\Service\Security\SecurityServiceInterface;
 use LogicException;
 use Nelmio\ApiDocBundle\Attribute\Security;
@@ -104,6 +106,7 @@ final class SecurityController extends AbstractController
      *
      * @param Request                  $request
      * @param SecurityServiceInterface $securityService
+     * @param LoginSuccessResponder    $responder
      *
      * @return Response
      *
@@ -129,14 +132,16 @@ final class SecurityController extends AbstractController
     )]
     #[OA\Response(response: Response::HTTP_UNAUTHORIZED, description: 'Keine Session (`AUTHENTICATION_REQUIRED`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[Route('/api/login/success', name: 'login_success', methods: ['GET'], format: 'json')]
-    public function loginSuccess(Request $request, SecurityServiceInterface $securityService): Response
+    public function loginSuccess(Request $request, SecurityServiceInterface $securityService, LoginSuccessResponder $responder): Response
     {
         $user = $this->getUser();
         if (!$user instanceof User) {
             throw new UserNotAuthenticatedException();
         }
 
-        return $securityService->buildLoginSuccessResponse($user, $request->getSession());
+        $invitedGameId = InvitationSession::take($request->getSession());
+
+        return $responder->respond($securityService->resolveLoginSuccess($user, $invitedGameId));
     }
 
     /**

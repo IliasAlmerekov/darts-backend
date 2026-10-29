@@ -23,10 +23,12 @@ final readonly class ApiAuthenticationSuccessHandler implements AuthenticationSu
 {
     /**
      * @param SecurityServiceInterface $securityService
+     * @param LoginSuccessResponder    $responder
      * @param UrlGeneratorInterface    $urlGenerator
      */
     public function __construct(
         private SecurityServiceInterface $securityService,
+        private LoginSuccessResponder $responder,
         private UrlGeneratorInterface $urlGenerator,
     ) {
     }
@@ -47,7 +49,9 @@ final readonly class ApiAuthenticationSuccessHandler implements AuthenticationSu
                 throw new UserNotAuthenticatedException();
             }
 
-            return $this->securityService->buildLoginSuccessResponse($user, $request->getSession());
+            $invitedGameId = InvitationSession::take($request->getSession());
+
+            return $this->responder->respond($this->securityService->resolveLoginSuccess($user, $invitedGameId));
         }
 
         return new RedirectResponse($this->urlGenerator->generate('login_success'));

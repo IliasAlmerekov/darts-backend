@@ -14,6 +14,7 @@ use App\Entity\Invitation;
 use App\Exception\Game\GameNotFoundException;
 use App\Exception\Health\DatabaseUnavailableException;
 use App\Http\Attribute\ApiResponse;
+use App\Security\InvitationSession;
 use App\Service\Invitation\InvitationServiceInterface;
 use Doctrine\DBAL\Connection;
 use Nelmio\ApiDocBundle\Attribute\Security;
@@ -204,9 +205,9 @@ final class InvitationController extends AbstractController
         ]);
 
         try {
-            $session->remove('invitation_uuid');
-            $session->set('invitation_uuid', $invitationUuid);
-            $session->set('game_id', $gameId);
+            $session->remove(InvitationSession::INVITATION_UUID);
+            $session->set(InvitationSession::INVITATION_UUID, $invitationUuid);
+            $session->set(InvitationSession::GAME_ID, $gameId);
 
             $this->logger->info('Invite join session prepared successfully.', [
                 'gameId' => $gameId,
