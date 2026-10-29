@@ -34,9 +34,8 @@ ENV APP_ENV=prod \
 
 # Install dependencies, build an authoritative classmap that includes App\ classes, and
 # warm the prod cache so FPM workers never compile the container under their memory
-# limit. Composer auto-scripts stay off: the API serves no bundle assets or importmap
-# (the Swagger UI needs Twig, which is a dev-only dependency), and importmap:install
-# would download from a CDN during the build. cache:warmup needs DATABASE_URL to be
+# limit. Composer auto-scripts stay off because Swagger UI needs Twig, which is a
+# dev-only dependency. cache:warmup needs DATABASE_URL to be
 # set, so that one command gets a dummy value without credentials; it is not written
 # to the cache or to the image.
 FROM base AS build
@@ -69,8 +68,6 @@ RUN rm -rf \
         tests \
         docker \
         Dockerfile \
-        compose.yaml \
-        compose.override.yaml \
         phpunit.dist.xml \
         psalm.xml \
         psalm-baseline.xml \
