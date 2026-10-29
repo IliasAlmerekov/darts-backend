@@ -49,10 +49,9 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      * @param EntityManagerInterface         $entityManager
      * @param GameAccessServiceInterface     $gameAccessService
      * @param GameRepositoryInterface        $gameRepository
-     * @param NewestGameGuardInterface       $newestGameGuard
+     * @param GameReopenServiceInterface     $gameReopenService
      * @param GameFinishServiceInterface     $gameFinishService
      * @param ActivePlayerResolverInterface  $activePlayerResolver
-     * @param GameReopenServiceInterface     $gameReopenService
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
@@ -63,10 +62,9 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         private EntityManagerInterface $entityManager,
         private GameAccessServiceInterface $gameAccessService,
         private GameRepositoryInterface $gameRepository,
-        private NewestGameGuardInterface $newestGameGuard,
+        private GameReopenServiceInterface $gameReopenService,
         private GameFinishServiceInterface $gameFinishService,
         private ?ActivePlayerResolverInterface $activePlayerResolver = null,
-        private ?GameReopenServiceInterface $gameReopenService = null,
     ) {
     }
 
@@ -249,22 +247,16 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             return null;
         }
 
-        $reopenService = $this->gameReopenService ?? new GameReopenService(
-            $this->entityManager,
-            $this->gameAccessService,
-            $this->gameRepository,
-            $this->newestGameGuard,
-        );
         $finished = GameStatus::Finished === $status;
         if ($finished) {
-            $reopenService->assertCanReopen($game);
+            $this->gameReopenService->assertCanReopen($game);
         }
 
         $seat = UndoThrowRules::findSeat($game, $lastThrow);
         $undoneThrow = $this->createThrowDeltaFromEntity($lastThrow, $seat);
         UndoThrowRules::restoreScore($game, $lastThrow, $seat, $this->roundThrowsRepository);
         if ($finished) {
-            $reopenService->reopenFinished($game);
+            $this->gameReopenService->reopenFinished($game);
         } else {
             $game->takeBackPlacementsFromSeatsWithScoreLeft();
         }
