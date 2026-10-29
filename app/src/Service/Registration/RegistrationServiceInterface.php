@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Registration;
 
 use App\Dto\RegistrationRequest;
+use App\Entity\User;
 use App\Exception\Registration\RegistrationAccountExistsException;
-use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Contract for user registration handling.
@@ -14,15 +14,13 @@ use Symfony\Component\HttpFoundation\Response;
 interface RegistrationServiceInterface
 {
     /**
-     * Registers a player from a validated request and logs them in.
-     *
-     * On success the response is the login success response with status 201.
+     * Registers a player from a validated request.
      *
      * @param RegistrationRequest $request
      *
-     * @return Response
+     * @return User the persisted player
      *
-     * @throws RegistrationAccountExistsException when the email or the username is taken; nobody is logged in
+     * @throws RegistrationAccountExistsException when the email or the username is taken
      */
-    public function register(RegistrationRequest $request): Response;
+    public function register(RegistrationRequest $request): User;
 }

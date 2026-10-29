@@ -12,12 +12,15 @@ namespace App\Controller;
 use App\Dto\RegistrationRequest;
 use App\Http\Attribute\ApiResponse;
 use App\Service\Registration\RegistrationServiceInterface;
-use Nelmio\ApiDocBundle\Attribute\Security;
+use LogicException;
+use Nelmio\ApiDocBundle\Attribute\Security as ApiDocSecurity;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Authenticator\Passport\Badge\RememberMeBadge;
 
 /**
  * Controller to handle user registration.
@@ -33,8 +36,13 @@ final class RegistrationController extends AbstractController
      * RegistrationRateLimitSubscriber counts the request before the payload is mapped, and
      * ErrorController renders mapping and validation failures.
      *
+     * The new player is logged in on the main firewall, as a form login would: the form_login
+     * success handler builds the body, including the invitation join or its `invitationError`.
+     * The remember-me badge lets RememberedLoginSubscriber start a Remembered login.
+     *
      * @param RegistrationRequest          $payload
      * @param RegistrationServiceInterface $registrationService
+     * @param Security                     $security
      *
      * @return Response
      *
@@ -117,14 +125,22 @@ final class RegistrationController extends AbstractController
             ]
         )
     )]
-    #[Security(name: null)]
+    #[ApiDocSecurity(name: null)]
     #[ApiResponse]
     #[Route('/api/register', name: self::ROUTE, methods: ['POST'], format: 'json')]
     public function register(
         #[MapRequestPayload(acceptFormat: 'json')]
         RegistrationRequest $payload,
         RegistrationServiceInterface $registrationService,
+        Security $security,
     ): Response {
-        return $registrationService->register($payload);
+        $user = $registrationService->register($payload);
+
+        $response = $security->login($user, 'form_login', 'main', [new RememberMeBadge()]);
+        if (!$response instanceof Response) {
+            throw new LogicException('The form_login success handler returned no response.');
+        }
+
+        return $response->setStatusCode(Response::HTTP_CREATED);
     }
 }
