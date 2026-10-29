@@ -114,8 +114,8 @@ final class RememberedLoginTest extends WebTestCase
 
         $this->dropSessionCookie($client);
         $client->request(Request::METHOD_GET, '/api/player/current-game');
-        self::assertNotContains($client->getResponse()->getStatusCode(), [Response::HTTP_UNAUTHORIZED, Response::HTTP_FORBIDDEN]);
-        self::assertFalse(str_contains((string) $client->getResponse()->getContent(), 'AUTHENTICATION_REQUIRED'));
+        self::assertResponseStatusCodeSame(Response::HTTP_OK);
+        self::assertSame(['gameId' => null, 'status' => null], json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR));
     }
 
     public function testAnonymousAdminRouteRequiresAuthentication(): void
