@@ -17,7 +17,6 @@ use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\Round;
 use App\Entity\RoundThrows;
-use App\Exception\Game\InvalidThrowException;
 use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\GamePlayerNotActiveException;
 use App\Exception\Game\GameThrowNotAllowedException;
@@ -169,16 +168,21 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         $baseValue = $dto->value ?? 0;
         $isDouble = $dto->isDouble ?? false;
         $isTriple = $dto->isTriple ?? false;
-        $this->assertValidThrowInput($baseValue, $isDouble, $isTriple);
-
-        $finalValue = $baseValue;
-        if ($isTriple) {
-            $finalValue = $baseValue * 3;
-        } elseif ($isDouble) {
-            $finalValue = $baseValue * 2;
-        }
-
         $currentScore = $player->getScore() ?? $game->getStartScore();
+        $previousThrowsInRound = $this->roundThrowsRepository->findBy([
+            'round' => $round,
+            'player' => $player->getPlayer(),
+        ]);
+        $pointsScoredInRound = 0;
+        foreach ($previousThrowsInRound as $previousThrow) {
+            if (!$previousThrow->isBust()) {
+                $pointsScoredInRound += $previousThrow->getValue() ?? 0;
+            }
+        }
+        $scoring = ThrowScoring::score($currentScore, $pointsScoredInRound, $baseValue, $isDouble, $isTriple, $game->outRule());
+        $finalValue = $scoring->value;
+        $newScore = $scoring->score;
+        $isBust = $scoring->bust;
         $roundThrow = new RoundThrows();
         $roundThrow->setGame($game);
         $roundThrow->setRound($round);
@@ -188,52 +192,10 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         $roundThrow->setIsDouble($isDouble);
         $roundThrow->setIsTriple($isTriple);
         $roundThrow->setTimestamp(new DateTime());
-        // Calculate the new score
-        $newScore = $currentScore - $finalValue;
-        $wouldFinishGame = (0 === $newScore);
-        // Get the game mode settings
-        $isDoubleOutMode = $game->isDoubleOut();
-        $isTripleOutMode = $game->isTripleOut();
-        // Bust rules
-        $isBust =
-            // Score below 0
-            ($newScore < 0) ||
-
-            // Score = 1 in double out or triple out
-            (($isDoubleOutMode || $isTripleOutMode) && 1 === $newScore) ||
-
-            // Score = 2 in triple out
-            ($isTripleOutMode && 2 === $newScore) ||
-
-            // Finish without a double in double out
-            ($wouldFinishGame && $isDoubleOutMode && !$isDouble) ||
-
-            // Finish without a triple in triple out
-            ($wouldFinishGame && $isTripleOutMode && !$isTriple);
         $roundThrow->setIsBust($isBust);
-        if ($isBust) {
-            // On a bust, restore the score from before the round
-            $previousThrowsInRound = $this->roundThrowsRepository->findBy([
-                'round' => $round,
-                'player' => $player->getPlayer(),
-            ]);
-            $pointsScoredInRound = 0;
-            foreach ($previousThrowsInRound as $prevThrow) {
-                if (!$prevThrow->isBust()) {
-                    $throwValue = $prevThrow->getValue();
-                    if (null !== $throwValue) {
-                        $pointsScoredInRound += $throwValue;
-                    }
-                }
-            }
-
-            $resetScore = $currentScore + $pointsScoredInRound;
-            $roundThrow->setScore($resetScore);
-            $player->setScore($resetScore);
-        } else {
-            // No bust: update the score normally
-            $player->setScore($newScore);
-            $roundThrow->setScore($newScore);
+        $roundThrow->setScore($newScore);
+        $player->setScore($newScore);
+        if (!$isBust) {
             // Check whether the player has won
             if (0 === $newScore && $currentScore > 0) {
                 $finishedPlayers = $this->gamePlayersRepository->countFinishedPlayers((int) $game->getGameId());
@@ -523,32 +485,6 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             foreach ($game->getGamePlayers() as $gamePlayer) {
                 $gamePlayer->setIsWinner($gamePlayer === $winnerPlayer);
             }
-        }
-    }
-
-    /**
-     * @param int  $baseValue
-     * @param bool $isDouble
-     * @param bool $isTriple
-     *
-     * @return void
-     */
-    private function assertValidThrowInput(int $baseValue, bool $isDouble, bool $isTriple): void
-    {
-        if ($isDouble && $isTriple) {
-            throw new InvalidThrowException('Throw cannot be both double and triple at the same time.');
-        }
-
-        if ($isTriple && ($baseValue < 1 || $baseValue > 20)) {
-            throw new InvalidThrowException('Triple throws require a base value between 1 and 20.');
-        }
-
-        if ($isDouble && ($baseValue < 1 || $baseValue > 20) && 25 !== $baseValue) {
-            throw new InvalidThrowException('Double throws require a base value between 1 and 20, or 25 for bull.');
-        }
-
-        if (!$isDouble && !$isTriple && ($baseValue < 0 || $baseValue > 20) && 25 !== $baseValue) {
-            throw new InvalidThrowException('Single throws require a base value between 0 and 20, or 25 for bull.');
         }
     }
 
