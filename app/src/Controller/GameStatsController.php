@@ -38,9 +38,9 @@ final class GameStatsController extends AbstractController
     /**
      * Returns overview of finished games.
      *
-        * @param GameRepositoryInterface $gameRepository
-        * @param int                     $limit
-        * @param int                     $offset
+     * @param GameRepositoryInterface $gameRepository
+     * @param int                     $limit
+     * @param int                     $offset
      *
      * @return GameOverviewResponseDto
      */
@@ -97,7 +97,7 @@ final class GameStatsController extends AbstractController
      * @param GameRepositoryInterface    $gameRepository
      * @param GameFinishServiceInterface $gameFinishService
      *
-        * @return GameSummaryResponseDto
+     * @return GameSummaryResponseDto
      */
     #[OA\Parameter(
         name: 'gameId',

@@ -109,7 +109,7 @@ final class RegistrationEndpointTest extends WebTestCase
 
         $user = static::getContainer()->get(UserRepository::class)->findOneBy(['email' => $body['email']]);
         self::assertInstanceOf(User::class, $user);
-        self::assertResponseHeaderSame('X-Accel-Buffering', 'no');
+        self::assertFalse($client->getResponse()->headers->has('X-Accel-Buffering'));
         self::assertSame([
             'success' => true,
             'roles' => ['ROLE_PLAYER'],
@@ -135,7 +135,7 @@ final class RegistrationEndpointTest extends WebTestCase
         $user = static::getContainer()->get(UserRepository::class)->findOneBy(['email' => $body['email']]);
         self::assertInstanceOf(User::class, $user);
         self::assertTrue(static::getContainer()->get(GamePlayersRepositoryInterface::class)->isPlayerInGame($gameId, (int) $user->getId()));
-        self::assertResponseHeaderSame('X-Accel-Buffering', 'no');
+        self::assertFalse($client->getResponse()->headers->has('X-Accel-Buffering'));
         self::assertSame([
             'success' => true,
             'roles' => ['ROLE_PLAYER'],

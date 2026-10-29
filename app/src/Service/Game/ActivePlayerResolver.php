@@ -27,8 +27,8 @@ final readonly class ActivePlayerResolver implements ActivePlayerResolverInterfa
     }
 
     /**
-        * @param Game                    $game
-        * @param RoundStateSnapshot|null $roundStateSnapshot
+     * @param Game                    $game
+     * @param RoundStateSnapshot|null $roundStateSnapshot
      *
      * @return int|null
      */

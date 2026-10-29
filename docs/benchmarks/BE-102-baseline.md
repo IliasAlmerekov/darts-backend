@@ -4,7 +4,7 @@
 - Change scope: `GameService::createGameDto()` rewritten to use batched reads for game players, current-round throws, latest throw per player, and full round history assembly in memory.
 - Environment: PHPUnit functional test (`APP_ENV=test`) with MySQL in Docker and Symfony profiler enabled.
 - Samples per row: 3 identical runs; latency is wall-clock median measured around the in-process HTTP request.
-- Reference baseline: `app/tests/Benchmark/BE-101-baseline.md`
+- Reference baseline: `docs/benchmarks/BE-101-baseline.md`
 
 ## Current table
 
@@ -60,5 +60,5 @@ The generated runtime report is also written to `app/var/benchmarks/be-101-game-
 ## Suggested handoff for the next context window
 
 - Treat this file as the new post-BE-102 starting point.
-- Use `app/tests/Benchmark/BE-101-baseline.md` as the pre-optimization reference.
+- Use `docs/benchmarks/BE-101-baseline.md` as the pre-optimization reference.
 - If the next task targets `GET /api/game/{id}`, note that DTO assembly is no longer the dominant source of query growth; investigate remaining fixed query cost and non-DTO flows next.

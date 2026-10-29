@@ -188,31 +188,31 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         $roundThrow->setIsDouble($isDouble);
         $roundThrow->setIsTriple($isTriple);
         $roundThrow->setTimestamp(new DateTime());
-        // Berechne den neuen Score
+        // Calculate the new score
         $newScore = $currentScore - $finalValue;
         $wouldFinishGame = (0 === $newScore);
-        // Hole Game-Mode Einstellungen
+        // Get the game mode settings
         $isDoubleOutMode = $game->isDoubleOut();
         $isTripleOutMode = $game->isTripleOut();
-        // bust regeln
+        // Bust rules
         $isBust =
-            // Score unter 0
+            // Score below 0
             ($newScore < 0) ||
 
-            // Score = 1 bei Double-Out oder Triple-Out
+            // Score = 1 in double out or triple out
             (($isDoubleOutMode || $isTripleOutMode) && 1 === $newScore) ||
 
-            // Score = 2 bei Triple-Out
+            // Score = 2 in triple out
             ($isTripleOutMode && 2 === $newScore) ||
 
-            // Finish ohne Double bei Double-Out
+            // Finish without a double in double out
             ($wouldFinishGame && $isDoubleOutMode && !$isDouble) ||
 
-            // Finish ohne Triple bei Triple-Out
+            // Finish without a triple in triple out
             ($wouldFinishGame && $isTripleOutMode && !$isTriple);
         $roundThrow->setIsBust($isBust);
         if ($isBust) {
-            // Bei bust Score auf Stand vor der Runde zurücksetzen
+            // On a bust, restore the score from before the round
             $previousThrowsInRound = $this->roundThrowsRepository->findBy([
                 'round' => $round,
                 'player' => $player->getPlayer(),
@@ -231,10 +231,10 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             $roundThrow->setScore($resetScore);
             $player->setScore($resetScore);
         } else {
-            // Kein Bust: Score normal aktualisieren
+            // No bust: update the score normally
             $player->setScore($newScore);
             $roundThrow->setScore($newScore);
-            // Check, ob der Spieler gewonnen hat
+            // Check whether the player has won
             if (0 === $newScore && $currentScore > 0) {
                 $finishedPlayers = $this->gamePlayersRepository->countFinishedPlayers((int) $game->getGameId());
                 $player->setPlacement($finishedPlayers + 1);
@@ -340,8 +340,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             $gamePlayersByPlayerId[$playerId]->setScore($restoredScore);
         }
 
-        // Wenn der letzte Wurf in einem finished Game rückgängig gemacht wird,
-        // muss das Spiel wieder fortsetzbar sein.
+        // Undoing the last throw in a finished game must make it playable again.
         if (GameStatus::Finished === $game->getStatus()) {
             // The tablet runs one game at a time (ADR 0004).
             $this->gameRepository->abortStartedGames($gameId);
@@ -427,7 +426,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             return false;
         }
 
-        // Wir prüfen, ob alle AKTIVEN Spieler (Score > 0) 3 Würfe gemacht haben
+        // Check whether all active players (score > 0) have thrown 3 darts
         foreach ($game->getGamePlayers() as $gp) {
             $player = $gp->getPlayer();
             if (null === $player) {
@@ -439,7 +438,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
                 continue;
             }
 
-            // Skip Spieler, die bereits gewonnen haben (Score = 0)
+            // Skip players who have already won (score = 0)
             $playerScore = $gp->getScore() ?? $game->getStartScore();
             if (0 === $playerScore) {
                 continue;
@@ -448,11 +447,11 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             $playerRoundState = TurnOrder::roundState($roundStateSnapshot, $playerId);
             if ($playerRoundState['throwsCount'] < 3 && false === $playerRoundState['lastThrowBust']) {
                 return false;
-                // Noch nicht alle AKTIVEN Spieler haben 3 Würfe gemacht
+                // Not all active players have thrown 3 darts yet
             }
         }
 
-        // Alle Spieler haben 3 Würfe gemacht — wir gehen zur nächsten Runde über
+        // All players have thrown 3 darts, so advance to the next round
         $currentRound->setFinishedAt(new DateTime());
         $currentRoundNum = $game->getRound() ?? $currentRound->getRoundNumber() ?? 1;
         $nextRoundNumber = $currentRoundNum + 1;

@@ -51,7 +51,7 @@ final class ApiAuthenticationSuccessHandlerTest extends TestCase
         $response = $handler->onAuthenticationSuccess($request, $token);
 
         self::assertSame(200, $response->getStatusCode());
-        self::assertSame('no', $response->headers->get('X-Accel-Buffering'));
+        self::assertFalse($response->headers->has('X-Accel-Buffering'));
         self::assertSame(
             ['success' => true, 'roles' => ['ROLE_PLAYER'], 'id' => null, 'email' => 'alice@test.dev', 'username' => 'alice', 'redirect' => 'http://frontend.test/joined', 'gameId' => 42],
             json_decode((string) $response->getContent(), true, 512, JSON_THROW_ON_ERROR),

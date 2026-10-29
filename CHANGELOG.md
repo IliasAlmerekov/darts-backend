@@ -22,6 +22,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **ErrorCode**: Neuer Fehlercode `SecurityAccessDenied` für API-Fehlerbehandlung.
 
 ### Geändert
+- **Konsistenz**: Kommentare und Routen vereinheitlicht, den SSE-Header aus Einladungs- und Loginantworten entfernt und Benchmarkberichte verschoben (#173).
 - **CI**: Runtime-Image-Build und Repository-Prüfungen in GitHub und GitLab abgestimmt (#54).
 - **Registrierung**: `RegistrationService::register()` legt den Spieler an und gibt ihn zurück; `RegistrationController` meldet ihn mit Remember-me an und setzt 201. `POST /api/register` antwortet weiter mit 201 und dem Login-Body, mit und ohne Einladung (#167)
 - **Login**: `SecurityService::resolveLoginSuccess()` entscheidet das Ziel nach dem Login und liefert ein `LoginSuccessDto`; `LoginSuccessResponder` baut daraus die einzige Kopie des Login-Bodys für `GET /api/login/success` und `POST /api/login`. Beide Wege nehmen die Einladung vor der Entscheidung aus der Session, sodass `invitation_uuid` und `game_id` nach jedem Login fehlen, auch nach einem Admin-Login, der die Einladung ignoriert. Body, Status und `X-Accel-Buffering` bleiben gleich (#167)

@@ -17,9 +17,9 @@ use Doctrine\ORM\QueryBuilder;
 interface GameRepositoryInterface
 {
     /**
-        * @param int $limit
-        * @param int $offset
-        *
+     * @param int $limit
+     * @param int $offset
+     *
      * @return list<array{
      *     id:int,
      *     date:DateTimeImmutable|null,

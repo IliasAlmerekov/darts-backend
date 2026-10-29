@@ -51,6 +51,6 @@ final readonly class LoginSuccessResponder
             $body['invitationError'] = $loginSuccess->invitationError;
         }
 
-        return new JsonResponse($body, Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
+        return new JsonResponse($body, Response::HTTP_OK);
     }
 }

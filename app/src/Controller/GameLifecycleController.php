@@ -91,11 +91,11 @@ final class GameLifecycleController extends AbstractController
     /**
      * Starts the open lobby, or a new one, as a rematch of a finished game.
      *
-        * @param int                           $gameId
+     * @param int                           $gameId
      * @param RematchStartServiceInterface  $rematchStartService
      * @param GameStateViewBuilderInterface $gameStateViewBuilder
      * @param RetryingTransactionInterface  $transaction
-        * @param StartGameRequest              $dto
+     * @param StartGameRequest              $dto
      *
      * @return GameResponseDto
      *
