@@ -54,7 +54,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **Verschiedene Services**: Integration von `GameAccessService` in `GameAbortService`, `GameFinishService`, `GameRoomService`, `GameSettingsService`, `GameStartService`, `GameThrowService`, `RematchService` und `InvitationService` für Zugriffskontrollen vor Spielaktionen.
 
 ### Entfernt
-- **Statistik**: Die ungenutzte Entity `PlayerStats` mit Repository, Interface und Test entfällt; eine Migration löscht die Tabelle `player_stats`, ihr `down()` legt sie wieder an. Spielerstatistiken kommen weiter aus den Würfen, Routen und Antworten bleiben gleich (#200)
+- **Statistik**: Die ungenutzte Entity `PlayerStats` mit Repository, Interface und Test entfällt; eine Migration löscht die Tabelle `player_stats`, ihr `down()` legt sie wieder an. Spielerstatistiken kommen weiter aus den Würfen; Routen und Antworten bleiben gleich (#200)
 - **Einladungen**: BREAKING CHANGE: `POST /api/invite/process` entfällt mitsamt der OpenAPI-Doku und der `access_control`-Regel und antwortet jetzt mit 404. Das Frontend ruft den Endpunkt nicht auf; der Beitritt über eine Einladung läuft weiter über die Login-Antwort (`GET /api/login/success`, `POST /api/login`, `POST /api/register`) (#167)
 
 ### Behoben
