@@ -1,12 +1,18 @@
 #!/bin/sh
 set -eu
 
+if [ ! -r .gitlab-ci.yml ]; then
+    echo "Cannot read .gitlab-ci.yml" >&2
+    exit 1
+fi
+
 awk '
     function paths(command, fields, count, i) {
         if (command !~ /docker build([[:space:]]|$)/) return
         count = split(command, fields, /[[:space:]]+/)
         for (i = 1; i <= count; i++) {
             if (fields[i] == "-f" || fields[i] == "--file") print fields[i + 1]
+            else if (fields[i] ~ /^-f./) { sub(/^-f/, "", fields[i]); print fields[i] }
             else if (fields[i] ~ /^--file=/) { sub(/^--file=/, "", fields[i]); print fields[i] }
         }
     }

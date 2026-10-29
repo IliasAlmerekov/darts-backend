@@ -56,3 +56,11 @@ printf '%s\n' '  - >' '    docker build' '    -f app/Dockerfile --target runtime
 if sh "$root/scripts/check-gitlab-dockerfiles.sh" > /dev/null 2>&1; then
     echo "Dockerfile check accepted a missing file in a folded command" >&2; exit 1
 fi
+printf '%s\n' '  - docker build -fapp/Dockerfile .' > .gitlab-ci.yml
+if sh "$root/scripts/check-gitlab-dockerfiles.sh" > /dev/null 2>&1; then
+    echo "Dockerfile check accepted a missing file with an attached -f" >&2; exit 1
+fi
+rm .gitlab-ci.yml
+if sh "$root/scripts/check-gitlab-dockerfiles.sh" > /dev/null 2>&1; then
+    echo "Dockerfile check accepted a missing GitLab configuration" >&2; exit 1
+fi
