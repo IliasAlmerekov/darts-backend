@@ -65,11 +65,7 @@ SELECT
     g.finished_at AS finishedAt,
     COUNT(DISTINCT gp.game_player_id) AS playersCount,
     winner.id AS winnerId,
-    COALESCE(
-        NULLIF(TRIM(winner_gp.display_name_snapshot), ''),
-        NULLIF(TRIM(winner.display_name), ''),
-        TRIM(winner.username)
-    ) AS winnerName
+    %s AS winnerName
 FROM game g
 LEFT JOIN game_players gp ON gp.game_id = g.game_id
 LEFT JOIN %s winner ON winner.id = g.winner_id
@@ -79,6 +75,7 @@ GROUP BY g.game_id, g.date, g.finished_at, winner.id, winner.display_name, winne
 ORDER BY g.game_id DESC
 LIMIT :limit OFFSET :offset
 SQL,
+                PlayerDisplayNameExpression::sql('winner_gp', 'winner'),
                 $userTable,
             ),
             [

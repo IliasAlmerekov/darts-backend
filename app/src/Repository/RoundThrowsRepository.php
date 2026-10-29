@@ -59,7 +59,7 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
                 'rt.timestamp AS timestamp',
                 'r.roundNumber AS roundNumber',
                 'u.id AS playerId',
-                "COALESCE(NULLIF(TRIM(gp.displayNameSnapshot), ''), NULLIF(TRIM(u.displayName), ''), TRIM(u.username)) AS playerName"
+                PlayerDisplayNameExpression::dql('gp', 'u').' AS playerName'
             )
             ->innerJoin('rt.round', 'r')
             ->innerJoin('rt.player', 'u')
