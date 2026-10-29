@@ -109,9 +109,19 @@ final class OutRuleEndpointTest extends WebTestCase
 
     public function testTripleOutIsReportedAndRequiresATripleToCheckout(): void
     {
-        $game = $this->createGame(GameStatus::Started, score: 18);
-        $this->patchSettings($game, ['outMode' => 'tripleout']);
+        $room = $this->request(Request::METHOD_POST, '/api/room/create', [
+            'playerIds' => [(int) $this->first->getId(), (int) $this->second->getId()],
+            'tripleOut' => true,
+        ]);
         self::assertResponseIsSuccessful();
+        $game = $this->entityManager->find(Game::class, $room['gameId']);
+        self::assertInstanceOf(Game::class, $game);
+        $this->request(Request::METHOD_POST, sprintf('/api/game/%d/start', (int) $game->getGameId()));
+        self::assertResponseIsSuccessful();
+        $seat = $this->entityManager->getRepository(GamePlayers::class)->findOneBy(['game' => $game, 'player' => $this->first]);
+        self::assertInstanceOf(GamePlayers::class, $seat);
+        $seat->setScore(18);
+        $this->entityManager->flush();
         $settings = $this->request(Request::METHOD_GET, sprintf('/api/game/%d/settings', (int) $game->getGameId()));
         self::assertTrue($settings['tripleOut']);
         self::assertFalse($settings['doubleOut']);
