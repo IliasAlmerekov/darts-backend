@@ -24,6 +24,8 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 
 ### Geändert
 
+- **Spiel**: Out-Regeln für Wurfwertung und Checkout-Versuche stehen gemeinsam in `OutRule` (#208).
+
 - **Sicherheit**: Spielzugriffe prüfen die Adminrolle direkt (#71).
 - **Statistik**: Die Statistikabfragen liegen in `PlayerStatisticsRepository`, `RoundThrowsRepository` enthält nur noch Würfe. Die Namensregel für Spieler steht als `PlayerDisplayNameExpression` an einer Stelle (#169).
 - **Spiel**: Regeln zum Rückgängigmachen von Würfen und zum Wiederöffnen aufgeteilt (#193).

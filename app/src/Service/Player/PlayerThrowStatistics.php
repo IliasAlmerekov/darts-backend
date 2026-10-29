@@ -89,7 +89,7 @@ final class PlayerThrowStatistics
             }
 
             $isCheckout = !$throw['isBust'] && 0 === $throw['score'];
-            $isAttempt = self::isCheckable($remaining, $throw['outRule']);
+            $isAttempt = $throw['outRule']->canCheckOutInOneDart($remaining);
             if ($isAttempt) {
                 $checkoutAttempts++;
                 $checkoutHits += $isCheckout ? 1 : 0;
@@ -168,33 +168,6 @@ final class PlayerThrowStatistics
             $throw['isDouble'] => 'D'.$segment,
             default => 'S'.$segment,
         };
-    }
-
-    /**
-     * @param int     $remaining
-     * @param OutRule $outRule
-     *
-     * @return bool
-     */
-    private static function isCheckable(int $remaining, OutRule $outRule): bool
-    {
-        $oneTripleScores = $remaining >= 3 && $remaining <= 60 && 0 === $remaining % 3;
-
-        return match ($outRule) {
-            OutRule::Double => self::isDouble($remaining),
-            OutRule::Triple => $oneTripleScores,
-            OutRule::Single => ($remaining >= 1 && $remaining <= 20) || 25 === $remaining || self::isDouble($remaining) || $oneTripleScores,
-        };
-    }
-
-    /**
-     * @param int $score
-     *
-     * @return bool whether one double scores exactly this: D1 to D20 or BULLSEYE
-     */
-    private static function isDouble(int $score): bool
-    {
-        return 50 === $score || ($score >= 2 && $score <= 40 && 0 === $score % 2);
     }
 
     /**
