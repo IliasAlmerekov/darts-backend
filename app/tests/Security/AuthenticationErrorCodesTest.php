@@ -41,6 +41,12 @@ final class AuthenticationErrorCodesTest extends WebTestCase
             ['success' => false, 'error' => 'AUTHENTICATION_REQUIRED', 'message' => 'Unauthorized'],
             json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR),
         );
+        $client->request(Request::METHOD_POST, '/api/room/create');
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+        self::assertSame(
+            ['success' => false, 'error' => 'AUTHENTICATION_REQUIRED', 'message' => 'Unauthorized'],
+            json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR),
+        );
     }
 
     public function testPlayerCallingAnAdminRouteAnswers403AccessDenied(): void

@@ -22,7 +22,7 @@ use Symfony\Component\Security\Core\User\InMemoryUser;
 
 final class ApiAuthenticationEntryPointTest extends TestCase
 {
-    public function testOtherExceptionsAndTokensRemainUnauthorized(): void
+    public function testApiAndNonApiResponsesDependOnTheExceptionAndToken(): void
     {
         $entryPoint = new ApiAuthenticationEntryPoint($this->createStub(UrlGeneratorInterface::class));
         $remembered = new RememberMeToken(new InMemoryUser('player', null, ['ROLE_PLAYER']), 'main');
@@ -32,15 +32,18 @@ final class ApiAuthenticationEntryPointTest extends TestCase
         $wrongToken = new InsufficientAuthenticationException();
         $wrongToken->setToken($otherToken);
 
+        $rememberedDenial = new InsufficientAuthenticationException();
+        $rememberedDenial->setToken($remembered);
+        $response = $entryPoint->start(Request::create('/api/room/create'), $rememberedDenial);
+        self::assertSame(Response::HTTP_FORBIDDEN, $response->getStatusCode());
+        self::assertSame(['success' => false, 'error' => 'ACCESS_DENIED', 'message' => 'Forbidden'], json_decode((string) $response->getContent(), true, 512, JSON_THROW_ON_ERROR));
+
         foreach ([null, new InsufficientAuthenticationException(), $wrongException, $wrongToken] as $exception) {
             $response = $entryPoint->start(Request::create('/api/room/create'), $exception);
             self::assertSame(Response::HTTP_UNAUTHORIZED, $response->getStatusCode());
             self::assertSame(['success' => false, 'error' => 'AUTHENTICATION_REQUIRED', 'message' => 'Unauthorized'], json_decode((string) $response->getContent(), true, 512, JSON_THROW_ON_ERROR));
         }
-    }
 
-    public function testNonApiRememberedDenialStillRedirects(): void
-    {
         $generator = $this->createStub(UrlGeneratorInterface::class);
         $generator->method('generate')->willReturn('/login');
         $exception = new InsufficientAuthenticationException();
