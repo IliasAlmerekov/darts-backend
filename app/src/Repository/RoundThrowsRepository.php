@@ -11,6 +11,7 @@ namespace App\Repository;
 
 use App\Dto\ParticipantTotalsDto;
 use App\Enum\GameStatus;
+use App\Enum\OutRule;
 use App\Entity\Round;
 use App\Entity\GamePlayers;
 use App\Entity\RoundThrows;
@@ -392,8 +393,7 @@ SQL,
      *     isBust:bool,
      *     score:int,
      *     startScore:int,
-     *     doubleOut:bool,
-     *     tripleOut:bool,
+     *     outRule:OutRule,
      *     placement:int|null
      * }>
      */
@@ -411,8 +411,7 @@ SELECT
     rt.is_bust AS isBust,
     rt.score AS score,
     g.start_score AS startScore,
-    g.double_out AS doubleOut,
-    g.triple_out AS tripleOut,
+    g.out_rule AS outRule,
     gp.placement AS placement
 FROM round_throws rt
 INNER JOIN game g ON g.game_id = rt.game_id
@@ -434,8 +433,7 @@ SQL,
             'isBust' => (bool) $row['isBust'],
             'score' => (int) $row['score'],
             'startScore' => (int) $row['startScore'],
-            'doubleOut' => (bool) $row['doubleOut'],
-            'tripleOut' => (bool) $row['tripleOut'],
+            'outRule' => OutRule::from((string) $row['outRule']),
             'placement' => null !== $row['placement'] ? (int) $row['placement'] : null,
         ], $rows);
     }

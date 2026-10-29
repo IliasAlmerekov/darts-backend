@@ -86,8 +86,7 @@ final class PlayerStatsSortEndpointTest extends WebTestCase
             ->setStatus(GameStatus::Started)
             ->setRound(1)
             ->setStartScore(101)
-            ->setDoubleOut(false)
-            ->setTripleOut(false);
+            ->setOutRule(\App\Enum\OutRule::Single);
         $this->entityManager->persist($game);
         $players = [];
         $position = 0;

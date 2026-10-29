@@ -49,9 +49,11 @@ final class ThrowScoringTest extends TestCase
     public function testOutRuleMapping(): void
     {
         $game = new Game();
-        foreach ([[false, false, OutRule::Single], [true, false, OutRule::Double], [false, true, OutRule::Triple], [true, true, OutRule::Double]] as [$double, $triple, $expected]) {
-            $game->setDoubleOut($double)->setTripleOut($triple);
-            self::assertSame($expected, $game->outRule());
+        foreach (OutRule::cases() as $rule) {
+            $game->setOutRule($rule);
+            self::assertSame($rule, $game->outRule());
+            self::assertSame(OutRule::Double === $rule, $game->isDoubleOut());
+            self::assertSame(OutRule::Triple === $rule, $game->isTripleOut());
         }
     }
 

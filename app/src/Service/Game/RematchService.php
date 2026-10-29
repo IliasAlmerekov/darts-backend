@@ -73,8 +73,7 @@ final readonly class RematchService implements RematchServiceInterface
         $lobby = $this->openLobbyService->findOrCreate();
         $lobbyGame = $lobby->game;
         $lobbyGame->setStartScore($oldGame->getStartScore());
-        $lobbyGame->setDoubleOut($oldGame->isDoubleOut());
-        $lobbyGame->setTripleOut($oldGame->isTripleOut());
+        $lobbyGame->setOutRule($oldGame->outRule());
         $lobbyGame->setType($oldGame->getType());
         $this->entityManager->flush();
         $lobbyGameId = $lobbyGame->getGameId() ?? throw new LogicException('The lobby game has no id.');

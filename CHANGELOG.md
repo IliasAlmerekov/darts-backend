@@ -22,6 +22,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **ErrorCode**: Neuer Fehlercode `SecurityAccessDenied` für API-Fehlerbehandlung.
 
 ### Geändert
+- **Spiel**: Die Out-Regel wird in einer Spalte gespeichert; bestehende Einstellungen und API-Felder bleiben erhalten (#192).
 - **Spiel**: Wurfwertung und Checkout-Verarbeitung in eigene Zuständigkeiten aufgeteilt (#168).
 - **Konsistenz**: Kommentare und Routen vereinheitlicht, den SSE-Header aus Einladungs- und Loginantworten entfernt und Benchmarkberichte verschoben (#173).
 - **CI**: Runtime-Image-Build und Repository-Prüfungen in GitHub und GitLab abgestimmt (#54).

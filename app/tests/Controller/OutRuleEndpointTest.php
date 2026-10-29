@@ -107,6 +107,31 @@ final class OutRuleEndpointTest extends WebTestCase
         $this->assertOutRule($lobby, false, true);
     }
 
+    public function testTripleOutIsReportedAndRequiresATripleToCheckout(): void
+    {
+        $game = $this->createGame(GameStatus::Started, score: 18);
+        $this->patchSettings($game, ['outMode' => 'tripleout']);
+        self::assertResponseIsSuccessful();
+        $settings = $this->request(Request::METHOD_GET, sprintf('/api/game/%d/settings', (int) $game->getGameId()));
+        self::assertTrue($settings['tripleOut']);
+        self::assertFalse($settings['doubleOut']);
+
+        $this->throwDart($game, 18);
+        $seat = $this->entityManager->getRepository(GamePlayers::class)->findOneBy(['game' => $game, 'player' => $this->first]);
+        self::assertInstanceOf(GamePlayers::class, $seat);
+        self::assertSame(18, $seat->getScore());
+        $this->undo($game);
+        $seat = $this->entityManager->getRepository(GamePlayers::class)->findOneBy(['game' => $game, 'player' => $this->first]);
+        self::assertInstanceOf(GamePlayers::class, $seat);
+        $seat->setScore(18);
+        $this->entityManager->flush();
+        $this->request(Request::METHOD_POST, $this->throwUri($game), ['playerId' => (int) $this->first->getId(), 'value' => 6, 'isTriple' => true]);
+        self::assertResponseIsSuccessful();
+        $seat = $this->entityManager->getRepository(GamePlayers::class)->findOneBy(['game' => $game, 'player' => $this->first]);
+        self::assertInstanceOf(GamePlayers::class, $seat);
+        self::assertSame(0, $seat->getScore());
+    }
+
     public function testStartRejectsDoubleAndTripleOutAndKeepsTheLobby(): void
     {
         $lobby = $this->createGame(GameStatus::Lobby);
@@ -191,8 +216,7 @@ final class OutRuleEndpointTest extends WebTestCase
             ->setDate(new DateTime())
             ->setStatus($status)
             ->setStartScore(301)
-            ->setDoubleOut($doubleOut)
-            ->setTripleOut(false);
+            ->setOutRule($doubleOut ? \App\Enum\OutRule::Double : \App\Enum\OutRule::Single);
         if (GameStatus::Started === $status) {
             $game->setRound(1);
         }

@@ -37,8 +37,7 @@ final class RematchStartEndpointTest extends WebTestCase
         $oldGame = (new Game())
             ->setDate(new DateTime())
             ->setStartScore(301)
-            ->setDoubleOut(false)
-            ->setTripleOut(false)
+            ->setOutRule(\App\Enum\OutRule::Single)
             ->setStatus(GameStatus::Finished)
             ->setFinishedAt(new DateTimeImmutable());
         $entityManager->persist($oldGame);

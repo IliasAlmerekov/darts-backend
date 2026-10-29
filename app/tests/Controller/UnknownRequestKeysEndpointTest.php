@@ -44,8 +44,7 @@ final class UnknownRequestKeysEndpointTest extends WebTestCase
         $game = (new Game())
             ->setDate(new DateTime())
             ->setStartScore(301)
-            ->setDoubleOut(false)
-            ->setTripleOut(false)
+            ->setOutRule(\App\Enum\OutRule::Single)
             ->setStatus(GameStatus::Lobby);
         $entityManager->persist($game);
         $entityManager->flush();

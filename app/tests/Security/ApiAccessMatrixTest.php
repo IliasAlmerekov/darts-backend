@@ -368,8 +368,7 @@ final class ApiAccessMatrixTest extends WebTestCase
         $game = (new Game())
             ->setDate(new DateTime())
             ->setStartScore(301)
-            ->setDoubleOut(false)
-            ->setTripleOut(false)
+            ->setOutRule(\App\Enum\OutRule::Single)
             ->setStatus(match ($state) {
                 self::STATE_LOBBY => GameStatus::Lobby,
                 self::STATE_STARTED => GameStatus::Started,

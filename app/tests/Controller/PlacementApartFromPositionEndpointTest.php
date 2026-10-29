@@ -145,7 +145,7 @@ final class PlacementApartFromPositionEndpointTest extends WebTestCase
      */
     private function createGame(int $startScore, array $seats): int
     {
-        $game = (new Game())->setDate(new DateTime())->setStartScore($startScore)->setDoubleOut(false)->setTripleOut(false)->setStatus(GameStatus::Started)->setRound(1);
+        $game = (new Game())->setDate(new DateTime())->setStartScore($startScore)->setOutRule(\App\Enum\OutRule::Single)->setStatus(GameStatus::Started)->setRound(1);
         $this->entityManager->persist($game);
         foreach ($seats as [$user, $position, $score]) {
             $seat = (new GamePlayers())->setPlayer($user)->setPosition($position)->setScore($score);

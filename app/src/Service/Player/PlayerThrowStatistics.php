@@ -14,6 +14,7 @@ use App\Dto\PlayerProfileFinishDto;
 use App\Dto\PlayerProfileMostHitSegmentDto;
 use App\Dto\PlayerProfileSegmentHitsDto;
 use App\Dto\PlayerProfileStatsDto;
+use App\Enum\OutRule;
 
 /**
  * A player's Profile statistics from their throws in the counted games. The app records what
@@ -32,8 +33,7 @@ use App\Dto\PlayerProfileStatsDto;
  *     isBust:bool,
  *     score:int,
  *     startScore:int,
- *     doubleOut:bool,
- *     tripleOut:bool,
+ *     outRule:OutRule,
  *     placement:int|null
  * }
  */
@@ -89,12 +89,12 @@ final class PlayerThrowStatistics
             }
 
             $isCheckout = !$throw['isBust'] && 0 === $throw['score'];
-            $isAttempt = self::isCheckable($remaining, $throw['doubleOut'], $throw['tripleOut']);
+            $isAttempt = self::isCheckable($remaining, $throw['outRule']);
             if ($isAttempt) {
                 $checkoutAttempts++;
                 $checkoutHits += $isCheckout ? 1 : 0;
             }
-            if ($isAttempt && $throw['doubleOut']) {
+            if ($isAttempt && OutRule::Double === $throw['outRule']) {
                 $doubles[$remaining] ??= ['hits' => 0, 'attempts' => 0];
                 $doubles[$remaining]['attempts']++;
                 $doubles[$remaining]['hits'] += $isCheckout ? 1 : 0;
@@ -171,24 +171,19 @@ final class PlayerThrowStatistics
     }
 
     /**
-     * Whether one dart can check out this remaining score under the game's out rule. With both
-     * double and triple out no dart can, as GameThrowService needs a dart that is both.
-     *
-     * @param int  $remaining
-     * @param bool $doubleOut
-     * @param bool $tripleOut
+     * @param int     $remaining
+     * @param OutRule $outRule
      *
      * @return bool
      */
-    private static function isCheckable(int $remaining, bool $doubleOut, bool $tripleOut): bool
+    private static function isCheckable(int $remaining, OutRule $outRule): bool
     {
         $oneTripleScores = $remaining >= 3 && $remaining <= 60 && 0 === $remaining % 3;
 
-        return match (true) {
-            $doubleOut && $tripleOut => false,
-            $doubleOut => self::isDouble($remaining),
-            $tripleOut => $oneTripleScores,
-            default => ($remaining >= 1 && $remaining <= 20) || 25 === $remaining || self::isDouble($remaining) || $oneTripleScores,
+        return match ($outRule) {
+            OutRule::Double => self::isDouble($remaining),
+            OutRule::Triple => $oneTripleScores,
+            OutRule::Single => ($remaining >= 1 && $remaining <= 20) || 25 === $remaining || self::isDouble($remaining) || $oneTripleScores,
         };
     }
 

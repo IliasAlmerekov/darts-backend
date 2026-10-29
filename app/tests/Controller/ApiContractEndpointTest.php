@@ -139,8 +139,7 @@ final class ApiContractEndpointTest extends WebTestCase
         $game = (new Game())
             ->setDate(new DateTime())
             ->setStartScore(301)
-            ->setDoubleOut(false)
-            ->setTripleOut(false)
+            ->setOutRule(\App\Enum\OutRule::Single)
             ->setStatus($status);
         $entityManager->persist($game);
         $seat = (new GamePlayers())->setPlayer($player)->setPosition(1)->setScore(301)->setIsWinner(false);

@@ -217,8 +217,7 @@ final class TabletGameEndpointTest extends WebTestCase
         $game = (new Game())
             ->setDate(new DateTime())
             ->setStartScore(301)
-            ->setDoubleOut(false)
-            ->setTripleOut(false)
+            ->setOutRule(\App\Enum\OutRule::Single)
             ->setStatus($status)
             ->setFinishedAt($finishedAt);
         $entityManager->persist($game);

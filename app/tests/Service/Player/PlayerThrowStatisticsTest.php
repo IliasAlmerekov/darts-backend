@@ -12,6 +12,7 @@ namespace App\Tests\Service\Player;
 use App\Dto\PlayerProfileDoubleDto;
 use App\Dto\PlayerProfileFinishDto;
 use App\Dto\PlayerProfileMostHitSegmentDto;
+use App\Enum\OutRule;
 use App\Service\Player\PlayerThrowStatistics;
 use PHPUnit\Framework\TestCase;
 
@@ -96,21 +97,12 @@ final class PlayerThrowStatisticsTest extends TestCase
         self::assertEquals(new PlayerProfileFinishDto(40, 2, ['S1', 'T13']), $stats->highestFinish);
     }
 
-    /**
-     * With double and triple out at once no dart can check out, so no dart is an attempt.
-     */
-    public function testDoubleAndTripleOutTogetherHaveNoCheckoutAttempts(): void
+    public function testCheckoutAttemptsFollowEachOutRule(): void
     {
-        $throws = array_map(
-            static fn(array $throw): array => ['tripleOut' => true] + $throw,
-            $this->turn(40, 'double', [[20, 'S', 20], [10, 'S', 10], [10, 'D', 10]])
-        );
-
-        $stats = PlayerThrowStatistics::build(1, 40.0, $throws);
-
-        self::assertSame(0, $stats->checkoutAttempts);
-        self::assertNull($stats->checkoutRate);
-        self::assertSame([], $stats->favoriteDoubles);
+        foreach (['single' => 2, 'double' => 1, 'triple' => 1] as $rule => $attempts) {
+            $throws = $this->turn(40, $rule, [[1, 'S', 39], [39, 'T', 0]]);
+            self::assertSame($attempts, PlayerThrowStatistics::build(1, 30.0, $throws)->checkoutAttempts);
+        }
     }
 
     /**
@@ -132,7 +124,7 @@ final class PlayerThrowStatisticsTest extends TestCase
      * A double-out game from a double: the player busts with T20 in each of the given turns,
      * then checks out with the double.
      *
-     * @return list<array{gameId:int, roundId:int, value:int, isDouble:bool, isTriple:bool, isBust:bool, score:int, startScore:int, doubleOut:bool, tripleOut:bool, placement:int|null}>
+     * @return list<array{gameId:int, roundId:int, value:int, isDouble:bool, isTriple:bool, isBust:bool, score:int, startScore:int, outRule:OutRule, placement:int|null}>
      */
     private function bustsThenCheckout(int $double, int $busts): array
     {
@@ -149,8 +141,7 @@ final class PlayerThrowStatisticsTest extends TestCase
                 'isBust' => !$isCheckout,
                 'score' => $isCheckout ? 0 : $double,
                 'startScore' => $double,
-                'doubleOut' => true,
-                'tripleOut' => false,
+                'outRule' => OutRule::Double,
                 'placement' => 1,
             ];
         }
@@ -164,7 +155,7 @@ final class PlayerThrowStatisticsTest extends TestCase
      * @param 'single'|'double'|'triple' $outRule
      * @param list<array{int, string, int}> $darts value as stored, ring S, D or T, score after the dart
      *
-     * @return list<array{gameId:int, roundId:int, value:int, isDouble:bool, isTriple:bool, isBust:bool, score:int, startScore:int, doubleOut:bool, tripleOut:bool, placement:int|null}>
+     * @return list<array{gameId:int, roundId:int, value:int, isDouble:bool, isTriple:bool, isBust:bool, score:int, startScore:int, outRule:OutRule, placement:int|null}>
      */
     private function turn(int $startScore, string $outRule, array $darts): array
     {
@@ -179,8 +170,7 @@ final class PlayerThrowStatisticsTest extends TestCase
             'isBust' => false,
             'score' => $dart[2],
             'startScore' => $startScore,
-            'doubleOut' => 'double' === $outRule,
-            'tripleOut' => 'triple' === $outRule,
+            'outRule' => OutRule::from($outRule.'out'),
             'placement' => 1,
         ], $darts);
     }

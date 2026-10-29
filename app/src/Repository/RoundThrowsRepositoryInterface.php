@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Enum\OutRule;
+
 use App\Dto\ParticipantTotalsDto;
 use App\Entity\RoundThrows;
 use Doctrine\ORM\QueryBuilder;
@@ -162,8 +164,7 @@ interface RoundThrowsRepositoryInterface
      *     isBust:bool,
      *     score:int,
      *     startScore:int,
-     *     doubleOut:bool,
-     *     tripleOut:bool,
+     *     outRule:OutRule,
      *     placement:int|null
      * }>
      */

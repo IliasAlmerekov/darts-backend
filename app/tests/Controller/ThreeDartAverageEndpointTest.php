@@ -161,8 +161,7 @@ final class ThreeDartAverageEndpointTest extends WebTestCase
             ->setStatus(GameStatus::Started)
             ->setRound(1)
             ->setStartScore(101)
-            ->setDoubleOut(true)
-            ->setTripleOut(false);
+            ->setOutRule(\App\Enum\OutRule::Double);
         $this->entityManager->persist($game);
         foreach ([1 => $this->anna, 2 => $this->boris] as $position => $player) {
             $seat = (new GamePlayers())->setPlayer($player)->setPosition($position)->setScore(101);
