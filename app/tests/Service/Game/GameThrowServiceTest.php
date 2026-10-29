@@ -1691,6 +1691,100 @@ final class GameThrowServiceTest extends TestCase
         self::assertSame([4, 1, 2, 3], [$normalLast->getPosition(), $guestWinner->getPosition(), $guestSecond->getPosition(), $normalThird->getPosition()]);
     }
 
+    public function testSecondCheckoutGetsSecondPlacementAndFinishesGame(): void
+    {
+        $game = new Game();
+        $this->setPrivateProperty($game, 'gameId', 10);
+        $game->setStartScore(20);
+        $game->setRound(1);
+        $game->setStatus(GameStatus::Started);
+
+        $round = new Round();
+        $round->setRoundNumber(1);
+        $round->setGame($game);
+
+        $normalLastUser = (new User())->setUsername('Regular Last');
+        $this->setPrivateProperty($normalLastUser, 'id', 1);
+        $normalLast = (new GamePlayers())
+            ->setPlayer($normalLastUser)
+            ->setScore(10)
+            ->setPosition(4);
+
+        $guestWinnerUser = (new User())->setUsername('Guest Winner')->setIsGuest(true);
+        $this->setPrivateProperty($guestWinnerUser, 'id', 2);
+        $guestWinner = (new GamePlayers())
+            ->setPlayer($guestWinnerUser)
+            ->setScore(0)
+            ->setPosition(1)
+            ->setPlacement(1)
+            ->setIsWinner(true);
+
+        $guestSecondUser = (new User())->setUsername('Guest Second')->setIsGuest(true);
+        $this->setPrivateProperty($guestSecondUser, 'id', 3);
+        $guestSecond = (new GamePlayers())
+            ->setPlayer($guestSecondUser)
+            ->setScore(10)
+            ->setPosition(2)
+            ->setIsWinner(false);
+
+        $game->setWinner($guestWinnerUser);
+        $game->addGamePlayer($normalLast);
+        $game->addGamePlayer($guestWinner);
+        $game->addGamePlayer($guestSecond);
+
+        $dto = new ThrowRequest();
+        $dto->playerId = 3;
+        $dto->value = 10;
+        $dto->isDouble = false;
+        $dto->isTriple = false;
+
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $gamePlayersRepository->method('findOneBy')
+            ->with(['game' => 10, 'player' => 3])
+            ->willReturn($guestSecond);
+        $gamePlayersRepository->method('countFinishedPlayers')
+            ->with(10)
+            ->willReturn(1);
+
+        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
+        $roundRepository->method('findOneBy')
+            ->with(['game' => $game, 'roundNumber' => 1])
+            ->willReturn($round);
+
+        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository->method('findCurrentRoundStateSnapshot')
+            ->with(10, 1)
+            ->willReturn([]);
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('wrapInTransaction')
+            ->willReturnCallback(static fn (\Closure $fn) => $fn());
+        $entityManager->expects(self::once())->method('persist');
+        $entityManager->expects(self::once())->method('flush');
+
+        $service = new GameThrowService(
+            $gamePlayersRepository,
+            $roundRepository,
+            $roundThrowsRepository,
+            $entityManager,
+            $this->createAccessService(),
+            $this->createMock(GameRepositoryInterface::class),
+            $this->createNewestGameGuard(),
+            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+        );
+
+        $service->recordThrow($game, $dto);
+
+        self::assertSame(GameStatus::Finished, $game->getStatus());
+        self::assertNotNull($game->getFinishedAt());
+        self::assertSame($guestWinnerUser, $game->getWinner());
+        self::assertSame(1, $guestWinner->getPlacement());
+        self::assertSame(2, $guestSecond->getPlacement());
+        self::assertSame(3, $normalLast->getPlacement());
+        self::assertTrue($guestWinner->isWinner());
+        self::assertFalse($guestSecond->isWinner());
+    }
+
     public function testScoringAndBustRulesThroughRecordThrow(): void
     {
         // Each row is double out, triple out, score, value, double, triple, expected score, bust.
