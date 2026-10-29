@@ -23,11 +23,9 @@ use App\Exception\Game\GameThrowNotAllowedException;
 use App\Exception\Game\PlayerAlreadyThrewThreeTimesException;
 use App\Exception\Game\PlayerNotFoundInGameException;
 use App\Enum\GameStatus;
-use App\Repository\GameRepositoryInterface;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
-use App\Service\Security\GameAccessServiceInterface;
 use DateTime;
 use DateTimeImmutable;
 use DateTimeInterface;
@@ -47,8 +45,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      * @param RoundRepositoryInterface       $roundRepository
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
      * @param EntityManagerInterface         $entityManager
-     * @param GameAccessServiceInterface     $gameAccessService
-     * @param GameRepositoryInterface        $gameRepository
+     * @param LockedGameTransactionInterface $lockedGameTransaction
      * @param GameReopenServiceInterface     $gameReopenService
      * @param GameFinishServiceInterface     $gameFinishService
      * @param ActivePlayerResolverInterface  $activePlayerResolver
@@ -60,8 +57,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         private RoundRepositoryInterface $roundRepository,
         private RoundThrowsRepositoryInterface $roundThrowsRepository,
         private EntityManagerInterface $entityManager,
-        private GameAccessServiceInterface $gameAccessService,
-        private GameRepositoryInterface $gameRepository,
+        private LockedGameTransactionInterface $lockedGameTransaction,
         private GameReopenServiceInterface $gameReopenService,
         private GameFinishServiceInterface $gameFinishService,
         private ?ActivePlayerResolverInterface $activePlayerResolver = null,
@@ -77,14 +73,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
     #[Override]
     public function recordThrowByGameId(int $gameId, ThrowRequest $dto): ThrowRecordingResultDto
     {
-        return $this->entityManager->wrapInTransaction(function () use ($gameId, $dto): ThrowRecordingResultDto {
-            $game = $this->gameRepository->findOneByGameIdForUpdate($gameId);
-            if (null === $game) {
-                throw new GameNotFoundException();
-            }
-
-            return $this->recordThrowUnlocked($game, $dto);
-        });
+        return $this->lockedGameTransaction->run($gameId, fn (Game $game): ThrowRecordingResultDto => $this->recordThrowUnlocked($game, $dto));
     }
 
     /**
@@ -95,17 +84,9 @@ final readonly class GameThrowService implements GameThrowServiceInterface
     #[Override]
     public function undoLastThrow(Game $game): ?ThrowDeltaDto
     {
-        $this->gameAccessService->assertAdmin();
+        $gameId = $game->getGameId() ?? throw new GameNotFoundException();
 
-        $undoneThrow = $this->entityManager->wrapInTransaction(function () use ($game): ?ThrowDeltaDto {
-            if ($this->entityManager->contains($game)) {
-                $this->gameRepository->refreshWithSeatsForUpdate($game);
-            }
-
-            return $this->undoLastThrowUnlocked($game);
-        });
-
-        return $undoneThrow;
+        return $this->lockedGameTransaction->run($gameId, fn (Game $game): ?ThrowDeltaDto => $this->undoLastThrowUnlocked($game));
     }
 
     /**
@@ -116,8 +97,6 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      */
     private function recordThrowUnlocked(Game $game, ThrowRequest $dto): ThrowRecordingResultDto
     {
-        $this->gameAccessService->assertAdmin();
-
         $status = $game->getStatus();
         if (GameStatus::Started !== $status) {
             throw new GameThrowNotAllowedException($status);

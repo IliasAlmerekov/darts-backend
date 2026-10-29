@@ -12,9 +12,7 @@ namespace App\Service\Game;
 use App\Entity\Game;
 use App\Enum\GameStatus;
 use App\Exception\Game\GameAbortNotAllowedException;
-use App\Repository\GameRepositoryInterface;
-use App\Service\Security\GameAccessServiceInterface;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Exception\Game\GameNotFoundException;
 
 /**
  * Service to handle aborting games.
@@ -25,11 +23,9 @@ use Doctrine\ORM\EntityManagerInterface;
 final readonly class GameAbortService implements GameAbortServiceInterface
 {
     /**
-     * @param EntityManagerInterface     $entityManager
-     * @param GameAccessServiceInterface $gameAccessService
-     * @param GameRepositoryInterface    $gameRepository
+     * @param LockedGameTransactionInterface $lockedGameTransaction
      */
-    public function __construct(private EntityManagerInterface $entityManager, private GameAccessServiceInterface $gameAccessService, private GameRepositoryInterface $gameRepository)
+    public function __construct(private LockedGameTransactionInterface $lockedGameTransaction)
     {
     }
 
@@ -44,9 +40,8 @@ final readonly class GameAbortService implements GameAbortServiceInterface
     public function abortGame(Game $game): void
     {
         // Wait for a throw, undo or finish that holds the game lock, then abort the committed state.
-        $this->entityManager->wrapInTransaction(function () use ($game): void {
-            $this->gameRepository->refreshWithSeatsForUpdate($game);
-            $this->gameAccessService->assertAdmin();
+        $gameId = $game->getGameId() ?? throw new GameNotFoundException();
+        $this->lockedGameTransaction->run($gameId, static function (Game $game): void {
             $status = $game->getStatus();
             if (!$status->canAbort()) {
                 throw new GameAbortNotAllowedException($status);

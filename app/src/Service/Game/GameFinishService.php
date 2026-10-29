@@ -17,13 +17,12 @@ use App\Entity\GamePlayers;
 use App\Enum\GameStatus;
 use App\Exception\Game\GameFinishNotAllowedException;
 use App\Exception\Game\GameNotFinishedException;
+use App\Exception\Game\GameNotFoundException;
 use App\Repository\GamePlayersRepositoryInterface;
-use App\Repository\GameRepositoryInterface;
 use App\Repository\PlayerStatisticsRepositoryInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use DateTimeImmutable;
 use DateTimeInterface;
-use Doctrine\ORM\EntityManagerInterface;
 
 /**
  * Service to handle finishing games.
@@ -32,13 +31,12 @@ use Doctrine\ORM\EntityManagerInterface;
 final readonly class GameFinishService implements GameFinishServiceInterface
 {
     /**
-     * @param EntityManagerInterface              $entityManager
      * @param GamePlayersRepositoryInterface      $gamePlayersRepository
      * @param PlayerStatisticsRepositoryInterface $playerStatisticsRepository
      * @param GameAccessServiceInterface          $gameAccessService
-     * @param GameRepositoryInterface             $gameRepository
+     * @param LockedGameTransactionInterface      $lockedGameTransaction
      */
-    public function __construct(private EntityManagerInterface $entityManager, private GamePlayersRepositoryInterface $gamePlayersRepository, private PlayerStatisticsRepositoryInterface $playerStatisticsRepository, private GameAccessServiceInterface $gameAccessService, private GameRepositoryInterface $gameRepository)
+    public function __construct(private GamePlayersRepositoryInterface $gamePlayersRepository, private PlayerStatisticsRepositoryInterface $playerStatisticsRepository, private GameAccessServiceInterface $gameAccessService, private LockedGameTransactionInterface $lockedGameTransaction)
     {
     }
 
@@ -92,9 +90,9 @@ final readonly class GameFinishService implements GameFinishServiceInterface
             ? $finishedAt
             : (null !== $finishedAt ? DateTimeImmutable::createFromInterface($finishedAt) : new DateTimeImmutable());
         // The route loaded the game before this transaction: rank the committed scores, not that snapshot.
-        return $this->entityManager->wrapInTransaction(function () use ($game, $timestamp): GameSummaryResponseDto {
-            $this->gameRepository->refreshWithSeatsForUpdate($game);
-            $this->gameAccessService->assertAdmin();
+        $gameId = $game->getGameId() ?? throw new GameNotFoundException();
+
+        return $this->lockedGameTransaction->run($gameId, function (Game $game) use ($timestamp): GameSummaryResponseDto {
             $status = $game->getStatus();
             if (!$status->canFinish()) {
                 throw new GameFinishNotAllowedException($status);

@@ -16,14 +16,15 @@ interface GameStartServiceInterface
     /**
      * Start a game with the given settings. Aborts every other started game (ADR 0004).
      *
-     * Must be called inside a transaction: it locks the game and its seats until it ends.
+     * Opens its own transaction through LockedGameTransactionInterface::runWithRetry() and
+     * locks the game and its seats until it ends.
      *
      * @param Game             $game The game to start
      * @param StartGameRequest $dto  Game start configuration
      *
      * @throws ApiExceptionInterface If game cannot be started (e.g., not enough players)
      *
-     * @return void
+     * @return Game the locked, started game; read the response from it, not from $game
      */
-    public function start(Game $game, StartGameRequest $dto): void;
+    public function start(Game $game, StartGameRequest $dto): Game;
 }

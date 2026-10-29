@@ -24,6 +24,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 
 ### Geändert
 
+- **Spiel**: Schreibende Spielaktionen prüfen Adminrolle, Transaktion und Sperre des Spiels an einer Stelle (`LockedGameTransaction`); `NewestGameGuard` ist durch die Regel `NewestGameRule` ersetzt (#204).
 - **Spiel**: Out-Regeln für Wurfwertung und Checkout-Versuche stehen gemeinsam in `OutRule` (#208).
 
 - **Sicherheit**: Spielzugriffe prüfen die Adminrolle direkt (#71).

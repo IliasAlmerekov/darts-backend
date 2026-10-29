@@ -26,18 +26,17 @@ use App\Repository\InvitationRepository;
 use App\Repository\PlayerStatisticsRepository;
 use App\Repository\RoundRepository;
 use App\Repository\RoundThrowsRepository;
-use App\Repository\UserRepositoryInterface;
 use App\Service\Game\GameAbortService;
 use App\Service\Game\GameFinishService;
-use App\Service\Game\GameRoomService;
 use App\Service\Game\GameSettingsService;
 use App\Service\Game\GameSetupService;
 use App\Service\Game\GameStartService;
 use App\Service\Game\GameThrowService;
 use App\Service\Game\GameReopenService;
-use App\Service\Game\NewestGameGuard;
+use App\Service\Game\LockedGameTransaction;
 use App\Service\Game\OpenLobbyService;
 use App\Service\Game\RematchService;
+use App\Service\Persistence\RetryingTransaction;
 use App\Service\Player\GuestPlayerService;
 use App\Service\Player\PlayerManagementService;
 use App\Service\Security\GameAccessServiceInterface;
@@ -245,15 +244,13 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $access->method('assertAdmin')->willReturn(new User());
         $openLobbyService = new OpenLobbyService($gameRepository, $this->entityManager);
         $service = new RematchService(
-            new GameRoomService($gameRepository, $this->gamePlayersRepository, $playerManagementService, $access, $openLobbyService, $this->createMock(UserRepositoryInterface::class)),
             $playerManagementService,
             new InvitationRepository($this->registry()),
             $this->entityManager,
             $this->createMock(UrlGeneratorInterface::class),
-            $access,
             $openLobbyService,
-            new NewestGameGuard($gameRepository),
             $gameRepository,
+            $this->lockedGameTransaction($access),
         );
 
         $this->request->beginTransaction();
@@ -428,9 +425,9 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $service = new GameStartService(
             new GameSetupService(),
             $this->entityManager,
-            $access,
             new RoundRepository($this->registry()),
             $gameRepository,
+            $this->lockedGameTransaction($access),
         );
 
         $this->request->beginTransaction();
@@ -506,7 +503,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $access->method('assertAdmin')->willReturn(new User());
 
         try {
-            (new GameSettingsService($this->entityManager, $access, new GameRepository($this->registry()), new RoundThrowsRepository($this->registry())))
+            (new GameSettingsService($this->entityManager, new RoundThrowsRepository($this->registry()), $this->lockedGameTransaction($access)))
                 ->updateSettings($loaded, new GameSettingsRequest(startScore: 501));
             self::fail('The settings changed a finished game.');
         } catch (SettingsNotEditableException) {
@@ -583,7 +580,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $this->other->update('game', ['status' => 'started'], ['game_id' => $game]);
         $this->request->executeStatement('SET SESSION innodb_lock_wait_timeout = 1');
         try {
-            (new GameAbortService($this->entityManager, $access, new GameRepository($this->registry())))->abortGame($loaded);
+            (new GameAbortService($this->lockedGameTransaction($access)))->abortGame($loaded);
             self::fail('The abort did not wait for the game lock.');
         } catch (LockWaitTimeoutException) {
         }
@@ -597,7 +594,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         self::assertSame(GameStatus::Aborted, $stale->getStatus());
         $this->other->commit();
 
-        (new GameAbortService($this->entityManager, $access, new GameRepository($this->registry())))->abortGame($stale);
+        (new GameAbortService($this->lockedGameTransaction($access)))->abortGame($stale);
 
         self::assertSame('aborted', $this->other->fetchOne('SELECT status FROM game WHERE game_id = ?', [$game]));
     }
@@ -675,9 +672,8 @@ final class ConcurrentSeatingTest extends KernelTestCase
             new RoundRepository($this->registry()),
             new RoundThrowsRepository($this->registry()),
             $this->entityManager,
-            $access,
-            $gameRepository,
-            new GameReopenService($this->entityManager, $access, $gameRepository, new NewestGameGuard($gameRepository)),
+            $this->lockedGameTransaction($access),
+            new GameReopenService($this->entityManager, $gameRepository, $this->lockedGameTransaction($access)),
             $this->finishService(),
         );
     }
@@ -688,12 +684,18 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $access->method('assertAdmin')->willReturn(new User());
 
         return new GameFinishService(
-            $this->entityManager,
             $this->gamePlayersRepository,
             new PlayerStatisticsRepository($this->entityManager),
             $access,
-            new GameRepository($this->registry()),
+            $this->lockedGameTransaction($access),
         );
+    }
+
+    private function lockedGameTransaction(GameAccessServiceInterface $access): LockedGameTransaction
+    {
+        $registry = $this->registry();
+
+        return new LockedGameTransaction($access, $this->entityManager, new RetryingTransaction($this->entityManager, $registry), new GameRepository($registry));
     }
 
     /**

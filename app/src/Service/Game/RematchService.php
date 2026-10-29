@@ -14,9 +14,7 @@ use App\Entity\Invitation;
 use App\Enum\GameStatus;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\InvitationRepositoryInterface;
-use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
-use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
 use LogicException;
@@ -33,19 +31,17 @@ use Override;
 final readonly class RematchService implements RematchServiceInterface
 {
     /**
-     * @param GameRoomServiceInterface         $gameRoomService
      * @param PlayerManagementServiceInterface $playerManagementService
      * @param InvitationRepositoryInterface    $invitationRepository
      * @param EntityManagerInterface           $entityManager
      * @param UrlGeneratorInterface            $urlGenerator
-     * @param GameAccessServiceInterface       $gameAccessService
      * @param OpenLobbyServiceInterface        $openLobbyService
-     * @param NewestGameGuardInterface         $newestGameGuard
      * @param GameRepositoryInterface          $gameRepository
+     * @param LockedGameTransactionInterface   $lockedGameTransaction
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
-    public function __construct(private GameRoomServiceInterface $gameRoomService, private PlayerManagementServiceInterface $playerManagementService, private InvitationRepositoryInterface $invitationRepository, private EntityManagerInterface $entityManager, private UrlGeneratorInterface $urlGenerator, private GameAccessServiceInterface $gameAccessService, private OpenLobbyServiceInterface $openLobbyService, private NewestGameGuardInterface $newestGameGuard, private GameRepositoryInterface $gameRepository)
+    public function __construct(private PlayerManagementServiceInterface $playerManagementService, private InvitationRepositoryInterface $invitationRepository, private EntityManagerInterface $entityManager, private UrlGeneratorInterface $urlGenerator, private OpenLobbyServiceInterface $openLobbyService, private GameRepositoryInterface $gameRepository, private LockedGameTransactionInterface $lockedGameTransaction)
     {
     }
 
@@ -54,43 +50,39 @@ final readonly class RematchService implements RematchServiceInterface
      *
      * @throws ORMException
      *
-      * @return array{success: bool, gameId?: int, invitationLink?: string, message?: string}
+     * @return array{success: bool, gameId?: int, invitationLink?: string}
      */
     #[Override]
     public function createRematch(int $oldGameId): array
     {
-        $oldGame = $this->gameRoomService->findGameById($oldGameId);
-        if (!$oldGame) {
-            return ['success' => false, 'message' => 'Previous game not found'];
-        }
-        // Reloads the status under the game's lock, so a parallel reopen of this game either
+        // Loads the status under the game's lock, so a parallel reopen of this game either
         // commits first and is seen, or waits until the rematch ends.
-        $this->gameRepository->refreshWithSeatsForUpdate($oldGame);
-        $this->gameAccessService->assertAdmin();
-        // Aborted too: the exit flow aborts the started game, then asks for its rematch.
-        $this->newestGameGuard->assertNewest($oldGame, [GameStatus::Finished, GameStatus::Aborted]);
+        return $this->lockedGameTransaction->runWithRetry($oldGameId, function (Game $oldGame) use ($oldGameId): array {
+            // Aborted too: the exit flow aborts the started game, then asks for its rematch.
+            NewestGameRule::assert($oldGame, [GameStatus::Finished, GameStatus::Aborted], $this->gameRepository);
 
-        $lobby = $this->openLobbyService->findOrCreate();
-        $lobbyGame = $lobby->game;
-        $lobbyGame->setStartScore($oldGame->getStartScore());
-        $lobbyGame->setOutRule($oldGame->outRule());
-        $this->entityManager->flush();
-        $lobbyGameId = $lobbyGame->getGameId() ?? throw new LogicException('The lobby game has no id.');
+            $lobby = $this->openLobbyService->findOrCreate();
+            $lobbyGame = $lobby->game;
+            $lobbyGame->setStartScore($oldGame->getStartScore());
+            $lobbyGame->setOutRule($oldGame->outRule());
+            $this->entityManager->flush();
+            $lobbyGameId = $lobbyGame->getGameId() ?? throw new LogicException('The lobby game has no id.');
 
-        // After a finished game the last placed participant throws first; an aborted game has no placements.
-        $lastPlacedFirst = GameStatus::Finished === $oldGame->getStatus();
-        if ($lobby->created) {
-            $this->playerManagementService->copyPlayers($oldGameId, $lobbyGameId, $lastPlacedFirst);
-        } else {
-            // Players who joined the open lobby keep their seats.
-            $this->playerManagementService->appendMissingPlayers($oldGameId, $lobbyGameId, $lastPlacedFirst);
-        }
+            // After a finished game the last placed participant throws first; an aborted game has no placements.
+            $lastPlacedFirst = GameStatus::Finished === $oldGame->getStatus();
+            if ($lobby->created) {
+                $this->playerManagementService->copyPlayers($oldGameId, $lobbyGameId, $lastPlacedFirst);
+            } else {
+                // Players who joined the open lobby keep their seats.
+                $this->playerManagementService->appendMissingPlayers($oldGameId, $lobbyGameId, $lastPlacedFirst);
+            }
 
-        return [
-            'success' => true,
-            'gameId' => $lobbyGameId,
-            'invitationLink' => $this->createInvitation($lobbyGame, $lobbyGameId),
-        ];
+            return [
+                'success' => true,
+                'gameId' => $lobbyGameId,
+                'invitationLink' => $this->createInvitation($lobbyGame, $lobbyGameId),
+            ];
+        });
     }
 
     /**

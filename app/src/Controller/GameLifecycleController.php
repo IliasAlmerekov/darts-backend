@@ -15,16 +15,13 @@ use App\Dto\SuccessMessageDto;
 use App\Dto\StartGameRequest;
 use App\Entity\Game;
 use App\Exception\ApiExceptionInterface;
-use App\Exception\Game\GameNotFoundException;
 use App\EventSubscriber\ApiViewSubscriber;
 use App\Http\Attribute\ApiResponse;
-use App\Repository\GameRepositoryInterface;
 use App\Service\Game\GameAbortServiceInterface;
 use App\Service\Game\GameFinishServiceInterface;
 use App\Service\Game\GameReopenServiceInterface;
 use App\Service\Game\GameStateViewBuilderInterface;
 use App\Service\Game\GameStartServiceInterface;
-use App\Service\Persistence\RetryingTransactionInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
@@ -48,8 +45,6 @@ final class GameLifecycleController extends AbstractController
      * @param Game                          $game
      * @param GameStartServiceInterface     $gameStartService
      * @param GameStateViewBuilderInterface $gameStateViewBuilder
-     * @param GameRepositoryInterface       $gameRepository
-     * @param RetryingTransactionInterface  $transaction
      * @param Request                       $request
      * @param StartGameRequest              $dto
      *
@@ -69,16 +64,9 @@ final class GameLifecycleController extends AbstractController
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht, oder das Spiel hätte danach `doubleOut` und `tripleOut` zugleich (`GAME_CONFLICTING_OUT_RULES`). Das Spiel bleibt unverändert.', content: new OA\JsonContent(anyOf: [new OA\Schema(ref: '#/components/schemas/RequestValidationFailed'), new OA\Schema(ref: '#/components/schemas/ApiError')]))]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: Nur ROLE_ADMIN (das Tablet) darf diese Route nutzen (`ACCESS_DENIED`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[Route('/api/game/{gameId}/start', name: 'app_game_start', methods: ['POST'], format: 'json')]
-    public function start(#[AttributeMapEntity(id: 'gameId')] Game $game, GameStartServiceInterface $gameStartService, GameStateViewBuilderInterface $gameStateViewBuilder, GameRepositoryInterface $gameRepository, RetryingTransactionInterface $transaction, Request $request, #[MapRequestPayload] StartGameRequest $dto): GameResponseDto
+    public function start(#[AttributeMapEntity(id: 'gameId')] Game $game, GameStartServiceInterface $gameStartService, GameStateViewBuilderInterface $gameStateViewBuilder, Request $request, #[MapRequestPayload] StartGameRequest $dto): GameResponseDto
     {
-        $gameId = $game->getGameId() ?? throw new GameNotFoundException();
-        $started = $transaction->run(static function () use ($gameRepository, $gameStartService, $gameId, $dto): Game {
-            // A retry follows resetManager(), which detaches the game the route resolved.
-            $game = $gameRepository->findOneByGameId($gameId) ?? throw new GameNotFoundException();
-            $gameStartService->start($game, $dto);
-
-            return $game;
-        });
+        $started = $gameStartService->start($game, $dto);
         $request->attributes->set(
             ApiViewSubscriber::RESPONSE_HEADERS_REQUEST_ATTRIBUTE,
             $this->createStateVersionHeaders($gameStateViewBuilder->buildStateVersion($started)),
@@ -118,8 +106,6 @@ final class GameLifecycleController extends AbstractController
      * @param Game                          $game
      * @param GameReopenServiceInterface    $gameReopenService
      * @param GameStateViewBuilderInterface $gameStateViewBuilder
-     * @param GameRepositoryInterface       $gameRepository
-     * @param RetryingTransactionInterface  $transaction
      *
      * @return mixed
      */
@@ -133,18 +119,9 @@ final class GameLifecycleController extends AbstractController
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: Nur ROLE_ADMIN (das Tablet) darf diese Route nutzen (`ACCESS_DENIED`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Das Spiel ist weder beendet noch gestartet (`GAME_REOPEN_NOT_ALLOWED`), oder es ist beendet, aber nicht das neueste Spiel (`GAME_NOT_NEWEST`).')]
     #[Route('/api/game/{gameId}/reopen', name: 'app_game_reopen', methods: ['PATCH'], format: 'json')]
-    public function reopen(#[AttributeMapEntity(id: 'gameId')] Game $game, GameReopenServiceInterface $gameReopenService, GameStateViewBuilderInterface $gameStateViewBuilder, GameRepositoryInterface $gameRepository, RetryingTransactionInterface $transaction): mixed
+    public function reopen(#[AttributeMapEntity(id: 'gameId')] Game $game, GameReopenServiceInterface $gameReopenService, GameStateViewBuilderInterface $gameStateViewBuilder): mixed
     {
-        $gameId = $game->getGameId() ?? throw new GameNotFoundException();
-        $reopened = $transaction->run(static function () use ($gameRepository, $gameReopenService, $gameId): Game {
-            // A retry follows resetManager(), which detaches the game the route resolved.
-            $game = $gameRepository->findOneByGameId($gameId) ?? throw new GameNotFoundException();
-            $gameReopenService->reopen($game);
-
-            return $game;
-        });
-
-        return $gameStateViewBuilder->createGameDto($reopened);
+        return $gameStateViewBuilder->createGameDto($gameReopenService->reopen($game));
     }
 
     /**

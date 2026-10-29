@@ -11,10 +11,10 @@ use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Repository\GamePlayersRepositoryInterface;
-use App\Repository\GameRepositoryInterface;
 use App\Repository\PlayerStatisticsRepositoryInterface;
 use App\Service\Game\GameFinishService;
 use App\Service\Security\GameAccessServiceInterface;
+use App\Tests\Support\LockedGameTransactionFake;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
@@ -36,7 +36,7 @@ final class GameFinishServiceTest extends TestCase
         $seats->method('countFinishedPlayers')->willReturnOnConsecutiveCalls(0, 1);
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects(self::never())->method('wrapInTransaction');
-        $service = $this->createService($em, $seats, $this->createMock(PlayerStatisticsRepositoryInterface::class));
+        $service = $this->createService($em, $seats, $this->createMock(PlayerStatisticsRepositoryInterface::class), $game);
 
         $service->recordCheckout($game, $winner);
         self::assertSame(1, $winner->getPlacement());
@@ -93,7 +93,7 @@ final class GameFinishServiceTest extends TestCase
             ]]);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $service = $this->createService($entityManager, $gamePlayersRepository, $playerStatisticsRepository);
+        $service = $this->createService($entityManager, $gamePlayersRepository, $playerStatisticsRepository, $game);
 
         $summary = $service->finishGame($game);
 
@@ -175,7 +175,7 @@ final class GameFinishServiceTest extends TestCase
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
 
-        $service = $this->createService($entityManager, $gamePlayersRepository, $playerStatisticsRepository);
+        $service = $this->createService($entityManager, $gamePlayersRepository, $playerStatisticsRepository, $game);
 
         $summary = $service->getGameSummary($game);
 
@@ -224,7 +224,7 @@ final class GameFinishServiceTest extends TestCase
             ]]);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $service = $this->createService($entityManager, $gamePlayersRepository, $playerStatisticsRepository);
+        $service = $this->createService($entityManager, $gamePlayersRepository, $playerStatisticsRepository, $game);
         $finishedAt = new \DateTimeImmutable('2026-03-10T12:00:00+00:00');
 
         $finishSummary = $service->finishGame($game, $finishedAt);
@@ -245,18 +245,17 @@ final class GameFinishServiceTest extends TestCase
     private function createService(
         EntityManagerInterface $entityManager,
         GamePlayersRepositoryInterface $gamePlayersRepository,
-        PlayerStatisticsRepositoryInterface $playerStatisticsRepository
+        PlayerStatisticsRepositoryInterface $playerStatisticsRepository,
+        Game $game,
     ): GameFinishService {
-        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $callback): mixed => $callback());
         $access = $this->createMock(GameAccessServiceInterface::class);
         $access->method('assertAdmin')->willReturn(new User());
 
         return new GameFinishService(
-            $entityManager,
             $gamePlayersRepository,
             $playerStatisticsRepository,
             $access,
-            $this->createStub(GameRepositoryInterface::class)
+            new LockedGameTransactionFake($game),
         );
     }
 }
