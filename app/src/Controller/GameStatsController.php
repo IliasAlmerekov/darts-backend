@@ -15,7 +15,7 @@ use App\Dto\PlayerStatsResponseDto;
 use App\Http\Attribute\ApiResponse;
 use App\Http\Pagination;
 use App\Repository\GameRepositoryInterface;
-use App\Repository\RoundThrowsRepositoryInterface;
+use App\Repository\PlayerStatisticsRepositoryInterface;
 use App\Service\Game\GameStatisticsServiceInterface;
 use DateTimeInterface;
 use Nelmio\ApiDocBundle\Attribute\Model;
@@ -89,11 +89,11 @@ final class GameStatsController extends AbstractController
     /**
      * Returns aggregated player stats.
      *
-     * @param GameStatisticsServiceInterface $gameStatisticsService
-     * @param RoundThrowsRepositoryInterface $roundThrowsRepository
-     * @param int                            $limit
-     * @param int                            $offset
-     * @param string                         $sort
+     * @param GameStatisticsServiceInterface      $gameStatisticsService
+     * @param PlayerStatisticsRepositoryInterface $playerStatisticsRepository
+     * @param int                                 $limit
+     * @param int                                 $offset
+     * @param string                              $sort
      *
      * @return PlayerStatsResponseDto
      */
@@ -124,7 +124,7 @@ final class GameStatsController extends AbstractController
     #[OA\Response(response: 400, description: '`limit` oder `offset` ist keine ganze Zahl.')]
     #[ApiResponse(groups: ['stats:read'])]
     #[Route('/api/players/stats', name: 'app_players_stats', methods: ['GET'], format: 'json')]
-    public function playerStats(GameStatisticsServiceInterface $gameStatisticsService, RoundThrowsRepositoryInterface $roundThrowsRepository, #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] int $limit = 20, #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] int $offset = 0, #[MapQueryParameter] string $sort = 'average:desc'): PlayerStatsResponseDto
+    public function playerStats(GameStatisticsServiceInterface $gameStatisticsService, PlayerStatisticsRepositoryInterface $playerStatisticsRepository, #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] int $limit = 20, #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] int $offset = 0, #[MapQueryParameter] string $sort = 'average:desc'): PlayerStatsResponseDto
     {
         $pagination = Pagination::from($limit, $offset, defaultLimit: 20, maxLimit: 100);
         [$sortField, $sortDirection] = $this->parseSort($sort);
@@ -134,7 +134,7 @@ final class GameStatsController extends AbstractController
         return new PlayerStatsResponseDto(
             limit: $pagination->limit,
             offset: $pagination->offset,
-            total: $roundThrowsRepository->countPlayersWithStatistics(),
+            total: $playerStatisticsRepository->countPlayersWithStatistics(),
             items: $items
         );
     }

@@ -17,6 +17,7 @@ use App\Exception\Game\GameThrowNotAllowedException;
 use App\Exception\Game\InvalidThrowException;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\GamePlayersRepositoryInterface;
+use App\Repository\PlayerStatisticsRepositoryInterface;
 use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Game\ActivePlayerResolverInterface;
@@ -117,7 +118,7 @@ final class GameThrowServiceTest extends TestCase
             $this->createAccessService(),
             $gameRepository,
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
         );
 
         $service->recordThrowByGameId(10, $dto);
@@ -153,7 +154,7 @@ final class GameThrowServiceTest extends TestCase
             $this->createAccessService(),
             $gameRepository,
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
         );
 
         $this->expectException(GameNotFoundException::class);
@@ -219,7 +220,7 @@ final class GameThrowServiceTest extends TestCase
             $accessService,
             $gameRepository,
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
         );
 
         $this->expectException(GamePlayerNotActiveException::class);
@@ -299,7 +300,7 @@ final class GameThrowServiceTest extends TestCase
             $this->createAccessService(),
             $this->gameRepositoryFor($game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
         );
 
         $service->recordThrowByGameId((int) $game->getGameId(), $dto);
@@ -391,7 +392,7 @@ final class GameThrowServiceTest extends TestCase
             $this->createAccessService(),
             $this->gameRepositoryFor($game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
         );
 
         $result = $service->recordThrowByGameId((int) $game->getGameId(), $dto);
@@ -486,7 +487,7 @@ final class GameThrowServiceTest extends TestCase
             $this->createAccessService(),
             $this->gameRepositoryFor($game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
         );
 
         $result = $service->recordThrowByGameId((int) $game->getGameId(), $dto);
@@ -547,7 +548,7 @@ final class GameThrowServiceTest extends TestCase
             $this->createAccessService(),
             $this->gameRepositoryFor($game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
         );
 
         $this->expectException(GameThrowNotAllowedException::class);
@@ -587,7 +588,7 @@ final class GameThrowServiceTest extends TestCase
             $this->createAccessService(),
             $this->gameRepositoryFor($game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
         );
 
         $this->expectException(GameThrowNotAllowedException::class);
@@ -652,7 +653,7 @@ final class GameThrowServiceTest extends TestCase
             $this->createAccessService(),
             $this->gameRepositoryFor($game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
         );
 
         $this->expectException(InvalidThrowException::class);
@@ -737,7 +738,7 @@ final class GameThrowServiceTest extends TestCase
             $this->createAccessService(),
             $this->gameRepositoryFor($game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
         );
 
         $this->expectException(InvalidThrowException::class);
@@ -829,7 +830,7 @@ final class GameThrowServiceTest extends TestCase
             $this->createAccessService(),
             $this->gameRepositoryFor($game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
         );
 
         $service->recordThrowByGameId((int) $game->getGameId(), $dto);
@@ -903,7 +904,7 @@ final class GameThrowServiceTest extends TestCase
             $this->createAccessService(),
             $this->gameRepositoryFor($game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
         );
 
         $this->expectException(GamePlayerNotActiveException::class);
@@ -991,7 +992,7 @@ final class GameThrowServiceTest extends TestCase
             $this->createAccessService(),
             $this->gameRepositoryFor($game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
         );
 
         $this->expectException(GamePlayerNotActiveException::class);
@@ -1078,7 +1079,7 @@ final class GameThrowServiceTest extends TestCase
             $this->createAccessService(),
             $this->gameRepositoryFor($game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
             $activePlayerResolver,
         );
 
@@ -1159,7 +1160,7 @@ final class GameThrowServiceTest extends TestCase
             $this->createAccessService(),
             $this->gameRepositoryFor($game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
         );
 
         $result = $service->recordThrowByGameId((int) $game->getGameId(), $dto);
@@ -1260,7 +1261,7 @@ final class GameThrowServiceTest extends TestCase
             $this->createAccessService(),
             $gameRepository,
             $this->createReopenService($entityManager, $gameRepository, 10),
-            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
         );
 
         $undoneThrow = $service->undoLastThrow($game);
@@ -1377,7 +1378,7 @@ final class GameThrowServiceTest extends TestCase
             $this->createAccessService(),
             $gameRepository,
             $this->createReopenService($entityManager, $gameRepository, 10),
-            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
         );
 
         $undoneThrow = $service->undoLastThrow($game);
@@ -1490,7 +1491,7 @@ final class GameThrowServiceTest extends TestCase
             $this->createAccessService(),
             $gameRepository,
             $this->createReopenService($entityManager, $gameRepository, 11),
-            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
         );
 
         try {
@@ -1526,7 +1527,7 @@ final class GameThrowServiceTest extends TestCase
         $em->expects(self::never())->method('flush');
         $repository = $this->createMock(GameRepositoryInterface::class);
         $repository->expects(self::never())->method('abortStartedGames');
-        $service = new GameThrowService($seats, $rounds, $throws, $em, $this->createAccessService(), $repository, $this->createReopenService($em, $repository, 11), new GameFinishService($em, $seats, $throws, $this->createAccessService(), $repository));
+        $service = new GameThrowService($seats, $rounds, $throws, $em, $this->createAccessService(), $repository, $this->createReopenService($em, $repository, 11), new GameFinishService($em, $seats, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $repository));
 
         self::assertNull($service->undoLastThrow($game));
         self::assertSame(GameStatus::Finished, $game->getStatus());
@@ -1616,7 +1617,7 @@ final class GameThrowServiceTest extends TestCase
             $this->createAccessService(),
             $gameRepository,
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
         );
 
         $undoneThrow = $service->undoLastThrow($game);
@@ -1727,7 +1728,7 @@ final class GameThrowServiceTest extends TestCase
             $this->createAccessService(),
             $gameRepository,
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
         );
 
         $undoneThrow = $service->undoLastThrow($game);
@@ -1825,7 +1826,7 @@ final class GameThrowServiceTest extends TestCase
             $this->createAccessService(),
             $gameRepository,
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
         );
 
         $service->undoLastThrow($game);
@@ -1928,7 +1929,7 @@ final class GameThrowServiceTest extends TestCase
             $this->createAccessService(),
             $this->gameRepositoryFor($game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
         );
 
         $service->recordThrowByGameId((int) $game->getGameId(), $dto);
@@ -2023,7 +2024,7 @@ final class GameThrowServiceTest extends TestCase
             $this->createAccessService(),
             $this->gameRepositoryFor($game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $roundThrowsRepository, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
         );
 
         $service->recordThrowByGameId((int) $game->getGameId(), $dto);
@@ -2090,7 +2091,7 @@ final class GameThrowServiceTest extends TestCase
             $em = $this->createMock(EntityManagerInterface::class);
             $em->method('wrapInTransaction')->willReturnCallback(static fn (\Closure $fn) => $fn());
             $em->method('persist')->willReturnCallback(static function (object $entity) use (&$persisted): void { $persisted = $entity; });
-            $service = new GameThrowService($seats, $rounds, $throws, $em, $this->createAccessService(), $this->gameRepositoryFor($game), $this->createStub(GameReopenServiceInterface::class), new GameFinishService($em, $seats, $throws, $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)));
+            $service = new GameThrowService($seats, $rounds, $throws, $em, $this->createAccessService(), $this->gameRepositoryFor($game), $this->createStub(GameReopenServiceInterface::class), new GameFinishService($em, $seats, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)));
             $service->recordThrowByGameId((int) $game->getGameId(), $dto);
             self::assertSame($expected, $seat->getScore());
             self::assertInstanceOf(RoundThrows::class, $persisted);

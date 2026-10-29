@@ -21,6 +21,7 @@ services:
 
     App\Repository\RoundRepositoryInterface: '@App\Repository\RoundRepository'
     App\Repository\RoundThrowsRepositoryInterface: '@App\Repository\RoundThrowsRepository'
+    App\Repository\PlayerStatisticsRepositoryInterface: '@App\Repository\PlayerStatisticsRepository'
     App\Repository\GamePlayersRepositoryInterface: '@App\Repository\GamePlayersRepository'
     App\Repository\GameRepositoryInterface: '@App\Repository\GameRepository'
     App\Repository\InvitationRepositoryInterface: '@App\Repository\InvitationRepository'

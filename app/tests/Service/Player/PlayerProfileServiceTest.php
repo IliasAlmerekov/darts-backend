@@ -18,7 +18,7 @@ use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
-use App\Repository\RoundThrowsRepositoryInterface;
+use App\Repository\PlayerStatisticsRepositoryInterface;
 use App\Service\Game\GameStatisticsServiceInterface;
 use App\Service\Player\PlayerProfileService;
 use App\Service\Player\PlayerThrowStatistics;
@@ -35,7 +35,7 @@ final class PlayerProfileServiceTest extends TestCase
     private GameStatisticsServiceInterface&Stub $gameStatisticsService;
     private GameRepositoryInterface&Stub $gameRepository;
     private GamePlayersRepositoryInterface&Stub $gamePlayersRepository;
-    private RoundThrowsRepositoryInterface&Stub $roundThrowsRepository;
+    private PlayerStatisticsRepositoryInterface&Stub $playerStatisticsRepository;
     private EntityManagerInterface&Stub $entityManager;
     private bool $inTransaction = false;
     private PlayerProfileService $service;
@@ -45,7 +45,7 @@ final class PlayerProfileServiceTest extends TestCase
         $this->gameStatisticsService = $this->createStub(GameStatisticsServiceInterface::class);
         $this->gameRepository = $this->createStub(GameRepositoryInterface::class);
         $this->gamePlayersRepository = $this->createStub(GamePlayersRepositoryInterface::class);
-        $this->roundThrowsRepository = $this->createStub(RoundThrowsRepositoryInterface::class);
+        $this->playerStatisticsRepository = $this->createStub(PlayerStatisticsRepositoryInterface::class);
         $this->entityManager = $this->createStub(EntityManagerInterface::class);
         $this->entityManager->method('wrapInTransaction')->willReturnCallback(function (callable $operation): mixed {
             $this->inTransaction = true;
@@ -76,7 +76,7 @@ final class PlayerProfileServiceTest extends TestCase
         $this->gameStatisticsService->method('getPlayerStatsForPlayer')->willReturnCallback(
             fn(): PlayerStatsDto => new PlayerStatsDto(self::PLAYER_ID, 'ilias', $this->inTransaction ? 1 : 0, 40.0)
         );
-        $this->roundThrowsRepository->method('findThrowsInCountedGamesForPlayer')->willReturnCallback(
+        $this->playerStatisticsRepository->method('findThrowsInCountedGamesForPlayer')->willReturnCallback(
             fn(): array => $this->inTransaction ? [] : [['gameId' => 1, 'roundId' => 1, 'value' => 0, 'isDouble' => false, 'isTriple' => false, 'isBust' => false, 'score' => 301, 'startScore' => 301, 'doubleOut' => false, 'tripleOut' => false, 'placement' => 1]]
         );
         $this->gameRepository->method('findRecentFinishedForPlayer')->willReturn([]);
@@ -105,7 +105,7 @@ final class PlayerProfileServiceTest extends TestCase
             $this->createSeat($tom, 3, 100),
             $this->createSeat($mia, 1, 0),
         ]]);
-        $this->roundThrowsRepository->method('getParticipantTotalsForGames')->willReturn([42 => [
+        $this->playerStatisticsRepository->method('getParticipantTotalsForGames')->willReturn([42 => [
             self::PLAYER_ID => new ParticipantTotalsDto(turns: 2, dartsThrown: 5, totalScore: 101.0),
             2 => new ParticipantTotalsDto(turns: 2, dartsThrown: 6, totalScore: 301.0),
             3 => new ParticipantTotalsDto(turns: 1, dartsThrown: 3, totalScore: 10.0),
@@ -137,7 +137,7 @@ final class PlayerProfileServiceTest extends TestCase
         $player = $this->createUser(self::PLAYER_ID, 'ilias');
         $this->gameRepository->method('findRecentFinishedForPlayer')->willReturn([['gameId' => 42, 'finishedAt' => null]]);
         $this->gamePlayersRepository->method('findByGameIds')->willReturn([42 => [$this->createSeat($player, 1, 301)]]);
-        $this->roundThrowsRepository->method('getParticipantTotalsForGames')->willReturn([]);
+        $this->playerStatisticsRepository->method('getParticipantTotalsForGames')->willReturn([]);
 
         $game = $this->service->getProfile($player)->recentGames[0];
 
@@ -151,7 +151,7 @@ final class PlayerProfileServiceTest extends TestCase
             $this->gameStatisticsService,
             $this->gameRepository,
             $gamePlayersRepository,
-            $this->roundThrowsRepository,
+            $this->playerStatisticsRepository,
             $this->entityManager,
         );
     }

@@ -122,6 +122,10 @@ _Avoid_: Double attempt, finish attempt
 The turn that ends with a checkout. Its value is the participant's remaining score when the turn began; the highest finish is the one with the greatest value.
 _Avoid_: Checkout (for the whole turn), high out
 
+**Player statistics**:
+The games played and the three-dart average of one player, counted over every finished game in which they threw. Guests have none.
+_Avoid_: Player stats, lifetime stats, profile stats
+
 **Three-dart average**:
 The points a participant scored divided by the darts they threw, times three. A bust turn counts as three darts and no points; any other turn counts only the darts actually thrown, so a checkout or a manual end can cut it short.
 _Avoid_: Round average, score average, points per turn

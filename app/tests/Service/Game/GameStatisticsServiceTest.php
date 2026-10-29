@@ -6,24 +6,24 @@ namespace App\Tests\Service\Game;
 
 use App\Dto\PlayerStatsDto;
 use App\Service\Game\GameStatisticsService;
-use App\Repository\RoundThrowsRepositoryInterface;
+use App\Repository\PlayerStatisticsRepositoryInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 final class GameStatisticsServiceTest extends TestCase
 {
     private GameStatisticsService $service;
-    private RoundThrowsRepositoryInterface&MockObject $roundThrowsRepository;
+    private PlayerStatisticsRepositoryInterface&MockObject $playerStatisticsRepository;
 
     protected function setUp(): void
     {
-        $this->roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
-        $this->service = new GameStatisticsService($this->roundThrowsRepository);
+        $this->playerStatisticsRepository = $this->createMock(PlayerStatisticsRepositoryInterface::class);
+        $this->service = new GameStatisticsService($this->playerStatisticsRepository);
     }
 
     public function testGetPlayerStatsMapsRepositoryRowsToDto(): void
     {
-        $this->roundThrowsRepository
+        $this->playerStatisticsRepository
             ->expects(self::once())
             ->method('getPlayerStatistics')
             ->with(10, 0, 'average', 'DESC')
@@ -68,7 +68,7 @@ final class GameStatisticsServiceTest extends TestCase
 
     public function testGetPlayerStatsMapsLegacyNumericRowsWithoutWarnings(): void
     {
-        $this->roundThrowsRepository
+        $this->playerStatisticsRepository
             ->expects(self::once())
             ->method('getPlayerStatistics')
             ->with(10, 0, 'average', 'DESC')
@@ -104,7 +104,7 @@ final class GameStatisticsServiceTest extends TestCase
 
     public function testGetPlayerStatsMapsLowercaseAndSnakeCaseAliases(): void
     {
-        $this->roundThrowsRepository
+        $this->playerStatisticsRepository
             ->expects(self::once())
             ->method('getPlayerStatistics')
             ->with(10, 0, 'average', 'DESC')
@@ -140,7 +140,7 @@ final class GameStatisticsServiceTest extends TestCase
 
     public function testGetPlayerStatsForPlayerMapsThePlayersRowLikeTheList(): void
     {
-        $this->roundThrowsRepository
+        $this->playerStatisticsRepository
             ->expects(self::once())
             ->method('getPlayerStatisticsForPlayer')
             ->with(1)
@@ -164,7 +164,7 @@ final class GameStatisticsServiceTest extends TestCase
 
     public function testGetPlayerStatsForPlayerIsNullWithoutAFinishedRound(): void
     {
-        $this->roundThrowsRepository
+        $this->playerStatisticsRepository
             ->expects(self::once())
             ->method('getPlayerStatisticsForPlayer')
             ->with(1)
