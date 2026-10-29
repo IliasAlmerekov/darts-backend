@@ -100,7 +100,7 @@ final readonly class GameStateViewBuilder implements GameStateViewBuilderInterfa
             /** @var list<array{round: int, throws: list<ThrowResponseDto>}> $roundHistory */
             $roundHistory = [];
 
-            // Nur aktive Spieler (Score > 0) bekommen currentRoundThrows angezeigt
+            // Only active players (score > 0) see currentRoundThrows
             $playerScore = $gamePlayer['score'] ?? $game->getStartScore();
             $isPlayerActive = ($playerScore > 0);
             $throwsThisRound = $isPlayerActive ? count($currentRoundThrowEntities) : 0;
@@ -121,9 +121,9 @@ final readonly class GameStateViewBuilder implements GameStateViewBuilderInterfa
                 }
             }
 
-            // Wenn es in der aktuellen Runde noch keine Würfe gibt (oder die Runde-Entity noch nicht existiert),
-            // nehmen wir den letzten Wurf des Spielers insgesamt. Das hilft dem Client, den letzten Bust-Status
-            // direkt nach einem Bust bzw. beim Round-Wechsel korrekt anzuzeigen.
+            // If the current round has no throws or its entity does not exist yet, use the player's
+            // last throw overall. This lets the client show the last bust status after a bust
+            // or a round change.
             if (0 === $throwsThisRound && $isPlayerActive) {
                 $latestThrowForPlayer = $batchedThrowData['latestByPlayer'][$userId] ?? null;
                 if (null !== $latestThrowForPlayer) {
@@ -231,7 +231,7 @@ final readonly class GameStateViewBuilder implements GameStateViewBuilderInterfa
     }
 
     /**
-        * @param Game                                                                                                                    $game
+     * @param Game                                                                                                                    $game
      * @param array<int, array{playerId:int,name:string,position:int|null,placement:int|null,score:int|null,isGuest:bool}>            $gamePlayers
      * @param array<int, list<array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>> $currentRoundThrowsByPlayer
      *

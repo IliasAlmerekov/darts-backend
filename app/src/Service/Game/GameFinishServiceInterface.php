@@ -24,7 +24,7 @@ interface GameFinishServiceInterface
      * @param Game                   $game
      * @param DateTimeInterface|null $finishedAt
      *
-        * @return GameSummaryResponseDto
+     * @return GameSummaryResponseDto
      */
     public function finishGame(Game $game, ?DateTimeInterface $finishedAt = null): GameSummaryResponseDto;
 
@@ -33,7 +33,7 @@ interface GameFinishServiceInterface
      *
      * @param Game $game
      *
-        * @return GameSummaryResponseDto
+     * @return GameSummaryResponseDto
      */
     public function getGameStats(Game $game): GameSummaryResponseDto;
 
@@ -42,7 +42,7 @@ interface GameFinishServiceInterface
      *
      * @param Game $game
      *
-        * @return GameSummaryResponseDto
+     * @return GameSummaryResponseDto
      */
     public function getGameSummary(Game $game): GameSummaryResponseDto;
 

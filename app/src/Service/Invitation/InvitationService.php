@@ -222,7 +222,7 @@ final readonly class InvitationService implements InvitationServiceInterface
                 'username' => $user->getUsername(),
                 'redirect' => rtrim($this->frontendUrl, '/').'/joined',
                 'gameId' => $gameId,
-            ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
+            ], Response::HTTP_OK);
         });
     }
 

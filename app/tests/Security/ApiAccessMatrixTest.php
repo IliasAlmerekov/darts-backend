@@ -228,7 +228,7 @@ final class ApiAccessMatrixTest extends WebTestCase
 
         $routed = [];
         foreach ($router->getRouteCollection()->all() as $name => $route) {
-            // Some routes are declared without a leading slash, e.g. 'api/invite/process'.
+            // Normalize paths before comparing them with the access rules.
             $path = '/'.ltrim($route->getPath(), '/');
             if (!str_starts_with($path, '/api/')) {
                 continue;

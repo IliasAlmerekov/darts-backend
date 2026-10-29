@@ -312,12 +312,14 @@ final class OneStartedGameEndpointTest extends WebTestCase
         self::assertIsInt($lobbyId);
         $invitationLink = $this->postJson(sprintf('/api/invite/create/%d', $lobbyId))['invitationLink'];
         self::assertIsString($invitationLink);
+        self::assertFalse($this->client->getResponse()->headers->has('X-Accel-Buffering'));
 
         $this->client->loginUser($player);
         $this->client->request(Request::METHOD_GET, $invitationLink);
         self::assertResponseStatusCodeSame(Response::HTTP_FOUND);
         $this->postJson('/api/invite/process');
         self::assertResponseIsSuccessful();
+        self::assertFalse($this->client->getResponse()->headers->has('X-Accel-Buffering'));
 
         $this->client->loginUser($this->admin);
         $this->client->request(Request::METHOD_DELETE, sprintf('/api/room/%d?playerId=%d', $lobbyId, $player->getId()));

@@ -22,6 +22,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **ErrorCode**: Neuer Fehlercode `SecurityAccessDenied` für API-Fehlerbehandlung.
 
 ### Geändert
+- **Konsistenz**: Kommentare, Routen und Einladungsantworten vereinheitlicht; Benchmarkberichte verschoben (#173).
 - **CI**: Runtime-Image-Build und Repository-Prüfungen in GitHub und GitLab abgestimmt (#54).
 - **Struktur**: Die Settings-Routen (`POST /api/game/settings`, `PATCH`/`GET /api/game/{gameId}/settings`) liegen in `GameSettingsController`, `ErrorController` liegt in `src/Controller/`, `GameService` heißt `GameStateViewBuilder`, und `GameRepository::findFinishedOverview()` liefert Datumswerte als `DateTimeImmutable`, die der Controller formatiert. Routen, Namen und Antworten bleiben gleich (#170)
 - **Docker-Image**: Das Runtime-Image nutzt `php.ini-production` als Basis-`php.ini`; die Projekt-Overrides in `conf.d/zz-darts.ini` gelten danach und setzen zusätzlich `html_errors=Off` und `session.use_strict_mode=On` (`zend.assertions=-1` kommt aus `php.ini-production`). Der `HEALTHCHECK` ruft `/api/ready` statt `/api/health` auf, sodass der Container ohne Datenbank nicht mehr als gesund gilt. Das Basis-Image installiert weder `pdo_pgsql` noch `libpq` (#56)
