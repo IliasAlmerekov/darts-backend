@@ -8,14 +8,24 @@ PATTERN='AKIA[0-9A-Z]{16}|ghp_[0-9A-Za-z]{36}|glpat-[0-9A-Za-z\-_]{20,}|-----BEG
 
 echo "Scanning tracked files for possible secrets..."
 
+git ls-files > /dev/null
+
 found=0
 while IFS= read -r file; do
-    if rg -n "${PATTERN}" "${file}" >/dev/null; then
-        rg -n "${PATTERN}" "${file}"
-        echo "-- ${file}"
+    matches=$(grep -En "${PATTERN}" "${file}" || true)
+    while IFS= read -r match; do
+        [ -n "${match}" ] || continue
+        match=${match%$'\r'}
+        content=${match#*:}
+        if [[ ${file} == app/.env.prod.example && ${content} == "APP_""SECRET=CHANGE_ME_32_CHARS_MIN" ]] ||
+           [[ ${file} == scripts/check-runtime-image.sh && ${content} == '    -e APP_'"SECRET=check-runtime-image-secret "'\' ]] ||
+           [[ ${file} == scripts/check-secrets.sh && ${content} == "PATTERN='"* ]]; then
+            continue
+        fi
+        printf '%s\n-- %s\n' "${match}" "${file}"
         found=1
-    fi
-done < <(git ls-files | rg -v '^(app/vendor/|app/public/bundles/|app/var/)')
+    done <<< "${matches}"
+done < <(git ls-files | grep -Ev '^(app/vendor/|app/public/bundles/|app/var/)')
 
 if [ 0 -eq "${found}" ]; then
     echo "No obvious secrets found in tracked files."

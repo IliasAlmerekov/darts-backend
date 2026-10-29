@@ -145,6 +145,9 @@ last read of a property or method passes locally and fails CI.
 ```bash
 sh scripts/check-test-db-env.sh
 sh scripts/check-image-eol.sh
+sh scripts/check-gitlab-dockerfiles.sh
+sh scripts/test-ci-checks.sh
+bash scripts/check-secrets.sh
 docker compose up -d php mysql
 x() { docker compose exec -T -w /var/www/html php "$@"; }
 x composer install --no-interaction
@@ -153,6 +156,7 @@ x mkdir -p build
 x php -d memory_limit=-1 vendor/bin/phpcs
 x php vendor/bin/psalm --no-cache --show-info=false --report=build/psalm-quality-report.json
 x php bin/console lint:yaml -v --ansi --env=test config
+x php -d memory_limit=-1 bin/console lint:container --env=test
 x php -d memory_limit=-1 bin/console cache:clear --env=test
 x php -d memory_limit=-1 bin/console doctrine:database:create --env=test --if-not-exists
 x php -d memory_limit=-1 bin/console doctrine:migrations:migrate --env=test --no-interaction

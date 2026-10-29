@@ -60,7 +60,7 @@ build:php:
     - composer selfupdate $COMPOSER_VERSION
     - composer clearcache
     # install dependencies
-    - composer install --no-progress --prefer-dist --ignore-platform-reqs
+    - composer install --no-progress --prefer-dist
     - composer dump-autoload --classmap-authoritative
     - composer audit
     - "find ./vendor -name .git -type d | xargs rm -rf"
@@ -117,6 +117,7 @@ test:php:
     - cd app
     #
     - php bin/console lint:yaml -v --ansi --env=test config
+    - php -d memory_limit=-1 bin/console lint:container --env=test
     - php -d memory_limit=-1 bin/console cache:clear --env=test
     - until php -r 'new PDO("mysql:host=mysql;port=3306", "root", "root123");' >/dev/null 2>&1; do sleep 1; done
     - php -d memory_limit=-1 bin/console doctrine:database:create --env=test --if-not-exists
@@ -152,6 +153,9 @@ test:line-endings:
   stage: test
   script:
     - sh scripts/check-image-eol.sh
+    - sh scripts/check-gitlab-dockerfiles.sh
+    - sh scripts/test-ci-checks.sh
+    - bash scripts/check-secrets.sh
   needs: []
 
 test:codesniffer:
@@ -198,29 +202,8 @@ docker:build:php:
     - docker
   before_script: *docker_login
   script:
-    - docker build --label ref_name=${CI_COMMIT_REF_NAME} -f etc/k8s/build/php/Dockerfile -t ${HARBOR_REGISTRY_PREFIX}/php:${CI_COMMIT_REF_NAME} .
+    - docker build --label ref_name=${CI_COMMIT_REF_NAME} -f app/Dockerfile --target runtime -t ${HARBOR_REGISTRY_PREFIX}/php:${CI_COMMIT_REF_NAME} .
     - docker push ${HARBOR_REGISTRY_PREFIX}/php:${CI_COMMIT_REF_NAME}
-  needs:
-    - job: build:php
-      artifacts: true
-  #    - job: build:assets
-  #      artifacts: true
-  rules:
-    - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+(-(rc|dev|hotfix).*)?$/'
-      when: always
-    - when: never
-
-docker:build:nginx:
-  stage: build-docker
-  image: ${CI_DEPENDENCY_PROXY_DIRECT_GROUP_IMAGE_PREFIX}/docker:${DOCKER_VERSION}
-  # Never cancel a half-pushed image.
-  interruptible: false
-  tags:
-    - docker
-  before_script: *docker_login
-  script:
-    - docker build --label ref_name=${CI_COMMIT_REF_NAME} -f etc/k8s/build/nginx/Dockerfile -t $HARBOR_REGISTRY_PREFIX/nginx:${CI_COMMIT_REF_NAME} .
-    - docker push ${HARBOR_REGISTRY_PREFIX}/nginx:${CI_COMMIT_REF_NAME}
   needs:
     - job: build:php
       artifacts: true
