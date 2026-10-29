@@ -244,6 +244,45 @@ final class PlayerStatisticsRepositoryTest extends KernelTestCase
         self::assertNull($this->repo->getPlayerStatisticsForPlayer((int) $nobody->getId()));
     }
 
+    public function testPlayerStatisticsNameAPlayerWithABlankDisplayNameByTheirUsername(): void
+    {
+        $game = $this->createGame(GameStatus::Finished);
+        $round = $this->createRound($game, 1, finished: true);
+        $blank = $this->createUser(' blank-name-stats ');
+        $blank->setDisplayName('   ');
+        $this->createThrow($game, $round, $blank, 1, 30, 271);
+        $this->em->flush();
+
+        $listRows = array_values(array_filter(
+            $this->repo->getPlayerStatistics(1000, 0),
+            static fn(array $row): bool => (int) $row['playerId'] === $blank->getId()
+        ));
+        $single = $this->repo->getPlayerStatisticsForPlayer((int) $blank->getId());
+
+        self::assertSame('blank-name-stats', $listRows[0]['username'] ?? null);
+        self::assertSame('blank-name-stats', $single['username'] ?? null);
+    }
+
+    public function testPlayerStatisticsSortByTheNameTheRowsReturn(): void
+    {
+        $game = $this->createGame(GameStatus::Finished);
+        $round = $this->createRound($game, 1, finished: true);
+        $blank = $this->createUser('zz-sort-blank');
+        $blank->setDisplayName('   ');
+        $named = $this->createUser('aa-sort-named');
+        $named->setDisplayName('Mm sort');
+        $this->createThrow($game, $round, $blank, 1, 30, 271);
+        $this->createThrow($game, $round, $named, 1, 30, 271);
+        $this->em->flush();
+
+        $names = array_column(array_values(array_filter(
+            $this->repo->getPlayerStatistics(1000, 0, 'name', 'ASC'),
+            static fn(array $row): bool => in_array((int) $row['playerId'], [$blank->getId(), $named->getId()], true)
+        )), 'username');
+
+        self::assertSame(['Mm sort', 'zz-sort-blank'], $names);
+    }
+
     private function createGame(GameStatus $status): Game
     {
         $game = (new Game())

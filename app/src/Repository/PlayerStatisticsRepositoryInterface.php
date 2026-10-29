@@ -27,7 +27,7 @@ interface PlayerStatisticsRepositoryInterface
     /**
      * @param int    $limit
      * @param int    $offset
-     * @param string $sortField `average`, `gamesPlayed` or `name` (display name); ties follow the player id
+     * @param string $sortField `average`, `gamesPlayed` or `name` (the returned username); ties follow the player id
      * @param string $direction
      *
      * @return array<int, array{

@@ -218,11 +218,13 @@ SQL,
     /**
      * Aggregates the turns of finished games per registered player. Both public
      * statistics reads share this query, so the admin list and a player's Profile agree.
+     * The username column is the player's name under PlayerDisplayName::forUser(): the display
+     * name, else the username, trimmed.
      *
      * @param int|null $playerId  only this player's row, or every player's
      * @param int|null $limit     page size, or every row
      * @param int      $offset
-     * @param string   $sortField 'gamesPlayed', 'name' (display name), or the score average; ties follow the player id
+     * @param string   $sortField 'gamesPlayed', 'name' (the returned username), or the score average; ties follow the player id
      * @param string   $direction
      *
      * @return array<int, array{
@@ -279,7 +281,7 @@ SELECT
 FROM (
     SELECT
         rt.player_id AS playerId,
-        u.display_name AS username,
+        %s AS username,
         rt.game_id AS gameId,
         CASE WHEN MAX(rt.is_bust) THEN 0 ELSE SUM(rt.value) END AS turnTotal,
         CASE WHEN MAX(rt.is_bust) THEN 3 ELSE COUNT(*) END AS turnDarts
@@ -289,12 +291,13 @@ FROM (
     WHERE g.status = :status
       AND u.is_guest = FALSE
       %s
-    GROUP BY rt.player_id, u.display_name, rt.game_id, rt.round_id
+    GROUP BY rt.player_id, u.display_name, u.username, rt.game_id, rt.round_id
 ) player_turns
 GROUP BY player_turns.playerId, player_turns.username
 ORDER BY %s %s, playerId ASC
 %s
 SQL,
+            PlayerDisplayNameExpression::sql(null, 'u'),
             $userTable,
             $playerFilter,
             $orderColumn,
