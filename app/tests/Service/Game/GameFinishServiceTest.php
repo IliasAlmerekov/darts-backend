@@ -84,8 +84,8 @@ final class GameFinishServiceTest extends TestCase
             ->with(42)
             ->willReturn(1);
 
-        $roundThrowsRepository = $this->createMock(PlayerStatisticsRepositoryInterface::class);
-        $roundThrowsRepository->method('getParticipantTotalsForGames')
+        $playerStatisticsRepository = $this->createMock(PlayerStatisticsRepositoryInterface::class);
+        $playerStatisticsRepository->method('getParticipantTotalsForGames')
             ->with([42])
             ->willReturn([42 => [
                 1 => new ParticipantTotalsDto(turns: 5, dartsThrown: 15, totalScore: 301.0),
@@ -93,7 +93,7 @@ final class GameFinishServiceTest extends TestCase
             ]]);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $service = $this->createService($entityManager, $gamePlayersRepository, $roundThrowsRepository);
+        $service = $this->createService($entityManager, $gamePlayersRepository, $playerStatisticsRepository);
 
         $summary = $service->finishGame($game);
 
@@ -165,8 +165,8 @@ final class GameFinishServiceTest extends TestCase
         $gamePlayersRepository->method('countFinishedPlayers')
             ->willReturn(1);
 
-        $roundThrowsRepository = $this->createMock(PlayerStatisticsRepositoryInterface::class);
-        $roundThrowsRepository->method('getParticipantTotalsForGames')
+        $playerStatisticsRepository = $this->createMock(PlayerStatisticsRepositoryInterface::class);
+        $playerStatisticsRepository->method('getParticipantTotalsForGames')
             ->with([99])
             ->willReturn([99 => [
                 1 => new ParticipantTotalsDto(turns: 5, dartsThrown: 13, totalScore: 260.0),
@@ -175,7 +175,7 @@ final class GameFinishServiceTest extends TestCase
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
 
-        $service = $this->createService($entityManager, $gamePlayersRepository, $roundThrowsRepository);
+        $service = $this->createService($entityManager, $gamePlayersRepository, $playerStatisticsRepository);
 
         $summary = $service->getGameSummary($game);
 
@@ -215,8 +215,8 @@ final class GameFinishServiceTest extends TestCase
             ->with(77)
             ->willReturn([$winner, $second]);
 
-        $roundThrowsRepository = $this->createMock(PlayerStatisticsRepositoryInterface::class);
-        $roundThrowsRepository->method('getParticipantTotalsForGames')
+        $playerStatisticsRepository = $this->createMock(PlayerStatisticsRepositoryInterface::class);
+        $playerStatisticsRepository->method('getParticipantTotalsForGames')
             ->with([77])
             ->willReturn([77 => [
                 1 => new ParticipantTotalsDto(turns: 6, dartsThrown: 17, totalScore: 301.0),
@@ -224,7 +224,7 @@ final class GameFinishServiceTest extends TestCase
             ]]);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $service = $this->createService($entityManager, $gamePlayersRepository, $roundThrowsRepository);
+        $service = $this->createService($entityManager, $gamePlayersRepository, $playerStatisticsRepository);
         $finishedAt = new \DateTimeImmutable('2026-03-10T12:00:00+00:00');
 
         $finishSummary = $service->finishGame($game, $finishedAt);
@@ -245,7 +245,7 @@ final class GameFinishServiceTest extends TestCase
     private function createService(
         EntityManagerInterface $entityManager,
         GamePlayersRepositoryInterface $gamePlayersRepository,
-        PlayerStatisticsRepositoryInterface $roundThrowsRepository
+        PlayerStatisticsRepositoryInterface $playerStatisticsRepository
     ): GameFinishService {
         $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $callback): mixed => $callback());
         $access = $this->createMock(GameAccessServiceInterface::class);
@@ -254,7 +254,7 @@ final class GameFinishServiceTest extends TestCase
         return new GameFinishService(
             $entityManager,
             $gamePlayersRepository,
-            $roundThrowsRepository,
+            $playerStatisticsRepository,
             $access,
             $this->createStub(GameRepositoryInterface::class)
         );

@@ -67,10 +67,10 @@ final class GameStatsControllerTest extends TestCase
         $statsService = $this->createMock(GameStatisticsServiceInterface::class);
         $statsService->method('getPlayerStats')->willReturn([new PlayerStatsDto(1, 'p', 1, 50.0)]);
 
-        $throwsRepo = $this->createMock(PlayerStatisticsRepositoryInterface::class);
-        $throwsRepo->method('countPlayersWithStatistics')->willReturn(1);
+        $playerStatisticsRepository = $this->createMock(PlayerStatisticsRepositoryInterface::class);
+        $playerStatisticsRepository->method('countPlayersWithStatistics')->willReturn(1);
 
-        $response = $this->controller->playerStats($statsService, $throwsRepo, 20, 0, 'average:desc');
+        $response = $this->controller->playerStats($statsService, $playerStatisticsRepository, 20, 0, 'average:desc');
 
         $this->assertInstanceOf(PlayerStatsResponseDto::class, $response);
     }
