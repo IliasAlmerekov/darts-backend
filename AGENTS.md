@@ -129,6 +129,8 @@ The `scripts/` checks run on the host, because the container mounts only `app/`.
 MySQL root password; put the matching `DATABASE_URL` in `app/.env.test.local` to fix it.
 `check-image-eol.sh` fails when a shell script, a Dockerfile, or a file under `app/docker/`
 lacks `eol=lf` in `.gitattributes` or is committed with CRLF.
+`check-gitlab-dockerfiles.sh` checks that Dockerfile paths in GitLab build commands exist.
+`test-ci-checks.sh` tests the secret scan and GitLab Dockerfile path check in temporary directories.
 `check-runtime-image.sh` boots a built runtime image and fails on PHP older than 8.4.27,
 upload progress on, or a multipart request that nginx passes to PHP (#146). It also fails
 (#56) on a root process, an `X-Powered-By` header, a cold `var/cache/prod`, a production ini
@@ -145,6 +147,9 @@ last read of a property or method passes locally and fails CI.
 ```bash
 sh scripts/check-test-db-env.sh
 sh scripts/check-image-eol.sh
+sh scripts/check-gitlab-dockerfiles.sh
+sh scripts/test-ci-checks.sh
+bash scripts/check-secrets.sh
 docker compose up -d php mysql
 x() { docker compose exec -T -w /var/www/html php "$@"; }
 x composer install --no-interaction
@@ -153,6 +158,7 @@ x mkdir -p build
 x php -d memory_limit=-1 vendor/bin/phpcs
 x php vendor/bin/psalm --no-cache --show-info=false --report=build/psalm-quality-report.json
 x php bin/console lint:yaml -v --ansi --env=test config
+x php -d memory_limit=-1 bin/console lint:container --env=test
 x php -d memory_limit=-1 bin/console cache:clear --env=test
 x php -d memory_limit=-1 bin/console doctrine:database:create --env=test --if-not-exists
 x php -d memory_limit=-1 bin/console doctrine:migrations:migrate --env=test --no-interaction

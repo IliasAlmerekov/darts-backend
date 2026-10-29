@@ -1,0 +1,51 @@
+#!/bin/sh
+set -eu
+
+if [ ! -r .gitlab-ci.yml ]; then
+    echo "Cannot read .gitlab-ci.yml" >&2
+    exit 1
+fi
+
+awk '
+    function paths(command, fields, count, i, explicit) {
+        if (command !~ /docker build([[:space:]]|$)/) return
+        sub(/[[:space:]]+$/, "", command)
+        count = split(command, fields, /[[:space:]]+/)
+        for (i = 1; i <= count; i++) {
+            if (fields[i] == "-f" || fields[i] == "--file") { print fields[i + 1]; explicit = 1 }
+            else if (fields[i] ~ /^-f./) { sub(/^-f/, "", fields[i]); print fields[i]; explicit = 1 }
+            else if (fields[i] ~ /^--file=/) { sub(/^--file=/, "", fields[i]); print fields[i]; explicit = 1 }
+        }
+        if (!explicit) print fields[count] "/Dockerfile"
+    }
+    {
+        if (folded) {
+            indent = match($0, /[^ ]/) - 1
+            if (indent > depth || $0 ~ /^[[:space:]]*$/) {
+                block = block " " $0
+                next
+            }
+            paths(block)
+            folded = 0
+        }
+        if ($0 ~ /-[[:space:]]*>[-+]?[[:space:]]*$/) {
+            depth = match($0, /[^ ]/) - 1
+            block = ""
+            folded = 1
+            next
+        }
+        if ($0 ~ /docker build([[:space:]]|$)/) {
+            while ($0 ~ /\\[[:space:]]*$/ && getline next_line > 0) {
+                sub(/\\[[:space:]]*$/, " ")
+                $0 = $0 next_line
+            }
+            paths($0)
+        }
+    }
+    END { if (folded) paths(block) }
+' .gitlab-ci.yml | while IFS= read -r file; do
+    if [ ! -f "$file" ]; then
+        echo "Dockerfile not found: $file" >&2
+        exit 1
+    fi
+done
