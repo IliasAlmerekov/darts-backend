@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Enum\OutRule;
+
 use App\Enum\GameStatus;
 use App\Repository\GameRepository;
 use DateTime;
@@ -180,6 +182,14 @@ class Game
         $this->startScore = $startScore;
 
         return $this;
+    }
+
+    /**
+     * @return OutRule
+     */
+    public function outRule(): OutRule
+    {
+        return $this->isDoubleOut() ? OutRule::Double : ($this->isTripleOut() ? OutRule::Triple : OutRule::Single);
     }
 
     /**

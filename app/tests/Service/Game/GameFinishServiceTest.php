@@ -24,6 +24,35 @@ use ReflectionProperty;
 #[AllowMockObjectsWithoutExpectations]
 final class GameFinishServiceTest extends TestCase
 {
+    public function testRecordCheckoutSetsPlacementsWinnerAndFinishesWithoutTransaction(): void
+    {
+        $game = (new Game())->setStartScore(301)->setStatus(GameStatus::Started);
+        $this->setPrivateProperty($game, 'gameId', 42);
+        $winner = (new GamePlayers())->setPlayer(new User())->setPosition(1)->setScore(0);
+        $second = (new GamePlayers())->setPlayer(new User())->setPosition(2)->setScore(30);
+        $third = (new GamePlayers())->setPlayer(new User())->setPosition(3)->setScore(40);
+        $game->addGamePlayer($winner)->addGamePlayer($second)->addGamePlayer($third);
+        $seats = $this->createMock(GamePlayersRepositoryInterface::class);
+        $seats->method('countFinishedPlayers')->willReturnOnConsecutiveCalls(0, 1);
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->expects(self::never())->method('wrapInTransaction');
+        $service = $this->createService($em, $seats, $this->createMock(RoundThrowsRepositoryInterface::class));
+
+        $service->recordCheckout($game, $winner);
+        self::assertSame(1, $winner->getPlacement());
+        self::assertSame($winner->getPlayer(), $game->getWinner());
+        self::assertTrue($winner->isWinner());
+        self::assertSame(GameStatus::Started, $game->getStatus());
+
+        $second->setScore(0);
+        $service->recordCheckout($game, $second);
+        self::assertSame(2, $second->getPlacement());
+        self::assertSame(3, $third->getPlacement());
+        self::assertSame(GameStatus::Finished, $game->getStatus());
+        self::assertNotNull($game->getFinishedAt());
+        self::assertSame($winner->getPlayer(), $game->getWinner());
+    }
+
     /**
      * @throws ReflectionException
      */

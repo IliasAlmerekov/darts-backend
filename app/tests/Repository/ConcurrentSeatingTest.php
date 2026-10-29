@@ -676,6 +676,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
             $access,
             $gameRepository,
             new NewestGameGuard($gameRepository),
+            $this->finishService(),
         );
     }
 
