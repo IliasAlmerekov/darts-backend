@@ -94,7 +94,7 @@ final readonly class GameFinishService implements GameFinishServiceInterface
         // The route loaded the game before this transaction: rank the committed scores, not that snapshot.
         return $this->entityManager->wrapInTransaction(function () use ($game, $timestamp): GameSummaryResponseDto {
             $this->gameRepository->refreshWithSeatsForUpdate($game);
-            $this->gameAccessService->assertPlayerInGameOrAdmin($game);
+            $this->gameAccessService->assertAdmin();
             $status = $game->getStatus();
             if (!$status->canFinish()) {
                 throw new GameFinishNotAllowedException($status);
@@ -122,7 +122,7 @@ final readonly class GameFinishService implements GameFinishServiceInterface
     #[\Override]
     public function getGameSummary(Game $game): GameSummaryResponseDto
     {
-        $this->gameAccessService->assertPlayerInGameOrAdmin($game);
+        $this->gameAccessService->assertAdmin();
         if (GameStatus::Finished !== $game->getStatus()) {
             throw new GameNotFinishedException($game->getStatus());
         }

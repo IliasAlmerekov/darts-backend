@@ -100,7 +100,7 @@ final readonly class InvitationService implements InvitationServiceInterface
     #[Override]
     public function getInvitationPayload(Game $game): array
     {
-        $this->gameAccessService->assertPlayerInGameOrAdmin($game);
+        $this->gameAccessService->assertAdmin();
         $gameId = $game->getGameId();
         if (null === $gameId) {
             return ['success' => false, 'message' => 'Game not found'];
@@ -126,7 +126,7 @@ final readonly class InvitationService implements InvitationServiceInterface
     #[Override]
     public function getUsersForGame(Game $game): array
     {
-        $this->gameAccessService->assertPlayerInGameOrAdmin($game);
+        $this->gameAccessService->assertAdmin();
         $gameId = $game->getGameId();
         if (null === $gameId) {
             return [];

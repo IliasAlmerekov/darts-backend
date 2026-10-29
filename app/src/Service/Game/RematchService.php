@@ -66,7 +66,7 @@ final readonly class RematchService implements RematchServiceInterface
         // Reloads the status under the game's lock, so a parallel reopen of this game either
         // commits first and is seen, or waits until the rematch ends.
         $this->gameRepository->refreshWithSeatsForUpdate($oldGame);
-        $this->gameAccessService->assertPlayerInGameOrAdmin($oldGame);
+        $this->gameAccessService->assertAdmin();
         // Aborted too: the exit flow aborts the started game, then asks for its rematch.
         $this->newestGameGuard->assertNewest($oldGame, [GameStatus::Finished, GameStatus::Aborted]);
 

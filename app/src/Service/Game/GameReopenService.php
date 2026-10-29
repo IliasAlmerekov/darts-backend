@@ -44,7 +44,7 @@ final readonly class GameReopenService implements GameReopenServiceInterface
     public function reopen(Game $game): void
     {
         $this->gameRepository->refreshWithSeatsForUpdate($game);
-        $this->gameAccessService->assertPlayerInGameOrAdmin($game);
+        $this->gameAccessService->assertAdmin();
 
         $status = $game->getStatus();
         if (GameStatus::Started === $status) {

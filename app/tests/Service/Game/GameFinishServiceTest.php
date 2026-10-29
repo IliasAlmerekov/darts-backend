@@ -249,7 +249,7 @@ final class GameFinishServiceTest extends TestCase
     ): GameFinishService {
         $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $callback): mixed => $callback());
         $access = $this->createMock(GameAccessServiceInterface::class);
-        $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+        $access->method('assertAdmin')->willReturn(new User());
 
         return new GameFinishService(
             $entityManager,

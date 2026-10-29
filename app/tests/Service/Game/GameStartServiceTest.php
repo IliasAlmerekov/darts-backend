@@ -187,7 +187,7 @@ final class GameStartServiceTest extends TestCase
     private function createAccessService(): GameAccessServiceInterface
     {
         $access = $this->createMock(GameAccessServiceInterface::class);
-        $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+        $access->method('assertAdmin')->willReturn(new User());
 
         return $access;
     }

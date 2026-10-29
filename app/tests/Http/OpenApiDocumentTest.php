@@ -27,7 +27,7 @@ use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 final class OpenApiDocumentTest extends WebTestCase
 {
     /**
-     * Routes whose service call chain reaches GameAccessService::assertPlayerInGameOrAdmin().
+     * Routes whose service call chain reaches GameAccessService::assertAdmin().
      */
     private const array GUARDED_ROUTES = [
         'app_game_start',

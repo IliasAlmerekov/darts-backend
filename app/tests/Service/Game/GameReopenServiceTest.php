@@ -50,8 +50,7 @@ final class GameReopenServiceTest extends TestCase
 
         $access = $this->createMock(GameAccessServiceInterface::class);
         $access->expects(self::once())
-            ->method('assertPlayerInGameOrAdmin')
-            ->with($game)
+            ->method('assertAdmin')
             ->willReturn(new User());
 
         $gameRepository = $this->createMock(GameRepositoryInterface::class);
@@ -89,7 +88,7 @@ final class GameReopenServiceTest extends TestCase
             ->addGamePlayer($otherSeat);
 
         $access = $this->createStub(GameAccessServiceInterface::class);
-        $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+        $access->method('assertAdmin')->willReturn(new User());
         $gameRepository = $this->createStub(GameRepositoryInterface::class);
         $gameRepository->method('findHighestGameId')->willReturn(7);
         $service = new GameReopenService($this->createStub(EntityManagerInterface::class), $access, $gameRepository, new NewestGameGuard($gameRepository));
@@ -113,8 +112,7 @@ final class GameReopenServiceTest extends TestCase
 
         $access = $this->createMock(GameAccessServiceInterface::class);
         $access->expects(self::once())
-            ->method('assertPlayerInGameOrAdmin')
-            ->with($game)
+            ->method('assertAdmin')
             ->willReturn(new User());
 
         $gameRepository = $this->createMock(GameRepositoryInterface::class);
@@ -137,8 +135,7 @@ final class GameReopenServiceTest extends TestCase
 
         $access = $this->createMock(GameAccessServiceInterface::class);
         $access->expects(self::once())
-            ->method('assertPlayerInGameOrAdmin')
-            ->with($game)
+            ->method('assertAdmin')
             ->willReturn(new User());
 
         $gameRepository = $this->createStub(GameRepositoryInterface::class);

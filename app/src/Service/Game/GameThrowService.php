@@ -95,7 +95,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
     #[Override]
     public function undoLastThrow(Game $game): ?ThrowDeltaDto
     {
-        $this->gameAccessService->assertPlayerInGameOrAdmin($game);
+        $this->gameAccessService->assertAdmin();
 
         $undoneThrow = $this->entityManager->wrapInTransaction(function () use ($game): ?ThrowDeltaDto {
             if ($this->entityManager->contains($game)) {
@@ -116,15 +116,11 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      */
     private function recordThrowUnlocked(Game $game, ThrowRequest $dto): ThrowRecordingResultDto
     {
-        $user = $this->gameAccessService->assertPlayerInGameOrAdmin($game);
+        $this->gameAccessService->assertAdmin();
 
         $status = $game->getStatus();
         if (GameStatus::Started !== $status) {
             throw new GameThrowNotAllowedException($status);
-        }
-
-        if (null !== $dto->playerId) {
-            $this->gameAccessService->assertPlayerMatches($user, $dto->playerId);
         }
 
         $player = $this->gamePlayersRepository->findOneBy([

@@ -71,7 +71,7 @@ final class GameRoomServiceTest extends TestCase
         );
         $this->gameAccessService = $this->createMock(GameAccessServiceInterface::class);
         $this->gameAccessService->method('requireAuthenticatedUser')->willReturn(new User());
-        $this->gameAccessService->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+        $this->gameAccessService->method('assertAdmin')->willReturn(new User());
         $this->lobbyGame = (new Game())->setGameId(99)->setDate(new DateTime());
         $this->openLobbyService = $this->createMock(OpenLobbyServiceInterface::class);
         $this->userRepository = $this->createMock(UserRepositoryInterface::class);

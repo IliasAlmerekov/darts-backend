@@ -65,7 +65,7 @@ final readonly class GameSettingsService implements GameSettingsServiceInterface
         // The route loaded the game before this transaction: check the committed status, not that snapshot.
         $this->entityManager->wrapInTransaction(function () use ($game, $dto): void {
             $this->gameRepository->refreshWithSeatsForUpdate($game);
-            $this->gameAccessService->assertPlayerInGameOrAdmin($game);
+            $this->gameAccessService->assertAdmin();
             $this->applySettings($game, $dto);
         });
     }

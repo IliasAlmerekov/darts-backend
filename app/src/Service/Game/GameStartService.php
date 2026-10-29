@@ -62,7 +62,7 @@ final readonly class GameStartService implements GameStartServiceInterface
         // The request may hold the game from before a room create or join committed; start
         // from the locked, current game and seats.
         $this->gameRepository->refreshWithSeatsForUpdate($game);
-        $this->gameAccessService->assertPlayerInGameOrAdmin($game);
+        $this->gameAccessService->assertAdmin();
         $status = $game->getStatus();
         if (GameStatus::Lobby !== $status) {
             throw new GameStartNotAllowedException($status);

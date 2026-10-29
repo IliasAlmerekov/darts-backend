@@ -208,8 +208,7 @@ final class GameThrowServiceTest extends TestCase
 
         $accessService = $this->createMock(GameAccessServiceInterface::class);
         $accessService->expects(self::once())
-            ->method('assertPlayerInGameOrAdmin')
-            ->with($game)
+            ->method('assertAdmin')
             ->willThrowException(new GamePlayerNotActiveException(1, 2));
 
         $service = new GameThrowService(
@@ -2129,7 +2128,7 @@ final class GameThrowServiceTest extends TestCase
     private function createAccessService(): GameAccessServiceInterface
     {
         $access = $this->createMock(GameAccessServiceInterface::class);
-        $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+        $access->method('assertAdmin')->willReturn(new User());
 
         return $access;
     }
