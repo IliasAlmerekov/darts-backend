@@ -19,7 +19,7 @@ use App\Exception\Game\GameFinishNotAllowedException;
 use App\Exception\Game\GameNotFinishedException;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
-use App\Repository\RoundThrowsRepositoryInterface;
+use App\Repository\PlayerStatisticsRepositoryInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use DateTimeImmutable;
 use DateTimeInterface;
@@ -32,13 +32,13 @@ use Doctrine\ORM\EntityManagerInterface;
 final readonly class GameFinishService implements GameFinishServiceInterface
 {
     /**
-     * @param EntityManagerInterface         $entityManager
-     * @param GamePlayersRepositoryInterface $gamePlayersRepository
-     * @param RoundThrowsRepositoryInterface $roundThrowsRepository
-     * @param GameAccessServiceInterface     $gameAccessService
-     * @param GameRepositoryInterface        $gameRepository
+     * @param EntityManagerInterface              $entityManager
+     * @param GamePlayersRepositoryInterface      $gamePlayersRepository
+     * @param PlayerStatisticsRepositoryInterface $playerStatisticsRepository
+     * @param GameAccessServiceInterface          $gameAccessService
+     * @param GameRepositoryInterface             $gameRepository
      */
-    public function __construct(private EntityManagerInterface $entityManager, private GamePlayersRepositoryInterface $gamePlayersRepository, private RoundThrowsRepositoryInterface $roundThrowsRepository, private GameAccessServiceInterface $gameAccessService, private GameRepositoryInterface $gameRepository)
+    public function __construct(private EntityManagerInterface $entityManager, private GamePlayersRepositoryInterface $gamePlayersRepository, private PlayerStatisticsRepositoryInterface $playerStatisticsRepository, private GameAccessServiceInterface $gameAccessService, private GameRepositoryInterface $gameRepository)
     {
     }
 
@@ -145,7 +145,7 @@ final readonly class GameFinishService implements GameFinishServiceInterface
     #[\Override]
     public function buildFinishedPlayersList(int $gameId): array
     {
-        $totals = $this->roundThrowsRepository->getParticipantTotalsForGames([$gameId])[$gameId] ?? [];
+        $totals = $this->playerStatisticsRepository->getParticipantTotalsForGames([$gameId])[$gameId] ?? [];
         $players = $this->gamePlayersRepository->findByGameId($gameId);
         usort($players, ParticipantResult::compareByPlacement(...));
         $result = [];

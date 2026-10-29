@@ -12,7 +12,7 @@ use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
-use App\Repository\RoundThrowsRepositoryInterface;
+use App\Repository\PlayerStatisticsRepositoryInterface;
 use App\Service\Game\GameFinishService;
 use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -36,7 +36,7 @@ final class GameFinishServiceTest extends TestCase
         $seats->method('countFinishedPlayers')->willReturnOnConsecutiveCalls(0, 1);
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects(self::never())->method('wrapInTransaction');
-        $service = $this->createService($em, $seats, $this->createMock(RoundThrowsRepositoryInterface::class));
+        $service = $this->createService($em, $seats, $this->createMock(PlayerStatisticsRepositoryInterface::class));
 
         $service->recordCheckout($game, $winner);
         self::assertSame(1, $winner->getPlacement());
@@ -84,7 +84,7 @@ final class GameFinishServiceTest extends TestCase
             ->with(42)
             ->willReturn(1);
 
-        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository = $this->createMock(PlayerStatisticsRepositoryInterface::class);
         $roundThrowsRepository->method('getParticipantTotalsForGames')
             ->with([42])
             ->willReturn([42 => [
@@ -165,7 +165,7 @@ final class GameFinishServiceTest extends TestCase
         $gamePlayersRepository->method('countFinishedPlayers')
             ->willReturn(1);
 
-        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository = $this->createMock(PlayerStatisticsRepositoryInterface::class);
         $roundThrowsRepository->method('getParticipantTotalsForGames')
             ->with([99])
             ->willReturn([99 => [
@@ -215,7 +215,7 @@ final class GameFinishServiceTest extends TestCase
             ->with(77)
             ->willReturn([$winner, $second]);
 
-        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository = $this->createMock(PlayerStatisticsRepositoryInterface::class);
         $roundThrowsRepository->method('getParticipantTotalsForGames')
             ->with([77])
             ->willReturn([77 => [
@@ -245,7 +245,7 @@ final class GameFinishServiceTest extends TestCase
     private function createService(
         EntityManagerInterface $entityManager,
         GamePlayersRepositoryInterface $gamePlayersRepository,
-        RoundThrowsRepositoryInterface $roundThrowsRepository
+        PlayerStatisticsRepositoryInterface $roundThrowsRepository
     ): GameFinishService {
         $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $callback): mixed => $callback());
         $access = $this->createMock(GameAccessServiceInterface::class);

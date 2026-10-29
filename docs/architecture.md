@@ -47,7 +47,7 @@ a detail page that only reads data calls the repository from the controller, as
 transactions themselves; #195 moves them into their services.
 
 **Statistics aggregates live in repository SQL.** Averages, totals, and player rankings
-are SQL in `RoundThrowsRepository` and its neighbours, because the database computes them
+are SQL in `PlayerStatisticsRepository` and its neighbours, because the database computes them
 faster than PHP. The measurements are in `docs/benchmarks/BE-701` to `BE-704`. Game rules
 such as checkout, bust, and turn order stay in PHP services, not in SQL.
 

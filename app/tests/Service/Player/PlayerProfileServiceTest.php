@@ -18,7 +18,7 @@ use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
-use App\Repository\RoundThrowsRepositoryInterface;
+use App\Repository\PlayerStatisticsRepositoryInterface;
 use App\Service\Game\GameStatisticsServiceInterface;
 use App\Service\Player\PlayerProfileService;
 use App\Service\Player\PlayerThrowStatistics;
@@ -35,7 +35,7 @@ final class PlayerProfileServiceTest extends TestCase
     private GameStatisticsServiceInterface&Stub $gameStatisticsService;
     private GameRepositoryInterface&Stub $gameRepository;
     private GamePlayersRepositoryInterface&Stub $gamePlayersRepository;
-    private RoundThrowsRepositoryInterface&Stub $roundThrowsRepository;
+    private PlayerStatisticsRepositoryInterface&Stub $roundThrowsRepository;
     private EntityManagerInterface&Stub $entityManager;
     private bool $inTransaction = false;
     private PlayerProfileService $service;
@@ -45,7 +45,7 @@ final class PlayerProfileServiceTest extends TestCase
         $this->gameStatisticsService = $this->createStub(GameStatisticsServiceInterface::class);
         $this->gameRepository = $this->createStub(GameRepositoryInterface::class);
         $this->gamePlayersRepository = $this->createStub(GamePlayersRepositoryInterface::class);
-        $this->roundThrowsRepository = $this->createStub(RoundThrowsRepositoryInterface::class);
+        $this->roundThrowsRepository = $this->createStub(PlayerStatisticsRepositoryInterface::class);
         $this->entityManager = $this->createStub(EntityManagerInterface::class);
         $this->entityManager->method('wrapInTransaction')->willReturnCallback(function (callable $operation): mixed {
             $this->inTransaction = true;

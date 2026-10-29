@@ -6,18 +6,18 @@ namespace App\Tests\Service\Game;
 
 use App\Dto\PlayerStatsDto;
 use App\Service\Game\GameStatisticsService;
-use App\Repository\RoundThrowsRepositoryInterface;
+use App\Repository\PlayerStatisticsRepositoryInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 final class GameStatisticsServiceTest extends TestCase
 {
     private GameStatisticsService $service;
-    private RoundThrowsRepositoryInterface&MockObject $roundThrowsRepository;
+    private PlayerStatisticsRepositoryInterface&MockObject $roundThrowsRepository;
 
     protected function setUp(): void
     {
-        $this->roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $this->roundThrowsRepository = $this->createMock(PlayerStatisticsRepositoryInterface::class);
         $this->service = new GameStatisticsService($this->roundThrowsRepository);
     }
 
