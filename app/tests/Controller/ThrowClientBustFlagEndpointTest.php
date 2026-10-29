@@ -17,18 +17,30 @@ use App\Enum\OutRule;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * The bust comes from the scoring rules, never from the client's `isBust` (#50).
+ * A throw request no longer declares `isBust`: the bust comes from the scoring rules,
+ * so a client that still sends the key gets 422 UNKNOWN_FIELD and no throw is recorded (#50).
  */
 final class ThrowClientBustFlagEndpointTest extends WebTestCase
 {
     private const string USER_PREFIX = 'clientbust';
 
-    public function testAClientBustFlagOnANonBustThrowIsRecordedAsNotBust(): void
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function throwPaths(): iterable
+    {
+        yield 'throw' => ['/api/game/%d/throw'];
+        yield 'throw delta' => ['/api/game/%d/throw/delta'];
+    }
+
+    #[DataProvider('throwPaths')]
+    public function testAThrowCarryingIsBustIsRejectedAndRecordsNothing(string $path): void
     {
         $client = static::createClient();
         $entityManager = static::getContainer()->get(EntityManagerInterface::class);
@@ -48,18 +60,22 @@ final class ThrowClientBustFlagEndpointTest extends WebTestCase
         $client->loginUser($admin);
         $client->request(
             Request::METHOD_POST,
-            sprintf('/api/game/%d/throw/delta', (int) $game->getGameId()),
+            sprintf($path, (int) $game->getGameId()),
             [],
             [],
             ['CONTENT_TYPE' => 'application/json'],
             json_encode(['playerId' => $player->getId(), 'value' => 20, 'isBust' => true], JSON_THROW_ON_ERROR),
         );
 
-        self::assertResponseStatusCodeSame(Response::HTTP_OK, (string) $client->getResponse()->getContent());
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY, (string) $client->getResponse()->getContent());
+        $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($payload);
+        self::assertSame('REQUEST_VALIDATION_FAILED', $payload['error'] ?? null);
+        self::assertSame(
+            [['field' => 'isBust', 'code' => 'UNKNOWN_FIELD', 'message' => 'This attribute was not expected.']],
+            $payload['violations'] ?? null,
+        );
         $entityManager->clear();
-        $throws = $entityManager->getRepository(RoundThrows::class)->findBy(['game' => $game->getGameId()]);
-        self::assertCount(1, $throws);
-        self::assertSame(20, $throws[0]->getValue());
-        self::assertFalse($throws[0]->isBust());
+        self::assertSame([], $entityManager->getRepository(RoundThrows::class)->findBy(['game' => $game->getGameId()]));
     }
 }
