@@ -104,14 +104,14 @@ final class RememberedLoginTest extends WebTestCase
         $this->logIn($client, $player);
         $this->dropSessionCookie($client);
 
-        // The matrix rule `^/api` needs ROLE_ADMIN, and `^/api/invite/process$` needs ROLE_PLAYER.
+        // The matrix rule `^/api` needs ROLE_ADMIN, and `^/api/player/current-game$` needs ROLE_PLAYER.
         // Symfony does not count a remember-me token as fully authenticated, so a denied
         // route ends in the entry point (401) instead of access denied (403).
         $client->request(Request::METHOD_POST, '/api/room/create');
         self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
 
         $this->dropSessionCookie($client);
-        $client->request(Request::METHOD_POST, '/api/invite/process');
+        $client->request(Request::METHOD_GET, '/api/player/current-game');
         self::assertNotContains($client->getResponse()->getStatusCode(), [Response::HTTP_UNAUTHORIZED, Response::HTTP_FORBIDDEN]);
         self::assertFalse(str_contains((string) $client->getResponse()->getContent(), 'AUTHENTICATION_REQUIRED'));
     }

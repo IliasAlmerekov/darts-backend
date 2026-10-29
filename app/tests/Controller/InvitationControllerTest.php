@@ -16,7 +16,6 @@ use Psr\Log\LoggerInterface;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
-use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Uid\Uuid;
 
 #[AllowMockObjectsWithoutExpectations]
@@ -163,34 +162,5 @@ final class InvitationControllerTest extends TestCase
         self::assertSame($uuid, $setCalls['invitation_uuid']);
         self::assertSame(Response::HTTP_FOUND, $response->getStatusCode());
         self::assertSame('http://example.test/app/', $response->headers->get('Location'));
-    }
-
-    public function testProcessInvitationDelegatesToService(): void
-    {
-        $session = $this->createMock(SessionInterface::class);
-        $expectedResponse = new Response('ok', Response::HTTP_ACCEPTED);
-
-        $invitationService = $this->createMock(InvitationServiceInterface::class);
-        $invitationService->expects(self::once())
-            ->method('processInvitation')
-            ->with($session, null)
-            ->willReturn($expectedResponse);
-
-        $tokenStorage = $this->createMock(TokenStorageInterface::class);
-        $tokenStorage->method('getToken')->willReturn(null);
-
-        $this->container->method('has')
-            ->with('security.token_storage')
-            ->willReturn(true);
-        $this->container->method('get')
-            ->with('security.token_storage')
-            ->willReturn($tokenStorage);
-
-        $this->logger->expects(self::exactly(2))
-            ->method('info');
-
-        $response = $this->controller->processInvitation($session, $invitationService);
-
-        self::assertSame($expectedResponse, $response);
     }
 }

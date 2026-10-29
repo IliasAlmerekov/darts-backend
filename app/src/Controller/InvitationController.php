@@ -13,6 +13,7 @@ use App\Entity\Game;
 use App\Entity\Invitation;
 use App\Exception\Game\GameNotFoundException;
 use App\Exception\Health\DatabaseUnavailableException;
+use App\Security\InvitationSession;
 use App\Service\Invitation\InvitationServiceInterface;
 use Doctrine\DBAL\Connection;
 use Nelmio\ApiDocBundle\Attribute\Security;
@@ -27,8 +28,8 @@ use Symfony\Component\Routing\Attribute\Route;
 use Throwable;
 
 /**
- * This class handles invitation-related actions such as creating invitations,
- * joining via invitation links, and processing invitations.
+ * This class handles invitation-related actions such as creating invitations and
+ * joining via invitation links.
  * Also get as JSON responses for API requests.
  */
 #[OA\Tag(name: 'Invitations')]
@@ -202,9 +203,9 @@ final class InvitationController extends AbstractController
         ]);
 
         try {
-            $session->remove('invitation_uuid');
-            $session->set('invitation_uuid', $invitationUuid);
-            $session->set('game_id', $gameId);
+            $session->remove(InvitationSession::INVITATION_UUID);
+            $session->set(InvitationSession::INVITATION_UUID, $invitationUuid);
+            $session->set(InvitationSession::GAME_ID, $gameId);
 
             $this->logger->info('Invite join session prepared successfully.', [
                 'gameId' => $gameId,
@@ -217,89 +218,6 @@ final class InvitationController extends AbstractController
             $this->logger->error('Invite join request failed.', [
                 'gameId' => $gameId,
                 'invitationUuid' => $invitationUuid,
-                'exceptionClass' => $throwable::class,
-                'exceptionMessage' => $throwable->getMessage(),
-            ]);
-
-            throw $throwable;
-        }
-    }
-
-    /**
-     * Processes invitation stored in session for the current user.
-     *
-     * @param SessionInterface           $session
-     * @param InvitationServiceInterface $invitationService
-     *
-     * @return Response
-     */
-    #[OA\Response(
-        response: Response::HTTP_OK,
-        description: 'Einladung wurde verarbeitet (User dem Spiel hinzugefügt) und Redirect fürs Frontend zurückgegeben.',
-        content: new OA\JsonContent(
-            type: 'object',
-            required: ['success', 'roles', 'id', 'redirect', 'gameId'],
-            properties: [
-                new OA\Property(property: 'success', type: 'boolean', example: true),
-                new OA\Property(property: 'roles', type: 'array', items: new OA\Items(type: 'string'), example: ['ROLE_PLAYER']),
-                new OA\Property(property: 'id', type: 'integer', example: 1),
-                new OA\Property(property: 'email', type: 'string', nullable: true, example: 'alice@example.com'),
-                new OA\Property(property: 'username', type: 'string', nullable: true, example: 'alice'),
-                new OA\Property(property: 'redirect', type: 'string', example: 'http://localhost:5173/joined'),
-                new OA\Property(property: 'gameId', type: 'integer', example: 42),
-            ]
-        )
-    )]
-    #[OA\Response(
-        response: Response::HTTP_UNAUTHORIZED,
-        description: 'User ist nicht authentifiziert oder Session ist ungültig.',
-        content: new OA\JsonContent(
-            type: 'object',
-            required: ['success', 'redirect'],
-            properties: [
-                new OA\Property(property: 'success', type: 'boolean', example: false),
-                new OA\Property(property: 'redirect', type: 'string', example: '/login'),
-            ]
-        )
-    )]
-    #[OA\Response(
-        response: Response::HTTP_BAD_REQUEST,
-        description: 'Session enthält keine game_id (z. B. Einladung nicht zuerst gejoint).',
-        content: new OA\JsonContent(
-            type: 'object',
-            required: ['success', 'redirect'],
-            properties: [
-                new OA\Property(property: 'success', type: 'boolean', example: false),
-                new OA\Property(property: 'redirect', type: 'string', example: '/start'),
-            ]
-        )
-    )]
-    #[OA\Response(
-        response: Response::HTTP_CONFLICT,
-        description: 'Spiel kann nicht gejoint werden (z. B. nicht mehr in Lobby oder Raum bereits voll).'
-    )]
-    #[Route('/api/invite/process', name: 'process_invitation', methods: ['POST'], format: 'json')]
-    public function processInvitation(SessionInterface $session, InvitationServiceInterface $invitationService): Response
-    {
-        $user = $this->getUser();
-        $userId = is_object($user) && method_exists($user, 'getId') ? $user->getId() : null;
-
-        $this->logger->info('Invite process request received.', [
-            'userId' => $userId,
-        ]);
-
-        try {
-            $result = $invitationService->processInvitation($session, $user);
-
-            $this->logger->info('Invite process request completed.', [
-                'userId' => $userId,
-                'statusCode' => $result->getStatusCode(),
-            ]);
-
-            return $result;
-        } catch (Throwable $throwable) {
-            $this->logger->error('Invite process request failed.', [
-                'userId' => $userId,
                 'exceptionClass' => $throwable::class,
                 'exceptionMessage' => $throwable->getMessage(),
             ]);

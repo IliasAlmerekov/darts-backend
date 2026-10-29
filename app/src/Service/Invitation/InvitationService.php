@@ -17,6 +17,7 @@ use App\Exception\Game\GameAlreadyStartedException;
 use App\Exception\Game\GameJoinNotAllowedException;
 use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\GameRoomFullException;
+use App\Exception\Security\UserNotAuthenticatedException;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\InvitationRepositoryInterface;
@@ -27,9 +28,6 @@ use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Override;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Component\Uid\Uuid;
 
@@ -49,7 +47,6 @@ final readonly class InvitationService implements InvitationServiceInterface
      * @param EntityManagerInterface           $entityManager
      * @param RouterInterface                  $router
      * @param GameAccessServiceInterface       $gameAccessService
-     * @param string                           $frontendUrl
      */
     public function __construct(
         private InvitationRepositoryInterface $invitationRepository,
@@ -60,7 +57,6 @@ final readonly class InvitationService implements InvitationServiceInterface
         private EntityManagerInterface $entityManager,
         private RouterInterface $router,
         private GameAccessServiceInterface $gameAccessService,
-        private string $frontendUrl,
     ) {
     }
 
@@ -159,47 +155,20 @@ final readonly class InvitationService implements InvitationServiceInterface
     }
 
     /**
-     * @param SessionInterface $session
-     * @param mixed            $user
-     *
-     * @return Response
-     */
-    #[Override]
-    public function processInvitation(SessionInterface $session, mixed $user): Response
-    {
-        if (!$user instanceof User) {
-            return new JsonResponse(['success' => false, 'redirect' => '/login'], Response::HTTP_UNAUTHORIZED);
-        }
-
-        $gameId = $session->get('game_id');
-        if (!$gameId) {
-            return new JsonResponse(['success' => false, 'redirect' => '/start'], Response::HTTP_BAD_REQUEST);
-        }
-        $gameId = (int) $gameId;
-        $userId = $user->getId();
-        if (null === $userId) {
-            return new JsonResponse(['success' => false, 'redirect' => '/login'], Response::HTTP_UNAUTHORIZED);
-        }
-
-        // Whatever the join outcome, the invitation is spent: a stale one must not block later logins.
-        try {
-            return $this->joinGame($gameId, $userId, $user);
-        } finally {
-            $session->remove('invitation_uuid');
-            $session->remove('game_id');
-        }
-    }
-
-    /**
      * @param int  $gameId
-     * @param int  $userId
      * @param User $user
      *
-     * @return Response
+     * @return int
      */
-    private function joinGame(int $gameId, int $userId, User $user): Response
+    #[Override]
+    public function joinInvitedGame(int $gameId, User $user): int
     {
-        return $this->entityManager->wrapInTransaction(function () use ($gameId, $userId, $user): Response {
+        $userId = $user->getId();
+        if (null === $userId) {
+            throw new UserNotAuthenticatedException();
+        }
+
+        return $this->entityManager->wrapInTransaction(function () use ($gameId, $userId): int {
             $game = $this->gameRepository->find($gameId);
             if (!$game instanceof Game) {
                 throw new GameNotFoundException();
@@ -214,15 +183,7 @@ final readonly class InvitationService implements InvitationServiceInterface
                 $this->playerManagementService->addPlayer($gameId, $userId);
             }
 
-            return new JsonResponse([
-                'success' => true,
-                'roles' => $user->getStoredRoles(),
-                'id' => $userId,
-                'email' => $user->getEmail(),
-                'username' => $user->getUsername(),
-                'redirect' => rtrim($this->frontendUrl, '/').'/joined',
-                'gameId' => $gameId,
-            ], Response::HTTP_OK);
+            return $gameId;
         });
     }
 

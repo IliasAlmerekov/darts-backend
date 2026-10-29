@@ -42,8 +42,7 @@ final class LoginSuccessRedirectEndpointTest extends WebTestCase
 
         $payload = $this->getLoginSuccess($client);
 
-        self::assertSame('/playerprofile', parse_url($payload['redirect'], PHP_URL_PATH));
-        self::assertArrayNotHasKey('gameId', $payload);
+        self::assertSame(self::loginBody($player, '/playerprofile'), $payload);
     }
 
     /**
@@ -67,8 +66,7 @@ final class LoginSuccessRedirectEndpointTest extends WebTestCase
 
         $payload = $this->getLoginSuccess($client);
 
-        self::assertSame('/joined', parse_url($payload['redirect'], PHP_URL_PATH));
-        self::assertSame($gameId, $payload['gameId']);
+        self::assertSame(self::loginBody($player, '/joined', ['gameId' => $gameId]), $payload);
     }
 
     /**
@@ -153,12 +151,32 @@ final class LoginSuccessRedirectEndpointTest extends WebTestCase
     public function testAdminWithoutInvitationLandsOnStart(): void
     {
         $client = static::createClient();
-        $client->loginUser($this->createUser('admin', 'ROLE_ADMIN'));
+        $admin = $this->createUser('admin', 'ROLE_ADMIN');
+        $client->loginUser($admin);
 
         $payload = $this->getLoginSuccess($client);
 
-        self::assertSame('/start', parse_url($payload['redirect'], PHP_URL_PATH));
-        self::assertArrayNotHasKey('gameId', $payload);
+        self::assertSame(self::loginBody($admin, '/start'), $payload);
+    }
+
+    /**
+     * The login success body, every field in response order.
+     *
+     * @param array<string, int|string> $extra fields after `redirect`
+     *
+     * @return array<string, mixed>
+     */
+    private static function loginBody(User $user, string $frontendPath, array $extra = []): array
+    {
+        return [
+            'success' => true,
+            'roles' => $user->getStoredRoles(),
+            'id' => $user->getId(),
+            'email' => $user->getEmail(),
+            'username' => $user->getUsername(),
+            'redirect' => 'http://localhost:5173'.$frontendPath,
+            ...$extra,
+        ];
     }
 
     /**

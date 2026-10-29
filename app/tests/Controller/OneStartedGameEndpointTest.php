@@ -317,8 +317,9 @@ final class OneStartedGameEndpointTest extends WebTestCase
         $this->client->loginUser($player);
         $this->client->request(Request::METHOD_GET, $invitationLink);
         self::assertResponseStatusCodeSame(Response::HTTP_FOUND);
-        $this->postJson('/api/invite/process');
+        $this->client->request(Request::METHOD_GET, '/api/login/success');
         self::assertResponseIsSuccessful();
+        self::assertSame($lobbyId, $this->decodeResponse()['gameId'] ?? null);
         self::assertFalse($this->client->getResponse()->headers->has('X-Accel-Buffering'));
 
         $this->client->loginUser($this->admin);

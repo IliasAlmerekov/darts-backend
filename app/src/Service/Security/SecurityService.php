@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Service\Security;
 
+use App\Dto\LoginSuccessDto;
 use App\Entity\User;
 use App\Exception\Game\GameAlreadyStartedException;
 use App\Exception\Game\GameJoinNotAllowedException;
@@ -17,48 +18,44 @@ use App\Exception\Game\GameRoomFullException;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Service\Invitation\InvitationServiceInterface;
 use Override;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 /**
- * Builds API responses for security flows.
+ * Decides the outcome of a successful login.
  */
 final readonly class SecurityService implements SecurityServiceInterface
 {
     /**
      * @param InvitationServiceInterface     $invitationService
      * @param GamePlayersRepositoryInterface $gamePlayersRepository
-     * @param string                         $frontendUrl
      */
     public function __construct(
         private InvitationServiceInterface $invitationService,
         private GamePlayersRepositoryInterface $gamePlayersRepository,
-        private string $frontendUrl,
     ) {
     }
 
     /**
-     * Builds login success response with proper redirect for role or invitation flow.
+     * Admin goes to the start page, an invited player joins the game, any other player
+     * returns to their current game or lands on the profile.
      *
-     * @param User             $user
-     * @param SessionInterface $session
+     * @param User     $user
+     * @param int|null $invitedGameId
      *
-     * @return Response
+     * @return LoginSuccessDto
      */
     #[Override]
-    public function buildLoginSuccessResponse(User $user, SessionInterface $session): Response
+    public function resolveLoginSuccess(User $user, ?int $invitedGameId): LoginSuccessDto
     {
         if (in_array('ROLE_ADMIN', $user->getRoles(), true)) {
-            return $this->buildResponse($user, '/start');
+            return new LoginSuccessDto($user, '/start');
         }
 
-        if ($session->has('invitation_uuid')) {
+        if (null !== $invitedGameId) {
             try {
-                return $this->invitationService->processInvitation($session, $user);
+                return new LoginSuccessDto($user, '/joined', gameId: $this->invitationService->joinInvitedGame($invitedGameId, $user));
             } catch (GameAlreadyStartedException|GameJoinNotAllowedException|GameRoomFullException|GameNotFoundException $exception) {
                 // The login itself succeeded; report why the join did not instead of failing the request.
-                return $this->buildResponse($user, '/playerprofile', ['invitationError' => $exception->getErrorCode()]);
+                return new LoginSuccessDto($user, '/playerprofile', invitationError: $exception->getErrorCode());
             }
         }
 
@@ -66,29 +63,9 @@ final readonly class SecurityService implements SecurityServiceInterface
         $playerId = $user->getId();
         $currentGame = null !== $playerId ? $this->gamePlayersRepository->findCurrentGameForPlayer($playerId) : null;
         if (null !== $currentGame) {
-            return $this->buildResponse($user, '/joined', ['gameId' => $currentGame['gameId']]);
+            return new LoginSuccessDto($user, '/joined', gameId: $currentGame['gameId']);
         }
 
-        return $this->buildResponse($user, '/playerprofile');
-    }
-
-    /**
-     * @param User                 $user
-     * @param string               $frontendPath path on the frontend the client should open next
-     * @param array<string, mixed> $extra        fields appended after `redirect`
-     *
-     * @return JsonResponse
-     */
-    private function buildResponse(User $user, string $frontendPath, array $extra = []): JsonResponse
-    {
-        return new JsonResponse([
-            'success' => true,
-            'roles' => $user->getStoredRoles(),
-            'id' => $user->getId(),
-            'email' => $user->getEmail(),
-            'username' => $user->getUsername(),
-            'redirect' => rtrim($this->frontendUrl, '/').$frontendPath,
-            ...$extra,
-        ], Response::HTTP_OK);
+        return new LoginSuccessDto($user, '/playerprofile');
     }
 }

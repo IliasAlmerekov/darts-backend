@@ -18,6 +18,7 @@ use App\Exception\Game\GameAlreadyStartedException;
 use App\Exception\Game\GameJoinNotAllowedException;
 use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\GameRoomFullException;
+use App\Exception\Security\UserNotAuthenticatedException;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\InvitationRepositoryInterface;
@@ -31,9 +32,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Routing\RouterInterface;
 
 #[AllowMockObjectsWithoutExpectations]
@@ -74,7 +72,6 @@ final class InvitationServiceTest extends TestCase
             $this->entityManager,
             $this->router,
             $this->gameAccessService,
-            'http://example.test/app',
         );
     }
 
@@ -191,14 +188,13 @@ final class InvitationServiceTest extends TestCase
         }
     }
 
-    public function testProcessInvitationRejectsWhenUserNotLoggedIn(): void
+    public function testJoinInvitedGameRejectsAnUnsavedUser(): void
     {
-        $session = $this->createMock(SessionInterface::class);
+        $this->gameRepository->expects(self::never())->method('find');
 
-        $response = $this->service->processInvitation($session, null);
+        $this->expectException(UserNotAuthenticatedException::class);
 
-        self::assertInstanceOf(JsonResponse::class, $response);
-        self::assertSame(Response::HTTP_UNAUTHORIZED, $response->getStatusCode());
+        $this->service->joinInvitedGame(50, new User());
     }
 
     public function testGetUsersForGameReturnsEmptyWhenNoGameId(): void
@@ -246,11 +242,8 @@ final class InvitationServiceTest extends TestCase
         self::assertSame([['id' => 6, 'username' => 'Mia (joined)']], $this->service->getUsersForGame($game));
     }
 
-    public function testProcessInvitationAddsPlayerToGameAndRedirects(): void
+    public function testJoinInvitedGameAddsPlayerToGame(): void
     {
-        $session = $this->createMock(SessionInterface::class);
-        $session->expects(self::once())->method('get')->with('game_id')->willReturn(50);
-
         $game = (new Game())->setGameId(50)->setStatus(GameStatus::Lobby);
         $this->gameRepository
             ->expects(self::once())
@@ -262,13 +255,6 @@ final class InvitationServiceTest extends TestCase
             ->expects(self::once())
             ->method('refreshWithSeatsForUpdate')
             ->with($game);
-
-        $removedKeys = [];
-        $session->expects(self::exactly(2))
-            ->method('remove')
-            ->willReturnCallback(static function (string $key) use (&$removedKeys): void {
-                $removedKeys[] = $key;
-            });
 
         $user = $this->createUserWithId(5, 'player', 'p@test');
 
@@ -283,27 +269,25 @@ final class InvitationServiceTest extends TestCase
             ->method('addPlayer')
             ->with(50, 5);
 
-        $response = $this->service->processInvitation($session, $user);
-
-        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
-        $content = json_decode($response->getContent() ?: '{}', true, 512, JSON_THROW_ON_ERROR);
-        self::assertTrue($content['success']);
-        self::assertSame('http://example.test/app/joined', $content['redirect'] ?? null);
-        self::assertSame(50, $content['gameId'] ?? null);
-        self::assertSame(5, $content['id'] ?? null);
-        self::assertSame($user->getStoredRoles(), $content['roles'] ?? null);
-        self::assertSame($user->getEmail(), $content['email'] ?? null);
-        self::assertSame($user->getUsername(), $content['username'] ?? null);
-        sort($removedKeys);
-        self::assertSame(['game_id', 'invitation_uuid'], $removedKeys);
+        self::assertSame(50, $this->service->joinInvitedGame(50, $user));
     }
 
-    public function testProcessInvitationRejectsWhenGameAlreadyStarted(): void
+    public function testJoinInvitedGameKeepsAnExistingSeat(): void
     {
-        $session = $this->createMock(SessionInterface::class);
-        $session->expects(self::once())->method('get')->with('game_id')->willReturn(60);
-        $session->expects(self::exactly(2))->method('remove');
+        $game = (new Game())->setGameId(51)->setStatus(GameStatus::Started);
+        $this->gameRepository->method('find')->with(51)->willReturn($game);
+        $this->gamePlayersRepository
+            ->expects(self::once())
+            ->method('isPlayerInGameForShare')
+            ->with(51, 7)
+            ->willReturn(true);
+        $this->playerManagementService->expects(self::never())->method('addPlayer');
 
+        self::assertSame(51, $this->service->joinInvitedGame(51, $this->createUserWithId(7, 'seated', 's@test')));
+    }
+
+    public function testJoinInvitedGameRejectsWhenGameAlreadyStarted(): void
+    {
         $game = (new Game())->setGameId(60)->setStatus(GameStatus::Started);
         $this->gameRepository
             ->expects(self::once())
@@ -315,16 +299,12 @@ final class InvitationServiceTest extends TestCase
 
         $this->expectException(GameAlreadyStartedException::class);
 
-        $this->service->processInvitation($session, $user);
+        $this->service->joinInvitedGame(60, $user);
     }
 
     #[DataProvider('endedGameStatuses')]
-    public function testProcessInvitationRejectsEndedGameWithoutClaimingItStarted(GameStatus $status): void
+    public function testJoinInvitedGameRejectsEndedGameWithoutClaimingItStarted(GameStatus $status): void
     {
-        $session = $this->createMock(SessionInterface::class);
-        $session->expects(self::once())->method('get')->with('game_id')->willReturn(62);
-        $session->expects(self::exactly(2))->method('remove');
-
         $game = (new Game())->setGameId(62)->setStatus($status);
         $this->gameRepository
             ->expects(self::once())
@@ -336,7 +316,7 @@ final class InvitationServiceTest extends TestCase
 
         $this->expectException(GameJoinNotAllowedException::class);
 
-        $this->service->processInvitation($session, $user);
+        $this->service->joinInvitedGame(62, $user);
     }
 
     /**
@@ -348,12 +328,8 @@ final class InvitationServiceTest extends TestCase
         yield 'aborted' => [GameStatus::Aborted];
     }
 
-    public function testProcessInvitationRejectsWhenRoomIsFull(): void
+    public function testJoinInvitedGameRejectsWhenRoomIsFull(): void
     {
-        $session = $this->createMock(SessionInterface::class);
-        $session->expects(self::once())->method('get')->with('game_id')->willReturn(61);
-        $session->expects(self::exactly(2))->method('remove');
-
         $game = (new Game())->setGameId(61)->setStatus(GameStatus::Lobby);
         $this->gameRepository
             ->expects(self::once())
@@ -379,15 +355,11 @@ final class InvitationServiceTest extends TestCase
         $this->expectException(GameRoomFullException::class);
         $this->expectExceptionMessage('The room is already full (10 players). Please wait for an available spot.');
 
-        $this->service->processInvitation($session, $user);
+        $this->service->joinInvitedGame(61, $user);
     }
 
-    public function testProcessInvitationClearsSessionWhenGameIsGone(): void
+    public function testJoinInvitedGameRejectsAGameThatIsGone(): void
     {
-        $session = $this->createMock(SessionInterface::class);
-        $session->expects(self::once())->method('get')->with('game_id')->willReturn(62);
-        $session->expects(self::exactly(2))->method('remove');
-
         $this->gameRepository
             ->expects(self::once())
             ->method('find')
@@ -398,7 +370,7 @@ final class InvitationServiceTest extends TestCase
 
         $this->expectException(GameNotFoundException::class);
 
-        $this->service->processInvitation($session, $user);
+        $this->service->joinInvitedGame(62, $user);
     }
 
     private function createUserWithId(int $id, string $username, string $email): User

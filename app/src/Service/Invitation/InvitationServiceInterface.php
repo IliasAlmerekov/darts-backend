@@ -6,8 +6,11 @@ namespace App\Service\Invitation;
 
 use App\Entity\Game;
 use App\Entity\Invitation;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\Session\SessionInterface;
+use App\Entity\User;
+use App\Exception\Game\GameAlreadyStartedException;
+use App\Exception\Game\GameJoinNotAllowedException;
+use App\Exception\Game\GameNotFoundException;
+use App\Exception\Game\GameRoomFullException;
 
 /**
  * Contract for invitation related operations.
@@ -33,14 +36,19 @@ interface InvitationServiceInterface
     public function getInvitationPayload(Game $game): array;
 
     /**
-     * Processes an invitation join flow for the current user from session.
+     * Seats the player in the invited game, unless they already have a seat there.
      *
-     * @param SessionInterface $session
-     * @param object|null      $user
+     * @param int  $gameId
+     * @param User $user
      *
-     * @return Response
+     * @return int the joined game's id
+     *
+     * @throws GameNotFoundException        when the game no longer exists
+     * @throws GameAlreadyStartedException  when the game has started
+     * @throws GameJoinNotAllowedException  when the game has ended
+     * @throws GameRoomFullException        when every seat is taken
      */
-    public function processInvitation(SessionInterface $session, mixed $user): Response;
+    public function joinInvitedGame(int $gameId, User $user): int;
 
     /**
      * Returns users participating in the given game.
