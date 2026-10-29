@@ -61,7 +61,7 @@ final class InvitationServiceTest extends TestCase
         $this->entityManager->method('contains')->willReturn(false);
         $this->router = $this->createMock(RouterInterface::class);
         $this->gameAccessService = $this->createMock(GameAccessServiceInterface::class);
-        $this->gameAccessService->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+        $this->gameAccessService->method('assertAdmin')->willReturn(new User());
 
         $this->service = new InvitationService(
             $this->invitationRepository,

@@ -23,6 +23,8 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **ErrorCode**: Neuer Fehlercode `SecurityAccessDenied` für API-Fehlerbehandlung.
 
 ### Geändert
+
+- **Sicherheit**: Spielzugriffe prüfen die Adminrolle direkt (#71).
 - **Statistik**: Die Statistikabfragen liegen in `PlayerStatisticsRepository`, `RoundThrowsRepository` enthält nur noch Würfe. Die Namensregel für Spieler steht als `PlayerDisplayNameExpression` an einer Stelle (#169).
 - **Spiel**: Regeln zum Rückgängigmachen von Würfen und zum Wiederöffnen aufgeteilt (#193).
 - **Spiel**: Die Out-Regel wird in einer Spalte gespeichert; bestehende Einstellungen und API-Felder bleiben erhalten (#192).

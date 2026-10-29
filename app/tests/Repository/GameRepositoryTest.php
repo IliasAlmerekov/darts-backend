@@ -171,7 +171,8 @@ final class GameRepositoryTest extends KernelTestCase
 
         $this->entityManager->flush();
 
-        // The read-only summary checks access; the winner is a participant of the game.
+        // The read-only summary requires the tablet's admin role.
+        $winner->setRoles(['ROLE_ADMIN']);
         static::getContainer()->get(TokenStorageInterface::class)->setToken(new UsernamePasswordToken($winner, 'main', $winner->getRoles()));
         $summary = $this->gameFinishService->getGameSummary($finishedGame);
         $overview = $this->repository->findFinishedOverview(limit: 10, offset: 0);

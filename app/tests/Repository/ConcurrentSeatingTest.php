@@ -242,7 +242,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $gameRepository = new GameRepository($this->registry());
         $playerManagementService = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager, new GameRepository($this->registry()));
         $access = $this->createMock(GameAccessServiceInterface::class);
-        $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+        $access->method('assertAdmin')->willReturn(new User());
         $openLobbyService = new OpenLobbyService($gameRepository, $this->entityManager);
         $service = new RematchService(
             new GameRoomService($gameRepository, $this->gamePlayersRepository, $playerManagementService, $access, $openLobbyService, $this->createMock(UserRepositoryInterface::class)),
@@ -424,7 +424,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $this->insertSeat($lobby, $anna, 2);
         $gameRepository = new GameRepository($this->registry());
         $access = $this->createMock(GameAccessServiceInterface::class);
-        $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+        $access->method('assertAdmin')->willReturn(new User());
         $service = new GameStartService(
             new GameSetupService(),
             $this->entityManager,
@@ -503,7 +503,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         // The game finishes after the settings request loaded it.
         $this->other->update('game', ['status' => 'finished'], ['game_id' => $game]);
         $access = $this->createMock(GameAccessServiceInterface::class);
-        $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+        $access->method('assertAdmin')->willReturn(new User());
 
         try {
             (new GameSettingsService($this->entityManager, $access, new GameRepository($this->registry()), new RoundThrowsRepository($this->registry())))
@@ -576,7 +576,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $loaded = $this->entityManager->find(Game::class, $game);
         self::assertInstanceOf(Game::class, $loaded);
         $access = $this->createMock(GameAccessServiceInterface::class);
-        $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+        $access->method('assertAdmin')->willReturn(new User());
 
         // A reopen holds the game lock and has not committed.
         $this->other->beginTransaction();
@@ -668,7 +668,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
     {
         $gameRepository = new GameRepository($this->registry());
         $access = $this->createMock(GameAccessServiceInterface::class);
-        $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+        $access->method('assertAdmin')->willReturn(new User());
 
         return new GameThrowService(
             $this->gamePlayersRepository,
@@ -685,7 +685,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
     private function finishService(): GameFinishService
     {
         $access = $this->createMock(GameAccessServiceInterface::class);
-        $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+        $access->method('assertAdmin')->willReturn(new User());
 
         return new GameFinishService(
             $this->entityManager,

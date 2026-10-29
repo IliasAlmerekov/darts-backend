@@ -102,8 +102,7 @@ final class GameSettingsControllerTest extends TestCase
 
         $gameAccessService = $this->createMock(GameAccessServiceInterface::class);
         $gameAccessService->expects($this->once())
-            ->method('assertPlayerInGameOrAdmin')
-            ->with($game);
+            ->method('assertAdmin');
 
         $response = $this->controller->getSettings($game, $gameAccessService);
 
@@ -139,8 +138,7 @@ final class GameSettingsControllerTest extends TestCase
 
         $gameAccessService = $this->createMock(GameAccessServiceInterface::class);
         $gameAccessService->expects($this->once())
-            ->method('assertPlayerInGameOrAdmin')
-            ->with($game);
+            ->method('assertAdmin');
 
         $this->expectException(GameIdMissingException::class);
         $this->controller->getSettings($game, $gameAccessService);

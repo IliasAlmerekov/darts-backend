@@ -161,8 +161,7 @@ final class GameLifecycleControllerTest extends TestCase
         $game = $this->createMock(Game::class);
         $gameAccessService = $this->createMock(GameAccessServiceInterface::class);
         $gameAccessService->expects($this->once())
-            ->method('assertPlayerInGameOrAdmin')
-            ->with($game);
+            ->method('assertAdmin');
         $gameStateViewBuilder = $this->createMock(GameStateViewBuilderInterface::class);
         $gameStateViewBuilder->expects($this->once())
             ->method('buildStateVersion')
@@ -187,8 +186,7 @@ final class GameLifecycleControllerTest extends TestCase
         $game = $this->createMock(Game::class);
         $gameAccessService = $this->createMock(GameAccessServiceInterface::class);
         $gameAccessService->expects($this->once())
-            ->method('assertPlayerInGameOrAdmin')
-            ->with($game);
+            ->method('assertAdmin');
 
         $gameStateViewBuilder = $this->createMock(GameStateViewBuilderInterface::class);
         $gameStateViewBuilder->expects($this->once())
@@ -285,8 +283,7 @@ final class GameLifecycleControllerTest extends TestCase
         $game = $this->createMock(Game::class);
         $gameAccessService = $this->createMock(GameAccessServiceInterface::class);
         $gameAccessService->expects($this->once())
-            ->method('assertPlayerInGameOrAdmin')
-            ->with($game);
+            ->method('assertAdmin');
         $gameStateViewBuilder = $this->createMock(GameStateViewBuilderInterface::class);
         $gameStateViewBuilder->expects($this->once())
             ->method('buildStateVersion')
@@ -307,8 +304,7 @@ final class GameLifecycleControllerTest extends TestCase
         $game = $this->createMock(Game::class);
         $gameAccessService = $this->createMock(GameAccessServiceInterface::class);
         $gameAccessService->expects($this->once())
-            ->method('assertPlayerInGameOrAdmin')
-            ->with($game);
+            ->method('assertAdmin');
         $gameStateViewBuilder = $this->createMock(GameStateViewBuilderInterface::class);
         $gameStateViewBuilder->expects($this->once())
             ->method('buildStateVersion')

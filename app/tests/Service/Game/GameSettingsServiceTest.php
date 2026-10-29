@@ -131,7 +131,7 @@ final class GameSettingsServiceTest extends TestCase
         $entityManager->expects(self::once())->method('flush');
 
         $access = $this->createMock(GameAccessServiceInterface::class);
-        $access->expects(self::never())->method('assertPlayerInGameOrAdmin');
+        $access->expects(self::never())->method('assertAdmin');
 
         $service = new GameSettingsService($entityManager, $access, $this->createStub(GameRepositoryInterface::class), $this->createStub(RoundThrowsRepositoryInterface::class));
         $service->applySettings($game, $dto);
@@ -156,7 +156,7 @@ final class GameSettingsServiceTest extends TestCase
     private function createService(EntityManagerInterface $entityManager): GameSettingsService
     {
         $access = $this->createStub(GameAccessServiceInterface::class);
-        $access->method('assertPlayerInGameOrAdmin')->willReturn(new User());
+        $access->method('assertAdmin')->willReturn(new User());
         $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $callback): mixed => $callback());
 
         return new GameSettingsService($entityManager, $access, $this->createStub(GameRepositoryInterface::class), $this->createStub(RoundThrowsRepositoryInterface::class));
