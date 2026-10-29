@@ -33,6 +33,7 @@ use App\Service\Game\GameSettingsService;
 use App\Service\Game\GameSetupService;
 use App\Service\Game\GameStartService;
 use App\Service\Game\GameThrowService;
+use App\Service\Game\GameReopenService;
 use App\Service\Game\NewestGameGuard;
 use App\Service\Game\OpenLobbyService;
 use App\Service\Game\RematchService;
@@ -675,7 +676,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
             $this->entityManager,
             $access,
             $gameRepository,
-            new NewestGameGuard($gameRepository),
+            new GameReopenService($this->entityManager, $access, $gameRepository, new NewestGameGuard($gameRepository)),
             $this->finishService(),
         );
     }

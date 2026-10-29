@@ -1,5 +1,11 @@
 <?php
 
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
+
 declare(strict_types=1);
 
 namespace App\Service\Game;
@@ -24,4 +30,22 @@ interface GameReopenServiceInterface
      * @return void
      */
     public function reopen(Game $game): void;
+
+    /**
+     * Check before changing any state of a finished game.
+     *
+     * @param Game $game
+     *
+     * @return void
+     */
+    public function assertCanReopen(Game $game): void;
+
+    /**
+     * Apply the transition after assertCanReopen, inside the caller's transaction.
+     *
+     * @param Game $game
+     *
+     * @return void
+     */
+    public function reopenFinished(Game $game): void;
 }

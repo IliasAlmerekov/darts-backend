@@ -55,15 +55,34 @@ final readonly class GameReopenService implements GameReopenServiceInterface
             throw new GameReopenNotAllowedException($status);
         }
 
-        $this->newestGameGuard->assertNewest($game, [GameStatus::Finished]);
+        $this->assertCanReopen($game);
+        $this->reopenFinished($game);
 
-        // The tablet runs one game at a time (ADR 0004).
+        $this->entityManager->flush();
+    }
+
+    /**
+     * @param Game $game
+     *
+     * @return void
+     */
+    #[Override]
+    public function assertCanReopen(Game $game): void
+    {
+        $this->newestGameGuard->assertNewest($game, [GameStatus::Finished]);
+    }
+
+    /**
+     * @param Game $game
+     *
+     * @return void
+     */
+    #[Override]
+    public function reopenFinished(Game $game): void
+    {
         $this->gameRepository->abortStartedGames($game->getGameId());
         $game->setStatus(GameStatus::Started);
         $game->setFinishedAt(null);
-
         $game->takeBackPlacementsFromSeatsWithScoreLeft();
-
-        $this->entityManager->flush();
     }
 }
