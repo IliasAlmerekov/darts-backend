@@ -102,18 +102,50 @@ final class RememberedLoginTest extends WebTestCase
         $player = $this->createUser('matrix', ['ROLE_PLAYER']);
 
         $this->logIn($client, $player);
-        $this->dropSessionCookie($client);
-
-        // The matrix rule `^/api` needs ROLE_ADMIN, and `^/api/player/current-game$` needs ROLE_PLAYER.
-        // Symfony does not count a remember-me token as fully authenticated, so a denied
-        // route ends in the entry point (401) instead of access denied (403).
         $client->request(Request::METHOD_POST, '/api/room/create');
-        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+        self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+        $sessionBody = $client->getResponse()->getContent();
+        self::assertSame(['success' => false, 'error' => 'ACCESS_DENIED', 'message' => 'Forbidden'], json_decode((string) $sessionBody, true, 512, JSON_THROW_ON_ERROR));
+
+        $this->dropSessionCookie($client);
+        $client->request(Request::METHOD_POST, '/api/room/create');
+        self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+        self::assertSame($sessionBody, $client->getResponse()->getContent());
 
         $this->dropSessionCookie($client);
         $client->request(Request::METHOD_GET, '/api/player/current-game');
         self::assertNotContains($client->getResponse()->getStatusCode(), [Response::HTTP_UNAUTHORIZED, Response::HTTP_FORBIDDEN]);
         self::assertFalse(str_contains((string) $client->getResponse()->getContent(), 'AUTHENTICATION_REQUIRED'));
+    }
+
+    public function testAnonymousAdminRouteRequiresAuthentication(): void
+    {
+        $client = static::createClient();
+        $client->request(Request::METHOD_POST, '/api/room/create');
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+        self::assertSame(['success' => false, 'error' => 'AUTHENTICATION_REQUIRED', 'message' => 'Unauthorized'], json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR));
+    }
+
+    public function testExpiredRememberedLoginRequiresAuthentication(): void
+    {
+        $client = static::createClient();
+        $player = $this->createUser('exp', ['ROLE_PLAYER']);
+        $this->logIn($client, $player);
+        $this->dropSessionCookie($client);
+        $this->backdateTokens(self::SEVEN_DAYS + 3600);
+        $client->request(Request::METHOD_POST, '/api/room/create');
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+        self::assertSame(['success' => false, 'error' => 'AUTHENTICATION_REQUIRED', 'message' => 'Unauthorized'], json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR));
+    }
+
+    public function testRememberedPlayerReachesRemovedInvitationRoute(): void
+    {
+        $client = static::createClient();
+        $player = $this->createUser('invite', ['ROLE_PLAYER']);
+        $this->logIn($client, $player);
+        $this->dropSessionCookie($client);
+        $client->request(Request::METHOD_POST, '/api/invite/process');
+        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
     }
 
     public function testVisitWithALiveSessionRefreshesTheTokenAndCookie(): void
