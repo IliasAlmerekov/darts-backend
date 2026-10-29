@@ -34,9 +34,6 @@ class Game
     #[ORM\Column]
     private ?int $gameId = null;
 
-    #[ORM\Column(nullable: true)]
-    private ?int $type = null;
-
     #[ORM\ManyToOne]
     private ?User $winner = null;
 
@@ -95,26 +92,6 @@ class Game
     {
         $this->gamePlayers = new ArrayCollection();
         $this->rounds = new ArrayCollection();
-    }
-
-    /**
-     * @return int|null
-     */
-    public function getType(): ?int
-    {
-        return $this->type;
-    }
-
-    /**
-     * @param int|null $type
-     *
-     * @return static
-     */
-    public function setType(?int $type): static
-    {
-        $this->type = $type;
-
-        return $this;
     }
 
     /**

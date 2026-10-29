@@ -170,7 +170,7 @@ final class OpenLobbyEndpointTest extends WebTestCase
         $anna = $this->createPlayer('anna');
         $lobby = $this->createGame(GameStatus::Lobby, [$vanya, $anna]);
         $finished = $this->createGame(GameStatus::Finished, [$bob, $vanya]);
-        $finished->setStartScore(501)->setOutRule(\App\Enum\OutRule::Double)->setType(2);
+        $finished->setStartScore(501)->setOutRule(\App\Enum\OutRule::Double);
         $this->entityManager->flush();
         $gameCount = $this->countGames();
 
@@ -186,20 +186,6 @@ final class OpenLobbyEndpointTest extends WebTestCase
         self::assertSame(501, $reloaded->getStartScore());
         self::assertTrue($reloaded->isDoubleOut());
         self::assertFalse($reloaded->isTripleOut());
-        self::assertSame(2, $reloaded->getType());
-    }
-
-    public function testRematchOverwritesTheLobbyTypeEvenWhenTheOldGameHasNone(): void
-    {
-        $bob = $this->createPlayer('bob');
-        $lobby = $this->createGame(GameStatus::Lobby, []);
-        $lobby->setType(2);
-        $finished = $this->createGame(GameStatus::Finished, [$bob]);
-
-        $this->postJson(sprintf('/api/room/%d/rematch', $finished->getGameId()));
-
-        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
-        self::assertNull($this->reload($lobby)->getType());
     }
 
     /**
