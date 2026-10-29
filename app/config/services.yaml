@@ -24,7 +24,6 @@ services:
     App\Repository\GamePlayersRepositoryInterface: '@App\Repository\GamePlayersRepository'
     App\Repository\GameRepositoryInterface: '@App\Repository\GameRepository'
     App\Repository\InvitationRepositoryInterface: '@App\Repository\InvitationRepository'
-    App\Repository\PlayerStatsRepositoryInterface: '@App\Repository\PlayerStatsRepository'
     App\Repository\UserRepositoryInterface: '@App\Repository\UserRepository'
     App\EventSubscriber\RememberedLoginCookieSubscriber:
         arguments:
