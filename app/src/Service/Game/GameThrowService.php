@@ -69,23 +69,6 @@ final readonly class GameThrowService implements GameThrowServiceInterface
     }
 
     /**
-     * @param Game         $game
-     * @param ThrowRequest $dto
-     *
-     * @return ThrowRecordingResultDto
-     */
-    public function recordThrow(Game $game, ThrowRequest $dto): ThrowRecordingResultDto
-    {
-        return $this->entityManager->wrapInTransaction(function () use ($game, $dto): ThrowRecordingResultDto {
-            if ($this->entityManager->contains($game)) {
-                $this->gameRepository->refreshWithSeatsForUpdate($game);
-            }
-
-            return $this->recordThrowUnlocked($game, $dto);
-        });
-    }
-
-    /**
      * @param int          $gameId
      * @param ThrowRequest $dto
      *

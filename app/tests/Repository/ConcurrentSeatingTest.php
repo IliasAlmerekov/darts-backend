@@ -363,7 +363,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $throw->value = 20;
 
         try {
-            $this->throwService()->recordThrow($loaded, $throw);
+            $this->throwService()->recordThrowByGameId($game, $throw);
             self::fail('The throw used the status from before the winning throw.');
         } catch (GameThrowNotAllowedException) {
         }
