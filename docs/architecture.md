@@ -1,11 +1,13 @@
 # Architecture
 
 The backend is a layered Symfony application. It is not MVC: the API answers with JSON
-and has no templates. A request passes through three layers, and each layer calls only
-the one below it.
+and has no templates. A request that writes passes through three layers, and each layer
+calls only the one below it. A request that only reads may skip the service and go from
+the controller to the repository.
 
 ```text
-Controller  ->  use-case Service  ->  Repository / Entity (Doctrine)
+write:  Controller  ->  use-case Service  ->  Repository / Entity (Doctrine)
+read:   Controller  ->  Repository
 ```
 
 [ADR 0008](adr/0008-layered-architecture.md) records why the layers stay as they are and
