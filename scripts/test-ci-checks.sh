@@ -64,3 +64,19 @@ rm .gitlab-ci.yml
 if sh "$root/scripts/check-gitlab-dockerfiles.sh" > /dev/null 2>&1; then
     echo "Dockerfile check accepted a missing GitLab configuration" >&2; exit 1
 fi
+printf '%s\n' '  - docker build .' > .gitlab-ci.yml
+if sh "$root/scripts/check-gitlab-dockerfiles.sh" > /dev/null 2>&1; then
+    echo "Dockerfile check accepted a missing default Dockerfile" >&2; exit 1
+fi
+printf 'FROM scratch\n' > Dockerfile
+if ! sh "$root/scripts/check-gitlab-dockerfiles.sh"; then
+    echo "Dockerfile check rejected the default Dockerfile" >&2; exit 1
+fi
+printf '%s\n' '  - docker build app' > .gitlab-ci.yml
+if sh "$root/scripts/check-gitlab-dockerfiles.sh" > /dev/null 2>&1; then
+    echo "Dockerfile check accepted a missing context Dockerfile" >&2; exit 1
+fi
+printf 'FROM scratch\n' > app/Dockerfile
+if ! sh "$root/scripts/check-gitlab-dockerfiles.sh"; then
+    echo "Dockerfile check rejected the context Dockerfile" >&2; exit 1
+fi

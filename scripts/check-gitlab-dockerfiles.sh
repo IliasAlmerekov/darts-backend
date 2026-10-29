@@ -7,14 +7,16 @@ if [ ! -r .gitlab-ci.yml ]; then
 fi
 
 awk '
-    function paths(command, fields, count, i) {
+    function paths(command, fields, count, i, explicit) {
         if (command !~ /docker build([[:space:]]|$)/) return
+        sub(/[[:space:]]+$/, "", command)
         count = split(command, fields, /[[:space:]]+/)
         for (i = 1; i <= count; i++) {
-            if (fields[i] == "-f" || fields[i] == "--file") print fields[i + 1]
-            else if (fields[i] ~ /^-f./) { sub(/^-f/, "", fields[i]); print fields[i] }
-            else if (fields[i] ~ /^--file=/) { sub(/^--file=/, "", fields[i]); print fields[i] }
+            if (fields[i] == "-f" || fields[i] == "--file") { print fields[i + 1]; explicit = 1 }
+            else if (fields[i] ~ /^-f./) { sub(/^-f/, "", fields[i]); print fields[i]; explicit = 1 }
+            else if (fields[i] ~ /^--file=/) { sub(/^--file=/, "", fields[i]); print fields[i]; explicit = 1 }
         }
+        if (!explicit) print fields[count] "/Dockerfile"
     }
     {
         if (folded) {
