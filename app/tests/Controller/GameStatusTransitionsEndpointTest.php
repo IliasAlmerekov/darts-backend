@@ -174,7 +174,7 @@ final class GameStatusTransitionsEndpointTest extends WebTestCase
         $this->throwDart($gameId, $this->first);
         $this->request(Request::METHOD_PATCH, sprintf('/api/game/%d/abort', $gameId));
 
-        $this->assertConflict(Request::METHOD_DELETE, sprintf('/api/game/%d/throw', $gameId), 'GAME_THROW_NOT_ALLOWED');
+        $this->assertConflict(Request::METHOD_DELETE, sprintf('/api/game/%d/throw/delta', $gameId), 'GAME_THROW_NOT_ALLOWED');
 
         self::assertSame(1, $this->throwCount($gameId));
         self::assertSame('aborted', $this->storedStatus($gameId));

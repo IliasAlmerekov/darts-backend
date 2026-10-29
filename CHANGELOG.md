@@ -54,6 +54,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **Verschiedene Services**: Integration von `GameAccessService` in `GameAbortService`, `GameFinishService`, `GameRoomService`, `GameSettingsService`, `GameStartService`, `GameThrowService`, `RematchService` und `InvitationService` für Zugriffskontrollen vor Spielaktionen.
 
 ### Entfernt
+- **Würfe**: BREAKING CHANGE: `POST /api/game/{gameId}/throw` und `DELETE /api/game/{gameId}/throw` entfallen samt OpenAPI-Doku. Wurf und Undo laufen über die jeweiligen `/throw/delta`-Routen (#197)
 - **Spiel-API**: BREAKING CHANGE: `POST /api/game/settings`, `POST /api/game/{gameId}/rematch/start`, `GET /api/games/{gameId}` und `GET /api/games/{gameId}/finished` entfallen mitsamt ihrer OpenAPI-Doku und antworten wie jede unbekannte Route mit 404 oder 405. Das Frontend ruft sie nicht auf; es nutzt `POST /api/room/create` mit `PATCH /api/game/{gameId}/settings`, `POST /api/room/{id}/rematch` mit `POST /api/game/{gameId}/start` und `GET /api/game/{gameId}/finished`. `RematchStartService` und `GameFinishServiceInterface::getGameStats()` entfallen mit ihnen (#50)
 - **Spiel**: Das ungenutzte Feld `Game::$type` entfällt, Rematch kopiert es nicht mehr; eine Migration löscht die Spalte `game.type`, ihr `down()` legt sie als nullable Integer wieder an (#50)
 - **Repositories**: Die auskommentierten Beispielmethoden des Symfony-Makers entfallen aus allen Repositories (#50)

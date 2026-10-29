@@ -16,22 +16,6 @@ use App\Exception\ApiExceptionInterface;
 interface GameThrowServiceInterface
 {
     /**
-     * Record a throw in the game.
-     * Updates the game state, calculates scores, checks for bust conditions,
-     * and determines if a player has won.
-     *
-     * @param Game         $game The game to record the throw in
-     * @param ThrowRequest $dto  The throw data (player, value, double/triple flags)
-     *
-     * @throws ApiExceptionInterface If the throw is invalid for current turn/state
-     *
-     * @return ThrowRecordingResultDto Post-throw context for compact delta acknowledgements
-     *
-     * @psalm-suppress PossiblyUnusedReturnValue Legacy full-state endpoint ignores this value, but delta-oriented callers and tests rely on it.
-     */
-    public function recordThrow(Game $game, ThrowRequest $dto): ThrowRecordingResultDto;
-
-    /**
      * Record a throw by game id.
      * Resolves and locks the game inside a transaction before applying throw rules.
      *

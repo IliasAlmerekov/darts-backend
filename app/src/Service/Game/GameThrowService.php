@@ -74,7 +74,6 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      *
      * @return ThrowRecordingResultDto
      */
-    #[Override]
     public function recordThrow(Game $game, ThrowRequest $dto): ThrowRecordingResultDto
     {
         return $this->entityManager->wrapInTransaction(function () use ($game, $dto): ThrowRecordingResultDto {

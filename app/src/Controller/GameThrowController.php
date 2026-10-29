@@ -9,7 +9,6 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Dto\GameResponseDto;
 use App\Dto\ThrowAckDto;
 use App\Dto\ThrowRequest;
 use App\Dto\UndoAckDto;
@@ -17,14 +16,12 @@ use App\Entity\Game;
 use App\Exception\Game\GameNotFoundException;
 use App\Http\Attribute\ApiResponse;
 use App\Service\Game\GameDeltaServiceInterface;
-use App\Service\Game\GameStateViewBuilderInterface;
 use App\Service\Game\GameThrowServiceInterface;
 use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity as AttributeMapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
@@ -35,46 +32,6 @@ use Symfony\Component\Routing\Attribute\Route;
 #[OA\Tag(name: 'Game Throws')]
 final class GameThrowController extends AbstractController
 {
-    /**
-     * Records a throw for the current player.
-     *
-     * @param Game                          $game
-     * @param GameThrowServiceInterface     $gameThrowService
-     * @param GameStateViewBuilderInterface $gameStateViewBuilder
-     * @param ThrowRequest                  $dto
-     *
-     * @return JsonResponse
-     */
-    #[OA\Parameter(name: 'gameId', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
-    #[OA\RequestBody(required: true, content: new OA\JsonContent(ref: new Model(type: ThrowRequest::class)))]
-    #[OA\Response(
-        response: Response::HTTP_OK,
-        description: 'Spielzustand nach dem Erfassen des Wurfs.',
-        content: new OA\JsonContent(ref: new Model(type: GameResponseDto::class))
-    )]
-    #[OA\Response(
-        response: Response::HTTP_CONFLICT,
-        description: 'Wurf ist im aktuellen Zustand nicht erlaubt (z. B. falscher aktiver Spieler).'
-    )]
-    #[ApiResponse]
-    #[OA\Post(deprecated: true)]
-    #[OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Der Request-Body ist kein gültiges JSON (`REQUEST_INVALID_JSON_BODY`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
-    #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht.', content: new OA\JsonContent(ref: '#/components/schemas/RequestValidationFailed'))]
-    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme (`ACCESS_DENIED`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
-    #[Route('/api/game/{gameId}/throw', name: 'app_game_throw', methods: ['POST'], format: 'json')]
-    public function throw(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameStateViewBuilderInterface $gameStateViewBuilder, #[MapRequestPayload] ThrowRequest $dto): JsonResponse
-    {
-        $gameThrowService->recordThrow($game, $dto);
-
-        $gameDto = $gameStateViewBuilder->createGameDto($game);
-
-        $response = $this->json($gameDto);
-        $response->headers->set('Deprecation', 'true');
-        $response->headers->set('Link', sprintf('</api/game/%d/throw/delta>; rel="successor-version"', (int) $game->getGameId()));
-
-        return $response;
-    }
-
     /**
      * Records a throw and returns compact delta payload.
      *
@@ -110,38 +67,6 @@ final class GameThrowController extends AbstractController
         }
 
         return $gameDeltaService->buildThrowAck($throwRecordingResult->game, $throwRecordingResult->latestThrow, $throwRecordingResult->currentRoundStateSnapshot);
-    }
-
-    /**
-     * Undoes the last recorded throw.
-     *
-     * @param Game                          $game
-     * @param GameThrowServiceInterface     $gameThrowService
-     * @param GameStateViewBuilderInterface $gameStateViewBuilder
-     *
-     * @return JsonResponse
-     */
-    #[OA\Parameter(name: 'gameId', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
-    #[OA\Response(
-        response: Response::HTTP_OK,
-        description: 'Spielzustand nach dem Rückgängigmachen des letzten Wurfs.',
-        content: new OA\JsonContent(ref: new Model(type: GameResponseDto::class))
-    )]
-    #[ApiResponse]
-    #[OA\Delete(deprecated: true)]
-    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme (`ACCESS_DENIED`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
-    #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Das Spiel ist in der Lobby oder abgebrochen (`GAME_THROW_NOT_ALLOWED`); es wird nichts gelöscht. Oder der letzte Wurf hat das Spiel beendet, und das Spiel ist nicht das neueste Spiel (`GAME_NOT_NEWEST`). Das Rückgängigmachen würde das laufende Spiel abbrechen.')]
-    #[Route('/api/game/{gameId}/throw', name: 'app_game_throw_undo', methods: ['DELETE'], format: 'json')]
-    public function undoThrow(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameStateViewBuilderInterface $gameStateViewBuilder): JsonResponse
-    {
-        $gameThrowService->undoLastThrow($game);
-        $gameDto = $gameStateViewBuilder->createGameDto($game);
-
-        $response = $this->json($gameDto);
-        $response->headers->set('Deprecation', 'true');
-        $response->headers->set('Link', sprintf('</api/game/%d/throw/delta>; rel="successor-version"', (int) $game->getGameId()));
-
-        return $response;
     }
 
     /**
