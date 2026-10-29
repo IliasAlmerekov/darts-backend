@@ -41,9 +41,6 @@ services:
         arguments:
             $frontendUrl: "%frontend_url%"
     App\Service\Invitation\InvitationServiceInterface: '@App\Service\Invitation\InvitationService'
-    App\Service\Invitation\InvitationService:
-        arguments:
-            $frontendUrl: "%frontend_url%"
     App\Service\Registration\RegistrationServiceInterface: '@App\Service\Registration\RegistrationService'
     App\Service\Security\SecurityServiceInterface: '@App\Service\Security\SecurityService'
     App\Service\Security\SecurityService:

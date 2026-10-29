@@ -15,7 +15,8 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\Session\SessionInterface;
+use Symfony\Component\HttpFoundation\Session\Session;
+use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
 
 #[AllowMockObjectsWithoutExpectations]
 final class SecurityServiceTest extends TestCase
@@ -35,7 +36,7 @@ final class SecurityServiceTest extends TestCase
     {
         $user = $this->userWithIdAndRoles(1, ['ROLE_ADMIN']);
         $user->setEmail('admin@test.dev');
-        $session = $this->createMock(SessionInterface::class);
+        $session = new Session(new MockArraySessionStorage());
 
         $response = $this->service->buildLoginSuccessResponse($user, $session);
 
@@ -52,30 +53,31 @@ final class SecurityServiceTest extends TestCase
     public function testInvitationFlowDelegatesToInvitationService(): void
     {
         $user = $this->userWithIdAndRoles(2, ['ROLE_PLAYER']);
-        $session = $this->createMock(SessionInterface::class);
-        $session->expects(self::once())->method('has')->with('invitation_uuid')->willReturn(true);
+        $session = $this->sessionWithInvitation(77);
 
-        $expected = new JsonResponse(['success' => true, 'redirect' => '/joined'], Response::HTTP_OK);
         $this->invitationService
             ->expects(self::once())
-            ->method('processInvitation')
-            ->with($session, $user)
-            ->willReturn($expected);
+            ->method('joinInvitedGame')
+            ->with(77, $user)
+            ->willReturn(77);
 
         $response = $this->service->buildLoginSuccessResponse($user, $session);
 
-        self::assertSame($expected, $response);
+        $payload = json_decode($response->getContent() ?: '{}', true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('/joined', parse_url($payload['redirect'], PHP_URL_PATH));
+        self::assertSame(77, $payload['gameId']);
+        self::assertFalse($session->has('invitation_uuid'));
+        self::assertFalse($session->has('game_id'));
     }
 
     public function testFailedInvitationJoinStillReturnsUserPayload(): void
     {
         $user = $this->userWithIdAndRoles(4, ['ROLE_PLAYER']);
-        $session = $this->createMock(SessionInterface::class);
-        $session->expects(self::once())->method('has')->with('invitation_uuid')->willReturn(true);
+        $session = $this->sessionWithInvitation(78);
 
         $this->invitationService
             ->expects(self::once())
-            ->method('processInvitation')
+            ->method('joinInvitedGame')
             ->willThrowException(new GameAlreadyStartedException());
 
         $response = $this->service->buildLoginSuccessResponse($user, $session);
@@ -91,8 +93,7 @@ final class SecurityServiceTest extends TestCase
     public function testPlayerWithCurrentGameRedirectsToJoined(): void
     {
         $user = $this->userWithIdAndRoles(5, ['ROLE_PLAYER']);
-        $session = $this->createMock(SessionInterface::class);
-        $session->expects(self::once())->method('has')->with('invitation_uuid')->willReturn(false);
+        $session = new Session(new MockArraySessionStorage());
         $this->gamePlayersRepository
             ->expects(self::once())
             ->method('findCurrentGameForPlayer')
@@ -110,8 +111,7 @@ final class SecurityServiceTest extends TestCase
     {
         $user = $this->userWithIdAndRoles(3, ['ROLE_PLAYER']);
         $user->setEmail('player@test.dev');
-        $session = $this->createMock(SessionInterface::class);
-        $session->expects(self::once())->method('has')->with('invitation_uuid')->willReturn(false);
+        $session = new Session(new MockArraySessionStorage());
         $this->gamePlayersRepository->method('findCurrentGameForPlayer')->willReturn(null);
 
         $response = $this->service->buildLoginSuccessResponse($user, $session);
@@ -124,6 +124,15 @@ final class SecurityServiceTest extends TestCase
         self::assertSame($user->getEmail(), $payload['email']);
         self::assertSame($user->getUsername(), $payload['username']);
         self::assertSame($user->getStoredRoles(), $payload['roles']);
+    }
+
+    private function sessionWithInvitation(int $gameId): Session
+    {
+        $session = new Session(new MockArraySessionStorage());
+        $session->set('invitation_uuid', 'uuid-'.$gameId);
+        $session->set('game_id', $gameId);
+
+        return $session;
     }
 
     private function userWithIdAndRoles(int $id, array $roles): User

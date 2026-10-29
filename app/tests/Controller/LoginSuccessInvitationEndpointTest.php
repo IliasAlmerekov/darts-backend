@@ -214,6 +214,26 @@ final class LoginSuccessInvitationEndpointTest extends WebTestCase
         self::assertSame(self::loginBody($admin, '/start'), $this->decodeLoginSuccess($client));
     }
 
+    public function testInvitationUuidWithoutGameIdIsNoInvitation(): void
+    {
+        $client = static::createClient();
+        $entityManager = static::getContainer()->get(EntityManagerInterface::class);
+
+        $player = TestUserFactory::create($entityManager, self::USER_PREFIX, 'halfway', ['ROLE_PLAYER']);
+        $invitation = $this->createInvitation($entityManager, $this->createGame($entityManager, GameStatus::Lobby));
+
+        $client->request(Request::METHOD_GET, sprintf('/api/invite/join/%s', $invitation->getUuid()));
+        $session = $client->getRequest()->getSession();
+        $session->remove('game_id');
+        $session->save();
+
+        $client->loginUser($player);
+        $client->request(Request::METHOD_GET, '/api/login/success');
+
+        self::assertSame(self::loginBody($player, '/playerprofile'), $this->decodeLoginSuccess($client));
+        self::assertInvitationCleared($client);
+    }
+
     /**
      * The login response joins the invitation, so the separate process route is gone.
      */

@@ -15,6 +15,7 @@ use App\Exception\Game\GameJoinNotAllowedException;
 use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\GameRoomFullException;
 use App\Repository\GamePlayersRepositoryInterface;
+use App\Security\InvitationSession;
 use App\Service\Invitation\InvitationServiceInterface;
 use Override;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -53,9 +54,12 @@ final readonly class SecurityService implements SecurityServiceInterface
             return $this->buildResponse($user, '/start');
         }
 
-        if ($session->has('invitation_uuid')) {
+        $invitedGameId = InvitationSession::take($session);
+        if (null !== $invitedGameId) {
             try {
-                return $this->invitationService->processInvitation($session, $user);
+                $gameId = $this->invitationService->joinInvitedGame($invitedGameId, $user);
+
+                return $this->buildResponse($user, '/joined', ['gameId' => $gameId]);
             } catch (GameAlreadyStartedException|GameJoinNotAllowedException|GameRoomFullException|GameNotFoundException $exception) {
                 // The login itself succeeded; report why the join did not instead of failing the request.
                 return $this->buildResponse($user, '/playerprofile', ['invitationError' => $exception->getErrorCode()]);
