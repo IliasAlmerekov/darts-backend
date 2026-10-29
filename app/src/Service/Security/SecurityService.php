@@ -89,6 +89,6 @@ final readonly class SecurityService implements SecurityServiceInterface
             'username' => $user->getUsername(),
             'redirect' => rtrim($this->frontendUrl, '/').$frontendPath,
             ...$extra,
-        ], Response::HTTP_OK, ['X-Accel-Buffering' => 'no']);
+        ], Response::HTTP_OK);
     }
 }

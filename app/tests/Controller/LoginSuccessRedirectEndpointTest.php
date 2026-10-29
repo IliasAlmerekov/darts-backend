@@ -172,14 +172,14 @@ final class LoginSuccessRedirectEndpointTest extends WebTestCase
     }
 
     /**
-     * Every login success response, whatever its target, disables nginx buffering.
+     * Login success responses do not disable nginx buffering.
      *
      * @return array<string, mixed>
      */
     private function decodeLoginSuccess(KernelBrowser $client): array
     {
         self::assertResponseStatusCodeSame(Response::HTTP_OK, (string) $client->getResponse()->getContent());
-        self::assertResponseHeaderSame('X-Accel-Buffering', 'no');
+        self::assertFalse($client->getResponse()->headers->has('X-Accel-Buffering'));
 
         $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
         self::assertIsArray($payload);
