@@ -30,19 +30,19 @@ final class RemovedRoutesEndpointTest extends WebTestCase
     private const string USER_PREFIX = 'removedroutes';
 
     /**
-     * @return iterable<string, array{string, string, int}>
+     * @return iterable<string, array{string, string, int, string}>
      */
     public static function removedRoutes(): iterable
     {
         // 405: `GET /api/game/{gameId}` (app_game_state) shares the path, with `settings` as the id.
-        yield 'settings create' => [Request::METHOD_POST, '/api/game/settings', Response::HTTP_METHOD_NOT_ALLOWED];
-        yield 'rematch start' => [Request::METHOD_POST, '/api/game/%d/rematch/start', Response::HTTP_NOT_FOUND];
-        yield 'game details' => [Request::METHOD_GET, '/api/games/%d', Response::HTTP_NOT_FOUND];
-        yield 'plural finished' => [Request::METHOD_GET, '/api/games/%d/finished', Response::HTTP_NOT_FOUND];
+        yield 'settings create' => [Request::METHOD_POST, '/api/game/settings', Response::HTTP_METHOD_NOT_ALLOWED, 'METHOD_NOT_ALLOWED'];
+        yield 'rematch start' => [Request::METHOD_POST, '/api/game/%d/rematch/start', Response::HTTP_NOT_FOUND, 'NOT_FOUND'];
+        yield 'game details' => [Request::METHOD_GET, '/api/games/%d', Response::HTTP_NOT_FOUND, 'NOT_FOUND'];
+        yield 'plural finished' => [Request::METHOD_GET, '/api/games/%d/finished', Response::HTTP_NOT_FOUND, 'NOT_FOUND'];
     }
 
     #[DataProvider('removedRoutes')]
-    public function testRemovedRouteAnswersLikeAnUnknownRoute(string $method, string $path, int $expectedStatus): void
+    public function testRemovedRouteAnswersLikeAnUnknownRoute(string $method, string $path, int $expectedStatus, string $expectedError): void
     {
         $client = static::createClient();
         $entityManager = static::getContainer()->get(EntityManagerInterface::class);
@@ -62,6 +62,11 @@ final class RemovedRoutesEndpointTest extends WebTestCase
         $client->loginUser($admin);
         $client->request($method, sprintf($path, (int) $game->getGameId()), [], [], ['CONTENT_TYPE' => 'application/json'], '{"startScore":501}');
 
-        self::assertSame($expectedStatus, $client->getResponse()->getStatusCode(), (string) $client->getResponse()->getContent());
+        $content = (string) $client->getResponse()->getContent();
+        self::assertSame($expectedStatus, $client->getResponse()->getStatusCode(), $content);
+        $data = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($data);
+        self::assertFalse($data['success'] ?? null);
+        self::assertSame($expectedError, $data['error'] ?? null);
     }
 }
