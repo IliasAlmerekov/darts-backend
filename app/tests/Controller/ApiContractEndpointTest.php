@@ -51,13 +51,6 @@ final class ApiContractEndpointTest extends WebTestCase
         $undo = $this->requestJson($client, Request::METHOD_DELETE, sprintf('/api/game/%d/throw/delta', $gameId));
         self::assertSame('ack', $undo['type'] ?? null);
 
-        $legacy = $this->requestJson(
-            $client,
-            Request::METHOD_POST,
-            sprintf('/api/game/%d/throw', $gameId),
-            (string) json_encode(['playerId' => $player->getId(), 'value' => 20]),
-        );
-        self::assertSame('full-state', $legacy['type'] ?? null);
     }
 
     #[DataProvider('finishedRoutes')]

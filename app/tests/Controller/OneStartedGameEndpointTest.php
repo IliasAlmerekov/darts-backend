@@ -282,7 +282,6 @@ final class OneStartedGameEndpointTest extends WebTestCase
     {
         return [
             'delta' => [Request::METHOD_DELETE, '/api/game/%d/throw/delta'],
-            'deprecated' => [Request::METHOD_DELETE, '/api/game/%d/throw'],
         ];
     }
 

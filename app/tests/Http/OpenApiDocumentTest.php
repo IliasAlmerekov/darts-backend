@@ -39,9 +39,7 @@ final class OpenApiDocumentTest extends WebTestCase
         'app_game_state',
         'app_game_abort',
         'room_rematch',
-        'app_game_throw',
         'app_game_throw_delta',
-        'app_game_throw_undo',
         'app_game_throw_undo_delta',
         'create_invitation',
     ];
@@ -319,7 +317,6 @@ final class OpenApiDocumentTest extends WebTestCase
         $expected = [
             ['/api/game/{gameId}/finish', 'post', 'GAME_FINISH_NOT_ALLOWED'],
             ['/api/game/{gameId}/abort', 'patch', 'GAME_ABORT_NOT_ALLOWED'],
-            ['/api/game/{gameId}/throw', 'delete', 'GAME_THROW_NOT_ALLOWED'],
             ['/api/game/{gameId}/throw/delta', 'delete', 'GAME_THROW_NOT_ALLOWED'],
         ];
 

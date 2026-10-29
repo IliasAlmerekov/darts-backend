@@ -7,7 +7,7 @@ Now every request that opens a lobby or makes a game `started` sets every other 
 - `POST /api/room/create` and `POST /api/room/{id}/rematch`, on every call, also when they return the open lobby (ADR 0003) instead of creating one.
 - `POST /api/game/{gameId}/start`: every `started` game except the one the request starts.
 - `PATCH /api/game/{gameId}/reopen`: every `started` game except the reopened one.
-- `DELETE /api/game/{gameId}/throw/delta` and the deprecated `DELETE /api/game/{gameId}/throw`, when undoing the last throw moves a `finished` game back to `started`: every `started` game except that one.
+- `DELETE /api/game/{gameId}/throw/delta`, when undoing the last throw moves a `finished` game back to `started`: every `started` game except that one.
 
 Aborting changes the status to `aborted` and nothing else, the same change `PATCH /api/game/{gameId}/abort` makes. Statistics count only `finished` games, so they stay the same. `finished` and `lobby` games are never aborted.
 

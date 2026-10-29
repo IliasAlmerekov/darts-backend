@@ -34,6 +34,8 @@ final class RemovedRoutesEndpointTest extends WebTestCase
      */
     public static function removedRoutes(): iterable
     {
+        yield 'legacy throw' => [Request::METHOD_POST, '/api/game/%d/throw', Response::HTTP_NOT_FOUND, 'NOT_FOUND'];
+        yield 'legacy undo' => [Request::METHOD_DELETE, '/api/game/%d/throw', Response::HTTP_NOT_FOUND, 'NOT_FOUND'];
         // 405: `GET /api/game/{gameId}` (app_game_state) shares the path, with `settings` as the id.
         yield 'settings create' => [Request::METHOD_POST, '/api/game/settings', Response::HTTP_METHOD_NOT_ALLOWED, 'METHOD_NOT_ALLOWED'];
         yield 'rematch start' => [Request::METHOD_POST, '/api/game/%d/rematch/start', Response::HTTP_NOT_FOUND, 'NOT_FOUND'];

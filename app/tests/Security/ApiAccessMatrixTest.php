@@ -128,9 +128,7 @@ final class ApiAccessMatrixTest extends WebTestCase
             self::entry('app_tablet_game', Request::METHOD_GET, self::ACCESS_ADMIN, expected: Response::HTTP_OK),
 
             // Admin: throws
-            self::entry('app_game_throw', Request::METHOD_POST, self::ACCESS_ADMIN, $game, state: self::STATE_STARTED, payload: $throw, expected: Response::HTTP_OK),
             self::entry('app_game_throw_delta', Request::METHOD_POST, self::ACCESS_ADMIN, $game, state: self::STATE_STARTED, payload: $throw, expected: Response::HTTP_OK),
-            self::entry('app_game_throw_undo', Request::METHOD_DELETE, self::ACCESS_ADMIN, $game, state: self::STATE_STARTED, expected: Response::HTTP_OK),
             self::entry('app_game_throw_undo_delta', Request::METHOD_DELETE, self::ACCESS_ADMIN, $game, state: self::STATE_STARTED, expected: Response::HTTP_OK),
 
             // Admin: statistics

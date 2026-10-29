@@ -126,7 +126,7 @@ final class GameEndpointsBaselineTest extends WebTestCase
                 },
             ],
             [
-                'endpoint' => 'DELETE /api/game/{id}/throw',
+                'endpoint' => 'DELETE /api/game/{id}/throw/delta',
                 'scenario' => 'started_undo_last_throw',
                 'method' => Request::METHOD_DELETE,
                 'builder' => function (EntityManagerInterface $entityManager, User $benchmarkUser, int $run): array {
@@ -141,7 +141,7 @@ final class GameEndpointsBaselineTest extends WebTestCase
                     $entityManager->flush();
 
                     return [
-                        'uri' => sprintf('/api/game/%d/throw', (int) $game->getGameId()),
+                        'uri' => sprintf('/api/game/%d/throw/delta', (int) $game->getGameId()),
                         'content' => null,
                     ];
                 },
@@ -485,7 +485,7 @@ final class GameEndpointsBaselineTest extends WebTestCase
         $lines[] = '- This baseline is intended for before/after comparison during endpoint optimization.';
         $lines[] = '- `GET /api/game/{id}` is measured on three representative scenarios: small, medium, and long-with-history.';
         $lines[] = '- `PATCH /api/game/{id}/settings` is captured separately because it mutates game settings and should stay lightweight after BE-202.';
-        $lines[] = '- `DELETE /api/game/{id}/throw` is still captured separately because it returns the full game DTO.';
+        $lines[] = '- `DELETE /api/game/{id}/throw/delta` returns a compact acknowledgment.';
 
         return implode(PHP_EOL, $lines).PHP_EOL;
     }

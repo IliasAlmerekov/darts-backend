@@ -35,7 +35,6 @@ final class ThrowClientBustFlagEndpointTest extends WebTestCase
      */
     public static function throwPaths(): iterable
     {
-        yield 'throw' => ['/api/game/%d/throw'];
         yield 'throw delta' => ['/api/game/%d/throw/delta'];
     }
 
