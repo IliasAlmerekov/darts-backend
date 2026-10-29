@@ -43,10 +43,8 @@ final class ThrowScoring
         $value = $baseValue * ($isTriple ? 3 : ($isDouble ? 2 : 1));
         $remaining = $score - $value;
         $bust = $remaining < 0
-            || (OutRule::Single !== $rule && 1 === $remaining)
-            || (OutRule::Triple === $rule && 2 === $remaining)
-            || (0 === $remaining && OutRule::Double === $rule && !$isDouble)
-            || (0 === $remaining && OutRule::Triple === $rule && !$isTriple);
+            || $rule->isDeadScore($remaining)
+            || (0 === $remaining && !$rule->allowsCheckoutWith($isDouble, $isTriple));
 
         return new ThrowScore($value, $bust ? $score + $earlierPoints : $remaining, $bust);
     }
