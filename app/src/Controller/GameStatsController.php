@@ -11,15 +11,11 @@ namespace App\Controller;
 
 use App\Dto\GameOverviewItemDto;
 use App\Dto\GameOverviewResponseDto;
-use App\Dto\GameSummaryResponseDto;
 use App\Dto\PlayerStatsResponseDto;
-use App\Entity\Game;
-use App\Exception\Game\GameNotFoundException;
 use App\Http\Attribute\ApiResponse;
 use App\Http\Pagination;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
-use App\Service\Game\GameFinishServiceInterface;
 use App\Service\Game\GameStatisticsServiceInterface;
 use DateTimeInterface;
 use Nelmio\ApiDocBundle\Attribute\Model;
@@ -88,39 +84,6 @@ final class GameStatsController extends AbstractController
             total: $gameRepository->countFinishedGames(),
             items: $items,
         );
-    }
-
-    /**
-     * Returns details for a single game from overview context.
-     *
-     * @param int                        $gameId
-     * @param GameRepositoryInterface    $gameRepository
-     * @param GameFinishServiceInterface $gameFinishService
-     *
-     * @return GameSummaryResponseDto
-     */
-    #[OA\Parameter(
-        name: 'gameId',
-        in: 'path',
-        required: true,
-        schema: new OA\Schema(type: 'integer', example: 123)
-    )]
-    #[OA\Response(
-        response: 200,
-        description: 'Details eines einzelnen Spiels.',
-        content: new OA\JsonContent(ref: new Model(type: GameSummaryResponseDto::class))
-    )]
-    #[OA\Response(response: 404, description: 'Spiel nicht gefunden.')]
-    #[ApiResponse]
-    #[Route('/api/games/{gameId}', name: 'app_games_details', methods: ['GET'], format: 'json', requirements: ['gameId' => '\d+'])]
-    public function gameDetails(int $gameId, GameRepositoryInterface $gameRepository, GameFinishServiceInterface $gameFinishService): GameSummaryResponseDto
-    {
-        $game = $gameRepository->find($gameId);
-        if (!$game instanceof Game) {
-            throw new GameNotFoundException();
-        }
-
-        return $gameFinishService->getGameStats($game);
     }
 
     /**

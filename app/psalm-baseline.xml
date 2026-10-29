@@ -51,11 +51,6 @@
       <code><![CDATA[$playerId]]></code>
     </PossiblyUnusedProperty>
   </file>
-  <file src="src/Dto/ThrowRequest.php">
-    <PossiblyUnusedProperty>
-      <code><![CDATA[$isBust]]></code>
-    </PossiblyUnusedProperty>
-  </file>
   <file src="src/Dto/ThrowResponseDto.php">
     <PossiblyUnusedProperty>
       <code><![CDATA[$isBust]]></code>

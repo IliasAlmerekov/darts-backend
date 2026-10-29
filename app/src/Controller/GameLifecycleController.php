@@ -24,7 +24,6 @@ use App\Service\Game\GameFinishServiceInterface;
 use App\Service\Game\GameReopenServiceInterface;
 use App\Service\Game\GameStateViewBuilderInterface;
 use App\Service\Game\GameStartServiceInterface;
-use App\Service\Game\RematchStartServiceInterface;
 use App\Service\Persistence\RetryingTransactionInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use Nelmio\ApiDocBundle\Attribute\Model;
@@ -84,43 +83,6 @@ final class GameLifecycleController extends AbstractController
             ApiViewSubscriber::RESPONSE_HEADERS_REQUEST_ATTRIBUTE,
             $this->createStateVersionHeaders($gameStateViewBuilder->buildStateVersion($started)),
         );
-
-        return $gameStateViewBuilder->createGameDto($started);
-    }
-
-    /**
-     * Starts the open lobby, or a new one, as a rematch of a finished game.
-     *
-     * @param int                           $gameId
-     * @param RematchStartServiceInterface  $rematchStartService
-     * @param GameStateViewBuilderInterface $gameStateViewBuilder
-     * @param RetryingTransactionInterface  $transaction
-     * @param StartGameRequest              $dto
-     *
-     * @return GameResponseDto
-     *
-     * @throws ApiExceptionInterface
-     */
-    #[OA\Post(
-        summary: 'Rematch in der offenen Lobby oder in einer neuen Lobby direkt starten',
-        description: 'Wie `POST /api/room/{id}/rematch`, danach wird das Spiel gestartet. Es ist höchstens ein Spiel in der Lobby. Ist ein Spiel in der Lobby, startet dieses Spiel mit seinen Spielern und den fehlenden Spielern des alten Spiels; sonst wird eine neue Lobby angelegt und gestartet.'
-    )]
-    #[OA\Parameter(name: 'gameId', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
-    #[OA\RequestBody(required: true, content: new OA\JsonContent(ref: new Model(type: StartGameRequest::class)))]
-    #[OA\Response(
-        response: Response::HTTP_CREATED,
-        description: 'Die offene Lobby oder eine neue Lobby wurde mit den Spielern befüllt und gestartet.',
-        content: new OA\JsonContent(ref: new Model(type: GameResponseDto::class))
-    )]
-    #[ApiResponse(status: Response::HTTP_CREATED)]
-    #[OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Der Request-Body ist kein gültiges JSON (`REQUEST_INVALID_JSON_BODY`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
-    #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht, oder das Spiel hätte danach `doubleOut` und `tripleOut` zugleich (`GAME_CONFLICTING_OUT_RULES`). Das Spiel bleibt unverändert.', content: new OA\JsonContent(anyOf: [new OA\Schema(ref: '#/components/schemas/RequestValidationFailed'), new OA\Schema(ref: '#/components/schemas/ApiError')]))]
-    #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme (`ACCESS_DENIED`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
-    #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Das alte Spiel ist nicht das neueste Spiel, oder es ist weder beendet noch abgebrochen (`GAME_NOT_NEWEST`). Eine offene Lobby ist immer das neueste Spiel.')]
-    #[Route('/api/game/{gameId}/rematch/start', name: 'app_game_rematch_start', methods: ['POST'], format: 'json')]
-    public function createAndStartRematch(int $gameId, RematchStartServiceInterface $rematchStartService, GameStateViewBuilderInterface $gameStateViewBuilder, RetryingTransactionInterface $transaction, #[MapRequestPayload] StartGameRequest $dto): GameResponseDto
-    {
-        $started = $transaction->run(static fn (): Game => $rematchStartService->createAndStart($gameId, $dto));
 
         return $gameStateViewBuilder->createGameDto($started);
     }
@@ -203,7 +165,6 @@ final class GameLifecycleController extends AbstractController
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: `/api` ist per Firewall nur für ROLE_ADMIN offen, und der Code prüft zusätzlich die Spielteilnahme (`ACCESS_DENIED`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Das Spiel ist nicht beendet (`GAME_NOT_FINISHED`).')]
     #[Route('/api/game/{gameId}/finished', name: 'app_game_finished', methods: ['GET'], format: 'json')]
-    #[Route('/api/games/{gameId}/finished', name: 'app_games_finished', methods: ['GET'], format: 'json', requirements: ['gameId' => '\d+'])]
     public function finished(#[AttributeMapEntity(id: 'gameId')] Game $game, GameFinishServiceInterface $gameFinishService): GameSummaryResponseDto
     {
         return $gameFinishService->getGameSummary($game);

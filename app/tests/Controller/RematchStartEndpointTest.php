@@ -21,11 +21,14 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * The frontend starts a rematch in two calls: rematch, then start of the returned lobby.
+ */
 final class RematchStartEndpointTest extends WebTestCase
 {
     private const string USER_PREFIX = 'rematch';
 
-    public function testRematchStartOfFinishedTwoPlayerGameStartsNewGameWithBothPlayers(): void
+    public function testRematchThenStartOfFinishedTwoPlayerGameStartsNewGameWithBothPlayers(): void
     {
         $client = static::createClient();
         $entityManager = static::getContainer()->get(EntityManagerInterface::class);
@@ -50,9 +53,15 @@ final class RematchStartEndpointTest extends WebTestCase
         $oldGameId = (int) $oldGame->getGameId();
 
         $client->loginUser($admin);
-        $client->request(Request::METHOD_POST, sprintf('/api/game/%d/rematch/start', $oldGameId), [], [], ['CONTENT_TYPE' => 'application/json'], '{}');
-
+        $client->request(Request::METHOD_POST, sprintf('/api/room/%d/rematch', $oldGameId), [], [], ['CONTENT_TYPE' => 'application/json'], '{}');
         self::assertResponseStatusCodeSame(Response::HTTP_CREATED, (string) $client->getResponse()->getContent());
+        $rematch = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($rematch);
+        self::assertIsInt($rematch['gameId'] ?? null);
+
+        $client->request(Request::METHOD_POST, sprintf('/api/game/%d/start', $rematch['gameId']), [], [], ['CONTENT_TYPE' => 'application/json'], '{}');
+
+        self::assertResponseStatusCodeSame(Response::HTTP_OK, (string) $client->getResponse()->getContent());
 
         $entityManager->clear();
         $newGames = static::getContainer()->get(GameRepository::class)->createQueryBuilder('g')

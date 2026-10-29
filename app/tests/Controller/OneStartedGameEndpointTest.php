@@ -88,20 +88,6 @@ final class OneStartedGameEndpointTest extends WebTestCase
         self::assertSame(GameStatus::Finished, $this->statusOf($finished));
     }
 
-    #[DataProvider('lobbyReuse')]
-    public function testDeprecatedSettingsCreateAbortsTheStartedGame(bool $withOpenLobby): void
-    {
-        $started = $this->createGame(GameStatus::Started, [$this->createPlayer('bob')]);
-        if ($withOpenLobby) {
-            $this->createGame(GameStatus::Lobby, []);
-        }
-
-        $this->postJson('/api/game/settings', ['startScore' => 501]);
-
-        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
-        self::assertSame(GameStatus::Aborted, $this->statusOf($started));
-    }
-
     public function testStartAbortsTheOtherStartedGame(): void
     {
         $bob = $this->createPlayer('bob');
@@ -119,7 +105,7 @@ final class OneStartedGameEndpointTest extends WebTestCase
     }
 
     #[DataProvider('lobbyReuse')]
-    public function testRematchStartAbortsTheOtherStartedGame(bool $withOpenLobby): void
+    public function testRematchThenStartAbortsTheOtherStartedGame(bool $withOpenLobby): void
     {
         $bob = $this->createPlayer('bob');
         $vanya = $this->createPlayer('vanya');
@@ -127,15 +113,16 @@ final class OneStartedGameEndpointTest extends WebTestCase
         $started = $this->createGame(GameStatus::Started, [$bob]);
         $finished = $this->createGame(GameStatus::Finished, [$bob, $vanya]);
 
-        $this->postJson(sprintf('/api/game/%d/rematch/start', $finished->getGameId()));
-
+        $rematch = $this->postJson(sprintf('/api/room/%d/rematch', $finished->getGameId()));
         self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        $this->postJson(sprintf('/api/game/%d/start', $rematch['gameId']));
+
+        self::assertResponseIsSuccessful((string) $this->client->getResponse()->getContent());
         self::assertSame(GameStatus::Aborted, $this->statusOf($started));
         self::assertSame(GameStatus::Finished, $this->statusOf($finished));
         // The rematch is the open lobby, or the lobby the request created and so the newest game.
-        $rematchId = $lobby?->getGameId() ?? $this->newestGameId();
-        self::assertNotSame($finished->getGameId(), $rematchId);
-        self::assertSame(GameStatus::Started, $this->statusOfId((int) $rematchId));
+        self::assertSame($lobby?->getGameId() ?? $this->newestGameId(), $rematch['gameId']);
+        self::assertSame(GameStatus::Started, $this->statusOfId((int) $rematch['gameId']));
     }
 
     /**
@@ -199,7 +186,6 @@ final class OneStartedGameEndpointTest extends WebTestCase
     {
         return [
             'rematch' => ['/api/room/%d/rematch'],
-            'rematch start' => ['/api/game/%d/rematch/start'],
         ];
     }
 

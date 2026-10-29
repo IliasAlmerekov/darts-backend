@@ -119,14 +119,11 @@ final class ApiAccessMatrixTest extends WebTestCase
             // Admin: game lifecycle
             self::entry('app_game_state', Request::METHOD_GET, self::ACCESS_ADMIN, $game, expected: Response::HTTP_OK),
             self::entry('app_game_start', Request::METHOD_POST, self::ACCESS_ADMIN, $game, expected: Response::HTTP_OK),
-            self::entry('app_game_rematch_start', Request::METHOD_POST, self::ACCESS_ADMIN, $game, state: self::STATE_FINISHED, expected: Response::HTTP_CREATED),
-            self::entry('app_game_settings_create', Request::METHOD_POST, self::ACCESS_ADMIN, payload: ['startScore' => 501], expected: Response::HTTP_CREATED),
             self::entry('app_game_settings', Request::METHOD_PATCH, self::ACCESS_ADMIN, $game, payload: ['startScore' => 501], expected: Response::HTTP_OK),
             self::entry('app_game_settings_read', Request::METHOD_GET, self::ACCESS_ADMIN, $game, expected: Response::HTTP_OK),
             self::entry('app_game_finish', Request::METHOD_POST, self::ACCESS_ADMIN, $game, state: self::STATE_STARTED, expected: Response::HTTP_OK),
             self::entry('app_game_reopen', Request::METHOD_PATCH, self::ACCESS_ADMIN, $game, state: self::STATE_FINISHED, expected: Response::HTTP_OK),
             self::entry('app_game_finished', Request::METHOD_GET, self::ACCESS_ADMIN, $game, state: self::STATE_FINISHED, expected: Response::HTTP_OK),
-            self::entry('app_games_finished', Request::METHOD_GET, self::ACCESS_ADMIN, $game, state: self::STATE_FINISHED, expected: Response::HTTP_OK),
             self::entry('app_game_abort', Request::METHOD_PATCH, self::ACCESS_ADMIN, $game, state: self::STATE_STARTED, expected: Response::HTTP_OK),
             self::entry('app_tablet_game', Request::METHOD_GET, self::ACCESS_ADMIN, expected: Response::HTTP_OK),
 
@@ -138,7 +135,6 @@ final class ApiAccessMatrixTest extends WebTestCase
 
             // Admin: statistics
             self::entry('app_games_overview', Request::METHOD_GET, self::ACCESS_ADMIN, expected: Response::HTTP_OK),
-            self::entry('app_games_details', Request::METHOD_GET, self::ACCESS_ADMIN, $game, expected: Response::HTTP_OK),
             self::entry('app_players_stats', Request::METHOD_GET, self::ACCESS_ADMIN, expected: Response::HTTP_OK),
         ];
     }

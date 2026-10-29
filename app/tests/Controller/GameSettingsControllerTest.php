@@ -10,20 +10,14 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\Controller\GameSettingsController;
-use App\Dto\GameResponseDto;
 use App\Dto\GameSettingsRequest;
 use App\Dto\GameSettingsResponseDto;
 use App\Entity\Game;
 use App\Enum\GameStatus;
 use App\Exception\Game\GameIdMissingException;
 use App\Exception\Game\NoSettingsProvidedException;
-use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Game\GameSettingsServiceInterface;
-use App\Service\Game\GameStateViewBuilderInterface;
-use App\Service\Persistence\RetryingTransaction;
 use App\Service\Security\GameAccessServiceInterface;
-use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\Persistence\ManagerRegistry;
 use OpenApi\Attributes as OA;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
@@ -36,41 +30,6 @@ final class GameSettingsControllerTest extends TestCase
     protected function setUp(): void
     {
         $this->controller = new GameSettingsController();
-    }
-
-    public function testCreateSettingsCreatesGame(): void
-    {
-        $dto = new GameSettingsRequest();
-        $game = $this->createMock(Game::class);
-
-        $roomService = $this->createMock(GameRoomServiceInterface::class);
-        $roomService->method('openRoom')->willReturn($game);
-
-        $settingsService = $this->createMock(GameSettingsServiceInterface::class);
-        $settingsService->expects($this->once())->method('updateSettings')->with($game, $dto);
-
-        $gameStateViewBuilder = $this->createMock(GameStateViewBuilderInterface::class);
-        $gameStateViewBuilder->method('createGameDto')->willReturn(new GameResponseDto(id: 1, status: 'lobby', currentRound: 1, activePlayerId: null, currentThrowCount: 0, players: [], winnerId: null, settings: []));
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->expects($this->once())
-            ->method('wrapInTransaction')
-            ->willReturnCallback(static fn(callable $func) => $func());
-
-        $response = $this->controller->createSettings($roomService, $settingsService, $gameStateViewBuilder, new RetryingTransaction($entityManager, $this->createStub(ManagerRegistry::class)), $dto);
-
-        $this->assertInstanceOf(GameResponseDto::class, $response);
-    }
-
-    public function testCreateSettingsIsDocumentedAsDeprecatedLegacyFlow(): void
-    {
-        $operation = (new \ReflectionMethod(GameSettingsController::class, 'createSettings'))
-            ->getAttributes(OA\Post::class)[0]
-            ->newInstance();
-
-        $this->assertTrue($operation->deprecated);
-        $this->assertStringContainsString('Deprecated.', (string) $operation->description);
-        $this->assertStringContainsString('/api/room/create', (string) $operation->description);
-        $this->assertStringContainsString('/api/game/{gameId}/settings', (string) $operation->description);
     }
 
     public function testUpdateSettingsReturnsBadRequestOnError(): void

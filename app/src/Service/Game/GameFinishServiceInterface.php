@@ -38,15 +38,6 @@ interface GameFinishServiceInterface
     public function finishGame(Game $game, ?DateTimeInterface $finishedAt = null): GameSummaryResponseDto;
 
     /**
-     * Get statistics for a finished game.
-     *
-     * @param Game $game
-     *
-     * @return GameSummaryResponseDto
-     */
-    public function getGameStats(Game $game): GameSummaryResponseDto;
-
-    /**
      * Get the finished game summary without mutating state.
      *
      * @param Game $game

@@ -27,6 +27,4 @@ final class ThrowRequest
     public ?bool $isDouble = null;
     #[Assert\Type('bool')]
     public ?bool $isTriple = null;
-    #[Assert\Type('bool')]
-    public ?bool $isBust = null;
 }

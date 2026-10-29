@@ -14,6 +14,8 @@ use App\Repository\GameRepository;
 use App\Service\Game\GameFinishServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 
 final class GameRepositoryTest extends KernelTestCase
 {
@@ -169,7 +171,9 @@ final class GameRepositoryTest extends KernelTestCase
 
         $this->entityManager->flush();
 
-        $summary = $this->gameFinishService->getGameStats($finishedGame);
+        // The read-only summary checks access; the winner is a participant of the game.
+        static::getContainer()->get(TokenStorageInterface::class)->setToken(new UsernamePasswordToken($winner, 'main', $winner->getRoles()));
+        $summary = $this->gameFinishService->getGameSummary($finishedGame);
         $overview = $this->repository->findFinishedOverview(limit: 10, offset: 0);
 
         self::assertCount(1, $overview);

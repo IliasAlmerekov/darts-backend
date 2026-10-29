@@ -120,17 +120,6 @@ final readonly class GameFinishService implements GameFinishServiceInterface
      * @return GameSummaryResponseDto
      */
     #[\Override]
-    public function getGameStats(Game $game): GameSummaryResponseDto
-    {
-        return $this->buildGameSummary($game);
-    }
-
-    /**
-     * @param Game $game
-     *
-     * @return GameSummaryResponseDto
-     */
-    #[\Override]
     public function getGameSummary(Game $game): GameSummaryResponseDto
     {
         $this->gameAccessService->assertPlayerInGameOrAdmin($game);

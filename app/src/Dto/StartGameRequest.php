@@ -11,7 +11,6 @@ namespace App\Dto;
 
 use App\Entity\Game;
 use Symfony\Component\Validator\Constraints as Assert;
-use Webmozart\Assert\Assert as WebmozartAssert;
 
 /**
  * @psalm-immutable
@@ -35,17 +34,4 @@ final class StartGameRequest
         new Assert\Positive(),
     ])]
     public ?array $playerPositions = null;
-
-    /**
-     * @param list<int> $playerPositions
-     *
-     * @return self
-     */
-    public function withPlayerPositions(array $playerPositions): self
-    {
-        $request = clone $this;
-        $request->playerPositions = $playerPositions;
-
-        return $request;
-    }
 }

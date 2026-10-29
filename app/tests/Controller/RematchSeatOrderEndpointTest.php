@@ -86,14 +86,14 @@ final class RematchSeatOrderEndpointTest extends WebTestCase
         self::assertSame(['b', 'c', 'a'], $this->seatedUsers($lobbyId));
     }
 
-    public function testRematchStartOfAFinishedGameThrowsInReversePlacementOrder(): void
+    public function testRematchThenStartOfAFinishedGameThrowsInReversePlacementOrder(): void
     {
         $oldGameId = $this->createGame(GameStatus::Finished, [[$this->a, 1, 20], [$this->b, 2, 50], [$this->c, 3, 90]]);
+        $newGameId = $this->rematch($oldGameId);
 
-        $this->client->request(Request::METHOD_POST, sprintf('/api/game/%d/rematch/start', $oldGameId), [], [], ['CONTENT_TYPE' => 'application/json'], '{}');
+        $this->client->request(Request::METHOD_POST, sprintf('/api/game/%d/start', $newGameId), [], [], ['CONTENT_TYPE' => 'application/json'], '{}');
 
-        self::assertResponseStatusCodeSame(Response::HTTP_CREATED, (string) $this->client->getResponse()->getContent());
-        $newGameId = (int) $this->entityManager->getConnection()->fetchOne('SELECT MAX(game_id) FROM game');
+        self::assertResponseStatusCodeSame(Response::HTTP_OK, (string) $this->client->getResponse()->getContent());
         $this->entityManager->clear();
         self::assertGreaterThan($oldGameId, $newGameId);
         self::assertSame(['c', 'b', 'a'], $this->seatedUsers($newGameId));

@@ -132,6 +132,7 @@ final class GameFinishServiceTest extends TestCase
     {
         $game = new Game();
         $this->setPrivateProperty($game, 'gameId', 99);
+        $game->setStatus(GameStatus::Finished);
         $winnerUser = new User();
         $this->setPrivateProperty($winnerUser, 'id', 1);
         $winner = (new GamePlayers())
@@ -176,7 +177,7 @@ final class GameFinishServiceTest extends TestCase
 
         $service = $this->createService($entityManager, $gamePlayersRepository, $roundThrowsRepository);
 
-        $summary = $service->getGameStats($game);
+        $summary = $service->getGameSummary($game);
 
         self::assertInstanceOf(GameSummaryResponseDto::class, $summary);
         self::assertSame(5, $summary->winnerRoundsPlayed);
@@ -228,10 +229,8 @@ final class GameFinishServiceTest extends TestCase
 
         $finishSummary = $service->finishGame($game, $finishedAt);
         $readOnlySummary = $service->getGameSummary($game);
-        $statsSummary = $service->getGameStats($game);
 
         self::assertEquals($finishSummary, $readOnlySummary);
-        self::assertEquals($finishSummary, $statsSummary);
     }
 
     /**

@@ -19,7 +19,6 @@ use App\Service\Game\GameFinishServiceInterface;
 use App\Service\Game\GameReopenServiceInterface;
 use App\Service\Game\GameStateViewBuilderInterface;
 use App\Service\Game\GameStartServiceInterface;
-use App\Service\Game\RematchStartServiceInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -112,30 +111,6 @@ final class GameLifecycleControllerTest extends TestCase
         $transaction = new RetryingTransaction($entityManager, $this->createStub(ManagerRegistry::class));
 
         $response = $this->controller->start($routeGame, $startService, $gameStateViewBuilder, $gameRepository, $transaction, new Request(), new StartGameRequest());
-
-        $this->assertSame($gameDto, $response);
-    }
-
-    public function testCreateAndStartRematchReturnsStartedGame(): void
-    {
-        $gameId = 42;
-        $game = $this->createMock(Game::class);
-        $dto = new StartGameRequest();
-        $rematchStartService = $this->createMock(RematchStartServiceInterface::class);
-        $rematchStartService->expects($this->once())
-            ->method('createAndStart')
-            ->with($gameId, $dto)
-            ->willReturn($game);
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->expects($this->once())
-            ->method('wrapInTransaction')
-            ->willReturnCallback(static fn (callable $operation): mixed => $operation());
-        $transaction = new RetryingTransaction($entityManager, $this->createStub(ManagerRegistry::class));
-        $gameDto = $this->dummyGameDto();
-        $gameStateViewBuilder = $this->createMock(GameStateViewBuilderInterface::class);
-        $gameStateViewBuilder->expects($this->once())->method('createGameDto')->with($game)->willReturn($gameDto);
-
-        $response = $this->controller->createAndStartRematch($gameId, $rematchStartService, $gameStateViewBuilder, $transaction, $dto);
 
         $this->assertSame($gameDto, $response);
     }

@@ -31,14 +31,11 @@ final class OpenApiDocumentTest extends WebTestCase
      */
     private const array GUARDED_ROUTES = [
         'app_game_start',
-        'app_game_rematch_start',
-        'app_game_settings_create',
         'app_game_settings',
         'app_game_settings_read',
         'app_game_finish',
         'app_game_reopen',
         'app_game_finished',
-        'app_games_finished',
         'app_game_state',
         'app_game_abort',
         'room_rematch',
@@ -292,15 +289,28 @@ final class OpenApiDocumentTest extends WebTestCase
     {
         $document = $this->document();
 
-        foreach (['/api/game/{gameId}/finished', '/api/games/{gameId}/finished'] as $path) {
-            self::assertArrayHasKey('409', $document['paths'][$path]['get']['responses'], $path);
-        }
+        self::assertArrayHasKey('409', $document['paths']['/api/game/{gameId}/finished']['get']['responses']);
         self::assertArrayNotHasKey('409', $document['paths']['/api/game/{gameId}/settings']['get']['responses']);
 
         $schemas = $document['components']['schemas'];
         self::assertSame(['full-state'], $schemas['GameResponseDto']['properties']['type']['enum']);
         self::assertSame(['ack'], $schemas['ThrowAckDto']['properties']['type']['enum']);
         self::assertSame(['ack'], $schemas['UndoAckDto']['properties']['type']['enum']);
+    }
+
+    public function testRemovedRoutesHaveNoOperation(): void
+    {
+        $paths = $this->document()['paths'];
+        $removed = [
+            ['/api/game/settings', 'post'],
+            ['/api/game/{gameId}/rematch/start', 'post'],
+            ['/api/games/{gameId}', 'get'],
+            ['/api/games/{gameId}/finished', 'get'],
+        ];
+
+        foreach ($removed as [$path, $method]) {
+            self::assertArrayNotHasKey($method, $paths[$path] ?? [], strtoupper($method).' '.$path);
+        }
     }
 
     public function testFinishAbortAndUndoDocumentTheirStatusConflicts(): void
@@ -418,15 +428,12 @@ final class OpenApiDocumentTest extends WebTestCase
         }
     }
 
-    public function testGameStartAndRematchStartDocumentNoConflictingSettingKeys(): void
+    public function testGameStartDocumentsNoConflictingSettingKeys(): void
     {
-        $paths = $this->document()['paths'];
+        $description = $this->document()['paths']['/api/game/{gameId}/start']['post']['responses']['400']['description'] ?? '';
 
-        foreach (['/api/game/{gameId}/start', '/api/game/{gameId}/rematch/start'] as $path) {
-            $description = $paths[$path]['post']['responses']['400']['description'] ?? '';
-            self::assertStringNotContainsString('REQUEST_CONFLICTING_SETTING_KEYS', $description, $path);
-            self::assertStringContainsString('REQUEST_INVALID_JSON_BODY', $description, $path);
-        }
+        self::assertStringNotContainsString('REQUEST_CONFLICTING_SETTING_KEYS', $description);
+        self::assertStringContainsString('REQUEST_INVALID_JSON_BODY', $description);
     }
 
     public function testRequestValidationFailedSchemaDocumentsUnknownField(): void
@@ -436,24 +443,18 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertStringContainsString('UNKNOWN_FIELD', $schema['properties']['violations']['items']['properties']['code']['description']);
     }
 
-    public function testGameStartAndRematchStartDocumentTheGameStateAsTheirSuccessBody(): void
+    public function testGameStartDocumentsTheGameStateAsItsSuccessBody(): void
     {
-        $paths = $this->document()['paths'];
+        $responses = $this->document()['paths']['/api/game/{gameId}/start']['post']['responses'];
 
-        foreach (['/api/game/{gameId}/start' => '200', '/api/game/{gameId}/rematch/start' => '201'] as $path => $status) {
-            self::assertSame(
-                '#/components/schemas/GameResponseDto',
-                $paths[$path]['post']['responses'][$status]['content']['application/json']['schema']['$ref'] ?? null,
-                $path,
-            );
-        }
+        self::assertSame('#/components/schemas/GameResponseDto', $responses['200']['content']['application/json']['schema']['$ref'] ?? null);
     }
 
     public function testRoomCreateAndRematchDocumentTheOpenLobbyReuse(): void
     {
         $paths = $this->document()['paths'];
 
-        foreach (['/api/room/create', '/api/room/{id}/rematch', '/api/game/{gameId}/rematch/start'] as $path) {
+        foreach (['/api/room/create', '/api/room/{id}/rematch'] as $path) {
             self::assertStringContainsString('höchstens ein Spiel in der Lobby', $paths[$path]['post']['description'] ?? '', $path);
         }
     }
