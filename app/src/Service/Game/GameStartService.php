@@ -35,14 +35,12 @@ use Override;
 final readonly class GameStartService implements GameStartServiceInterface
 {
     /**
-     * @param GameSetupService               $gameSetupService
      * @param EntityManagerInterface         $entityManager
      * @param RoundRepositoryInterface       $roundRepository
      * @param GameRepositoryInterface        $gameRepository
      * @param LockedGameTransactionInterface $lockedGameTransaction
      */
     public function __construct(
-        private GameSetupService $gameSetupService,
         private EntityManagerInterface $entityManager,
         private RoundRepositoryInterface $roundRepository,
         private GameRepositoryInterface $gameRepository,
@@ -88,7 +86,7 @@ final readonly class GameStartService implements GameStartServiceInterface
                 $game->setRound(1);
             }
 
-            $this->gameSetupService->applyInitialScoresAndPositions($game, $dto->playerPositions);
+            GameSetupRule::applyInitialScoresAndPositions($game, $dto->playerPositions);
             $this->entityManager->flush();
 
             return $game;

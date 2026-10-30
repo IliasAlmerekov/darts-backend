@@ -33,7 +33,6 @@ use App\Repository\RoundThrowsRepository;
 use App\Service\Game\GameAbortService;
 use App\Service\Game\GameFinishService;
 use App\Service\Game\GameSettingsService;
-use App\Service\Game\GameSetupService;
 use App\Service\Game\GameStartService;
 use App\Service\Game\GameThrowService;
 use App\Service\Game\GameStateReader;
@@ -486,7 +485,6 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $access = $this->createMock(GameAccessServiceInterface::class);
         $access->method('assertAdmin')->willReturn(new User());
         $service = new GameStartService(
-            new GameSetupService(),
             $this->entityManager,
             new RoundRepository($this->registry()),
             $gameRepository,
