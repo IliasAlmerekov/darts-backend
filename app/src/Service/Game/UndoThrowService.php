@@ -137,12 +137,13 @@ final readonly class UndoThrowService implements UndoThrowServiceInterface
         if (null === $round || null === $number) {
             return;
         }
+        // Taking back a dart leaves its round incomplete, also when the dart finished the game.
+        $round->setFinishedAt(null);
         $next = $this->roundRepository->findOneBy(['game' => $game, 'roundNumber' => $number + 1]);
         if (!$next instanceof Round || !$next->getRoundThrows()->isEmpty()) {
             return;
         }
         $game->removeRound($next);
         $this->entityManager->remove($next);
-        $round->setFinishedAt(null);
     }
 }

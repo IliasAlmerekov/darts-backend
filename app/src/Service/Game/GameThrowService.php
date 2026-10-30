@@ -211,7 +211,12 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         $this->entityManager->persist($roundThrow);
         $updatedRoundStateSnapshot = TurnOrder::recordThrow($roundStateSnapshot, $requestedPlayerId, $throwNumber, $finalValue, $isBust);
 
-        $this->maybeAdvanceRound($game, $round, $updatedRoundStateSnapshot);
+        if (GameStatus::Finished === $game->getStatus()) {
+            // The finishing throw closes its round; no seat throws in a next one.
+            $round->setFinishedAt(new DateTime());
+        } else {
+            $this->maybeAdvanceRound($game, $round, $updatedRoundStateSnapshot);
+        }
         $this->entityManager->flush();
 
         return new ThrowRecordingResultDto(
@@ -259,15 +264,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
 
         // All players have thrown 3 darts, so advance to the next round
         $currentRound->setFinishedAt(new DateTime());
-        $currentRoundNum = $game->getRound() ?? $currentRound->getRoundNumber() ?? 1;
-        $nextRoundNumber = $currentRoundNum + 1;
-        $game->setRound($nextRoundNumber);
-        $nextRound = new Round();
-        $nextRound->setRoundNumber($nextRoundNumber);
-        $nextRound->setGame($game);
-        $nextRound->setStartedAt(new DateTime());
-        $game->addRound($nextRound);
-        $this->entityManager->persist($nextRound);
+        $this->entityManager->persist($game->openNextRound());
 
         return true;
     }

@@ -18,6 +18,7 @@ use App\Exception\Game\ConflictingOutRulesException;
 use App\Exception\Game\GameMustHaveValidPlayerCountException;
 use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\GameStartNotAllowedException;
+use App\Exception\Game\InvalidPlayerOrderException;
 use App\Exception\Game\PlayerPositionsCountMismatchException;
 use App\Enum\GameStatus;
 use App\Repository\GameRepositoryInterface;
@@ -117,8 +118,27 @@ final readonly class GameStartService implements GameStartServiceInterface
             throw new GameMustHaveValidPlayerCountException();
         }
 
-        if (null !== $dto->playerPositions && count($dto->playerPositions) !== $count) {
+        if (null === $dto->playerPositions) {
+            return;
+        }
+
+        if (count($dto->playerPositions) !== $count) {
             throw new PlayerPositionsCountMismatchException();
+        }
+
+        $participantIds = [];
+        foreach ($game->getGamePlayers() as $seat) {
+            $participantIds[(int) $seat->getPlayer()?->getId()] = true;
+        }
+        $seen = [];
+        foreach ($dto->playerPositions as $playerId) {
+            if (isset($seen[$playerId])) {
+                throw new InvalidPlayerOrderException(sprintf('Duplicate playerId in positions payload: %d.', $playerId));
+            }
+            if (!isset($participantIds[$playerId])) {
+                throw new InvalidPlayerOrderException(sprintf('Player %d is not part of the game.', $playerId));
+            }
+            $seen[$playerId] = true;
         }
     }
 }

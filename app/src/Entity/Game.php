@@ -291,8 +291,6 @@ class Game
 
     /**
      * @return Collection<int, Round>
-     *
-     * @psalm-suppress PossiblyUnusedMethod Reason: the app reads rounds through RoundRepository; only tests read the collection.
      */
     public function getRounds(): Collection
     {
@@ -312,6 +310,20 @@ class Game
         }
 
         return $this;
+    }
+
+    /**
+     * Opens the round after the current one and makes it the current round.
+     *
+     * @return Round
+     */
+    public function openNextRound(): Round
+    {
+        $this->round = ($this->round ?? 1) + 1;
+        $next = (new Round())->setRoundNumber($this->round)->setStartedAt(new DateTime());
+        $this->addRound($next);
+
+        return $next;
     }
 
     /**

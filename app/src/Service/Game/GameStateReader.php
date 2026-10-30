@@ -21,6 +21,7 @@ use DateTimeInterface;
 use App\Dto\PlayerResponseDto;
 use App\Dto\ThrowResponseDto;
 use App\Entity\Game;
+use App\Enum\GameStatus;
 use App\Exception\Game\GameIdMissingException;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
@@ -321,6 +322,9 @@ final readonly class GameStateReader implements GameStateReaderInterface
      */
     private function resolveActivePlayerFromData(Game $game, array $gamePlayers, array $currentRoundThrowsByPlayer): ?int
     {
+        if (GameStatus::Started !== $game->getStatus()) {
+            return null;
+        }
         $snapshot = [];
         foreach ($currentRoundThrowsByPlayer as $playerId => $throws) {
             foreach ($throws as $throw) {
