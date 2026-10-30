@@ -34,46 +34,6 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
     }
 
     /**
-     * Latest throw for game (scalar data)
-     *
-     * @param int $gameId
-     *
-     * @return array<string, mixed>|null
-     */
-    #[\Override]
-    public function findLatestForGame(int $gameId): ?array
-    {
-        return $this->createQueryBuilder('rt')
-            ->select(
-                'rt.throwId AS id',
-                'rt.throwNumber AS throwNumber',
-                'rt.value AS value',
-                'rt.isDouble AS isDouble',
-                'rt.isTriple AS isTriple',
-                'rt.isBust AS isBust',
-                'rt.score AS score',
-                'rt.timestamp AS timestamp',
-                'r.roundNumber AS roundNumber',
-                'u.id AS playerId',
-                PlayerDisplayNameExpression::dql('gp', 'u').' AS playerName'
-            )
-            ->innerJoin('rt.round', 'r')
-            ->innerJoin('rt.player', 'u')
-            ->leftJoin(
-                GamePlayers::class,
-                'gp',
-                'WITH',
-                'gp.game = rt.game AND gp.player = rt.player'
-            )
-            ->andWhere('rt.game = :gameId')
-            ->setParameter('gameId', $gameId)
-            ->orderBy('rt.throwId', 'DESC')
-            ->setMaxResults(1)
-            ->getQuery()
-            ->getOneOrNullResult();
-    }
-
-    /**
      * @param int $gameId
      *
      * @return RoundThrows|null
@@ -150,29 +110,6 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
             ->getResult();
 
         return $throws;
-    }
-
-    /**
-     * @param int $gameId
-     * @param int $roundNumber
-     *
-     * @return array<int, array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>
-     */
-    #[\Override]
-    public function findCurrentRoundThrowsForGamePlayers(int $gameId, int $roundNumber): array
-    {
-        $rows = $this->createGameStateThrowQueryBuilder()
-            ->andWhere('rt.game = :gameId')
-            ->andWhere('r.roundNumber = :roundNumber')
-            ->setParameter('gameId', $gameId)
-            ->setParameter('roundNumber', $roundNumber)
-            ->orderBy('rt.player', 'ASC')
-            ->addOrderBy('rt.throwNumber', 'ASC')
-            ->addOrderBy('rt.throwId', 'ASC')
-            ->getQuery()
-            ->getArrayResult();
-
-        return $this->normalizeGameStateThrowRows($rows);
     }
 
     /**

@@ -161,6 +161,14 @@ final class GameEndpointsBaselineTest extends WebTestCase
                     $request['uri'],
                     $request['content'],
                 );
+                if ('lobby_settings_update' === $definition['scenario']) {
+                    $gameId = (int) basename(dirname($request['uri']));
+                    $lobby = $entityManager->find(Game::class, $gameId);
+                    if ($lobby instanceof Game) {
+                        $lobby->setStatus(GameStatus::Aborted);
+                        $entityManager->flush();
+                    }
+                }
             }
 
             $rows[] = $this->summarizeMeasurements(

@@ -530,7 +530,7 @@ final class GameSettingsReadBaselineTest extends WebTestCase
         $lines[] = '';
         $lines[] = '## Notes';
         $lines[] = '';
-        $lines[] = '- The lightweight endpoint avoids `GameStateViewBuilder::createGameDto()` and returns only settings-focused data.';
+        $lines[] = '- The lightweight endpoint avoids `GameStateReader::createGameDto()` and returns only settings-focused data.';
         $lines[] = '- Payload size is measured as raw response body bytes from the functional response content.';
         $lines[] = '- SQL count should remain flat across started scenarios because the lightweight endpoint reads only the game plus access-related data, not throw history.';
         $lines[] = '';

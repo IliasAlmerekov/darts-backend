@@ -107,6 +107,8 @@ class RoundThrows
     }
 
     /**
+     * @psalm-suppress PossiblyUnusedMethod Used by repository and service tests.
+     *
      * @return int|null
      */
     public function getThrowNumber(): ?int

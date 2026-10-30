@@ -10,6 +10,14 @@ declare(strict_types=1);
 namespace App\Service\Game;
 
 use App\Dto\GameResponseDto;
+use App\Dto\ScoreboardDeltaDto;
+use App\Dto\ScoreboardPlayerDeltaDto;
+use App\Dto\ThrowAckDto;
+use App\Dto\ThrowDeltaDto;
+use App\Dto\UndoAckDto;
+use App\Entity\RoundThrows;
+use DateTimeImmutable;
+use DateTimeInterface;
 use App\Dto\PlayerResponseDto;
 use App\Dto\ThrowResponseDto;
 use App\Entity\Game;
@@ -25,7 +33,7 @@ use Override;
  *
  * @psalm-suppress UnusedClass Reason: service is auto-wired by the container and used through DI.
  */
-final readonly class GameStateViewBuilder implements GameStateViewBuilderInterface
+final readonly class GameStateReader implements GameStateReaderInterface
 {
     /**
      * @param GamePlayersRepositoryInterface   $gamePlayersRepository
@@ -166,9 +174,107 @@ final readonly class GameStateViewBuilder implements GameStateViewBuilderInterfa
      * @return string
      */
     #[Override]
-    public function buildStateVersion(Game $game, ?int $latestThrowId = null): string
+    public function stateVersion(Game $game, ?int $latestThrowId = null): string
     {
         return $this->gameStateVersionService->buildStateVersion($game, $latestThrowId);
+    }
+
+    /** @param Game             $game
+     * @param RoundThrows|null $throw
+     *
+     * @return ThrowAckDto
+     */
+    #[Override]
+    public function buildThrowAck(Game $game, ?RoundThrows $throw): ThrowAckDto
+    {
+        $state = $this->createGameDto($game);
+
+        return new ThrowAckDto(
+            success: true,
+            gameId: $state->id,
+            stateVersion: $this->stateVersion($game, $throw?->getThrowId()),
+            throw: $this->throwDelta($throw, $state),
+            scoreboardDelta: $this->scoreboard($state),
+            serverTs: (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
+        );
+    }
+
+    /** @param Game             $game
+     * @param RoundThrows|null $throw
+     *
+     * @return UndoAckDto
+     */
+    #[Override]
+    public function buildUndoAck(Game $game, ?RoundThrows $throw): UndoAckDto
+    {
+        $state = $this->createGameDto($game);
+
+        return new UndoAckDto(
+            success: true,
+            gameId: $state->id,
+            stateVersion: $this->stateVersion($game),
+            undoneThrow: $this->throwDelta($throw, $state),
+            scoreboardDelta: $this->scoreboard($state),
+            serverTs: (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
+        );
+    }
+
+    /** @param GameResponseDto $state
+     *
+     * @return ScoreboardDeltaDto
+     */
+    private function scoreboard(GameResponseDto $state): ScoreboardDeltaDto
+    {
+        $players = [];
+        foreach ($state->players as $player) {
+            $players[] = new ScoreboardPlayerDeltaDto(
+                playerId: $player->id,
+                name: $player->name,
+                score: $player->score,
+                position: $player->position,
+                placement: $player->placement,
+                isActive: $player->isActive,
+                isGuest: $player->isGuest,
+                isBust: $player->isBust,
+            );
+        }
+
+        return new ScoreboardDeltaDto(changedPlayers: $players, winnerId: $state->winnerId, status: $state->status, currentRound: $state->currentRound);
+    }
+
+    /** @param RoundThrows|null $throw
+     * @param GameResponseDto  $state
+     *
+     * @return ThrowDeltaDto|null
+     */
+    private function throwDelta(?RoundThrows $throw, GameResponseDto $state): ?ThrowDeltaDto
+    {
+        if (null === $throw) {
+            return null;
+        }
+        $player = $throw->getPlayer();
+        $playerId = $player?->getId() ?? 0;
+        $name = null !== $player ? PlayerDisplayName::forUser($player) : '';
+        foreach ($state->players as $seat) {
+            if ($seat->id === $playerId) {
+                $name = $seat->name;
+                break;
+            }
+        }
+        $timestamp = $throw->getTimestamp();
+
+        return new ThrowDeltaDto(
+            id: $throw->getThrowId() ?? 0,
+            playerId: $playerId,
+            playerName: $name,
+            value: DartThrow::baseValue($throw->getValue() ?? 0, $throw->isDouble(), $throw->isTriple()),
+            isDouble: $throw->isDouble(),
+            isTriple: $throw->isTriple(),
+            isBust: $throw->isBust(),
+            score: $throw->getScore() ?? 0,
+            roundNumber: $throw->getRound()?->getRoundNumber() ?? 0,
+            timestamp: $timestamp instanceof DateTimeInterface ? $timestamp->format(DateTimeInterface::ATOM) : (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
+        );
     }
 
     /**

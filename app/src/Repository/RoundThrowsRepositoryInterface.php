@@ -83,14 +83,6 @@ interface RoundThrowsRepositoryInterface
      * @param int $gameId
      * @param int $roundNumber
      *
-     * @return array<int, array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>
-     */
-    public function findCurrentRoundThrowsForGamePlayers(int $gameId, int $roundNumber): array;
-
-    /**
-     * @param int $gameId
-     * @param int $roundNumber
-     *
      * @return array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}>
      */
     public function findCurrentRoundStateSnapshot(int $gameId, int $roundNumber): array;
@@ -110,13 +102,6 @@ interface RoundThrowsRepositoryInterface
      * @return array<int, array<string, mixed>>
      */
     public function getRoundAveragesForGame(int $gameId): array;
-
-    /**
-     * @param int $gameId
-     *
-     * @return array<string, mixed>|null
-     */
-    public function findLatestForGame(int $gameId): ?array;
 
     /**
      * @psalm-suppress PossiblyUnusedMethod

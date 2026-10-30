@@ -26,7 +26,7 @@ Around the layers:
 
 - `app/src/Dto/` holds request and response DTOs. Controllers return a response DTO, and
   `ApiViewSubscriber` serializes it with the serializer groups. This pair plus
-  `GameStateViewBuilder` is what MVC would call the view.
+  `GameStateReader` is what MVC would call the view.
 - `app/src/Exception/` holds the API errors, rendered by `ErrorController`
   ([ADR 0006](adr/0006-one-error-body.md)).
 - `app/src/EventSubscriber/` and `app/src/Security/` hold cross-cutting HTTP concerns:

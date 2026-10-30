@@ -15,7 +15,7 @@ use App\Dto\UndoAckDto;
 use App\Entity\Game;
 use App\Exception\Game\GameNotFoundException;
 use App\Http\Attribute\ApiResponse;
-use App\Service\Game\GameDeltaServiceInterface;
+use App\Service\Game\GameStateReaderInterface;
 use App\Service\Game\GameThrowServiceInterface;
 use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
@@ -37,7 +37,7 @@ final class GameThrowController extends AbstractController
      *
      * @param int                       $gameId
      * @param GameThrowServiceInterface $gameThrowService
-     * @param GameDeltaServiceInterface $gameDeltaService
+     * @param GameStateReaderInterface  $gameStateReader
      * @param ThrowRequest              $dto
      *
      * @return ThrowAckDto
@@ -58,7 +58,7 @@ final class GameThrowController extends AbstractController
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht.', content: new OA\JsonContent(ref: '#/components/schemas/RequestValidationFailed'))]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: Nur ROLE_ADMIN (das Tablet) darf diese Route nutzen (`ACCESS_DENIED`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[Route('/api/game/{gameId}/throw/delta', name: 'app_game_throw_delta', methods: ['POST'], format: 'json')]
-    public function throwDelta(int $gameId, GameThrowServiceInterface $gameThrowService, GameDeltaServiceInterface $gameDeltaService, #[MapRequestPayload] ThrowRequest $dto): ThrowAckDto
+    public function throwDelta(int $gameId, GameThrowServiceInterface $gameThrowService, GameStateReaderInterface $gameStateReader, #[MapRequestPayload] ThrowRequest $dto): ThrowAckDto
     {
         try {
             $throwRecordingResult = $gameThrowService->recordThrowByGameId($gameId, $dto);
@@ -66,7 +66,7 @@ final class GameThrowController extends AbstractController
             throw new NotFoundHttpException();
         }
 
-        return $gameDeltaService->buildThrowAck($throwRecordingResult->game, $throwRecordingResult->latestThrow, $throwRecordingResult->currentRoundStateSnapshot);
+        return $gameStateReader->buildThrowAck($throwRecordingResult->game, $throwRecordingResult->latestThrow);
     }
 
     /**
@@ -74,7 +74,7 @@ final class GameThrowController extends AbstractController
      *
      * @param Game                      $game
      * @param GameThrowServiceInterface $gameThrowService
-     * @param GameDeltaServiceInterface $gameDeltaService
+     * @param GameStateReaderInterface  $gameStateReader
      *
      * @return UndoAckDto
      */
@@ -88,10 +88,10 @@ final class GameThrowController extends AbstractController
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: Nur ROLE_ADMIN (das Tablet) darf diese Route nutzen (`ACCESS_DENIED`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Das Spiel ist in der Lobby oder abgebrochen (`GAME_THROW_NOT_ALLOWED`); es wird nichts gelöscht. Oder der letzte Wurf hat das Spiel beendet, und das Spiel ist nicht das neueste Spiel (`GAME_NOT_NEWEST`). Das Rückgängigmachen würde das laufende Spiel abbrechen.')]
     #[Route('/api/game/{gameId}/throw/delta', name: 'app_game_throw_undo_delta', methods: ['DELETE'], format: 'json')]
-    public function undoThrowDelta(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameDeltaServiceInterface $gameDeltaService): UndoAckDto
+    public function undoThrowDelta(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameStateReaderInterface $gameStateReader): UndoAckDto
     {
         $undoneThrow = $gameThrowService->undoLastThrow($game);
 
-        return $gameDeltaService->buildUndoAck($game, $undoneThrow);
+        return $gameStateReader->buildUndoAck($game, $undoneThrow);
     }
 }

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Game;
 
 use App\Dto\ThrowRecordingResultDto;
-use App\Dto\ThrowDeltaDto;
+use App\Entity\RoundThrows;
 use App\Dto\ThrowRequest;
 use App\Entity\Game;
 use App\Exception\ApiExceptionInterface;
@@ -35,7 +35,7 @@ interface GameThrowServiceInterface
      *
      * @param Game $game The game to undo the last throw in
      *
-     * @return ThrowDeltaDto|null Snapshot of the removed throw for compact acknowledgements
+     * @return RoundThrows|null Snapshot of the removed throw for compact acknowledgements
      */
-    public function undoLastThrow(Game $game): ?ThrowDeltaDto;
+    public function undoLastThrow(Game $game): ?RoundThrows;
 }
