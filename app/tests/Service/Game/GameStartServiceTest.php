@@ -32,8 +32,12 @@ final class GameStartServiceTest extends TestCase
     public function testStartConfiguresGameAndCallsSetup(): void
     {
         $game = (new Game())->setGameId(1);
-        $player1 = new GamePlayers()->setPlayer(new User()->setUsername('p1'));
-        $player2 = new GamePlayers()->setPlayer(new User()->setUsername('p2'));
+        $user1 = new User()->setUsername('p1');
+        $user2 = new User()->setUsername('p2');
+        $this->setPrivateProperty($user1, 'id', 1);
+        $this->setPrivateProperty($user2, 'id', 2);
+        $player1 = new GamePlayers()->setPlayer($user1);
+        $player2 = new GamePlayers()->setPlayer($user2);
         $game->addGamePlayer($player1);
         $game->addGamePlayer($player2);
 
@@ -41,7 +45,7 @@ final class GameStartServiceTest extends TestCase
         $dto->startScore = 301;
         $dto->doubleOut = true;
         $dto->tripleOut = false;
-        $dto->playerPositions = [1 => 2, 2 => 1];
+        $dto->playerPositions = [2, 1];
 
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects(self::once())->method('flush');
@@ -58,8 +62,8 @@ final class GameStartServiceTest extends TestCase
         self::assertCount(1, $game->getRounds());
         self::assertSame(301, $player1->getScore());
         self::assertSame(301, $player2->getScore());
-        self::assertSame(1, $player1->getPosition());
-        self::assertSame(2, $player2->getPosition());
+        self::assertSame(2, $player1->getPosition());
+        self::assertSame(1, $player2->getPosition());
     }
 
     public function testStartThrowsWhenNotEnoughPlayers(): void

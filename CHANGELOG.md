@@ -80,6 +80,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 
 ### Behoben
 
+- **Spielstart**: `playerPositions` mit doppelter Spieler-ID oder einer ID, die nicht zum Spiel gehört, wird mit 400 `GAME_INVALID_PLAYER_ORDER` abgelehnt; das Spiel bleibt in der Lobby, Positionen und Punkte bleiben unverändert (#59)
 - **Spielstand**: Das Bust-Zeichen erlischt beim Beginn des nächsten eigenen Turns; Wurf- und Undo-Bestätigungen liefern für alle Teilnehmer einen booleschen Wert statt `null` (#206).
 
 - **Authentifizierung**: Gespeicherte Spieleranmeldungen erhalten bei fehlender Berechtigung 403 statt 401 (#182).
