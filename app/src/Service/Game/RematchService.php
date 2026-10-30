@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Service\Game;
 
+use App\Dto\RematchResponseDto;
 use App\Entity\Game;
 use App\Entity\Invitation;
 use App\Enum\GameStatus;
@@ -50,14 +51,14 @@ final readonly class RematchService implements RematchServiceInterface
      *
      * @throws ORMException
      *
-     * @return array{success: bool, gameId?: int, invitationLink?: string}
+     * @return RematchResponseDto
      */
     #[Override]
-    public function createRematch(int $oldGameId): array
+    public function createRematch(int $oldGameId): RematchResponseDto
     {
         // Loads the status under the game's lock, so a parallel reopen of this game either
         // commits first and is seen, or waits until the rematch ends.
-        return $this->lockedGameTransaction->runWithRetry($oldGameId, function (Game $oldGame) use ($oldGameId): array {
+        return $this->lockedGameTransaction->runWithRetry($oldGameId, function (Game $oldGame) use ($oldGameId): RematchResponseDto {
             // Aborted too: the exit flow aborts the started game, then asks for its rematch.
             NewestGameRule::assert($oldGame, [GameStatus::Finished, GameStatus::Aborted], $this->gameRepository);
 
@@ -77,11 +78,7 @@ final readonly class RematchService implements RematchServiceInterface
                 $this->playerManagementService->appendMissingPlayers($oldGameId, $lobbyGameId, $lastPlacedFirst);
             }
 
-            return [
-                'success' => true,
-                'gameId' => $lobbyGameId,
-                'invitationLink' => $this->createInvitation($lobbyGame, $lobbyGameId),
-            ];
+            return new RematchResponseDto($lobbyGameId, $this->createInvitation($lobbyGame, $lobbyGameId));
         });
     }
 

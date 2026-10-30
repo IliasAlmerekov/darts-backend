@@ -55,6 +55,7 @@ final class OutRuleEndpointTest extends WebTestCase
 
     public function testRoomCreateWithoutLobbyRejectsDoubleAndTripleOutAndOpensNoLobby(): void
     {
+        self::assertSame(0, $this->countLobbies());
         $gameCount = $this->countGames();
 
         $response = $this->request(Request::METHOD_POST, '/api/room/create', [
@@ -65,6 +66,7 @@ final class OutRuleEndpointTest extends WebTestCase
 
         $this->assertConflictingOutRules($response);
         self::assertSame($gameCount, $this->countGames());
+        self::assertSame(0, $this->countLobbies());
     }
 
     public function testSettingsRejectDoubleAndTripleOut(): void
@@ -317,5 +319,10 @@ final class OutRuleEndpointTest extends WebTestCase
     private function countGames(): int
     {
         return (int) $this->entityManager->getConnection()->fetchOne('SELECT COUNT(*) FROM game');
+    }
+
+    private function countLobbies(): int
+    {
+        return (int) $this->entityManager->getConnection()->fetchOne('SELECT COUNT(*) FROM game WHERE status = ?', [GameStatus::Lobby->value]);
     }
 }

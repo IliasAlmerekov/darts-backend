@@ -10,9 +10,10 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Dto\GuestPlayerRequest;
-use App\Dto\GameSettingsRequest;
 use App\Dto\PlayerIdPayload;
+use App\Dto\RematchResponseDto;
 use App\Dto\RoomCreateRequest;
+use App\Dto\RoomCreateResponseDto;
 use App\Dto\SuccessMessageDto;
 use App\Dto\UpdatePlayerOrderRequest;
 use App\Entity\User;
@@ -22,13 +23,12 @@ use App\Exception\Game\PlayerNotFoundInGameException;
 use App\Exception\Request\PlayerIdRequiredException;
 use App\Http\Attribute\ApiResponse;
 use App\Service\Game\GameRoomServiceInterface;
-use App\Service\Game\GameSettingsServiceInterface;
 use App\Service\Game\RematchServiceInterface;
-use App\Service\Persistence\RetryingTransactionInterface;
 use App\Service\Player\GuestPlayerServiceInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
 use App\Service\Sse\SseStreamServiceInterface;
 use Doctrine\ORM\Exception\ORMException;
+use LogicException;
 use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -49,22 +49,18 @@ final class GameRoomController extends AbstractController
     /**
      * @param GameRoomServiceInterface         $gameRoomService
      * @param PlayerManagementServiceInterface $playerManagementService
-     * @param GameSettingsServiceInterface     $gameSettingsService
      * @param RematchServiceInterface          $rematchService
      * @param GuestPlayerServiceInterface      $guestPlayerService
      * @param SseStreamServiceInterface        $sseStreamService
-     * @param RetryingTransactionInterface     $transaction
      *
      * @return void
      */
     public function __construct(
         private readonly GameRoomServiceInterface $gameRoomService,
         private readonly PlayerManagementServiceInterface $playerManagementService,
-        private readonly GameSettingsServiceInterface $gameSettingsService,
         private readonly RematchServiceInterface $rematchService,
         private readonly GuestPlayerServiceInterface $guestPlayerService,
         private readonly SseStreamServiceInterface $sseStreamService,
-        private readonly RetryingTransactionInterface $transaction,
     ) {
     }
 
@@ -73,7 +69,7 @@ final class GameRoomController extends AbstractController
      *
      * @param RoomCreateRequest $dto
      *
-     * @return array{success:bool,gameId:int|null}
+     * @return RoomCreateResponseDto
      *
      * @throws ORMException
      */
@@ -88,14 +84,7 @@ final class GameRoomController extends AbstractController
     #[OA\Response(
         response: Response::HTTP_OK,
         description: 'Die offene Lobby wurde zurückgegeben oder eine neue Lobby angelegt.',
-        content: new OA\JsonContent(
-            required: ['success', 'gameId'],
-            properties: [
-                new OA\Property(property: 'success', type: 'boolean', example: true),
-                new OA\Property(property: 'gameId', type: 'integer', example: 123, nullable: true),
-            ],
-            type: 'object'
-        )
+        content: new OA\JsonContent(ref: new Model(type: RoomCreateResponseDto::class))
     )]
     #[ApiResponse]
     #[OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Der Request-Body ist kein gültiges JSON (`REQUEST_INVALID_JSON_BODY`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
@@ -104,25 +93,11 @@ final class GameRoomController extends AbstractController
     #[OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Eine ID in `playerIds` gehört zu keinem Benutzer (`PLAYER_NOT_FOUND`). Es wird keine Lobby angelegt.')]
     #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Die neue Lobby hätte mehr als 10 Spieler (`GAME_ROOM_FULL`). Es wird keine Lobby angelegt. Eine offene Lobby ignoriert `playerIds`.')]
     #[Route(path: '/api/room/create', name: 'room_create', methods: ['POST'], format: 'json')]
-    public function roomCreateApi(#[MapRequestPayload] RoomCreateRequest $dto): array
+    public function roomCreateApi(#[MapRequestPayload] RoomCreateRequest $dto): RoomCreateResponseDto
     {
-        return $this->transaction->run(function () use ($dto): array {
-            $includePlayerIds = null !== $dto->playerIds && [] !== $dto->playerIds
-                ? $dto->playerIds
-                : null;
-            $excludePlayerIds = null !== $dto->excludePlayerIds && [] !== $dto->excludePlayerIds
-                ? $dto->excludePlayerIds
-                : null;
+        $game = $this->gameRoomService->openRoom($dto);
 
-            $game = $this->gameRoomService->openRoom($includePlayerIds, $excludePlayerIds);
-
-            $settingsRequest = $this->createGameSettingsRequest($dto);
-            if (null !== $settingsRequest) {
-                $this->gameSettingsService->applySettings($game, $settingsRequest);
-            }
-
-            return ['success' => true, 'gameId' => $game->getGameId()];
-        });
+        return new RoomCreateResponseDto($game->getGameId() ?? throw new LogicException('The lobby game has no id.'));
     }
 
     /**
@@ -329,7 +304,7 @@ final class GameRoomController extends AbstractController
      *
      * @param int $id
      *
-     * @return array<string, mixed>
+     * @return RematchResponseDto
      *
      * @throws ORMException
      */
@@ -341,44 +316,15 @@ final class GameRoomController extends AbstractController
     #[OA\Response(
         response: Response::HTTP_CREATED,
         description: 'Die offene Lobby wurde zurückgegeben oder eine neue Lobby angelegt.',
-        content: new OA\JsonContent(
-            required: ['success'],
-            properties: [
-                new OA\Property(property: 'success', type: 'boolean', example: true),
-                new OA\Property(property: 'gameId', type: 'integer', example: 456, nullable: true),
-                new OA\Property(property: 'invitationLink', type: 'string', example: '/api/invite/join/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', nullable: true),
-                new OA\Property(property: 'message', type: 'string', example: 'Vorheriges Spiel nicht gefunden', nullable: true),
-            ],
-            type: 'object'
-        )
+        content: new OA\JsonContent(ref: new Model(type: RematchResponseDto::class))
     )]
     #[OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Vorheriges Spiel nicht gefunden (`GAME_NOT_FOUND`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[ApiResponse(status: Response::HTTP_CREATED)]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: Nur ROLE_ADMIN (das Tablet) darf diese Route nutzen (`ACCESS_DENIED`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Das alte Spiel ist nicht das neueste Spiel, oder es ist weder beendet noch abgebrochen (`GAME_NOT_NEWEST`). Eine offene Lobby ist immer das neueste Spiel.')]
     #[Route(path: '/api/room/{id}/rematch', name: 'room_rematch', methods: ['POST'])]
-    public function rematch(int $id): array
+    public function rematch(int $id): RematchResponseDto
     {
         return $this->rematchService->createRematch($id);
-    }
-
-    /**
-     * Builds a game settings DTO only when room-create includes settings fields.
-     *
-     * @param RoomCreateRequest $dto
-     *
-     * @return GameSettingsRequest|null
-     */
-    private function createGameSettingsRequest(RoomCreateRequest $dto): ?GameSettingsRequest
-    {
-        if (null === $dto->startScore && null === $dto->doubleOut && null === $dto->tripleOut) {
-            return null;
-        }
-
-        return new GameSettingsRequest(
-            startScore: $dto->startScore,
-            doubleOut: $dto->doubleOut,
-            tripleOut: $dto->tripleOut,
-        );
     }
 }
