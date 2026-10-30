@@ -49,31 +49,10 @@ final readonly class GameFinishService implements GameFinishServiceInterface
     #[\Override]
     public function recordCheckout(Game $game, GamePlayers $seat): void
     {
-        $finishedPlayers = $this->gamePlayersRepository->countFinishedPlayers((int) $game->getGameId());
-        $seat->setPlacement($finishedPlayers + 1);
-        if (0 === $finishedPlayers) {
-            $game->setWinner($seat->getPlayer());
-            $seat->setIsWinner(true);
-            foreach ($game->getGamePlayers() as $gamePlayer) {
-                if ($gamePlayer !== $seat) {
-                    $gamePlayer->setIsWinner(false);
-                }
-            }
-        } else {
-            $seat->setIsWinner(false);
-        }
-
-        $activePlayers = 0;
-        foreach ($game->getGamePlayers() as $gamePlayer) {
-            $seatScore = $gamePlayer->getScore() ?? $game->getStartScore();
-            if ($seatScore > 0) {
-                $activePlayers++;
-            }
-        }
-        if ($activePlayers <= 1) {
+        if (ParticipantResult::recordCheckout($game, $seat)) {
             $game->setStatus(GameStatus::Finished);
             $game->setFinishedAt(new DateTimeImmutable());
-            $this->normalizeFinishedGamePlacements($game);
+            ParticipantResult::rankFinishedGame($game);
         }
     }
 
@@ -105,7 +84,7 @@ final readonly class GameFinishService implements GameFinishServiceInterface
 
             $game->setStatus(GameStatus::Finished);
             $game->setFinishedAt($timestamp);
-            $this->recalculatePlacements($game);
+            ParticipantResult::rankFinishedGame($game);
 
             // Built under the lock too, so a parallel undo or reopen cannot leak into the response.
             return $this->buildGameSummary($game);
@@ -162,38 +141,6 @@ final readonly class GameFinishService implements GameFinishServiceInterface
         }
 
         return $result;
-    }
-
-    /**
-     * @param Game $game
-     *
-     * @return void
-     */
-    private function recalculatePlacements(Game $game): void
-    {
-        $players = $this->gamePlayersRepository->findByGameId((int) $game->getGameId());
-
-        usort($players, static function (GamePlayers $a, GamePlayers $b): int {
-            $scoreA = $a->getScore() ?? PHP_INT_MAX;
-            $scoreB = $b->getScore() ?? PHP_INT_MAX;
-            if ($scoreA === $scoreB) {
-                // Seats that checked out keep their order, then the turn order breaks the tie.
-                return ParticipantResult::compareByPlacement($a, $b) ?: TurnOrder::compare($a, $b);
-            }
-
-            return $scoreA <=> $scoreB;
-        });
-        foreach ($players as $index => $player) {
-            $player->setPlacement($index + 1);
-        }
-
-        if ([] !== $players) {
-            $winnerPlayer = $players[0];
-            $game->setWinner($winnerPlayer->getPlayer());
-            foreach ($players as $player) {
-                $player->setIsWinner($player === $winnerPlayer);
-            }
-        }
     }
 
     /**
@@ -276,46 +223,5 @@ final readonly class GameFinishService implements GameFinishServiceInterface
         }
 
         return $result;
-    }
-    /**
-     * Give every seat a unique placement (1..N) when the game ends.
-     * Seats that checked out keep their order of placement, then the seats with score left
-     * follow in turn order. Position stays untouched.
-     *
-     * @param Game $game
-     *
-     * @return void
-     */
-    private function normalizeFinishedGamePlacements(Game $game): void
-    {
-        $finishedPlayers = [];
-        $unfinishedPlayers = [];
-        foreach ($game->getGamePlayers() as $gamePlayer) {
-            $score = $gamePlayer->getScore() ?? $game->getStartScore();
-            if (0 === $score) {
-                $finishedPlayers[] = $gamePlayer;
-
-                continue;
-            }
-
-            $unfinishedPlayers[] = $gamePlayer;
-        }
-
-        usort($finishedPlayers, ParticipantResult::compareByPlacement(...));
-        usort($unfinishedPlayers, TurnOrder::compare(...));
-
-        $placement = 1;
-        foreach ([...$finishedPlayers, ...$unfinishedPlayers] as $gamePlayer) {
-            $gamePlayer->setPlacement($placement);
-            $placement++;
-        }
-
-        if ([] !== $finishedPlayers) {
-            $winnerPlayer = $finishedPlayers[0];
-            $game->setWinner($winnerPlayer->getPlayer());
-            foreach ($game->getGamePlayers() as $gamePlayer) {
-                $gamePlayer->setIsWinner($gamePlayer === $winnerPlayer);
-            }
-        }
     }
 }

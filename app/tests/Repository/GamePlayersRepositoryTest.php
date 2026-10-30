@@ -206,20 +206,6 @@ final class GamePlayersRepositoryTest extends KernelTestCase
         ], $result);
     }
 
-    public function testCountFinishedPlayers(): void
-    {
-        $game = $this->createGame();
-        $winner = $this->persistGamePlayer($game, $this->createUser('winner'), score: 0);
-        $notFinished = $this->persistGamePlayer($game, $this->createUser('active'), score: 20);
-        $this->entityManager->flush();
-
-        $count = $this->repository->countFinishedPlayers($game->getGameId());
-
-        self::assertSame(1, $count);
-        self::assertSame(0, $winner->getScore());
-        self::assertSame(20, $notFinished->getScore());
-    }
-
     public function testFindByGameIdsGroupsSeatsPerGameInSeatOrder(): void
     {
         $first = $this->createGame();

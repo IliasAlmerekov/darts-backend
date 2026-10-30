@@ -24,6 +24,8 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 
 ### Geändert
 
+- **Spiel**: Platzierungen und Sieger werden beim Checkout und Spielende aus den geladenen Teilnehmern berechnet (#203).
+
 - **Spiel**: Rücknahme eines Wurfs in einem eigenen Service zusammengefasst (#207)
 
 - **Spiel**: Schreibende Spielaktionen prüfen Adminrolle, Transaktion und Sperre des Spiels an einer Stelle (`LockedGameTransaction`); `NewestGameGuard` ist durch die Regel `NewestGameRule` ersetzt (#204).
