@@ -46,7 +46,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
      * @param EntityManagerInterface         $entityManager
      * @param LockedGameTransactionInterface $lockedGameTransaction
-     * @param GameReopenServiceInterface     $gameReopenService
+     * @param UndoThrowServiceInterface      $undoThrowService
      * @param GameFinishServiceInterface     $gameFinishService
      * @param ActivePlayerResolverInterface  $activePlayerResolver
      *
@@ -58,7 +58,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         private RoundThrowsRepositoryInterface $roundThrowsRepository,
         private EntityManagerInterface $entityManager,
         private LockedGameTransactionInterface $lockedGameTransaction,
-        private GameReopenServiceInterface $gameReopenService,
+        private UndoThrowServiceInterface $undoThrowService,
         private GameFinishServiceInterface $gameFinishService,
         private ?ActivePlayerResolverInterface $activePlayerResolver = null,
     ) {
@@ -86,7 +86,14 @@ final readonly class GameThrowService implements GameThrowServiceInterface
     {
         $gameId = $game->getGameId() ?? throw new GameNotFoundException();
 
-        return $this->lockedGameTransaction->run($gameId, fn (Game $game): ?ThrowDeltaDto => $this->undoLastThrowUnlocked($game));
+        return $this->lockedGameTransaction->run($gameId, function (Game $game): ?ThrowDeltaDto {
+            $status = $game->getStatus();
+            if (!$status->canUndo()) {
+                throw new GameThrowNotAllowedException($status);
+            }
+
+            return $this->undoThrowService->undo($game);
+        });
     }
 
     /**
@@ -185,49 +192,6 @@ final readonly class GameThrowService implements GameThrowServiceInterface
     /**
      * @param Game $game
      *
-     * @return ThrowDeltaDto|null
-     */
-    private function undoLastThrowUnlocked(Game $game): ?ThrowDeltaDto
-    {
-        $status = $game->getStatus();
-        if (!$status->canUndo()) {
-            throw new GameThrowNotAllowedException($status);
-        }
-
-        $gameId = $game->getGameId();
-        if (null === $gameId) {
-            return null;
-        }
-
-        $lastThrow = $this->roundThrowsRepository->findEntityLatestForGame($gameId);
-        if (!$lastThrow) {
-            return null;
-        }
-
-        $finished = GameStatus::Finished === $status;
-        if ($finished) {
-            $this->gameReopenService->assertCanReopen($game);
-        }
-
-        $seat = UndoThrowRules::findSeat($game, $lastThrow);
-        $undoneThrow = $this->createThrowDeltaFromEntity($lastThrow, $seat);
-        UndoThrowRules::restoreScore($game, $lastThrow, $seat, $this->roundThrowsRepository);
-        if ($finished) {
-            $this->gameReopenService->reopenFinished($game);
-        } else {
-            $game->takeBackPlacementsFromSeatsWithScoreLeft();
-        }
-
-        UndoThrowRules::reopenRound($game, $lastThrow, $this->roundRepository, $this->entityManager);
-        $this->entityManager->remove($lastThrow);
-        $this->entityManager->flush();
-
-        return $undoneThrow;
-    }
-
-    /**
-     * @param Game $game
-     *
      * @return Round
      */
     private function getCurrentRound(Game $game): Round
@@ -319,38 +283,6 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         }
 
         throw new GamePlayerNotActiveException($requestedPlayerId, $activePlayerId);
-    }
-
-    /**
-     * @param RoundThrows      $throw
-     * @param GamePlayers|null $seat  the thrower's seat, from the game's loaded seats; null once the player left the room
-     *
-     * @return ThrowDeltaDto
-     */
-    private function createThrowDeltaFromEntity(RoundThrows $throw, ?GamePlayers $seat): ThrowDeltaDto
-    {
-        $player = $throw->getPlayer();
-        $playerId = $player?->getId() ?? 0;
-        $playerName = match (true) {
-            null !== $seat => PlayerDisplayName::forSeat($seat),
-            null !== $player => PlayerDisplayName::forUser($player),
-            default => '',
-        };
-        $timestamp = $throw->getTimestamp();
-        $storedValue = $throw->getValue() ?? 0;
-
-        return new ThrowDeltaDto(
-            id: $throw->getThrowId() ?? 0,
-            playerId: $playerId,
-            playerName: $playerName,
-            value: DartThrow::baseValue($storedValue, $throw->isDouble(), $throw->isTriple()),
-            isDouble: $throw->isDouble(),
-            isTriple: $throw->isTriple(),
-            isBust: $throw->isBust(),
-            score: $throw->getScore() ?? 0,
-            roundNumber: $throw->getRound()?->getRoundNumber() ?? 0,
-            timestamp: $timestamp instanceof DateTimeInterface ? $timestamp->format(DateTimeInterface::ATOM) : (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
-        );
     }
 
     /**

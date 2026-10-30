@@ -22,8 +22,9 @@ use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Game\ActivePlayerResolverInterface;
 use App\Service\Game\GameThrowService;
-use App\Service\Game\GameReopenService;
-use App\Service\Game\GameReopenServiceInterface;
+use App\Service\Game\FinishedGameTransition;
+use App\Service\Game\UndoThrowService;
+use App\Service\Game\FinishedGameTransitionInterface;
 use App\Service\Game\GameFinishService;
 use App\Service\Game\LockedGameTransaction;
 use App\Service\Game\LockedGameTransactionInterface;
@@ -119,7 +120,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->lockedGame($entityManager, $gameRepository),
-            $this->createStub(GameReopenServiceInterface::class),
+            new UndoThrowService($roundRepository, $roundThrowsRepository, $entityManager, $this->createStub(FinishedGameTransitionInterface::class)),
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
@@ -154,7 +155,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->lockedGame($entityManager, $gameRepository),
-            $this->createStub(GameReopenServiceInterface::class),
+            new UndoThrowService($roundRepository, $roundThrowsRepository, $entityManager, $this->createStub(FinishedGameTransitionInterface::class)),
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
@@ -215,7 +216,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->lockedGame($entityManager, $gameRepository, $accessService),
-            $this->createStub(GameReopenServiceInterface::class),
+            new UndoThrowService($roundRepository, $roundThrowsRepository, $entityManager, $this->createStub(FinishedGameTransitionInterface::class)),
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
@@ -294,7 +295,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->lockedGame($entityManager, $game),
-            $this->createStub(GameReopenServiceInterface::class),
+            new UndoThrowService($roundRepository, $roundThrowsRepository, $entityManager, $this->createStub(FinishedGameTransitionInterface::class)),
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
@@ -385,7 +386,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->lockedGame($entityManager, $game),
-            $this->createStub(GameReopenServiceInterface::class),
+            new UndoThrowService($roundRepository, $roundThrowsRepository, $entityManager, $this->createStub(FinishedGameTransitionInterface::class)),
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
@@ -479,7 +480,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->lockedGame($entityManager, $game),
-            $this->createStub(GameReopenServiceInterface::class),
+            new UndoThrowService($roundRepository, $roundThrowsRepository, $entityManager, $this->createStub(FinishedGameTransitionInterface::class)),
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
@@ -539,7 +540,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->lockedGame($entityManager, $game),
-            $this->createStub(GameReopenServiceInterface::class),
+            new UndoThrowService($roundRepository, $roundThrowsRepository, $entityManager, $this->createStub(FinishedGameTransitionInterface::class)),
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
@@ -578,7 +579,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->lockedGame($entityManager, $game),
-            $this->createStub(GameReopenServiceInterface::class),
+            new UndoThrowService($roundRepository, $roundThrowsRepository, $entityManager, $this->createStub(FinishedGameTransitionInterface::class)),
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
@@ -642,7 +643,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->lockedGame($entityManager, $game),
-            $this->createStub(GameReopenServiceInterface::class),
+            new UndoThrowService($roundRepository, $roundThrowsRepository, $entityManager, $this->createStub(FinishedGameTransitionInterface::class)),
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
@@ -726,7 +727,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->lockedGame($entityManager, $game),
-            $this->createStub(GameReopenServiceInterface::class),
+            new UndoThrowService($roundRepository, $roundThrowsRepository, $entityManager, $this->createStub(FinishedGameTransitionInterface::class)),
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
@@ -817,7 +818,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->lockedGame($entityManager, $game),
-            $this->createStub(GameReopenServiceInterface::class),
+            new UndoThrowService($roundRepository, $roundThrowsRepository, $entityManager, $this->createStub(FinishedGameTransitionInterface::class)),
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
@@ -890,7 +891,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->lockedGame($entityManager, $game),
-            $this->createStub(GameReopenServiceInterface::class),
+            new UndoThrowService($roundRepository, $roundThrowsRepository, $entityManager, $this->createStub(FinishedGameTransitionInterface::class)),
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
@@ -977,7 +978,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->lockedGame($entityManager, $game),
-            $this->createStub(GameReopenServiceInterface::class),
+            new UndoThrowService($roundRepository, $roundThrowsRepository, $entityManager, $this->createStub(FinishedGameTransitionInterface::class)),
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
@@ -1063,7 +1064,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->lockedGame($entityManager, $game),
-            $this->createStub(GameReopenServiceInterface::class),
+            new UndoThrowService($roundRepository, $roundThrowsRepository, $entityManager, $this->createStub(FinishedGameTransitionInterface::class)),
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
             $activePlayerResolver,
         );
@@ -1143,7 +1144,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->lockedGame($entityManager, $game),
-            $this->createStub(GameReopenServiceInterface::class),
+            new UndoThrowService($roundRepository, $roundThrowsRepository, $entityManager, $this->createStub(FinishedGameTransitionInterface::class)),
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
@@ -1238,11 +1239,104 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->lockedGame($entityManager, $game),
-            $this->createReopenService($entityManager, $gameRepository, 10),
+            new UndoThrowService($roundRepository, $roundThrowsRepository, $entityManager, $this->createReopenService($gameRepository, 10)),
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
         $undoneThrow = $service->undoLastThrow($game);
+
+        self::assertSame(GameStatus::Started, $game->getStatus());
+        self::assertNull($game->getFinishedAt());
+        self::assertSame(40, $winnerPlayer->getScore());
+        self::assertSame(1, $winnerPlayer->getPosition());
+        self::assertSame(2, $otherPlayer->getPosition());
+        self::assertNull($winnerPlayer->getPlacement());
+        self::assertNull($otherPlayer->getPlacement());
+        self::assertNull($game->getWinner());
+        self::assertFalse((bool) $winnerPlayer->isWinner());
+        self::assertFalse((bool) $otherPlayer->isWinner());
+        self::assertSame(5, $game->getRound());
+        self::assertNotNull($undoneThrow);
+        self::assertSame(40, $undoneThrow->value);
+        self::assertSame(1, $undoneThrow->playerId);
+        self::assertSame(5, $undoneThrow->roundNumber);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    public function testUndoServiceRestoresScoreBeforeTakingBackPlacement(): void
+    {
+        $game = new Game();
+        $this->setPrivateProperty($game, 'gameId', 10);
+        $game->setStartScore(301);
+        $game->setRound(5);
+        $game->setStatus(GameStatus::Finished);
+        $game->setFinishedAt(new DateTimeImmutable());
+
+        $winnerUser = (new User())->setUsername('Winner');
+        $this->setPrivateProperty($winnerUser, 'id', 1);
+        $otherUser = (new User())->setUsername('Other');
+        $this->setPrivateProperty($otherUser, 'id', 2);
+
+        $winnerPlayer = (new GamePlayers())
+            ->setPlayer($winnerUser)
+            ->setScore(0)
+            ->setPosition(1)
+            ->setPlacement(1)
+            ->setIsWinner(true);
+        $otherPlayer = (new GamePlayers())
+            ->setPlayer($otherUser)
+            ->setScore(120)
+            ->setPosition(2)
+            ->setIsWinner(false);
+        $game->setWinner($winnerUser);
+        $game->addGamePlayer($winnerPlayer);
+        $game->addGamePlayer($otherPlayer);
+
+        $round = (new Round())
+            ->setGame($game)
+            ->setRoundNumber(5);
+        $lastThrow = (new RoundThrows())
+            ->setGame($game)
+            ->setRound($round)
+            ->setPlayer($winnerUser)
+            ->setThrowNumber(3)
+            ->setThrowId(103)
+            ->setValue(40)
+            ->setScore(0)
+            ->setTimestamp(new DateTime());
+        $previousThrow = (new RoundThrows())
+            ->setGame($game)
+            ->setRound($round)
+            ->setPlayer($winnerUser)
+            ->setThrowNumber(2)
+            ->setThrowId(102)
+            ->setValue(20)
+            ->setScore(40)
+            ->setTimestamp(new DateTime());
+
+        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+
+        $roundRepository = $this->createMock(RoundRepositoryInterface::class);
+
+        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository->method('findEntityLatestForGame')
+            ->with(10)
+            ->willReturn($lastThrow);
+        $roundThrowsRepository->method('findLatestForGameAndPlayerBeforeThrow')
+            ->with(10, 1, 103)
+            ->willReturn($previousThrow);
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::once())->method('remove')->with($lastThrow);
+        $entityManager->expects(self::once())->method('flush');
+
+        $gameRepository = $this->createMock(GameRepositoryInterface::class);
+
+        $service = new UndoThrowService($roundRepository, $roundThrowsRepository, $entityManager, $this->createReopenService($gameRepository, 10));
+
+        $undoneThrow = $service->undo($game);
 
         self::assertSame(GameStatus::Started, $game->getStatus());
         self::assertNull($game->getFinishedAt());
@@ -1349,7 +1443,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->lockedGame($entityManager, $game),
-            $this->createReopenService($entityManager, $gameRepository, 10),
+            new UndoThrowService($roundRepository, $roundThrowsRepository, $entityManager, $this->createReopenService($gameRepository, 10)),
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
@@ -1456,7 +1550,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->lockedGame($entityManager, $game),
-            $this->createReopenService($entityManager, $gameRepository, 11),
+            new UndoThrowService($roundRepository, $roundThrowsRepository, $entityManager, $this->createReopenService($gameRepository, 11)),
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
@@ -1493,7 +1587,7 @@ final class GameThrowServiceTest extends TestCase
         $em->expects(self::never())->method('flush');
         $repository = $this->createMock(GameRepositoryInterface::class);
         $repository->expects(self::never())->method('abortStartedGames');
-        $service = new GameThrowService($seats, $rounds, $throws, $em, $this->lockedGame($em, $game), $this->createReopenService($em, $repository, 11), new GameFinishService($seats, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)));
+        $service = new GameThrowService($seats, $rounds, $throws, $em, $this->lockedGame($em, $game), new UndoThrowService($rounds, $throws, $em, $this->createReopenService($repository, 11)), new GameFinishService($seats, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)));
 
         self::assertNull($service->undoLastThrow($game));
         self::assertSame(GameStatus::Finished, $game->getStatus());
@@ -1576,7 +1670,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->lockedGame($entityManager, $game),
-            $this->createStub(GameReopenServiceInterface::class),
+            new UndoThrowService($roundRepository, $roundThrowsRepository, $entityManager, $this->createStub(FinishedGameTransitionInterface::class)),
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
@@ -1681,7 +1775,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->lockedGame($entityManager, $game),
-            $this->createStub(GameReopenServiceInterface::class),
+            new UndoThrowService($roundRepository, $roundThrowsRepository, $entityManager, $this->createStub(FinishedGameTransitionInterface::class)),
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
@@ -1773,7 +1867,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->lockedGame($entityManager, $game),
-            $this->createStub(GameReopenServiceInterface::class),
+            new UndoThrowService($roundRepository, $roundThrowsRepository, $entityManager, $this->createStub(FinishedGameTransitionInterface::class)),
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
@@ -1875,7 +1969,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->lockedGame($entityManager, $game),
-            $this->createStub(GameReopenServiceInterface::class),
+            new UndoThrowService($roundRepository, $roundThrowsRepository, $entityManager, $this->createStub(FinishedGameTransitionInterface::class)),
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
@@ -1969,7 +2063,7 @@ final class GameThrowServiceTest extends TestCase
             $roundThrowsRepository,
             $entityManager,
             $this->lockedGame($entityManager, $game),
-            $this->createStub(GameReopenServiceInterface::class),
+            new UndoThrowService($roundRepository, $roundThrowsRepository, $entityManager, $this->createStub(FinishedGameTransitionInterface::class)),
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
@@ -2037,7 +2131,7 @@ final class GameThrowServiceTest extends TestCase
             $em = $this->createMock(EntityManagerInterface::class);
             $em->method('wrapInTransaction')->willReturnCallback(static fn (\Closure $fn) => $fn());
             $em->method('persist')->willReturnCallback(static function (object $entity) use (&$persisted): void { $persisted = $entity; });
-            $service = new GameThrowService($seats, $rounds, $throws, $em, $this->lockedGame($em, $game), $this->createStub(GameReopenServiceInterface::class), new GameFinishService($seats, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)));
+            $service = new GameThrowService($seats, $rounds, $throws, $em, $this->lockedGame($em, $game), new UndoThrowService($rounds, $throws, $em, $this->createStub(FinishedGameTransitionInterface::class)), new GameFinishService($seats, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)));
             $service->recordThrowByGameId((int) $game->getGameId(), $dto);
             self::assertSame($expected, $seat->getScore());
             self::assertInstanceOf(RoundThrows::class, $persisted);
@@ -2059,11 +2153,11 @@ final class GameThrowServiceTest extends TestCase
         $ref->setValue($object, $value);
     }
 
-    private function createReopenService(EntityManagerInterface $entityManager, GameRepositoryInterface&Stub $gameRepository, int $newestGameId): GameReopenService
+    private function createReopenService(GameRepositoryInterface&Stub $gameRepository, int $newestGameId): FinishedGameTransition
     {
         $gameRepository->method('findHighestGameId')->willReturn($newestGameId);
 
-        return new GameReopenService($entityManager, $gameRepository, $this->createStub(LockedGameTransactionInterface::class));
+        return new FinishedGameTransition($gameRepository);
     }
 
     private function lockedGame(EntityManagerInterface $entityManager, Game|GameRepositoryInterface $game, ?GameAccessServiceInterface $access = null): LockedGameTransaction

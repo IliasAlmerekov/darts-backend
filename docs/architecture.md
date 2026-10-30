@@ -39,7 +39,7 @@ cannot mock a final class. Unit tests mock the interface so they run without the
 database. Callers depend on the interface, not on the class.
 
 One exception: a stateless rule class with only static methods and no injected
-dependencies, such as `UndoThrowRules` and `NewestGameRule`, has no interface. It holds
+dependencies, such as `NewestGameRule`, has no interface. It holds
 nothing a test would replace, so a test passes it its repository instead. The exception
 ends once a rule class needs injected state.
 

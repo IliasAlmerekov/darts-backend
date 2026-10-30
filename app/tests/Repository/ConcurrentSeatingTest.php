@@ -32,7 +32,8 @@ use App\Service\Game\GameSettingsService;
 use App\Service\Game\GameSetupService;
 use App\Service\Game\GameStartService;
 use App\Service\Game\GameThrowService;
-use App\Service\Game\GameReopenService;
+use App\Service\Game\FinishedGameTransition;
+use App\Service\Game\UndoThrowService;
 use App\Service\Game\LockedGameTransaction;
 use App\Service\Game\OpenLobbyService;
 use App\Service\Game\RematchService;
@@ -673,7 +674,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
             new RoundThrowsRepository($this->registry()),
             $this->entityManager,
             $this->lockedGameTransaction($access),
-            new GameReopenService($this->entityManager, $gameRepository, $this->lockedGameTransaction($access)),
+            new UndoThrowService(new RoundRepository($this->registry()), new RoundThrowsRepository($this->registry()), $this->entityManager, new FinishedGameTransition($gameRepository)),
             $this->finishService(),
         );
     }
