@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Security;
 
+use App\Http\ApiRequest;
+
 use App\Exception\ErrorCode;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -36,7 +38,7 @@ final readonly class ApiAuthenticationEntryPoint implements AuthenticationEntryP
     #[\Override]
     public function start(Request $request, ?AuthenticationException $authException = null): Response
     {
-        if ($this->isApiRequest($request)) {
+        if (ApiRequest::matches($request)) {
             if ($authException instanceof InsufficientAuthenticationException && $authException->getToken() instanceof RememberMeToken) {
                 return new JsonResponse(
                     [
@@ -59,21 +61,5 @@ final readonly class ApiAuthenticationEntryPoint implements AuthenticationEntryP
         }
 
         return new RedirectResponse($this->urlGenerator->generate('app_login'));
-    }
-
-    /**
-     * @param Request $request
-     *
-     * @return bool
-     */
-    private function isApiRequest(Request $request): bool
-    {
-        if (str_starts_with($request->getPathInfo(), '/api/')) {
-            return true;
-        }
-
-        $accept = (string) $request->headers->get('Accept', '');
-
-        return str_contains($accept, 'application/json');
     }
 }

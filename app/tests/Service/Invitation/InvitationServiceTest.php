@@ -82,8 +82,8 @@ final class InvitationServiceTest extends TestCase
 
         $this->invitationRepository
             ->expects(self::once())
-            ->method('findOneBy')
-            ->with(['game' => $game])
+            ->method('findOneByGameIdForShare')
+            ->with($game->getGameId())
             ->willReturn($existing);
 
         $this->entityManager->expects(self::never())->method('persist');
@@ -100,8 +100,8 @@ final class InvitationServiceTest extends TestCase
 
         $this->invitationRepository
             ->expects(self::once())
-            ->method('findOneBy')
-            ->with(['game' => $game])
+            ->method('findOneByGameIdForShare')
+            ->with($game->getGameId())
             ->willReturn(null);
 
         $this->entityManager->expects(self::once())->method('persist');
@@ -135,8 +135,8 @@ final class InvitationServiceTest extends TestCase
         $player->setPlayer($user);
 
         $this->invitationRepository
-            ->method('findOneBy')
-            ->with(['game' => $game])
+            ->method('findOneByGameIdForShare')
+            ->with($game->getGameId())
             ->willReturn($invitation);
 
         $this->gamePlayersRepository
@@ -174,7 +174,7 @@ final class InvitationServiceTest extends TestCase
         $failure = new RuntimeException('participant list failed');
 
         $this->invitationRepository
-            ->method('findOneBy')
+            ->method('findOneByGameIdForShare')
             ->willReturn((new Invitation())->setUuid('def')->setGame($game));
         $this->gamePlayersRepository
             ->method('findByGameId')

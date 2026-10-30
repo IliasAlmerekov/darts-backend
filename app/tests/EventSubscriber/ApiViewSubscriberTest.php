@@ -19,6 +19,19 @@ use Symfony\Component\Serializer\SerializerInterface;
 
 final class ApiViewSubscriberTest extends TestCase
 {
+    public function testJsonFormatOutsideApiPathIsSerialized(): void
+    {
+        $serializer = $this->createMock(SerializerInterface::class);
+        $serializer->expects(self::once())->method('serialize')->willReturn('{"ok":true}');
+        $request = Request::create('/page');
+        $request->setRequestFormat('json');
+        $event = new ViewEvent($this->createStub(HttpKernelInterface::class), $request, HttpKernelInterface::MAIN_REQUEST, ['ok' => true]);
+
+        (new ApiViewSubscriber($serializer))->onKernelView($event);
+
+        self::assertInstanceOf(JsonResponse::class, $event->getResponse());
+    }
+
     public function testOnKernelViewUsesRealGameLifecycleStartMetadataAndMergesHeaders(): void
     {
         $gameDto = new GameResponseDto(id: 42, status: 'started', currentRound: 1, activePlayerId: null, currentThrowCount: 0, players: [], winnerId: null, settings: []);

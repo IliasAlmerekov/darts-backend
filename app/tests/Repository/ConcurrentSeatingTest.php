@@ -27,6 +27,7 @@ use App\Exception\Game\SettingsNotEditableException;
 use App\Repository\GamePlayersRepository;
 use App\Repository\GameRepository;
 use App\Repository\InvitationRepository;
+use App\Repository\UserRepositoryInterface;
 use App\Repository\PlayerStatisticsRepository;
 use App\Repository\RoundRepository;
 use App\Repository\RoundThrowsRepository;
@@ -43,6 +44,8 @@ use App\Service\Game\UndoThrowService;
 use App\Service\Game\LockedGameTransaction;
 use App\Service\Game\OpenLobbyService;
 use App\Service\Game\RematchService;
+use App\Service\Invitation\InvitationService;
+use App\Service\Invitation\InvitationServiceInterface;
 use App\Service\Persistence\RetryingTransaction;
 use App\Service\Player\GuestPlayerService;
 use App\Service\Player\PlayerManagementService;
@@ -56,6 +59,7 @@ use Doctrine\Persistence\ManagerRegistry;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Routing\RouterInterface;
 
 /**
  * Seats, invitations and started games committed by another request after this request's
@@ -219,6 +223,39 @@ final class ConcurrentSeatingTest extends KernelTestCase
         self::assertSame($lobby, $invitation?->getGameId());
     }
 
+    public function testRematchReusesInvitationCommittedAfterSnapshot(): void
+    {
+        $lobby = $this->insertGame('lobby');
+        $finished = $this->insertGame('finished');
+        $gameRepository = new GameRepository($this->registry());
+        $players = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager, $gameRepository);
+        $access = $this->createMock(GameAccessServiceInterface::class);
+        $access->method('assertAdmin')->willReturn(new User());
+        $invitations = new InvitationService(
+            new InvitationRepository($this->registry()),
+            $this->gamePlayersRepository,
+            $gameRepository,
+            $this->createMock(UserRepositoryInterface::class),
+            $players,
+            $this->entityManager,
+            $this->createMock(RouterInterface::class),
+            $access,
+        );
+        $urls = $this->createMock(UrlGeneratorInterface::class);
+        $urls->method('generate')->with('join_invitation', ['uuid' => '0192f0c4-7d3e-7a6b-9c1d-2e3f4a5b6c7d'])->willReturn('/api/invite/join/existing');
+        $service = new RematchService($players, $invitations, $this->entityManager, $urls, new OpenLobbyService($gameRepository, $this->entityManager), $gameRepository, $this->lockedGameTransaction($access));
+
+        $this->request->beginTransaction();
+        $this->takeSnapshot();
+        $this->other->insert('invitation', ['uuid' => '0192f0c4-7d3e-7a6b-9c1d-2e3f4a5b6c7d', 'game_id' => $lobby]);
+        $result = $service->createRematch($finished);
+        $this->request->commit();
+
+        self::assertSame($lobby, $result->gameId);
+        self::assertSame('/api/invite/join/existing', $result->invitationLink);
+        self::assertSame(1, (int) $this->other->fetchOne('SELECT COUNT(*) FROM invitation WHERE game_id = ?', [$lobby]));
+    }
+
     public function testRefreshWithSeatsForUpdateSeesTheGameAndSeatsCommittedAfterTheSnapshot(): void
     {
         $bob = $this->insertUser('bob');
@@ -252,7 +289,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $openLobbyService = new OpenLobbyService($gameRepository, $this->entityManager);
         $service = new RematchService(
             $playerManagementService,
-            new InvitationRepository($this->registry()),
+            $this->createMock(InvitationServiceInterface::class),
             $this->entityManager,
             $this->createMock(UrlGeneratorInterface::class),
             $openLobbyService,

@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace App\EventSubscriber;
 
+use App\Http\ApiRequest;
+
 use App\Http\Attribute\ApiResponse;
 use Override;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -58,7 +60,7 @@ final class ApiViewSubscriber implements EventSubscriberInterface
     public function onKernelView(ViewEvent $event): void
     {
         $request = $event->getRequest();
-        if (!$this->isApiRequest($request)) {
+        if (!(ApiRequest::matches($request) || 'json' === $request->getRequestFormat())) {
             return;
         }
 
@@ -138,22 +140,5 @@ final class ApiViewSubscriber implements EventSubscriberInterface
         $headers = $request->attributes->get(self::RESPONSE_HEADERS_REQUEST_ATTRIBUTE);
 
         return is_array($headers) ? $headers : [];
-    }
-
-    /**
-     * @param Request $request
-     *
-     * @return bool
-     */
-    private function isApiRequest(Request $request): bool
-    {
-        $path = $request->getPathInfo();
-        if (str_starts_with($path, '/api/')) {
-            return true;
-        }
-
-        $accept = (string) $request->headers->get('Accept', '');
-
-        return str_contains($accept, 'application/json') || 'json' === $request->getRequestFormat();
     }
 }

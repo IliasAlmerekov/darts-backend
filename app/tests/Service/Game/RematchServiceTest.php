@@ -11,11 +11,12 @@ namespace App\Tests\Service;
 
 use App\Dto\RematchResponseDto;
 use App\Entity\Game;
+use App\Entity\Invitation;
 use App\Enum\GameStatus;
 use App\Exception\Game\GameNotFoundException;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
-use App\Repository\InvitationRepositoryInterface;
+use App\Service\Invitation\InvitationServiceInterface;
 use App\Service\Game\OpenLobby;
 use App\Service\Game\OpenLobbyServiceInterface;
 use App\Service\Game\RematchService;
@@ -38,12 +39,12 @@ final class RematchServiceTest extends TestCase
         $playerManagementService = new PlayerManagementService($gamePlayersRepository, $entityManager, $gameRepository);
         $openLobbyService = $this->createMock(OpenLobbyServiceInterface::class);
         $openLobbyService->expects(self::never())->method('findOrCreate');
-        $invitationRepository = $this->createMock(InvitationRepositoryInterface::class);
+        $invitationService = $this->createMock(InvitationServiceInterface::class);
         $urlGenerator = $this->createMock(UrlGeneratorInterface::class);
 
         $service = new RematchService(
             $playerManagementService,
-            $invitationRepository,
+            $invitationService,
             $entityManager,
             $urlGenerator,
             $openLobbyService,
@@ -78,15 +79,18 @@ final class RematchServiceTest extends TestCase
         $openLobbyService = $this->createMock(OpenLobbyServiceInterface::class);
         $openLobbyService->method('findOrCreate')->willReturn(new OpenLobby($newLobby, true));
 
-        $invitationRepository = $this->createMock(InvitationRepositoryInterface::class);
-        $invitationRepository->method('findOneByGameIdForShare')->willReturn(null);
+        $invitationService = $this->createMock(InvitationServiceInterface::class);
+        $invitation = (new Invitation())->setUuid('existing-uuid')->setGame($newLobby);
+        $invitationService->expects(self::once())->method('createOrGetInvitation')->with($newLobby)->willReturn($invitation);
+        $entityManager->expects(self::never())->method('persist');
 
         $urlGenerator = $this->createMock(UrlGeneratorInterface::class);
-        $urlGenerator->method('generate')->willReturn('/join/uuid');
+        $urlGenerator->expects(self::once())->method('generate')
+            ->with('join_invitation', ['uuid' => 'existing-uuid'])->willReturn('/join/existing-uuid');
 
         $service = new RematchService(
             $playerManagementService,
-            $invitationRepository,
+            $invitationService,
             $entityManager,
             $urlGenerator,
             $openLobbyService,
@@ -97,7 +101,7 @@ final class RematchServiceTest extends TestCase
         $result = $service->createRematch(42);
 
         self::assertSame(['runWithRetry'], $lockedGame->calls);
-        self::assertEquals(new RematchResponseDto(100, '/join/uuid'), $result);
+        self::assertEquals(new RematchResponseDto(100, '/join/existing-uuid'), $result);
     }
 
     /**
