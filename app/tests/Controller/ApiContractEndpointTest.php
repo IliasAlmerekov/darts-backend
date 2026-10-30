@@ -24,7 +24,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Contract with the frontend: the type discriminator, 409 for unfinished summaries,
- * and 400 for non-integer pagination parameters.
+ * 400 for non-integer pagination parameters, and the key order of the rematch body.
  */
 final class ApiContractEndpointTest extends WebTestCase
 {
@@ -51,6 +51,21 @@ final class ApiContractEndpointTest extends WebTestCase
         $undo = $this->requestJson($client, Request::METHOD_DELETE, sprintf('/api/game/%d/throw/delta', $gameId));
         self::assertSame('ack', $undo['type'] ?? null);
 
+    }
+
+    public function testRematchBodyListsSuccessGameIdAndInvitationLinkInThatOrder(): void
+    {
+        $client = static::createClient();
+        [$admin, $player] = $this->users();
+        $gameId = $this->createGame($player, GameStatus::Finished);
+        $client->loginUser($admin);
+
+        $body = $this->requestJson($client, Request::METHOD_POST, sprintf('/api/room/%d/rematch', $gameId), null, Response::HTTP_CREATED);
+
+        self::assertSame(['success', 'gameId', 'invitationLink'], array_keys($body));
+        self::assertTrue($body['success']);
+        self::assertIsInt($body['gameId']);
+        self::assertStringStartsWith('/api/invite/join/', $body['invitationLink']);
     }
 
     #[DataProvider('finishedRoutes')]
