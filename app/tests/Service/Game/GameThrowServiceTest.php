@@ -20,7 +20,6 @@ use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\PlayerStatisticsRepositoryInterface;
 use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
-use App\Service\Game\ActivePlayerResolverInterface;
 use App\Service\Game\GameThrowService;
 use App\Service\Game\FinishedGameTransition;
 use App\Service\Game\UndoThrowService;
@@ -989,7 +988,7 @@ final class GameThrowServiceTest extends TestCase
     /**
      * @throws ReflectionException
      */
-    public function testRecordThrowPassesLoadedRoundStateSnapshotToSharedActivePlayerResolver(): void
+    public function testRecordThrowUsesLoadedRoundStateSnapshot(): void
     {
         $game = new Game();
         $this->setPrivateProperty($game, 'gameId', 11);
@@ -1046,12 +1045,6 @@ final class GameThrowServiceTest extends TestCase
             ->with(11, 2)
             ->willReturn($roundStateSnapshot);
 
-        $activePlayerResolver = $this->createMock(ActivePlayerResolverInterface::class);
-        $activePlayerResolver->expects(self::once())
-            ->method('resolveActivePlayer')
-            ->with($game, $roundStateSnapshot)
-            ->willReturn(1);
-
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->method('wrapInTransaction')
             ->willReturnCallback(static fn (\Closure $fn) => $fn());
@@ -1066,7 +1059,6 @@ final class GameThrowServiceTest extends TestCase
             $this->lockedGame($entityManager, $game),
             new UndoThrowService($roundRepository, $roundThrowsRepository, $entityManager, $this->createStub(FinishedGameTransitionInterface::class)),
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
-            $activePlayerResolver,
         );
 
         $service->recordThrowByGameId((int) $game->getGameId(), $dto);

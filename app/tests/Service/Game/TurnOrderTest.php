@@ -62,6 +62,60 @@ final class TurnOrderTest extends TestCase
         );
     }
 
+    public function testPlainSeatsSkipCompletedTurns(): void
+    {
+        $seats = [
+            ['playerId' => 1, 'score' => 0],
+            ['playerId' => 2, 'score' => 100],
+            ['playerId' => 3, 'score' => 100],
+            ['playerId' => 4, 'score' => 100],
+        ];
+        $snapshot = [
+            2 => ['throwsCount' => 1, 'lastThrowNumber' => 1, 'lastThrowValue' => 20, 'lastThrowBust' => true],
+            3 => ['throwsCount' => 3, 'lastThrowNumber' => 3, 'lastThrowValue' => 20, 'lastThrowBust' => false],
+        ];
+        self::assertSame(4, TurnOrder::activePlayerIdFromSeats($seats, $snapshot));
+    }
+
+    public function testRecordThrowReturnsUpdatedSnapshot(): void
+    {
+        $original = [];
+        $first = TurnOrder::recordThrow($original, 7, 1, 20, false);
+        self::assertSame([], $original);
+        self::assertSame(['throwsCount' => 1, 'lastThrowNumber' => 1, 'lastThrowValue' => 20, 'lastThrowBust' => false], $first[7]);
+        $second = TurnOrder::recordThrow($first, 7, 2, 40, true);
+        self::assertSame(['throwsCount' => 2, 'lastThrowNumber' => 2, 'lastThrowValue' => 40, 'lastThrowBust' => true], $second[7]);
+    }
+
+    public function testEmptyGameHasNoCompleteRound(): void
+    {
+        self::assertFalse(TurnOrder::isRoundComplete(new \App\Entity\Game(), []));
+    }
+
+    public function testGameAndPlainSeatsResolveTheSamePlayerAndRoundCompletion(): void
+    {
+        $game = (new \App\Entity\Game())->setStartScore(301);
+        $late = $this->seat(2, null);
+        $first = $this->seat(1, 1);
+        $user1 = new \App\Entity\User();
+        $user2 = new \App\Entity\User();
+        (new ReflectionProperty($user1, 'id'))->setValue($user1, 1);
+        (new ReflectionProperty($user2, 'id'))->setValue($user2, 2);
+        $first->setPlayer($user1);
+        $late->setPlayer($user2)->setScore(100);
+        $game->addGamePlayer($late)->addGamePlayer($first);
+        $seats = [['playerId' => 1, 'score' => 301], ['playerId' => 2, 'score' => 100]];
+        self::assertSame(1, TurnOrder::activePlayerId($game, []));
+        self::assertSame(TurnOrder::activePlayerIdFromSeats($seats, []), TurnOrder::activePlayerId($game, []));
+        self::assertFalse(TurnOrder::isRoundComplete($game, []));
+        $snapshot = [
+            1 => ['throwsCount' => 3, 'lastThrowNumber' => 3, 'lastThrowValue' => 20, 'lastThrowBust' => false],
+            2 => ['throwsCount' => 1, 'lastThrowNumber' => 1, 'lastThrowValue' => 20, 'lastThrowBust' => true],
+        ];
+        self::assertNull(TurnOrder::activePlayerId($game, $snapshot));
+        self::assertTrue(TurnOrder::isRoundComplete($game, $snapshot));
+    }
+
     private function seat(int $seatId, ?int $position): GamePlayers
     {
         $seat = new GamePlayers();
