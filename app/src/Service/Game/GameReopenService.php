@@ -13,6 +13,7 @@ use App\Entity\Game;
 use App\Enum\GameStatus;
 use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\GameReopenNotAllowedException;
+use App\Repository\RoundThrowsRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Override;
 
@@ -28,8 +29,9 @@ final readonly class GameReopenService implements GameReopenServiceInterface
      * @param EntityManagerInterface          $entityManager
      * @param FinishedGameTransitionInterface $finishedGameTransition
      * @param LockedGameTransactionInterface  $lockedGameTransaction
+     * @param RoundThrowsRepositoryInterface  $roundThrowsRepository
      */
-    public function __construct(private EntityManagerInterface $entityManager, private FinishedGameTransitionInterface $finishedGameTransition, private LockedGameTransactionInterface $lockedGameTransaction)
+    public function __construct(private EntityManagerInterface $entityManager, private FinishedGameTransitionInterface $finishedGameTransition, private LockedGameTransactionInterface $lockedGameTransaction, private RoundThrowsRepositoryInterface $roundThrowsRepository)
     {
     }
 
@@ -43,7 +45,7 @@ final readonly class GameReopenService implements GameReopenServiceInterface
     {
         $gameId = $game->getGameId() ?? throw new GameNotFoundException();
 
-        return $this->lockedGameTransaction->runWithRetry($gameId, function (Game $game): Game {
+        return $this->lockedGameTransaction->runWithRetry($gameId, function (Game $game) use ($gameId): Game {
             $status = $game->getStatus();
             if (GameStatus::Started === $status) {
                 return $game;
@@ -55,6 +57,11 @@ final readonly class GameReopenService implements GameReopenServiceInterface
 
             $this->finishedGameTransition->assertCanReopen($game);
             $this->finishedGameTransition->reopenFinished($game);
+            // A finish by the last seat of a round leaves that round complete; play goes on in the next one.
+            $snapshot = $this->roundThrowsRepository->findCurrentRoundStateSnapshot($gameId, $game->getRound() ?? 1);
+            if (TurnOrder::isRoundComplete($game, $snapshot)) {
+                $this->entityManager->persist($game->openNextRound());
+            }
 
             $this->entityManager->flush();
 

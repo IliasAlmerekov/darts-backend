@@ -315,6 +315,20 @@ class Game
     }
 
     /**
+     * Opens the round after the current one and makes it the current round.
+     *
+     * @return Round
+     */
+    public function openNextRound(): Round
+    {
+        $this->round = ($this->round ?? 1) + 1;
+        $next = (new Round())->setRoundNumber($this->round)->setStartedAt(new DateTime());
+        $this->addRound($next);
+
+        return $next;
+    }
+
+    /**
      * @param Round $round
      *
      * @return static
