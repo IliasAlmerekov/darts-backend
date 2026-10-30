@@ -71,6 +71,13 @@ final class FinishingThrowEndpointTest extends WebTestCase
         $this->assertNoActivePlayerInState();
     }
 
+    public function testLobbyStateHasNoActivePlayer(): void
+    {
+        $this->createGame(firstScore: 301, secondScore: 301, status: GameStatus::Lobby);
+
+        $this->assertNoActivePlayerInState('lobby');
+    }
+
     public function testUndoOfALastSeatFinishReopensTheRoundForTheFinisher(): void
     {
         $this->createGame(firstScore: 100, secondScore: 1);
@@ -190,10 +197,10 @@ final class FinishingThrowEndpointTest extends WebTestCase
         self::assertSame([false, false], array_column($players, 'isActive'));
     }
 
-    private function assertNoActivePlayerInState(): void
+    private function assertNoActivePlayerInState(string $status = 'finished'): void
     {
         $state = $this->state();
-        self::assertSame('finished', $state['status'] ?? null);
+        self::assertSame($status, $state['status'] ?? null);
         self::assertArrayHasKey('activePlayerId', $state);
         self::assertNull($state['activePlayerId']);
         $players = $state['players'] ?? null;
@@ -201,9 +208,9 @@ final class FinishingThrowEndpointTest extends WebTestCase
         self::assertSame([false, false], array_column($players, 'isActive'));
     }
 
-    private function createGame(int $firstScore, int $secondScore): void
+    private function createGame(int $firstScore, int $secondScore, GameStatus $status = GameStatus::Started): void
     {
-        $game = (new Game())->setDate(new DateTime())->setStartScore(301)->setOutRule(OutRule::Single)->setStatus(GameStatus::Started)->setRound(1);
+        $game = (new Game())->setDate(new DateTime())->setStartScore(301)->setOutRule(OutRule::Single)->setStatus($status)->setRound(1);
         $this->entityManager->persist($game);
         foreach ([[$this->first, $firstScore, 1], [$this->second, $secondScore, 2]] as [$user, $score, $position]) {
             $seat = (new GamePlayers())->setPlayer($user)->setScore($score)->setPosition($position)->setIsWinner(false);
