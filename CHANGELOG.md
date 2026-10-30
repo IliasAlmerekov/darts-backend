@@ -32,6 +32,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 
 - **Spiel**: Schreibende Spielaktionen prüfen Adminrolle, Transaktion und Sperre des Spiels an einer Stelle (`LockedGameTransaction`); `NewestGameGuard` ist durch die Regel `NewestGameRule` ersetzt (#204).
 - **Spiel**: Out-Regeln für Wurfwertung und Checkout-Versuche stehen gemeinsam in `OutRule` (#208).
+- **Spiel**: Die erlaubten Segmentwerte für Single-, Double- und Triple-Würfe stehen an einer Stelle (`DartThrow::isBoardSegment()`); Wurfprüfung und Rückrechnung gespeicherter Würfe nutzen sie, Fehlermeldungen und API-Ausgabe bleiben gleich (#214).
 - **Spielraum**: `GameRoomService::openRoom()` legt die Lobby an, setzt die Spieler und übernimmt die Einstellungen in einer eigenen Transaktion; der Controller öffnet keine mehr. Raum anlegen und Rematch antworten mit `RoomCreateResponseDto` und `RematchResponseDto`, der JSON-Body bleibt gleich, die OpenAPI-Doku führt `gameId` nicht mehr als nullable. `GameSetupService` heißt jetzt `GameSetupRule` und ist statisch (#205).
 
 - **Sicherheit**: Spielzugriffe prüfen die Adminrolle direkt (#71).
