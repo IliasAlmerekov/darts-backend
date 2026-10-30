@@ -21,8 +21,8 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
  * Rolls back the migration that turned `game.status` into a string column.
  *
  * Its old down() changed the column back to TINYINT(1), which MySQL rejects with 1366 once
- * a game holds a string status. The rollback has to refuse before it queues any SQL. The rollback runs DDL, so it uses a scratch database outside
- * the DAMA test transaction.
+ * a game holds a string status. The rollback has to refuse before it queues any SQL. The
+ * rollback runs DDL, so it uses a scratch database outside the DAMA test transaction.
  */
 final class IrreversibleStatusMigrationTest extends KernelTestCase
 {
