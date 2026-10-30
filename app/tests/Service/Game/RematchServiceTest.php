@@ -85,11 +85,12 @@ final class RematchServiceTest extends TestCase
             $urlGenerator,
             $openLobbyService,
             $gameRepository,
-            new LockedGameTransactionFake($oldGame),
+            $lockedGame = new LockedGameTransactionFake($oldGame),
         );
 
         $result = $service->createRematch(42);
 
+        self::assertSame(['runWithRetry'], $lockedGame->calls);
         self::assertTrue($result['success']);
         self::assertSame(100, $result['gameId']);
         self::assertSame('/join/uuid', $result['invitationLink']);

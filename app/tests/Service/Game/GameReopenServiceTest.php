@@ -51,10 +51,11 @@ final class GameReopenServiceTest extends TestCase
         $gameRepository->expects(self::once())->method('abortStartedGames')->with($game->getGameId());
         $gameRepository->method('findHighestGameId')->willReturn(7);
 
-        $service = new GameReopenService($entityManager, $gameRepository, new LockedGameTransactionFake($game));
+        $service = new GameReopenService($entityManager, $gameRepository, $lockedGame = new LockedGameTransactionFake($game));
 
         $service->reopen($game);
 
+        self::assertSame(['runWithRetry'], $lockedGame->calls);
         self::assertSame(GameStatus::Started, $game->getStatus());
         self::assertNull($game->getFinishedAt());
         self::assertSame($winner, $game->getWinner());

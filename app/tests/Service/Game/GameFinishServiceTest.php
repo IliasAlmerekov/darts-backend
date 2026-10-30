@@ -93,10 +93,12 @@ final class GameFinishServiceTest extends TestCase
             ]]);
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $service = $this->createService($entityManager, $gamePlayersRepository, $playerStatisticsRepository, $game);
+        $lockedGame = new LockedGameTransactionFake($game);
+        $service = $this->createService($entityManager, $gamePlayersRepository, $playerStatisticsRepository, $game, $lockedGame);
 
         $summary = $service->finishGame($game);
 
+        self::assertSame(['run'], $lockedGame->calls);
         self::assertSame(GameStatus::Finished, $game->getStatus());
         self::assertNotNull($game->getFinishedAt());
         self::assertSame(1, $player1->getPlacement());
@@ -247,6 +249,7 @@ final class GameFinishServiceTest extends TestCase
         GamePlayersRepositoryInterface $gamePlayersRepository,
         PlayerStatisticsRepositoryInterface $playerStatisticsRepository,
         Game $game,
+        ?LockedGameTransactionFake $lockedGame = null,
     ): GameFinishService {
         $access = $this->createMock(GameAccessServiceInterface::class);
         $access->method('assertAdmin')->willReturn(new User());
@@ -255,7 +258,7 @@ final class GameFinishServiceTest extends TestCase
             $gamePlayersRepository,
             $playerStatisticsRepository,
             $access,
-            new LockedGameTransactionFake($game),
+            $lockedGame ?? new LockedGameTransactionFake($game),
         );
     }
 }

@@ -44,9 +44,10 @@ final class GameStartServiceTest extends TestCase
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects(self::once())->method('flush');
 
-        $service = new GameStartService($setupService, $em, $this->createRoundRepository(false), $this->createStub(GameRepositoryInterface::class), new LockedGameTransactionFake($game));
+        $service = new GameStartService($setupService, $em, $this->createRoundRepository(false), $this->createStub(GameRepositoryInterface::class), $lockedGame = new LockedGameTransactionFake($game));
         $service->start($game, $dto);
 
+        self::assertSame(['runWithRetry'], $lockedGame->calls);
         self::assertSame(GameStatus::Started, $game->getStatus());
         self::assertSame(301, $game->getStartScore());
         self::assertTrue($game->isDoubleOut());

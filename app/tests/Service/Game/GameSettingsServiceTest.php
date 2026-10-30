@@ -31,9 +31,11 @@ final class GameSettingsServiceTest extends TestCase
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::once())->method('flush');
 
-        $service = $this->createService($entityManager, $game);
+        $lockedGame = new LockedGameTransactionFake($game);
+        $service = new GameSettingsService($entityManager, $this->createStub(RoundThrowsRepositoryInterface::class), $lockedGame);
         $service->updateSettings($game, $dto);
 
+        self::assertSame(['run'], $lockedGame->calls);
         self::assertSame(501, $game->getStartScore());
         self::assertTrue($game->isDoubleOut());
         self::assertFalse($game->isTripleOut());
