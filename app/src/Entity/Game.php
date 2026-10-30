@@ -291,6 +291,8 @@ class Game
 
     /**
      * @return Collection<int, Round>
+     *
+     * @psalm-suppress PossiblyUnusedMethod Reason: the app reads rounds through RoundRepository; only tests read the collection.
      */
     public function getRounds(): Collection
     {

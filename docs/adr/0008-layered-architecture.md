@@ -33,5 +33,5 @@ over their own state only.
 ## Consequences
 
 - New code follows the rules in `docs/architecture.md`; a reviewer cites that file.
-- Three controllers that open their own write transactions are known debt, tracked in #195.
+- The room create controller still opens its own write transaction. #195 moved start, reopen and rematch into their services; #205 tracks room create.
 - If the rules start to slip in review, revisit the automated check.

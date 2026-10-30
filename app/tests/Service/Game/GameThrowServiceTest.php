@@ -25,7 +25,9 @@ use App\Service\Game\GameThrowService;
 use App\Service\Game\GameReopenService;
 use App\Service\Game\GameReopenServiceInterface;
 use App\Service\Game\GameFinishService;
-use App\Service\Game\NewestGameGuard;
+use App\Service\Game\LockedGameTransaction;
+use App\Service\Game\LockedGameTransactionInterface;
+use App\Service\Persistence\RetryingTransactionInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use DateTime;
 use DateTimeImmutable;
@@ -34,6 +36,7 @@ use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use ReflectionException;
 use ReflectionProperty;
@@ -88,7 +91,7 @@ final class GameThrowServiceTest extends TestCase
         $gameRepository = $this->createMock(GameRepositoryInterface::class);
         $isInsideTransaction = false;
         $gameRepository->expects(self::once())
-            ->method('findOneByGameIdForUpdate')
+            ->method('findOneByGameIdWithSeatsForUpdate')
             ->with(10)
             ->willReturnCallback(function (int $lookupGameId) use (&$isInsideTransaction, $game): Game {
                 self::assertTrue($isInsideTransaction, 'Expected game lookup to happen inside transaction callback.');
@@ -115,10 +118,9 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService(),
-            $gameRepository,
+            $this->lockedGame($entityManager, $gameRepository),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
         $service->recordThrowByGameId(10, $dto);
@@ -134,7 +136,7 @@ final class GameThrowServiceTest extends TestCase
 
         $gameRepository = $this->createMock(GameRepositoryInterface::class);
         $gameRepository->expects(self::once())
-            ->method('findOneByGameIdForUpdate')
+            ->method('findOneByGameIdWithSeatsForUpdate')
             ->with(999)
             ->willReturn(null);
 
@@ -151,10 +153,9 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService(),
-            $gameRepository,
+            $this->lockedGame($entityManager, $gameRepository),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
         $this->expectException(GameNotFoundException::class);
@@ -196,15 +197,12 @@ final class GameThrowServiceTest extends TestCase
 
         $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
 
+        // The admin check runs before the transaction, so the game is never locked.
         $gameRepository = $this->createMock(GameRepositoryInterface::class);
-        $gameRepository->expects(self::once())
-            ->method('findOneByGameIdForUpdate')
-            ->with(10)
-            ->willReturn($game);
+        $gameRepository->expects(self::never())->method('findOneByGameIdWithSeatsForUpdate');
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->method('wrapInTransaction')
-            ->willReturnCallback(static fn (\Closure $fn) => $fn());
+        $entityManager->expects(self::never())->method('wrapInTransaction');
 
         $accessService = $this->createMock(GameAccessServiceInterface::class);
         $accessService->expects(self::once())
@@ -216,10 +214,9 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $accessService,
-            $gameRepository,
+            $this->lockedGame($entityManager, $gameRepository, $accessService),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
         $this->expectException(GamePlayerNotActiveException::class);
@@ -296,10 +293,9 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService(),
-            $this->gameRepositoryFor($game),
+            $this->lockedGame($entityManager, $game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
         $service->recordThrowByGameId((int) $game->getGameId(), $dto);
@@ -388,10 +384,9 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService(),
-            $this->gameRepositoryFor($game),
+            $this->lockedGame($entityManager, $game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
         $result = $service->recordThrowByGameId((int) $game->getGameId(), $dto);
@@ -483,10 +478,9 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService(),
-            $this->gameRepositoryFor($game),
+            $this->lockedGame($entityManager, $game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
         $result = $service->recordThrowByGameId((int) $game->getGameId(), $dto);
@@ -544,10 +538,9 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService(),
-            $this->gameRepositoryFor($game),
+            $this->lockedGame($entityManager, $game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
         $this->expectException(GameThrowNotAllowedException::class);
@@ -584,10 +577,9 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService(),
-            $this->gameRepositoryFor($game),
+            $this->lockedGame($entityManager, $game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
         $this->expectException(GameThrowNotAllowedException::class);
@@ -649,10 +641,9 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService(),
-            $this->gameRepositoryFor($game),
+            $this->lockedGame($entityManager, $game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
         $this->expectException(InvalidThrowException::class);
@@ -734,10 +725,9 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService(),
-            $this->gameRepositoryFor($game),
+            $this->lockedGame($entityManager, $game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
         $this->expectException(InvalidThrowException::class);
@@ -826,10 +816,9 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService(),
-            $this->gameRepositoryFor($game),
+            $this->lockedGame($entityManager, $game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
         $service->recordThrowByGameId((int) $game->getGameId(), $dto);
@@ -900,10 +889,9 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService(),
-            $this->gameRepositoryFor($game),
+            $this->lockedGame($entityManager, $game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
         $this->expectException(GamePlayerNotActiveException::class);
@@ -988,10 +976,9 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService(),
-            $this->gameRepositoryFor($game),
+            $this->lockedGame($entityManager, $game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
         $this->expectException(GamePlayerNotActiveException::class);
@@ -1075,10 +1062,9 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService(),
-            $this->gameRepositoryFor($game),
+            $this->lockedGame($entityManager, $game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
             $activePlayerResolver,
         );
 
@@ -1156,10 +1142,9 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService(),
-            $this->gameRepositoryFor($game),
+            $this->lockedGame($entityManager, $game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
         $result = $service->recordThrowByGameId((int) $game->getGameId(), $dto);
@@ -1242,25 +1227,19 @@ final class GameThrowServiceTest extends TestCase
             ->method('wrapInTransaction')
             ->with(self::isInstanceOf(\Closure::class))
             ->willReturnCallback(static fn (callable $callback): mixed => $callback());
-        $entityManager->expects(self::once())
-            ->method('contains')
-            ->with($game)
-            ->willReturn(true);
         $entityManager->expects(self::once())->method('remove')->with($lastThrow);
         $entityManager->expects(self::once())->method('flush');
 
         $gameRepository = $this->createMock(GameRepositoryInterface::class);
-        $gameRepository->expects(self::once())->method('refreshWithSeatsForUpdate')->with($game);
 
         $service = new GameThrowService(
             $gamePlayersRepository,
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService(),
-            $gameRepository,
+            $this->lockedGame($entityManager, $game),
             $this->createReopenService($entityManager, $gameRepository, 10),
-            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
         $undoneThrow = $service->undoLastThrow($game);
@@ -1359,25 +1338,19 @@ final class GameThrowServiceTest extends TestCase
             ->method('wrapInTransaction')
             ->with(self::isInstanceOf(\Closure::class))
             ->willReturnCallback(static fn (callable $callback): mixed => $callback());
-        $entityManager->expects(self::once())
-            ->method('contains')
-            ->with($game)
-            ->willReturn(true);
         $entityManager->expects(self::once())->method('remove')->with($lastThrow);
         $entityManager->expects(self::once())->method('flush');
 
         $gameRepository = $this->createMock(GameRepositoryInterface::class);
-        $gameRepository->expects(self::once())->method('refreshWithSeatsForUpdate')->with($game);
 
         $service = new GameThrowService(
             $gamePlayersRepository,
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService(),
-            $gameRepository,
+            $this->lockedGame($entityManager, $game),
             $this->createReopenService($entityManager, $gameRepository, 10),
-            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
         $undoneThrow = $service->undoLastThrow($game);
@@ -1472,25 +1445,19 @@ final class GameThrowServiceTest extends TestCase
             ->method('wrapInTransaction')
             ->with(self::isInstanceOf(\Closure::class))
             ->willReturnCallback(static fn (callable $callback): mixed => $callback());
-        $entityManager->expects(self::once())
-            ->method('contains')
-            ->with($game)
-            ->willReturn(true);
         $entityManager->expects(self::never())->method('remove');
         $entityManager->expects(self::never())->method('flush');
 
         $gameRepository = $this->createMock(GameRepositoryInterface::class);
-        $gameRepository->expects(self::once())->method('refreshWithSeatsForUpdate')->with($game);
 
         $service = new GameThrowService(
             $gamePlayersRepository,
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService(),
-            $gameRepository,
+            $this->lockedGame($entityManager, $game),
             $this->createReopenService($entityManager, $gameRepository, 11),
-            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
         try {
@@ -1526,7 +1493,7 @@ final class GameThrowServiceTest extends TestCase
         $em->expects(self::never())->method('flush');
         $repository = $this->createMock(GameRepositoryInterface::class);
         $repository->expects(self::never())->method('abortStartedGames');
-        $service = new GameThrowService($seats, $rounds, $throws, $em, $this->createAccessService(), $repository, $this->createReopenService($em, $repository, 11), new GameFinishService($em, $seats, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $repository));
+        $service = new GameThrowService($seats, $rounds, $throws, $em, $this->lockedGame($em, $game), $this->createReopenService($em, $repository, 11), new GameFinishService($seats, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)));
 
         self::assertNull($service->undoLastThrow($game));
         self::assertSame(GameStatus::Finished, $game->getStatus());
@@ -1598,25 +1565,19 @@ final class GameThrowServiceTest extends TestCase
         $entityManager->expects(self::once())
             ->method('wrapInTransaction')
             ->willReturnCallback(static fn (callable $callback): mixed => $callback());
-        $entityManager->expects(self::once())
-            ->method('contains')
-            ->with($game)
-            ->willReturn(true);
         $entityManager->expects(self::once())->method('remove')->with($lastBustThrow);
         $entityManager->expects(self::once())->method('flush');
 
         $gameRepository = $this->createMock(GameRepositoryInterface::class);
-        $gameRepository->expects(self::once())->method('refreshWithSeatsForUpdate')->with($game);
 
         $service = new GameThrowService(
             $gamePlayersRepository,
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService(),
-            $gameRepository,
+            $this->lockedGame($entityManager, $game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
         $undoneThrow = $service->undoLastThrow($game);
@@ -1709,25 +1670,19 @@ final class GameThrowServiceTest extends TestCase
         $entityManager->expects(self::once())
             ->method('wrapInTransaction')
             ->willReturnCallback(static fn (callable $callback): mixed => $callback());
-        $entityManager->expects(self::once())
-            ->method('contains')
-            ->with($game)
-            ->willReturn(true);
         $entityManager->expects(self::once())->method('remove')->with($winningThrow);
         $entityManager->expects(self::once())->method('flush');
 
         $gameRepository = $this->createMock(GameRepositoryInterface::class);
-        $gameRepository->expects(self::once())->method('refreshWithSeatsForUpdate')->with($game);
 
         $service = new GameThrowService(
             $gamePlayersRepository,
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService(),
-            $gameRepository,
+            $this->lockedGame($entityManager, $game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
         $undoneThrow = $service->undoLastThrow($game);
@@ -1807,25 +1762,19 @@ final class GameThrowServiceTest extends TestCase
         $entityManager->expects(self::once())
             ->method('wrapInTransaction')
             ->willReturnCallback(static fn (callable $callback): mixed => $callback());
-        $entityManager->expects(self::once())
-            ->method('contains')
-            ->with($game)
-            ->willReturn(true);
         $entityManager->expects(self::once())->method('remove')->with($lastThrow);
         $entityManager->expects(self::once())->method('flush');
 
         $gameRepository = $this->createMock(GameRepositoryInterface::class);
-        $gameRepository->expects(self::once())->method('refreshWithSeatsForUpdate')->with($game);
 
         $service = new GameThrowService(
             $gamePlayersRepository,
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService(),
-            $gameRepository,
+            $this->lockedGame($entityManager, $game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
         $service->undoLastThrow($game);
@@ -1925,10 +1874,9 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService(),
-            $this->gameRepositoryFor($game),
+            $this->lockedGame($entityManager, $game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
         $service->recordThrowByGameId((int) $game->getGameId(), $dto);
@@ -2020,10 +1968,9 @@ final class GameThrowServiceTest extends TestCase
             $roundRepository,
             $roundThrowsRepository,
             $entityManager,
-            $this->createAccessService(),
-            $this->gameRepositoryFor($game),
+            $this->lockedGame($entityManager, $game),
             $this->createStub(GameReopenServiceInterface::class),
-            new GameFinishService($entityManager, $gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)),
+            new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
         $service->recordThrowByGameId((int) $game->getGameId(), $dto);
@@ -2090,7 +2037,7 @@ final class GameThrowServiceTest extends TestCase
             $em = $this->createMock(EntityManagerInterface::class);
             $em->method('wrapInTransaction')->willReturnCallback(static fn (\Closure $fn) => $fn());
             $em->method('persist')->willReturnCallback(static function (object $entity) use (&$persisted): void { $persisted = $entity; });
-            $service = new GameThrowService($seats, $rounds, $throws, $em, $this->createAccessService(), $this->gameRepositoryFor($game), $this->createStub(GameReopenServiceInterface::class), new GameFinishService($em, $seats, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createMock(GameRepositoryInterface::class)));
+            $service = new GameThrowService($seats, $rounds, $throws, $em, $this->lockedGame($em, $game), $this->createStub(GameReopenServiceInterface::class), new GameFinishService($seats, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)));
             $service->recordThrowByGameId((int) $game->getGameId(), $dto);
             self::assertSame($expected, $seat->getScore());
             self::assertInstanceOf(RoundThrows::class, $persisted);
@@ -2112,17 +2059,22 @@ final class GameThrowServiceTest extends TestCase
         $ref->setValue($object, $value);
     }
 
-    private function createReopenService(EntityManagerInterface $entityManager, GameRepositoryInterface $gameRepository, int $newestGameId): GameReopenService
+    private function createReopenService(EntityManagerInterface $entityManager, GameRepositoryInterface&Stub $gameRepository, int $newestGameId): GameReopenService
     {
-        return new GameReopenService($entityManager, $this->createAccessService(), $gameRepository, $this->createNewestGameGuard($newestGameId));
-    }
-
-    private function createNewestGameGuard(?int $newestGameId = null): NewestGameGuard
-    {
-        $gameRepository = $this->createStub(GameRepositoryInterface::class);
         $gameRepository->method('findHighestGameId')->willReturn($newestGameId);
 
-        return new NewestGameGuard($gameRepository);
+        return new GameReopenService($entityManager, $gameRepository, $this->createStub(LockedGameTransactionInterface::class));
+    }
+
+    private function lockedGame(EntityManagerInterface $entityManager, Game|GameRepositoryInterface $game, ?GameAccessServiceInterface $access = null): LockedGameTransaction
+    {
+        $games = $game;
+        if ($game instanceof Game) {
+            $games = $this->createStub(GameRepositoryInterface::class);
+            $games->method('findOneByGameIdWithSeatsForUpdate')->willReturn($game);
+        }
+
+        return new LockedGameTransaction($access ?? $this->createAccessService(), $entityManager, $this->createStub(RetryingTransactionInterface::class), $games);
     }
 
     private function createAccessService(): GameAccessServiceInterface
@@ -2131,13 +2083,6 @@ final class GameThrowServiceTest extends TestCase
         $access->method('assertAdmin')->willReturn(new User());
 
         return $access;
-    }
-    private function gameRepositoryFor(Game $game): GameRepositoryInterface
-    {
-        $repository = $this->createStub(GameRepositoryInterface::class);
-        $repository->method('findOneByGameIdForUpdate')->with((int) $game->getGameId())->willReturn($game);
-
-        return $repository;
     }
 
 }

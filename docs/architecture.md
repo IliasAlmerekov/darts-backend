@@ -38,13 +38,28 @@ Around the layers:
 cannot mock a final class. Unit tests mock the interface so they run without the real
 database. Callers depend on the interface, not on the class.
 
+One exception: a stateless rule class with only static methods and no injected
+dependencies, such as `UndoThrowRules` and `NewestGameRule`, has no interface. It holds
+nothing a test would replace, so a test passes it its repository instead. The exception
+ends once a rule class needs injected state.
+
 **A controller may read a repository directly; writes go through a service.** A list or
 a detail page that only reads data calls the repository from the controller, as
 `GameStatsController` does. Anything that changes state calls a use-case service.
 
-**The use-case service owns the write transaction.** It opens the transaction through
-`RetryingTransactionInterface` and calls `flush()`. Three controllers still open
-transactions themselves; #195 moves them into their services.
+**The use-case service owns the write transaction.** It opens the transaction itself
+and calls `flush()`. The room create controller still opens its own; #205 moves it into a
+service.
+
+**A write on an existing game goes through `LockedGameTransactionInterface`.** Start,
+reopen, finish, abort, record throw, undo throw, rematch and settings update run one
+preamble in a fixed order: `assertAdmin()`, then the transaction, then a locked load of the
+game and its seats by id, then the use case with that locked `Game`. Status checks,
+idempotent early returns and use-case exceptions stay in the use-case service.
+`runWithRetry()` opens the transaction through `RetryingTransactionInterface` and loads the
+game again on each attempt; start, reopen and rematch use it. `run()` opens a plain
+transaction without retry; finish, abort, the throws and settings use it, because a
+rolled-back undo must reach its client (ADR 0004, ADR 0005).
 
 **Statistics aggregates live in repository SQL.** Averages, totals, and player rankings
 are SQL in `PlayerStatisticsRepository` and its neighbours, because the database computes them

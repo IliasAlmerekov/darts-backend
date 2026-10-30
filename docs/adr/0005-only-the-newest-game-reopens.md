@@ -13,6 +13,6 @@ Rematch also accepts an `aborted` newest game because of the frontend's exit flo
 
 ## Consequences
 
-- `NewestGameGuard` holds the rule. `GameThrowService` calls it before an undo that would reopen a finished game, `GameReopenService` after its status checks, and `RematchService` first, before it opens a lobby.
+- `NewestGameRule::assert` holds the rule. `GameThrowService` calls it before an undo that would reopen a finished game, `GameReopenService` after its status checks, and `RematchService` first, before it opens a lobby.
 - `GameRepository::findHighestGameId` reads the newest game id with a shared lock (FOR SHARE), so it sees games committed after the transaction's snapshot and blocks new games until the transaction ends. A parallel request that creates a game either waits or is rolled back as a deadlock; `RetryingTransaction` runs reopen and rematch again, and undo returns an error to its client, as in ADR 0004.
 - An open lobby is always the newest game, because no game can be created while one is in the lobby (ADR 0003). Rematch of the finished game before an open lobby therefore returns 409 instead of the lobby, and so does a second Back to start or a Play again from the summary after Back to start. Rematch still reuses an open lobby that is older than the old game; only data from before ADR 0003 has one.

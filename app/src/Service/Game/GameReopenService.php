@@ -11,9 +11,9 @@ namespace App\Service\Game;
 
 use App\Entity\Game;
 use App\Enum\GameStatus;
+use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\GameReopenNotAllowedException;
 use App\Repository\GameRepositoryInterface;
-use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Override;
 
@@ -26,39 +26,41 @@ use Override;
 final readonly class GameReopenService implements GameReopenServiceInterface
 {
     /**
-     * @param EntityManagerInterface     $entityManager
-     * @param GameAccessServiceInterface $gameAccessService
-     * @param GameRepositoryInterface    $gameRepository
-     * @param NewestGameGuardInterface   $newestGameGuard
+     * @param EntityManagerInterface         $entityManager
+     * @param GameRepositoryInterface        $gameRepository
+     * @param LockedGameTransactionInterface $lockedGameTransaction
      */
-    public function __construct(private EntityManagerInterface $entityManager, private GameAccessServiceInterface $gameAccessService, private GameRepositoryInterface $gameRepository, private NewestGameGuardInterface $newestGameGuard)
+    public function __construct(private EntityManagerInterface $entityManager, private GameRepositoryInterface $gameRepository, private LockedGameTransactionInterface $lockedGameTransaction)
     {
     }
 
     /**
      * @param Game $game
      *
-     * @return void
+     * @return Game
      */
     #[Override]
-    public function reopen(Game $game): void
+    public function reopen(Game $game): Game
     {
-        $this->gameRepository->refreshWithSeatsForUpdate($game);
-        $this->gameAccessService->assertAdmin();
+        $gameId = $game->getGameId() ?? throw new GameNotFoundException();
 
-        $status = $game->getStatus();
-        if (GameStatus::Started === $status) {
-            return;
-        }
+        return $this->lockedGameTransaction->runWithRetry($gameId, function (Game $game): Game {
+            $status = $game->getStatus();
+            if (GameStatus::Started === $status) {
+                return $game;
+            }
 
-        if (GameStatus::Finished !== $status) {
-            throw new GameReopenNotAllowedException($status);
-        }
+            if (GameStatus::Finished !== $status) {
+                throw new GameReopenNotAllowedException($status);
+            }
 
-        $this->assertCanReopen($game);
-        $this->reopenFinished($game);
+            $this->assertCanReopen($game);
+            $this->reopenFinished($game);
 
-        $this->entityManager->flush();
+            $this->entityManager->flush();
+
+            return $game;
+        });
     }
 
     /**
@@ -69,7 +71,7 @@ final readonly class GameReopenService implements GameReopenServiceInterface
     #[Override]
     public function assertCanReopen(Game $game): void
     {
-        $this->newestGameGuard->assertNewest($game, [GameStatus::Finished]);
+        NewestGameRule::assert($game, [GameStatus::Finished], $this->gameRepository);
     }
 
     /**

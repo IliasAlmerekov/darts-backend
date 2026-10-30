@@ -5,19 +5,16 @@ declare(strict_types=1);
 namespace App\Tests\Service;
 
 use App\Entity\Game;
-use App\Entity\User;
 use App\Enum\GameStatus;
+use App\Exception\Game\GameNotFoundException;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\InvitationRepositoryInterface;
-use App\Repository\UserRepositoryInterface;
-use App\Service\Game\GameRoomService;
-use App\Service\Game\NewestGameGuard;
 use App\Service\Game\OpenLobby;
 use App\Service\Game\OpenLobbyServiceInterface;
 use App\Service\Game\RematchService;
 use App\Service\Player\PlayerManagementService;
-use App\Service\Security\GameAccessServiceInterface;
+use App\Tests\Support\LockedGameTransactionFake;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
@@ -26,38 +23,30 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 #[AllowMockObjectsWithoutExpectations]
 final class RematchServiceTest extends TestCase
 {
-    public function testCreateRematchReturnsErrorWhenOldGameMissing(): void
+    public function testCreateRematchThrowsGameNotFoundWhenOldGameMissing(): void
     {
         $gameRepository = $this->createMock(GameRepositoryInterface::class);
-        $gameRepository->method('find')->with(42)->willReturn(null);
 
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $playerManagementService = new PlayerManagementService($gamePlayersRepository, $entityManager, $gameRepository);
-        $access = $this->createMock(GameAccessServiceInterface::class);
-        $access->method('assertAdmin')->willReturn(new User());
         $openLobbyService = $this->createMock(OpenLobbyServiceInterface::class);
         $openLobbyService->expects(self::never())->method('findOrCreate');
-        $gameRoomService = new GameRoomService($gameRepository, $gamePlayersRepository, $playerManagementService, $access, $this->createMock(OpenLobbyServiceInterface::class), $this->createMock(UserRepositoryInterface::class));
         $invitationRepository = $this->createMock(InvitationRepositoryInterface::class);
         $urlGenerator = $this->createMock(UrlGeneratorInterface::class);
 
         $service = new RematchService(
-            $gameRoomService,
             $playerManagementService,
             $invitationRepository,
             $entityManager,
             $urlGenerator,
-            $access,
             $openLobbyService,
-            new NewestGameGuard($gameRepository),
             $gameRepository,
+            new LockedGameTransactionFake(null),
         );
 
-        $result = $service->createRematch(42);
-
-        self::assertFalse($result['success']);
-        self::assertSame('Previous game not found', $result['message']);
+        $this->expectException(GameNotFoundException::class);
+        $service->createRematch(42);
     }
 
     public function testCreateRematchCreatesGameCopiesPlayersAndBuildsInvitation(): void
@@ -66,7 +55,6 @@ final class RematchServiceTest extends TestCase
         $this->setPrivateProperty($oldGame, 'gameId', 42);
 
         $gameRepository = $this->createMock(GameRepositoryInterface::class);
-        $gameRepository->method('find')->with(42)->willReturn($oldGame);
         $gameRepository->method('findHighestGameId')->willReturn(42);
 
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
@@ -79,14 +67,10 @@ final class RematchServiceTest extends TestCase
         $entityManager->expects(self::atLeastOnce())->method('flush');
 
         $playerManagementService = new PlayerManagementService($gamePlayersRepository, $entityManager, $gameRepository);
-        $access = $this->createMock(GameAccessServiceInterface::class);
-        $access->method('requireAuthenticatedUser')->willReturn(new User());
-        $access->method('assertAdmin')->willReturn(new User());
         $newLobby = new Game();
         $this->setPrivateProperty($newLobby, 'gameId', 100);
         $openLobbyService = $this->createMock(OpenLobbyServiceInterface::class);
         $openLobbyService->method('findOrCreate')->willReturn(new OpenLobby($newLobby, true));
-        $gameRoomService = new GameRoomService($gameRepository, $gamePlayersRepository, $playerManagementService, $access, $this->createMock(OpenLobbyServiceInterface::class), $this->createMock(UserRepositoryInterface::class));
 
         $invitationRepository = $this->createMock(InvitationRepositoryInterface::class);
         $invitationRepository->method('findOneByGameIdForShare')->willReturn(null);
@@ -95,19 +79,18 @@ final class RematchServiceTest extends TestCase
         $urlGenerator->method('generate')->willReturn('/join/uuid');
 
         $service = new RematchService(
-            $gameRoomService,
             $playerManagementService,
             $invitationRepository,
             $entityManager,
             $urlGenerator,
-            $access,
             $openLobbyService,
-            new NewestGameGuard($gameRepository),
             $gameRepository,
+            $lockedGame = new LockedGameTransactionFake($oldGame),
         );
 
         $result = $service->createRematch(42);
 
+        self::assertSame(['runWithRetry'], $lockedGame->calls);
         self::assertTrue($result['success']);
         self::assertSame(100, $result['gameId']);
         self::assertSame('/join/uuid', $result['invitationLink']);

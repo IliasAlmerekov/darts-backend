@@ -84,6 +84,17 @@ interface GameRepositoryInterface
     public function findOneByGameIdForUpdate(int $gameId): ?Game;
 
     /**
+     * Loads a game and its seats by id under a pessimistic write lock. A game this request
+     * already holds is reloaded with its seat collection, so both show what other
+     * transactions committed before the lock. Must be called inside an open transaction.
+     *
+     * @param int $gameId
+     *
+     * @return Game|null
+     */
+    public function findOneByGameIdWithSeatsForUpdate(int $gameId): ?Game;
+
+    /**
      * Locks the game row and its seats until the transaction ends, then reloads the game and
      * its seat collection. Unlike the entity a request already holds, the reloaded state
      * includes what other transactions committed while this one waited for the lock.

@@ -171,6 +171,25 @@ SQL,
     }
 
     /**
+     * @param int $gameId
+     *
+     * @return Game|null
+     */
+    #[\Override]
+    public function findOneByGameIdWithSeatsForUpdate(int $gameId): ?Game
+    {
+        return $this->createQueryBuilder('g')
+            ->addSelect('seat')
+            ->leftJoin('g.gamePlayers', 'seat')
+            ->andWhere('g.gameId = :gameId')
+            ->setParameter('gameId', $gameId)
+            ->getQuery()
+            ->setLockMode(LockMode::PESSIMISTIC_WRITE)
+            ->setHint(Query::HINT_REFRESH, true)
+            ->getOneOrNullResult();
+    }
+
+    /**
      * @param Game $game
      *
      * @return void

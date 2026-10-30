@@ -14,6 +14,7 @@ use App\Enum\OutRule;
 use App\Dto\GameSettingsRequest;
 use App\Entity\Game;
 use App\Exception\Game\ConflictingOutRulesException;
+use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\InvalidOutModeException;
 use App\Exception\Game\InvalidStartScoreException;
 use App\Exception\Game\NoSettingsProvidedException;
@@ -21,9 +22,7 @@ use App\Exception\Game\OutRuleCannotBeChangedAfterFirstThrowException;
 use App\Exception\Game\SettingsNotEditableException;
 use App\Exception\Game\StartScoreCannotBeChangedAfterStartException;
 use App\Enum\GameStatus;
-use App\Repository\GameRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
-use App\Service\Security\GameAccessServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Override;
 
@@ -39,17 +38,15 @@ final readonly class GameSettingsService implements GameSettingsServiceInterface
 
     /**
      * @param EntityManagerInterface         $entityManager
-     * @param GameAccessServiceInterface     $gameAccessService
-     * @param GameRepositoryInterface        $gameRepository
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
+     * @param LockedGameTransactionInterface $lockedGameTransaction
      *
      * @psalm-suppress PossiblyUnusedMethod Reason: constructor is used by Symfony autowiring.
      */
     public function __construct(
         private EntityManagerInterface $entityManager,
-        private GameAccessServiceInterface $gameAccessService,
-        private GameRepositoryInterface $gameRepository,
         private RoundThrowsRepositoryInterface $roundThrowsRepository,
+        private LockedGameTransactionInterface $lockedGameTransaction,
     ) {
     }
 
@@ -63,9 +60,8 @@ final readonly class GameSettingsService implements GameSettingsServiceInterface
     public function updateSettings(Game $game, GameSettingsRequest $dto): void
     {
         // The route loaded the game before this transaction: check the committed status, not that snapshot.
-        $this->entityManager->wrapInTransaction(function () use ($game, $dto): void {
-            $this->gameRepository->refreshWithSeatsForUpdate($game);
-            $this->gameAccessService->assertAdmin();
+        $gameId = $game->getGameId() ?? throw new GameNotFoundException();
+        $this->lockedGameTransaction->run($gameId, function (Game $game) use ($dto): void {
             $this->applySettings($game, $dto);
         });
     }

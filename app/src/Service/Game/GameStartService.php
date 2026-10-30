@@ -16,12 +16,12 @@ use App\Entity\Game;
 use App\Entity\Round;
 use App\Exception\Game\ConflictingOutRulesException;
 use App\Exception\Game\GameMustHaveValidPlayerCountException;
+use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\GameStartNotAllowedException;
 use App\Exception\Game\PlayerPositionsCountMismatchException;
 use App\Enum\GameStatus;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\RoundRepositoryInterface;
-use App\Service\Security\GameAccessServiceInterface;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use Override;
@@ -35,18 +35,18 @@ use Override;
 final readonly class GameStartService implements GameStartServiceInterface
 {
     /**
-     * @param GameSetupService           $gameSetupService
-     * @param EntityManagerInterface     $entityManager
-     * @param GameAccessServiceInterface $gameAccessService
-     * @param RoundRepositoryInterface   $roundRepository
-     * @param GameRepositoryInterface    $gameRepository
+     * @param GameSetupService               $gameSetupService
+     * @param EntityManagerInterface         $entityManager
+     * @param RoundRepositoryInterface       $roundRepository
+     * @param GameRepositoryInterface        $gameRepository
+     * @param LockedGameTransactionInterface $lockedGameTransaction
      */
     public function __construct(
         private GameSetupService $gameSetupService,
         private EntityManagerInterface $entityManager,
-        private GameAccessServiceInterface $gameAccessService,
         private RoundRepositoryInterface $roundRepository,
         private GameRepositoryInterface $gameRepository,
+        private LockedGameTransactionInterface $lockedGameTransaction,
     ) {
     }
 
@@ -54,43 +54,45 @@ final readonly class GameStartService implements GameStartServiceInterface
      * @param Game             $game
      * @param StartGameRequest $dto
      *
-     * @return void
+     * @return Game
      */
     #[Override]
-    public function start(Game $game, StartGameRequest $dto): void
+    public function start(Game $game, StartGameRequest $dto): Game
     {
-        // The request may hold the game from before a room create or join committed; start
-        // from the locked, current game and seats.
-        $this->gameRepository->refreshWithSeatsForUpdate($game);
-        $this->gameAccessService->assertAdmin();
-        $status = $game->getStatus();
-        if (GameStatus::Lobby !== $status) {
-            throw new GameStartNotAllowedException($status);
-        }
-        $this->guardPlayerCount($game, $dto);
-        $doubleOut = $dto->doubleOut ?? $game->isDoubleOut();
-        $tripleOut = $dto->tripleOut ?? $game->isTripleOut();
-        ConflictingOutRulesException::assertCompatible($doubleOut, $tripleOut);
-        // The tablet runs one game at a time (ADR 0004).
-        $this->gameRepository->abortStartedGames($game->getGameId());
-        $game->setStatus(GameStatus::Started);
-        if (null !== $dto->startScore) {
-            $game->setStartScore($dto->startScore);
-        }
+        $gameId = $game->getGameId() ?? throw new GameNotFoundException();
 
-        $game->setOutRule($doubleOut ? OutRule::Double : ($tripleOut ? OutRule::Triple : OutRule::Single));
+        return $this->lockedGameTransaction->runWithRetry($gameId, function (Game $game) use ($dto): Game {
+            $status = $game->getStatus();
+            if (GameStatus::Lobby !== $status) {
+                throw new GameStartNotAllowedException($status);
+            }
+            $this->guardPlayerCount($game, $dto);
+            $doubleOut = $dto->doubleOut ?? $game->isDoubleOut();
+            $tripleOut = $dto->tripleOut ?? $game->isTripleOut();
+            ConflictingOutRulesException::assertCompatible($doubleOut, $tripleOut);
+            // The tablet runs one game at a time (ADR 0004).
+            $this->gameRepository->abortStartedGames($game->getGameId());
+            $game->setStatus(GameStatus::Started);
+            if (null !== $dto->startScore) {
+                $game->setStartScore($dto->startScore);
+            }
 
-        // Initialize the first round if none exists
-        if (!$this->hasExistingRounds($game)) {
-            $round = new Round();
-            $round->setRoundNumber(1);
-            $round->setStartedAt(new DateTime());
-            $game->addRound($round);
-            $game->setRound(1);
-        }
+            $game->setOutRule($doubleOut ? OutRule::Double : ($tripleOut ? OutRule::Triple : OutRule::Single));
 
-        $this->gameSetupService->applyInitialScoresAndPositions($game, $dto->playerPositions);
-        $this->entityManager->flush();
+            // Initialize the first round if none exists
+            if (!$this->hasExistingRounds($game)) {
+                $round = new Round();
+                $round->setRoundNumber(1);
+                $round->setStartedAt(new DateTime());
+                $game->addRound($round);
+                $game->setRound(1);
+            }
+
+            $this->gameSetupService->applyInitialScoresAndPositions($game, $dto->playerPositions);
+            $this->entityManager->flush();
+
+            return $game;
+        });
     }
 
     /**
@@ -100,12 +102,8 @@ final readonly class GameStartService implements GameStartServiceInterface
      */
     private function hasExistingRounds(Game $game): bool
     {
-        $gameId = $game->getGameId();
-        if (null === $gameId) {
-            return false === $game->getRounds()->isEmpty();
-        }
-
-        return $this->roundRepository->existsForGame($gameId);
+        // The game was loaded by id, so it has one.
+        return $this->roundRepository->existsForGame((int) $game->getGameId());
     }
 
     /**

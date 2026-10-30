@@ -6,16 +6,15 @@ namespace App\Tests\Service;
 
 use App\Dto\GameSettingsRequest;
 use App\Entity\Game;
-use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Exception\Game\InvalidStartScoreException;
 use App\Exception\Game\NoSettingsProvidedException;
 use App\Exception\Game\SettingsNotEditableException;
 use App\Exception\Game\StartScoreCannotBeChangedAfterStartException;
-use App\Repository\GameRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
 use App\Service\Game\GameSettingsService;
-use App\Service\Security\GameAccessServiceInterface;
+use App\Service\Game\LockedGameTransactionInterface;
+use App\Tests\Support\LockedGameTransactionFake;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 
@@ -23,7 +22,7 @@ final class GameSettingsServiceTest extends TestCase
 {
     public function testUpdateSettingsChangesValuesAndFlushes(): void
     {
-        $game = new Game();
+        $game = (new Game())->setGameId(1);
         $dto = new GameSettingsRequest();
         $dto->startScore = 501;
         $dto->doubleOut = true;
@@ -32,9 +31,11 @@ final class GameSettingsServiceTest extends TestCase
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::once())->method('flush');
 
-        $service = $this->createService($entityManager);
+        $lockedGame = new LockedGameTransactionFake($game);
+        $service = new GameSettingsService($entityManager, $this->createStub(RoundThrowsRepositoryInterface::class), $lockedGame);
         $service->updateSettings($game, $dto);
 
+        self::assertSame(['run'], $lockedGame->calls);
         self::assertSame(501, $game->getStartScore());
         self::assertTrue($game->isDoubleOut());
         self::assertFalse($game->isTripleOut());
@@ -42,7 +43,7 @@ final class GameSettingsServiceTest extends TestCase
 
     public function testUpdateSettingsThrowsWhenGameNotInLobby(): void
     {
-        $game = new Game();
+        $game = (new Game())->setGameId(1);
         $game->setStatus(GameStatus::Finished);
         $dto = new GameSettingsRequest();
         $dto->startScore = 301;
@@ -50,7 +51,7 @@ final class GameSettingsServiceTest extends TestCase
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::never())->method('flush');
 
-        $service = $this->createService($entityManager);
+        $service = $this->createService($entityManager, $game);
 
         $this->expectException(SettingsNotEditableException::class);
         $service->updateSettings($game, $dto);
@@ -58,13 +59,13 @@ final class GameSettingsServiceTest extends TestCase
 
     public function testUpdateSettingsThrowsWhenPayloadIsEmpty(): void
     {
-        $game = new Game();
+        $game = (new Game())->setGameId(1);
         $dto = new GameSettingsRequest();
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::never())->method('flush');
 
-        $service = $this->createService($entityManager);
+        $service = $this->createService($entityManager, $game);
 
         $this->expectException(NoSettingsProvidedException::class);
         $service->updateSettings($game, $dto);
@@ -72,14 +73,14 @@ final class GameSettingsServiceTest extends TestCase
 
     public function testUpdateSettingsThrowsOnInvalidStartScore(): void
     {
-        $game = new Game();
+        $game = (new Game())->setGameId(1);
         $dto = new GameSettingsRequest();
         $dto->startScore = 999;
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::never())->method('flush');
 
-        $service = $this->createService($entityManager);
+        $service = $this->createService($entityManager, $game);
 
         $this->expectException(InvalidStartScoreException::class);
         $service->updateSettings($game, $dto);
@@ -87,7 +88,7 @@ final class GameSettingsServiceTest extends TestCase
 
     public function testUpdateSettingsAllowsFlagsWhenStarted(): void
     {
-        $game = new Game();
+        $game = (new Game())->setGameId(1);
         $game->setStatus(GameStatus::Started);
         $dto = new GameSettingsRequest();
         $dto->doubleOut = true;
@@ -96,7 +97,7 @@ final class GameSettingsServiceTest extends TestCase
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::once())->method('flush');
 
-        $service = $this->createService($entityManager);
+        $service = $this->createService($entityManager, $game);
         $service->updateSettings($game, $dto);
 
         self::assertTrue($game->isDoubleOut());
@@ -105,7 +106,7 @@ final class GameSettingsServiceTest extends TestCase
 
     public function testUpdateSettingsBlocksStartScoreWhenStarted(): void
     {
-        $game = new Game();
+        $game = (new Game())->setGameId(1);
         $game->setStatus(GameStatus::Started);
         $dto = new GameSettingsRequest();
         $dto->startScore = 301;
@@ -113,7 +114,7 @@ final class GameSettingsServiceTest extends TestCase
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::never())->method('flush');
 
-        $service = $this->createService($entityManager);
+        $service = $this->createService($entityManager, $game);
 
         $this->expectException(StartScoreCannotBeChangedAfterStartException::class);
         $service->updateSettings($game, $dto);
@@ -121,7 +122,7 @@ final class GameSettingsServiceTest extends TestCase
 
     public function testApplySettingsSkipsAccessChecksForNewRoomFlow(): void
     {
-        $game = new Game();
+        $game = (new Game())->setGameId(1);
         $dto = new GameSettingsRequest();
         $dto->startScore = 401;
         $dto->doubleOut = true;
@@ -130,10 +131,10 @@ final class GameSettingsServiceTest extends TestCase
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::once())->method('flush');
 
-        $access = $this->createMock(GameAccessServiceInterface::class);
-        $access->expects(self::never())->method('assertAdmin');
+        $lockedGameTransaction = $this->createMock(LockedGameTransactionInterface::class);
+        $lockedGameTransaction->expects(self::never())->method('run');
 
-        $service = new GameSettingsService($entityManager, $access, $this->createStub(GameRepositoryInterface::class), $this->createStub(RoundThrowsRepositoryInterface::class));
+        $service = new GameSettingsService($entityManager, $this->createStub(RoundThrowsRepositoryInterface::class), $lockedGameTransaction);
         $service->applySettings($game, $dto);
 
         self::assertSame(401, $game->getStartScore());
@@ -146,19 +147,16 @@ final class GameSettingsServiceTest extends TestCase
         $dto = new GameSettingsRequest();
         $dto->startScore = 401;
 
-        $gameRepository = $this->createMock(GameRepositoryInterface::class);
-        $gameRepository->expects(self::never())->method('refreshWithSeatsForUpdate');
-        $service = new GameSettingsService($this->createStub(EntityManagerInterface::class), $this->createStub(GameAccessServiceInterface::class), $gameRepository, $this->createStub(RoundThrowsRepositoryInterface::class));
+        $lockedGameTransaction = $this->createMock(LockedGameTransactionInterface::class);
+        $lockedGameTransaction->expects(self::never())->method('run');
+        $lockedGameTransaction->expects(self::never())->method('runWithRetry');
+        $service = new GameSettingsService($this->createStub(EntityManagerInterface::class), $this->createStub(RoundThrowsRepositoryInterface::class), $lockedGameTransaction);
 
         $service->applySettings(new Game(), $dto);
     }
 
-    private function createService(EntityManagerInterface $entityManager): GameSettingsService
+    private function createService(EntityManagerInterface $entityManager, Game $game): GameSettingsService
     {
-        $access = $this->createStub(GameAccessServiceInterface::class);
-        $access->method('assertAdmin')->willReturn(new User());
-        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $callback): mixed => $callback());
-
-        return new GameSettingsService($entityManager, $access, $this->createStub(GameRepositoryInterface::class), $this->createStub(RoundThrowsRepositoryInterface::class));
+        return new GameSettingsService($entityManager, $this->createStub(RoundThrowsRepositoryInterface::class), new LockedGameTransactionFake($game));
     }
 }

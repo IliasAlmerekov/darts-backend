@@ -20,16 +20,16 @@ interface GameReopenServiceInterface
 {
     /**
      * Reopen a finished game and move it back to started state. Aborts every other started
-     * game (ADR 0004). Must be called inside a transaction: it locks the game and its seats
-     * until it ends.
+     * game (ADR 0004). Opens its own transaction through
+     * LockedGameTransactionInterface::runWithRetry() and locks the game and its seats until it ends.
      *
      * @param Game $game
      *
      * @throws ApiExceptionInterface
      *
-     * @return void
+     * @return Game the locked game; read the response from it, not from $game
      */
-    public function reopen(Game $game): void;
+    public function reopen(Game $game): Game;
 
     /**
      * Check before changing any state of a finished game.
