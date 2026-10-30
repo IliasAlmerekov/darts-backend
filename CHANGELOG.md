@@ -81,7 +81,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 ### Behoben
 
 - **Spiel**: Der Wurf, der ein Spiel beendet, schließt seine Runde und legt keine neue, leere Runde an; `round` bleibt auf der letzten Runde. Ein Spielstand mit Status ungleich `started` hat `activePlayerId: null` und keinen Spieler mit `isActive: true`, auch in Wurf- und Undo-Bestätigungen. Undo des letzten Wurfs öffnet dessen Runde wieder; Wiederöffnen nach einem Finish durch den letzten Spieler einer Runde startet die nächste Runde, damit der verbliebene Spieler weiterwerfen kann; sonst ist die laufende Runde wieder offen (#59).
-- **Spielstart**: `playerPositions` mit doppelter Spieler-ID oder einer ID, die nicht zum Spiel gehört, wird mit 400 `GAME_INVALID_PLAYER_ORDER` abgelehnt; das Spiel bleibt in der Lobby, Positionen und Punkte bleiben unverändert. Die OpenAPI-Doku nennt für 400 beim Start zusätzlich `GAME_INVALID_PLAYER_ORDER` und `GAME_PLAYER_POSITIONS_COUNT_MISMATCH` (#59).
+- **Spielstart**: `playerPositions` mit doppelter Spieler-ID oder einer ID, die nicht zum Spiel gehört, wird mit 400 `GAME_INVALID_PLAYER_ORDER` abgelehnt; das Spiel bleibt in der Lobby, Positionen und Punkte bleiben unverändert. Die OpenAPI-Doku nennt für 400 beim Start zusätzlich `GAME_INVALID_PLAYER_ORDER`, `GAME_PLAYER_POSITIONS_COUNT_MISMATCH` und `GAME_INVALID_PLAYER_COUNT` (#59).
 - **Spielstand**: Das Bust-Zeichen erlischt beim Beginn des nächsten eigenen Turns; Wurf- und Undo-Bestätigungen liefern für alle Teilnehmer einen booleschen Wert statt `null` (#206).
 
 - **Authentifizierung**: Gespeicherte Spieleranmeldungen erhalten bei fehlender Berechtigung 403 statt 401 (#182).
