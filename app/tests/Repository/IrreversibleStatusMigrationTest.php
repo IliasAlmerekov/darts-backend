@@ -20,15 +20,13 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 /**
  * Rolls back the migration that turned `game.status` into a string column.
  *
- * Its old down() changed the column back to TINYINT(1), which MySQL rejects once a game
- * holds a string status, after earlier statements had already run. The rollback has to
- * refuse up front instead. The rollback runs DDL, so it uses a scratch database outside
+ * Its old down() changed the column back to TINYINT(1), which MySQL rejects with 1366 once
+ * a game holds a string status. The rollback has to refuse before it queues any SQL. The rollback runs DDL, so it uses a scratch database outside
  * the DAMA test transaction.
  */
 final class IrreversibleStatusMigrationTest extends KernelTestCase
 {
     private const string PREVIOUS_VERSION = 'DoctrineMigrations\Version20250916122511';
-    private const string STATUS_VERSION = 'DoctrineMigrations\Version20251121130030';
 
     private Connection $testConnection;
     private string $projectDir;
@@ -47,6 +45,7 @@ final class IrreversibleStatusMigrationTest extends KernelTestCase
 
     public function testDownThrowsBeforeQueueingAnySql(): void
     {
+        // Migrations are not autoloaded: composer.json has no DoctrineMigrations entry.
         require_once $this->projectDir.'/migrations/Version20251121130030.php';
         $migration = new Version20251121130030($this->testConnection, new NullLogger());
 
@@ -66,7 +65,7 @@ final class IrreversibleStatusMigrationTest extends KernelTestCase
         $connection = $database->connect();
 
         try {
-            $database->migrate(self::STATUS_VERSION);
+            $database->migrate(Version20251121130030::class);
             $connection->insert('game', ['date' => '2025-11-21', 'status' => 'active']);
             $columnsBefore = $connection->fetchAllAssociative('SHOW COLUMNS FROM game');
 
