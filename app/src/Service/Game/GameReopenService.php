@@ -13,7 +13,6 @@ use App\Entity\Game;
 use App\Enum\GameStatus;
 use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\GameReopenNotAllowedException;
-use App\Repository\GameRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Override;
 
@@ -26,11 +25,11 @@ use Override;
 final readonly class GameReopenService implements GameReopenServiceInterface
 {
     /**
-     * @param EntityManagerInterface         $entityManager
-     * @param GameRepositoryInterface        $gameRepository
-     * @param LockedGameTransactionInterface $lockedGameTransaction
+     * @param EntityManagerInterface          $entityManager
+     * @param FinishedGameTransitionInterface $finishedGameTransition
+     * @param LockedGameTransactionInterface  $lockedGameTransaction
      */
-    public function __construct(private EntityManagerInterface $entityManager, private GameRepositoryInterface $gameRepository, private LockedGameTransactionInterface $lockedGameTransaction)
+    public function __construct(private EntityManagerInterface $entityManager, private FinishedGameTransitionInterface $finishedGameTransition, private LockedGameTransactionInterface $lockedGameTransaction)
     {
     }
 
@@ -54,37 +53,12 @@ final readonly class GameReopenService implements GameReopenServiceInterface
                 throw new GameReopenNotAllowedException($status);
             }
 
-            $this->assertCanReopen($game);
-            $this->reopenFinished($game);
+            $this->finishedGameTransition->assertCanReopen($game);
+            $this->finishedGameTransition->reopenFinished($game);
 
             $this->entityManager->flush();
 
             return $game;
         });
-    }
-
-    /**
-     * @param Game $game
-     *
-     * @return void
-     */
-    #[Override]
-    public function assertCanReopen(Game $game): void
-    {
-        NewestGameRule::assert($game, [GameStatus::Finished], $this->gameRepository);
-    }
-
-    /**
-     * @param Game $game
-     *
-     * @return void
-     */
-    #[Override]
-    public function reopenFinished(Game $game): void
-    {
-        $this->gameRepository->abortStartedGames($game->getGameId());
-        $game->setStatus(GameStatus::Started);
-        $game->setFinishedAt(null);
-        $game->takeBackPlacementsFromSeatsWithScoreLeft();
     }
 }

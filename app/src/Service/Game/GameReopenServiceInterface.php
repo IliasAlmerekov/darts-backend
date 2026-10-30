@@ -30,22 +30,4 @@ interface GameReopenServiceInterface
      * @return Game the locked game; read the response from it, not from $game
      */
     public function reopen(Game $game): Game;
-
-    /**
-     * Check before changing any state of a finished game.
-     *
-     * @param Game $game
-     *
-     * @return void
-     */
-    public function assertCanReopen(Game $game): void;
-
-    /**
-     * Apply the transition after assertCanReopen, inside the caller's transaction.
-     *
-     * @param Game $game
-     *
-     * @return void
-     */
-    public function reopenFinished(Game $game): void;
 }
