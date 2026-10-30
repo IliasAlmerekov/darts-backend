@@ -23,7 +23,8 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * The throw that finishes a game closes its round, opens no new one, and leaves no active player (#59).
+ * The throw that finishes a game closes its round, opens no new one, and leaves no active player;
+ * a game that is not started reports no active player (#59).
  */
 final class FinishingThrowEndpointTest extends WebTestCase
 {
@@ -75,7 +76,7 @@ final class FinishingThrowEndpointTest extends WebTestCase
     {
         $this->createGame(firstScore: 301, secondScore: 301, status: GameStatus::Lobby);
 
-        $this->assertNoActivePlayerInState('lobby');
+        $this->assertNoActivePlayerInState(GameStatus::Lobby);
     }
 
     public function testUndoOfALastSeatFinishReopensTheRoundForTheFinisher(): void
@@ -197,10 +198,10 @@ final class FinishingThrowEndpointTest extends WebTestCase
         self::assertSame([false, false], array_column($players, 'isActive'));
     }
 
-    private function assertNoActivePlayerInState(string $status = 'finished'): void
+    private function assertNoActivePlayerInState(GameStatus $status = GameStatus::Finished): void
     {
         $state = $this->state();
-        self::assertSame($status, $state['status'] ?? null);
+        self::assertSame($status->value, $state['status'] ?? null);
         self::assertArrayHasKey('activePlayerId', $state);
         self::assertNull($state['activePlayerId']);
         $players = $state['players'] ?? null;
