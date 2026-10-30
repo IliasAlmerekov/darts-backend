@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace App\Service\Game;
 
 use App\Entity\Game;
+use App\Entity\Round;
 use App\Enum\GameStatus;
 use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\GameReopenNotAllowedException;
@@ -58,9 +59,13 @@ final readonly class GameReopenService implements GameReopenServiceInterface
             $this->finishedGameTransition->assertCanReopen($game);
             $this->finishedGameTransition->reopenFinished($game);
             // A finish by the last seat of a round leaves that round complete; play goes on in the next one.
-            $snapshot = $this->roundThrowsRepository->findCurrentRoundStateSnapshot($gameId, $game->getRound() ?? 1);
+            // Otherwise the seats still to throw play on in the current round, so it is open again.
+            $roundNumber = $game->getRound() ?? 1;
+            $snapshot = $this->roundThrowsRepository->findCurrentRoundStateSnapshot($gameId, $roundNumber);
             if (TurnOrder::isRoundComplete($game, $snapshot)) {
                 $this->entityManager->persist($game->openNextRound());
+            } else {
+                $game->getRounds()->findFirst(static fn (int $key, Round $round): bool => $round->getRoundNumber() === $roundNumber)?->setFinishedAt(null);
             }
 
             $this->entityManager->flush();

@@ -113,6 +113,21 @@ final class FinishingThrowEndpointTest extends WebTestCase
         self::assertSame(2, $this->storedGame()['round']);
     }
 
+    public function testReopenAfterAFirstSeatFinishReopensTheRoundForTheNextSeat(): void
+    {
+        $this->createGame(firstScore: 1, secondScore: 100);
+        $this->throwDart($this->first);
+
+        $this->request(Request::METHOD_PATCH, sprintf('/api/game/%d/reopen', $this->gameId));
+        self::assertResponseIsSuccessful((string) $this->client->getResponse()->getContent());
+        self::assertSame([1 => false], $this->roundsFinished());
+
+        $this->throwDart($this->second);
+
+        self::assertSame([1 => false], $this->roundsFinished());
+        self::assertSame(['status' => 'started', 'round' => 1], $this->storedGame());
+    }
+
     private function assertReopenedForTheFinisher(int $finisherId): void
     {
         self::assertSame(['status' => 'started', 'round' => 1], $this->storedGame());
