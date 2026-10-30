@@ -25,8 +25,6 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
     /**
      * @param ManagerRegistry $registry
      *
-     * @psalm-suppress PossiblyUnusedMethod
-     * @psalm-suppress UnusedParam
      */
     public function __construct(ManagerRegistry $registry)
     {

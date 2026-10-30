@@ -15,6 +15,8 @@ use Symfony\Component\Validator\Constraints as Assert;
 /**
  * Payload DTO for registering a player.
  *
+ * @psalm-suppress MissingConstructor Missing fields remain uninitialized for Validator and Nelmio.
+ *
  * Email and username are validated and saved without surrounding whitespace. The password
  * is validated and hashed exactly as sent. A missing field stays uninitialized, which the
  * validator reads as null, so it fails NotBlank. The properties have no default value

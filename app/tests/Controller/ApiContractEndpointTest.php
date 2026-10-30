@@ -30,6 +30,26 @@ final class ApiContractEndpointTest extends WebTestCase
 {
     private const string USER_PREFIX = 'apicontract';
 
+    public function testServerApiExceptionKeepsErrorLogLevel(): void
+    {
+        $client = static::createClient();
+        [$admin, $player] = $this->users();
+        $gameId = $this->createGame($player, GameStatus::Lobby);
+        $client->loginUser($admin);
+        $service = $this->createStub(\App\Service\Invitation\InvitationServiceInterface::class);
+        $service->method('getInvitationPayload')->willThrowException(new \App\Exception\ApiHttpException('TEST_ERROR', 500, 'Test failure'));
+        static::getContainer()->set(\App\Service\Invitation\InvitationServiceInterface::class, $service);
+        $handler = new \Monolog\Handler\TestHandler();
+        $logger = static::getContainer()->get('monolog.logger.request');
+        self::assertInstanceOf(\Monolog\Logger::class, $logger);
+        $logger->pushHandler($handler);
+        $client->request(Request::METHOD_POST, sprintf('/api/invite/create/%d', $gameId));
+        self::assertResponseStatusCodeSame(500);
+        $records = array_values(array_filter($handler->getRecords(), static fn ($record): bool => ($record->context['exception'] ?? null) instanceof \App\Exception\ApiHttpException));
+        self::assertCount(1, $records);
+        self::assertGreaterThanOrEqual(\Monolog\Level::Error->value, $records[0]->level->value);
+    }
+
     public function testFullStateResponseAndAcksCarryTypeDiscriminator(): void
     {
         $client = static::createClient();

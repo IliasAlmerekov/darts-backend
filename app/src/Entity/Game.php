@@ -16,6 +16,8 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
+ * @psalm-suppress ClassMustBeFinal Doctrine lazy-loading proxies extend entities.
+ *
  * @ORM\Entity(repositoryClass: GameRepository::class)
  * This class represents a game
  */
@@ -84,7 +86,6 @@ class Game
     private ?DateTimeImmutable $finishedAt = null;
 
     /**
-     * @psalm-suppress PossiblyUnusedMethod Reason: lobbies are inserted through DBAL (ADR 0003); only tests construct games.
      *
      * @return void
      */

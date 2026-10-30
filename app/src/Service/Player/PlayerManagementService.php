@@ -83,7 +83,6 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
      *
      * @return GamePlayers
      *
-     * @psalm-suppress PossiblyUnusedReturnValue
      */
     #[Override]
     public function addPlayer(int $gameId, int $playerId, ?int $position = null): GamePlayers

@@ -28,7 +28,6 @@ final readonly class RetryingTransaction implements RetryingTransactionInterface
      * @param EntityManagerInterface $entityManager
      * @param ManagerRegistry        $registry
      *
-     * @psalm-suppress PossiblyUnusedMethod
      */
     public function __construct(private EntityManagerInterface $entityManager, private ManagerRegistry $registry)
     {

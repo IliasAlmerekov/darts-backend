@@ -38,7 +38,6 @@ final readonly class RematchService implements RematchServiceInterface
      * @param GameRepositoryInterface          $gameRepository
      * @param LockedGameTransactionInterface   $lockedGameTransaction
      *
-     * @psalm-suppress PossiblyUnusedMethod
      */
     public function __construct(private PlayerManagementServiceInterface $playerManagementService, private InvitationServiceInterface $invitationService, private EntityManagerInterface $entityManager, private UrlGeneratorInterface $urlGenerator, private OpenLobbyServiceInterface $openLobbyService, private GameRepositoryInterface $gameRepository, private LockedGameTransactionInterface $lockedGameTransaction)
     {

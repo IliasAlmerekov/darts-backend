@@ -179,6 +179,7 @@ test:static-analysis:
   #  allow_failure: true
   script:
     - cd app
+    - php bin/console cache:warmup --env=dev
     - php vendor/bin/psalm --show-info=false --report=build/psalm-quality-report.json
     - sed -i -e 's#\/builds\/deepblue\/darts\/backend\/app\/src#app\/src#g' build/psalm-quality-report.json
   needs:

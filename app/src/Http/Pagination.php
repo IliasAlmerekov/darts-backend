@@ -14,7 +14,7 @@ namespace App\Http;
  *
  * @psalm-immutable
  */
-final class Pagination
+final readonly class Pagination
 {
     /**
      * @param int $limit

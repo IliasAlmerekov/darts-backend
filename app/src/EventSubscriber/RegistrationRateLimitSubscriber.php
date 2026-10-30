@@ -30,7 +30,6 @@ final readonly class RegistrationRateLimitSubscriber implements EventSubscriberI
     /**
      * @param RateLimiterFactoryInterface $registrationLimiter
      *
-     * @psalm-suppress PossiblyUnusedMethod Reason: constructor is used by Symfony autowiring.
      */
     public function __construct(private RateLimiterFactoryInterface $registrationLimiter)
     {
@@ -52,7 +51,6 @@ final readonly class RegistrationRateLimitSubscriber implements EventSubscriberI
      *
      * @return void
      *
-     * @psalm-suppress PossiblyUnusedMethod Reason: Symfony event dispatcher invokes this listener.
      */
     public function onKernelController(ControllerEvent $event): void
     {

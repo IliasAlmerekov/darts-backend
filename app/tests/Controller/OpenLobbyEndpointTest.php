@@ -142,12 +142,19 @@ final class OpenLobbyEndpointTest extends WebTestCase
 
     public function testRoomCreateWithMorePlayersThanAGameSeatsIsRejectedAndOpensNoLobby(): void
     {
+        $handler = new \Monolog\Handler\TestHandler();
+        $logger = static::getContainer()->get('monolog.logger.request');
+        self::assertInstanceOf(\Monolog\Logger::class, $logger);
+        $logger->pushHandler($handler);
         $gameCount = $this->countGames();
 
         $response = $this->postJson('/api/room/create', ['playerIds' => $this->createPlayerIds(Game::MAX_PARTICIPANTS + 1)]);
 
         self::assertResponseStatusCodeSame(Response::HTTP_CONFLICT);
         self::assertSame('GAME_ROOM_FULL', $response['error'] ?? null);
+        $records = array_values(array_filter($handler->getRecords(), static fn ($record): bool => ($record->context['exception'] ?? null) instanceof \App\Exception\Game\GameRoomFullException));
+        self::assertCount(1, $records);
+        self::assertSame(\Monolog\Level::Warning, $records[0]->level);
         self::assertSame($gameCount, $this->countGames());
     }
 

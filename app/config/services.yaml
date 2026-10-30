@@ -19,6 +19,9 @@ services:
     App\:
         resource: "../src/"
 
+    App\Logging\RequestProcessor:
+        tags: [monolog.processor]
+
     App\Repository\RoundRepositoryInterface: '@App\Repository\RoundRepository'
     App\Repository\RoundThrowsRepositoryInterface: '@App\Repository\RoundThrowsRepository'
     App\Repository\PlayerStatisticsRepositoryInterface: '@App\Repository\PlayerStatisticsRepository'

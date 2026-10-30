@@ -5,7 +5,7 @@ Alle wichtigen Änderungen an diesem Projekt werden in dieser Datei dokumentiert
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2026-02-03
+## [Unreleased]
 
 ### Hinzugefügt
 - **Architektur**: `docs/architecture.md` beschreibt die Schichten (Controller, Use-Case-Service, Repository, Entity) und ihre Regeln; ADR 0008 hält fest, warum das Backend bei dieser Schichtung bleibt statt MVC, Rich Domain Model oder Hexagonal. `AGENTS.md` verweist darauf. Controller, die ihre Schreibtransaktion selbst öffnen, sind in #195 erfasst (#196)
@@ -23,6 +23,8 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **ErrorCode**: Neuer Fehlercode `SecurityAccessDenied` für API-Fehlerbehandlung.
 
 ### Geändert
+
+- **Protokollierung**: Einladungs-UUIDs aus Logs entfernt und Anfrage-IDs ergänzt (#63).
 
 - **API-Anfragen**: Die gemeinsame Prüfung von Pfad und Accept-Header ersetzt die Kopien in der Antwortverarbeitung und Authentifizierung (#61).
 - **Einladungen**: Rematches nutzen den gemeinsamen Einladungsservice und behalten die bestehende Einladungs-URL (#61).

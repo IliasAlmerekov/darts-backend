@@ -30,6 +30,101 @@ final class LoginSuccessInvitationEndpointTest extends WebTestCase
 {
     private const string USER_PREFIX = 'loginsuccess';
 
+    public function testInvitationRequestLogsDoNotContainUuid(): void
+    {
+        $client = static::createClient();
+        $entityManager = static::getContainer()->get(EntityManagerInterface::class);
+        $invitation = $this->createInvitation($entityManager, $this->createGame($entityManager, GameStatus::Lobby));
+        $uuid = (string) $invitation->getUuid();
+        $handler = new \Monolog\Handler\TestHandler();
+        foreach (['logger', 'monolog.logger.request', 'monolog.logger.security', 'monolog.logger.doctrine', 'monolog.logger.event', 'monolog.logger.router', 'monolog.logger.php'] as $channel) {
+            $logger = static::getContainer()->get($channel);
+            self::assertInstanceOf(\Monolog\Logger::class, $logger);
+            $logger->pushHandler($handler);
+        }
+        $client->request(Request::METHOD_GET, '/api/invite/join/'.$uuid);
+        self::assertResponseStatusCodeSame(Response::HTTP_FOUND);
+        self::assertNotEmpty($handler->getRecords());
+        foreach ($handler->getRecords() as $record) {
+            self::assertStringNotContainsString($uuid, print_r([$record->message, $record->context], true));
+        }
+    }
+
+    public function testEncodedInvitationAndExtraAreRedactedInHttpLogs(): void
+    {
+        $client = static::createClient();
+        $entityManager = static::getContainer()->get(EntityManagerInterface::class);
+        $invitation = $this->createInvitation($entityManager, $this->createGame($entityManager, GameStatus::Lobby));
+        $uuid = (string) $invitation->getUuid();
+        $encodedUuid = preg_replace('/-/', '%2D', $uuid, 1);
+        $handler = new \Monolog\Handler\TestHandler();
+        $requests = static::getContainer()->get(\Symfony\Component\HttpFoundation\RequestStack::class);
+        foreach (['logger', 'monolog.logger.request', 'monolog.logger.security', 'monolog.logger.doctrine', 'monolog.logger.event', 'monolog.logger.router', 'monolog.logger.php'] as $channel) {
+            $logger = static::getContainer()->get($channel);
+            self::assertInstanceOf(\Monolog\Logger::class, $logger);
+            $logger->pushHandler($handler);
+            $logger->pushProcessor(static function (\Monolog\LogRecord $record) use ($uuid, $encodedUuid, $requests): \Monolog\LogRecord {
+                return null === $requests->getMainRequest() ? $record : $record->with(extra: ['nested' => [$uuid, $encodedUuid]]);
+            });
+        }
+        $client->request(Request::METHOD_GET, '/api/invite/join/'.$encodedUuid);
+        self::assertResponseStatusCodeSame(Response::HTTP_FOUND);
+        self::assertNotEmpty($handler->getRecords());
+        foreach ($handler->getRecords() as $record) {
+            $logged = print_r([$record->message, $record->context, $record->extra], true);
+            self::assertStringNotContainsString($uuid, $logged);
+            self::assertStringNotContainsString($encodedUuid, $logged);
+            if (isset($record->extra['nested'])) {
+                self::assertNotEmpty($record->extra['request_id'] ?? null);
+            }
+        }
+    }
+
+    public function testUnknownInvitationRequestLogsDoNotContainUuid(): void
+    {
+        $client = static::createClient();
+        $uuid = Uuid::v4()->toRfc4122();
+        $handler = new \Monolog\Handler\TestHandler();
+        foreach (['logger', 'monolog.logger.request', 'monolog.logger.security', 'monolog.logger.doctrine', 'monolog.logger.event', 'monolog.logger.router', 'monolog.logger.php'] as $channel) {
+            $logger = static::getContainer()->get($channel);
+            self::assertInstanceOf(\Monolog\Logger::class, $logger);
+            $logger->pushHandler($handler);
+        }
+        $client->request(Request::METHOD_GET, '/api/invite/join/'.$uuid);
+        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
+        self::assertNotEmpty($handler->getRecords());
+        foreach ($handler->getRecords() as $record) {
+            self::assertStringNotContainsString($uuid, print_r([$record->message, $record->context], true));
+        }
+    }
+
+    public function testRequestLogsShareIdAndRequestsHaveDifferentIds(): void
+    {
+        $client = static::createClient();
+        $client->disableReboot();
+        $entityManager = static::getContainer()->get(EntityManagerInterface::class);
+        $invitation = $this->createInvitation($entityManager, $this->createGame($entityManager, GameStatus::Lobby));
+        $handler = new \Monolog\Handler\TestHandler();
+        foreach (['logger', 'monolog.logger.request'] as $channel) {
+            $logger = static::getContainer()->get($channel);
+            self::assertInstanceOf(\Monolog\Logger::class, $logger);
+            $logger->pushHandler($handler);
+        }
+        $client->request(Request::METHOD_GET, '/api/invite/join/'.$invitation->getUuid());
+        $records = $handler->getRecords();
+        self::assertGreaterThanOrEqual(2, count($records));
+        $id = $records[0]->extra['request_id'] ?? null;
+        self::assertIsString($id);
+        self::assertNotSame('', $id);
+        foreach ($records as $record) {
+            self::assertSame($id, $record->extra['request_id'] ?? null);
+        }
+        $handler->clear();
+        $client->request(Request::METHOD_GET, '/api/health');
+        self::assertNotEmpty($handler->getRecords());
+        self::assertNotSame($id, $handler->getRecords()[0]->extra['request_id'] ?? null);
+    }
+
     public function testInvitationLoginReturnsUserPayloadAndGameId(): void
     {
         $client = static::createClient();

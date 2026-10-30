@@ -33,7 +33,6 @@ final class RememberedLoginRefreshSubscriber implements EventSubscriberInterface
      * @param RememberedLoginPolicy      $policy
      * @param string                     $cookieName
      *
-     * @psalm-suppress PossiblyUnusedMethod Reason: constructor is used by Symfony autowiring.
      */
     public function __construct(
         private readonly TokenStorageInterface $tokenStorage,

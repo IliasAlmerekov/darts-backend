@@ -10,3 +10,5 @@
 /.claude/settings.json
 
 .codex/
+
+/app/.env*.bak

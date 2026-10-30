@@ -33,7 +33,6 @@ final class ApiViewSubscriber implements EventSubscriberInterface
     /**
      * @param SerializerInterface $serializer
      *
-     * @psalm-suppress PossiblyUnusedMethod Reason: constructor is used by Symfony autowiring.
      */
     public function __construct(private readonly SerializerInterface $serializer)
     {

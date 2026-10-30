@@ -60,7 +60,6 @@ interface PlayerManagementServiceInterface
      *
      * @throws ORMException
      *
-     * @psalm-suppress PossiblyUnusedReturnValue
      */
     public function addPlayerEntity(int $gameId, User $player, ?int $position = null, bool $flush = true): GamePlayers;
 

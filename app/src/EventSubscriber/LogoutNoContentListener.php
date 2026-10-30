@@ -30,7 +30,6 @@ final class LogoutNoContentListener
      *
      * @return void
      *
-     * @psalm-suppress PossiblyUnusedMethod Called by the event dispatcher
      */
     public function __invoke(LogoutEvent $event): void
     {

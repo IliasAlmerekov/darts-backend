@@ -11,6 +11,8 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
+ * @psalm-suppress ClassMustBeFinal Doctrine lazy-loading proxies extend entities.
+ *
  * @ORM\Entity(repositoryClass: RoundThrowsRepository::class)
  * This class represents a round throw.
  */
@@ -129,7 +131,6 @@ class RoundThrows
     }
 
     /**
-     * @psalm-suppress PossiblyUnusedMethod
      *
      * @return int|null
      */
@@ -151,7 +152,6 @@ class RoundThrows
     }
 
     /**
-     * @psalm-suppress PossiblyUnusedMethod
      *
      * @return bool
      */
@@ -173,7 +173,6 @@ class RoundThrows
     }
 
     /**
-     * @psalm-suppress PossiblyUnusedMethod
      *
      * @return bool
      */
@@ -194,7 +193,6 @@ class RoundThrows
     }
 
     /**
-     * @psalm-suppress PossiblyUnusedMethod
      *
      * @return bool
      */

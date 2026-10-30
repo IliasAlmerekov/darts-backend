@@ -13,6 +13,8 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
+ * @psalm-suppress ClassMustBeFinal Doctrine lazy-loading proxies extend entities.
+ *
  * @ORM\Entity(repositoryClass: RoundRepository::class)
  * This class represents a round of a game.
  */

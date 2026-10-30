@@ -29,8 +29,6 @@ final class GameRepository extends ServiceEntityRepository implements GameReposi
     /**
      * @param ManagerRegistry $registry
      *
-     * @psalm-suppress PossiblyUnusedMethod
-     * @psalm-suppress UnusedParam
      */
     public function __construct(ManagerRegistry $registry)
     {
@@ -282,7 +280,7 @@ SQL,
             ->setLockMode(LockMode::PESSIMISTIC_READ)
             ->getSingleScalarResult();
 
-        return $result ? (int) $result : null;
+        return (bool) $result ? (int) $result : null;
     }
 
     /**

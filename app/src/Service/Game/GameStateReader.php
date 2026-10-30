@@ -41,7 +41,6 @@ final readonly class GameStateReader implements GameStateReaderInterface
      * @param RoundThrowsRepositoryInterface   $roundThrowsRepository
      * @param GameStateVersionServiceInterface $gameStateVersionService
      *
-     * @psalm-suppress PossiblyUnusedMethod
      */
     public function __construct(
         private GamePlayersRepositoryInterface $gamePlayersRepository,
@@ -340,7 +339,7 @@ final readonly class GameStateReader implements GameStateReaderInterface
     }
 
     /**
-     * @param array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool} $throw
+     * @param array{playerId:int,roundNumber:int,throwNumber:int,value:int|null,isDouble:bool,isTriple:bool,isBust:bool} $throw
      *
      * @return ThrowResponseDto|null
      */
@@ -352,7 +351,7 @@ final readonly class GameStateReader implements GameStateReaderInterface
         }
 
         return new ThrowResponseDto(
-            value: DartThrow::baseValue((int) $throwValue, $throw['isDouble'], $throw['isTriple']),
+            value: DartThrow::baseValue($throwValue, $throw['isDouble'], $throw['isTriple']),
             isDouble: $throw['isDouble'],
             isTriple: $throw['isTriple'],
             isBust: $throw['isBust'],

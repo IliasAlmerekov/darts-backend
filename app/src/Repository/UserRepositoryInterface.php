@@ -23,7 +23,6 @@ interface UserRepositoryInterface extends PasswordUpgraderInterface
     public function find(mixed $id): ?object;
 
     /**
-     * @psalm-suppress PossiblyUnusedMethod
      *
      * @param array<int> $ids
      *
@@ -32,7 +31,6 @@ interface UserRepositoryInterface extends PasswordUpgraderInterface
     public function findByIds(array $ids): array;
 
     /**
-     * @psalm-suppress PossiblyUnusedMethod
      *
      * @param string $username
      *
@@ -50,7 +48,6 @@ interface UserRepositoryInterface extends PasswordUpgraderInterface
     public function hasUserWithRole(string $role): bool;
 
     /**
-     * @psalm-suppress PossiblyUnusedMethod
      *
      * @param array<string, mixed>       $criteria
      * @param array<string, string>|null $orderBy

@@ -27,7 +27,6 @@ final class RoomCreateRequest
      * @param bool|null      $doubleOut
      * @param bool|null      $tripleOut
      *
-     * @psalm-suppress PossiblyUnusedMethod
      */
     public function __construct(
         // shortcut: kept only because the current frontend still sends it; remove it once the frontend stops (#133).

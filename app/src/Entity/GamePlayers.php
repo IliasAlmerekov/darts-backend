@@ -9,6 +9,8 @@ use App\Service\Game\PlayerDisplayName;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
+ * @psalm-suppress ClassMustBeFinal Doctrine lazy-loading proxies extend entities.
+ *
  * @ORM\Entity(repositoryClass: GamePlayersRepository::class)
  * This class represents the association between a Game and its Players.
  */

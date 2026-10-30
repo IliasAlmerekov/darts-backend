@@ -53,7 +53,6 @@ final class CreateAdminCommand extends Command
      * @param ValidatorInterface          $validator
      * @param (Closure(): bool)|null      $stdinIsTerminal Replaces the STDIN check in tests.
      *
-     * @psalm-suppress PossiblyUnusedMethod
      */
     public function __construct(
         private readonly UserRepositoryInterface $users,

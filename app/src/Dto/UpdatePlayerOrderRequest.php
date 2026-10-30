@@ -19,7 +19,6 @@ final class UpdatePlayerOrderRequest
     /**
      * @param list<array{playerId:int, position:int}> $positions
      *
-     * @psalm-suppress PossiblyUnusedMethod Constructor is used via serializer payload mapping
      */
     public function __construct(
         #[Assert\NotNull]

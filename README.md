@@ -19,7 +19,6 @@ cp app/.env.local.example app/.env.local
 2. Fill in required values in `app/.env.local`:
 - `APP_SECRET`
 - `DATABASE_URL`
-- `API_KEY`
 - (optional) `CORS_ALLOW_ORIGIN`, `FRONTEND_URL`
 
 Notes:
@@ -35,7 +34,6 @@ The root `docker-compose.yaml` provides PHP, Nginx, and MySQL for local developm
 
 The production container is expected to run behind a real HTTP server (`nginx + php-fpm`), not PHP's built-in development server.
 
-For production prerequisites and rollout steps see `DEPLOYMENT_DE.md`.
 Before pushing to a public repository run:
 
 ```bash
