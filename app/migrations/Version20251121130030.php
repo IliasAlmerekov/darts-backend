@@ -1,5 +1,11 @@
 <?php
 
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
+
 declare(strict_types=1);
 
 namespace DoctrineMigrations;
@@ -89,12 +95,8 @@ END");
 
     public function down(Schema $schema): void
     {
-        $this->addSql('ALTER TABLE game DROP start_score, DROP double_out, DROP triple_out, CHANGE status status TINYINT(1) DEFAULT NULL');
-        $this->addSql('DROP INDEX `UNIQ_IDENTIFIER_USERNAME` ON user');
-        $this->addSql('ALTER TABLE round_throws DROP `timestamp`, CHANGE is_bust is_bust TINYINT(1) NOT NULL, CHANGE is_double is_double TINYINT(1) NOT NULL, CHANGE is_triple is_triple TINYINT(1) DEFAULT NULL');
-        $this->addSql('CREATE INDEX FK_48EA89BF99E6F5DF ON round_throws (player_id)');
-        $this->addSql('CREATE INDEX FK_48EA89BFE48FD905 ON round_throws (game_id)');
-        $this->addSql('ALTER TABLE round DROP started_at, DROP finished_at');
-        $this->addSql('CREATE INDEX FK_A640D85999E6F5DF ON game_players (player_id)');
+        $this->throwIrreversibleMigrationException(
+            'game.status holds string statuses since this migration and cannot be mapped back to the old TINYINT(1) column.'
+        );
     }
 }
