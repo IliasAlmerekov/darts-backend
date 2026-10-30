@@ -128,6 +128,45 @@ final class FinishingThrowEndpointTest extends WebTestCase
         self::assertSame(['status' => 'started', 'round' => 1], $this->storedGame());
     }
 
+    public function testReopenOfALegacyLastSeatFinishPlaysOnInTheEmptyNextRound(): void
+    {
+        $this->createLegacyLastSeatFinish();
+
+        $this->request(Request::METHOD_PATCH, sprintf('/api/game/%d/reopen', $this->gameId));
+        self::assertResponseIsSuccessful((string) $this->client->getResponse()->getContent());
+        self::assertSame((int) $this->first->getId(), $this->state()['activePlayerId'] ?? null);
+
+        $this->throwDart($this->first);
+
+        self::assertSame([1 => true, 2 => false], $this->roundsFinished());
+        self::assertSame(['status' => 'started', 'round' => 2], $this->storedGame());
+    }
+
+    public function testUndoOfALegacyLastSeatFinishRemovesTheEmptyNextRound(): void
+    {
+        $this->createLegacyLastSeatFinish();
+
+        $this->request(Request::METHOD_DELETE, sprintf('/api/game/%d/throw/delta', $this->gameId));
+        self::assertResponseIsSuccessful((string) $this->client->getResponse()->getContent());
+
+        $this->assertReopenedForTheFinisher((int) $this->second->getId());
+    }
+
+    /**
+     * A last-seat finish as the code before #59 stored it: an empty next round and the round counter on it.
+     */
+    private function createLegacyLastSeatFinish(): void
+    {
+        $this->createGame(firstScore: 100, secondScore: 1);
+        $this->throwDarts($this->first, 3);
+        $this->throwDart($this->second);
+        $connection = $this->entityManager->getConnection();
+        $connection->executeStatement('INSERT INTO `round` (game_id, round_number, started_at) VALUES (?, 2, NOW())', [$this->gameId]);
+        $connection->executeStatement('UPDATE game SET round = 2 WHERE game_id = ?', [$this->gameId]);
+        self::assertSame([1 => true, 2 => false], $this->roundsFinished());
+        self::assertSame(['status' => 'finished', 'round' => 2], $this->storedGame());
+    }
+
     private function assertReopenedForTheFinisher(int $finisherId): void
     {
         self::assertSame(['status' => 'started', 'round' => 1], $this->storedGame());
