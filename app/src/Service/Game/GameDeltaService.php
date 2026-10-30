@@ -234,11 +234,15 @@ final readonly class GameDeltaService implements GameDeltaServiceInterface
         ?array $currentRoundStateSnapshot = null,
     ): array {
         $gameId = $game->getGameId();
-        $currentBustStates = null;
-        if (is_array($currentRoundStateSnapshot)) {
-            $currentBustStates = $this->normalizeBustStatesFromRoundSnapshot($currentRoundStateSnapshot);
-        } elseif (null !== $gameId) {
-            $currentBustStates = $this->loadCurrentRoundBustStates($gameId, $game->getRound() ?? 1);
+        $currentBustStates = [];
+        $currentRoundPlayers = [];
+        if (null !== $gameId) {
+            foreach ($this->roundThrowsRepository->findRoundHistoryForGame($gameId) as $throw) {
+                $currentBustStates[$throw['playerId']] = $throw['isBust'];
+                if ($throw['roundNumber'] === ($game->getRound() ?? 1)) {
+                    $currentRoundPlayers[$throw['playerId']] = true;
+                }
+            }
         }
 
         $rows = [];
@@ -253,9 +257,9 @@ final readonly class GameDeltaService implements GameDeltaServiceInterface
                 continue;
             }
 
-            $isBust = $currentBustStates[$playerId] ?? null;
-            if ($playerId === $highlightedPlayerId && null !== $highlightedPlayerBustState) {
-                $isBust = $highlightedPlayerBustState;
+            $isBust = $currentBustStates[$playerId] ?? false;
+            if ($playerId === $activePlayerId && !isset($currentRoundPlayers[$playerId])) {
+                $isBust = false;
             }
 
             $rows[] = new ScoreboardPlayerDeltaDto(

@@ -100,7 +100,7 @@ final readonly class GameStateViewBuilder implements GameStateViewBuilderInterfa
             // If the current round has no throws or its entity does not exist yet, use the player's
             // last throw overall. This lets the client show the last bust status after a bust
             // or a round change.
-            if (0 === $throwsThisRound && $isPlayerActive) {
+            if (0 === $throwsThisRound && $isPlayerActive && $userId !== $calculatedActivePlayerId) {
                 $latestThrowForPlayer = $batchedThrowData['latestByPlayer'][$userId] ?? null;
                 if (null !== $latestThrowForPlayer) {
                     $isBust = $latestThrowForPlayer['isBust'];
