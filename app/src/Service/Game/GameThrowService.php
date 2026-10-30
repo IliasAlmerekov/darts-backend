@@ -48,7 +48,6 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      * @param LockedGameTransactionInterface $lockedGameTransaction
      * @param UndoThrowServiceInterface      $undoThrowService
      * @param GameFinishServiceInterface     $gameFinishService
-     * @param ActivePlayerResolverInterface  $activePlayerResolver
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
@@ -60,7 +59,6 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         private LockedGameTransactionInterface $lockedGameTransaction,
         private UndoThrowServiceInterface $undoThrowService,
         private GameFinishServiceInterface $gameFinishService,
-        private ?ActivePlayerResolverInterface $activePlayerResolver = null,
     ) {
     }
 
@@ -171,13 +169,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         $latestThrowPlayerName = PlayerDisplayName::forSeat($player);
 
         $this->entityManager->persist($roundThrow);
-        $updatedRoundStateSnapshot = $roundStateSnapshot;
-        $updatedRoundStateSnapshot[$requestedPlayerId] = [
-            'throwsCount' => $playerThrowsThisRound + 1,
-            'lastThrowNumber' => $throwNumber,
-            'lastThrowValue' => $finalValue,
-            'lastThrowBust' => $isBust,
-        ];
+        $updatedRoundStateSnapshot = TurnOrder::recordThrow($roundStateSnapshot, $requestedPlayerId, $throwNumber, $finalValue, $isBust);
 
         $hasAdvancedRound = $this->maybeAdvanceRound($game, $round, $updatedRoundStateSnapshot);
         $this->entityManager->flush();
@@ -222,34 +214,8 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      */
     private function maybeAdvanceRound(Game $game, Round $currentRound, array $roundStateSnapshot): bool
     {
-        $playersCount = $game->getGamePlayers()->count();
-        if (0 === $playersCount) {
+        if (!TurnOrder::isRoundComplete($game, $roundStateSnapshot)) {
             return false;
-        }
-
-        // Check whether all active players (score > 0) have thrown 3 darts
-        foreach ($game->getGamePlayers() as $gp) {
-            $player = $gp->getPlayer();
-            if (null === $player) {
-                continue;
-            }
-
-            $playerId = $player->getId();
-            if (null === $playerId) {
-                continue;
-            }
-
-            // Skip players who have already won (score = 0)
-            $playerScore = $gp->getScore() ?? $game->getStartScore();
-            if (0 === $playerScore) {
-                continue;
-            }
-
-            $playerRoundState = TurnOrder::roundState($roundStateSnapshot, $playerId);
-            if ($playerRoundState['throwsCount'] < 3 && false === $playerRoundState['lastThrowBust']) {
-                return false;
-                // Not all active players have thrown 3 darts yet
-            }
         }
 
         // All players have thrown 3 darts, so advance to the next round
@@ -276,8 +242,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      */
     private function assertActivePlayer(Game $game, int $requestedPlayerId, array $roundStateSnapshot): void
     {
-        $activePlayerId = ($this->activePlayerResolver ?? new ActivePlayerResolver($this->roundThrowsRepository))
-            ->resolveActivePlayer($game, $roundStateSnapshot);
+        $activePlayerId = TurnOrder::activePlayerId($game, $roundStateSnapshot);
         if (null !== $activePlayerId && $activePlayerId === $requestedPlayerId) {
             return;
         }

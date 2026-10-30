@@ -12,7 +12,7 @@ use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
-use App\Service\Game\ActivePlayerResolver;
+use App\Service\Game\TurnOrder;
 use App\Service\Game\GameStateViewBuilder;
 use App\Service\Game\GameStateVersionService;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -114,7 +114,6 @@ final class GameStateViewBuilderTest extends TestCase
         $service = new GameStateViewBuilder(
             $gamePlayersRepository,
             $roundThrowsRepository,
-            new ActivePlayerResolver($roundThrowsRepository),
             new GameStateVersionService($roundThrowsRepository),
         );
         $dto = $service->createGameDto($game);
@@ -439,7 +438,6 @@ final class GameStateViewBuilderTest extends TestCase
         $service = new GameStateViewBuilder(
             $gamePlayersRepository,
             $roundThrowsRepository,
-            new ActivePlayerResolver($roundThrowsRepository),
             new GameStateVersionService($roundThrowsRepository),
         );
 
@@ -480,7 +478,6 @@ final class GameStateViewBuilderTest extends TestCase
         $service = new GameStateViewBuilder(
             $gamePlayersRepository,
             $roundThrowsRepository,
-            new ActivePlayerResolver($roundThrowsRepository),
             new GameStateVersionService($roundThrowsRepository),
         );
 
@@ -493,7 +490,7 @@ final class GameStateViewBuilderTest extends TestCase
     /**
      * @throws ReflectionException
      */
-    public function testCalculateActivePlayerUsesGamePlayerIdWhenPositionsAreEqual(): void
+    public function testTurnOrderUsesGamePlayerIdWhenPositionsAreEqual(): void
     {
         $game = new Game();
         $this->setPrivateProperty($game, 'gameId', 90);
@@ -533,10 +530,9 @@ final class GameStateViewBuilderTest extends TestCase
         $service = new GameStateViewBuilder(
             $gamePlayersRepository,
             $roundThrowsRepository,
-            new ActivePlayerResolver($roundThrowsRepository),
             new GameStateVersionService($roundThrowsRepository),
         );
-        $activePlayerId = $service->calculateActivePlayer($game);
+        $activePlayerId = TurnOrder::activePlayerId($game, []);
 
         self::assertSame(2, $activePlayerId);
     }
@@ -544,7 +540,7 @@ final class GameStateViewBuilderTest extends TestCase
     /**
      * @throws ReflectionException
      */
-    public function testCalculateActivePlayerReusesProvidedRoundStateSnapshot(): void
+    public function testTurnOrderUsesProvidedRoundStateSnapshot(): void
     {
         $game = new Game();
         $this->setPrivateProperty($game, 'gameId', 91);
@@ -569,19 +565,7 @@ final class GameStateViewBuilderTest extends TestCase
         $game->addGamePlayer($playerOne);
         $game->addGamePlayer($playerTwo);
 
-        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
-        $roundThrowsRepository->expects(self::never())
-            ->method('findCurrentRoundStateSnapshot');
-        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
-
-        $service = new GameStateViewBuilder(
-            $gamePlayersRepository,
-            $roundThrowsRepository,
-            new ActivePlayerResolver($roundThrowsRepository),
-            new GameStateVersionService($roundThrowsRepository),
-        );
-
-        $activePlayerId = $service->calculateActivePlayer($game, [
+        $activePlayerId = TurnOrder::activePlayerId($game, [
             1 => [
                 'throwsCount' => 3,
                 'lastThrowNumber' => 3,
@@ -619,7 +603,6 @@ final class GameStateViewBuilderTest extends TestCase
         return new GameStateViewBuilder(
             $gamePlayersRepository,
             $roundThrowsRepository,
-            new ActivePlayerResolver($roundThrowsRepository),
             new GameStateVersionService($roundThrowsRepository),
         );
     }

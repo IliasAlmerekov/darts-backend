@@ -24,6 +24,8 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 
 ### Geändert
 
+- **Spiel**: Zugreihenfolge und Rundenabschluss zentral berechnet (#202).
+
 - **Spiel**: Platzierungen und Sieger werden beim Checkout und Spielende aus den geladenen Teilnehmern berechnet (#203).
 
 - **Spiel**: Rücknahme eines Wurfs in einem eigenen Service zusammengefasst (#207)

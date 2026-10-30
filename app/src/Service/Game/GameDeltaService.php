@@ -72,9 +72,8 @@ final readonly class GameDeltaService implements GameDeltaServiceInterface
             $throwIsBust = $throwDto->isBust;
         }
 
-        $activePlayerId = null === $currentRoundStateSnapshot
-            ? $this->gameStateViewBuilder->calculateActivePlayer($game)
-            : $this->gameStateViewBuilder->calculateActivePlayer($game, $currentRoundStateSnapshot);
+        $activeSnapshot = $currentRoundStateSnapshot ?? $this->roundThrowsRepository->findCurrentRoundStateSnapshot($gameId, $game->getRound() ?? 1);
+        $activePlayerId = TurnOrder::activePlayerId($game, $activeSnapshot);
         $scoreboardDelta = $this->buildScoreboardDelta(
             $game,
             $activePlayerId,
@@ -110,7 +109,7 @@ final readonly class GameDeltaService implements GameDeltaServiceInterface
 
         $gameStatePlayers = $this->gamePlayersRepository->findGameStatePlayersByGameId($gameId);
         $stateVersion = $this->gameStateViewBuilder->buildStateVersion($game);
-        $activePlayerId = $this->gameStateViewBuilder->calculateActivePlayer($game);
+        $activePlayerId = TurnOrder::activePlayerId($game, $this->roundThrowsRepository->findCurrentRoundStateSnapshot($gameId, $game->getRound() ?? 1));
         $scoreboardDelta = $this->buildScoreboardDelta(
             $game,
             $activePlayerId,

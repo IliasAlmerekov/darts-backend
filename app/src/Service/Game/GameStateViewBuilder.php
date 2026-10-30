@@ -30,7 +30,6 @@ final readonly class GameStateViewBuilder implements GameStateViewBuilderInterfa
     /**
      * @param GamePlayersRepositoryInterface   $gamePlayersRepository
      * @param RoundThrowsRepositoryInterface   $roundThrowsRepository
-     * @param ActivePlayerResolverInterface    $activePlayerResolver
      * @param GameStateVersionServiceInterface $gameStateVersionService
      *
      * @psalm-suppress PossiblyUnusedMethod
@@ -38,31 +37,8 @@ final readonly class GameStateViewBuilder implements GameStateViewBuilderInterfa
     public function __construct(
         private GamePlayersRepositoryInterface $gamePlayersRepository,
         private RoundThrowsRepositoryInterface $roundThrowsRepository,
-        private ActivePlayerResolverInterface $activePlayerResolver,
         private GameStateVersionServiceInterface $gameStateVersionService,
     ) {
-    }
-
-
-    /**
-     * Calculates and returns the id of the active player for the given game.
-     *
-     * Logic:
-     * Players will be sorted by their position in the game.
-     * The player is active if:
-     * - He has not yet reached a score of 0 (not won)
-     * - He has thrown less than 3 times in the current round
-     * - He is not bust in the current round
-     *
-     * @param Game                    $game               The game entity
-     * @param RoundStateSnapshot|null $roundStateSnapshot Optional preloaded current-round snapshot
-     *
-     * @return int|null The id of the active player or null if no active player found
-     */
-    #[Override]
-    public function calculateActivePlayer(Game $game, ?array $roundStateSnapshot = null): ?int
-    {
-        return $this->activePlayerResolver->resolveActivePlayer($game, $roundStateSnapshot);
     }
 
 
@@ -239,28 +215,18 @@ final readonly class GameStateViewBuilder implements GameStateViewBuilderInterfa
      */
     private function resolveActivePlayerFromData(Game $game, array $gamePlayers, array $currentRoundThrowsByPlayer): ?int
     {
-        foreach ($gamePlayers as $gamePlayer) {
-            $playerScore = $gamePlayer['score'] ?? $game->getStartScore();
-            if (0 === $playerScore) {
-                continue;
-            }
-
-            $playerId = $gamePlayer['playerId'];
-
-            $throwsInCurrentRound = $currentRoundThrowsByPlayer[$playerId] ?? [];
-            $throwsCount = count($throwsInCurrentRound);
-            $hasBusted = false;
-            if ($throwsCount > 0) {
-                $lastThrow = end($throwsInCurrentRound);
-                $hasBusted = false !== $lastThrow && true === $lastThrow['isBust'];
-            }
-
-            if ($throwsCount < 3 && false === $hasBusted) {
-                return $playerId;
+        $snapshot = [];
+        foreach ($currentRoundThrowsByPlayer as $playerId => $throws) {
+            foreach ($throws as $throw) {
+                $snapshot = TurnOrder::recordThrow($snapshot, $playerId, $throw['throwNumber'], $throw['value'], $throw['isBust']);
             }
         }
+        $seats = [];
+        foreach ($gamePlayers as $seat) {
+            $seats[] = ['playerId' => $seat['playerId'], 'score' => $seat['score'] ?? $game->getStartScore()];
+        }
 
-        return null;
+        return TurnOrder::activePlayerIdFromSeats($seats, $snapshot);
     }
 
     /**

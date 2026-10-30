@@ -19,22 +19,7 @@ use App\Entity\Game;
  */
 interface GameStateViewBuilderInterface
 {
-    /**
-     * Calculate and return the id of the active player for the given game.
-     *
-     * Logic:
-     * - Players are sorted by their position in the game
-     * - A player is active if:
-     *   * They have not yet reached a score of 0 (not won)
-     *   * They have thrown less than 3 times in the current round
-     *   * They are not bust in the current round
-     *
-    * @param Game                    $game               The game entity
-    * @param RoundStateSnapshot|null $roundStateSnapshot Optional preloaded current-round snapshot
-     *
-     * @return int|null The id of the active player or null if no active player found
-     */
-    public function calculateActivePlayer(Game $game, ?array $roundStateSnapshot = null): ?int;
+
 
     /**
      * Create a complete game response DTO from a game entity.
