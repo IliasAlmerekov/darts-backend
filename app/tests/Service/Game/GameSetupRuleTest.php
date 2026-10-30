@@ -12,12 +12,12 @@ namespace App\Tests\Service;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\User;
-use App\Service\Game\GameSetupService;
+use App\Service\Game\GameSetupRule;
 use PHPUnit\Framework\TestCase;
 use ReflectionException;
 use ReflectionProperty;
 
-final class GameSetupServiceTest extends TestCase
+final class GameSetupRuleTest extends TestCase
 {
     /**
      * @throws ReflectionException
@@ -35,8 +35,7 @@ final class GameSetupServiceTest extends TestCase
         $game->addGamePlayer($playerB);
         $game->addGamePlayer($playerC);
 
-        $service = new GameSetupService();
-        $service->applyInitialScoresAndPositions($game, [2, 3, 1]);
+        GameSetupRule::applyInitialScoresAndPositions($game, [2, 3, 1]);
 
         self::assertSame(301, $playerA->getScore());
         self::assertSame(301, $playerB->getScore());
@@ -61,8 +60,7 @@ final class GameSetupServiceTest extends TestCase
         $game->addGamePlayer($playerA);
         $game->addGamePlayer($playerB);
 
-        $service = new GameSetupService();
-        $service->applyInitialScoresAndPositions($game);
+        GameSetupRule::applyInitialScoresAndPositions($game);
 
         self::assertSame(501, $playerA->getScore());
         self::assertSame(501, $playerB->getScore());
@@ -85,8 +83,7 @@ final class GameSetupServiceTest extends TestCase
         $game->addGamePlayer($playerA);
         $game->addGamePlayer($playerB);
 
-        $service = new GameSetupService();
-        $service->applyInitialScoresAndPositions($game);
+        GameSetupRule::applyInitialScoresAndPositions($game);
 
         self::assertSame(401, $playerA->getScore());
         self::assertSame(401, $playerB->getScore());

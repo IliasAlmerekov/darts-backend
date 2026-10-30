@@ -26,6 +26,8 @@ use Override;
 /**
  * Service to handle player management.
  * This class is responsible for adding and removing players from games.
+ *
+ * @psalm-suppress UnusedClass Reason: service is auto-wired and used via interface.
  */
 final readonly class PlayerManagementService implements PlayerManagementServiceInterface
 {

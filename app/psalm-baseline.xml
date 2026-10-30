@@ -110,11 +110,6 @@
       <code><![CDATA[GameStatisticsService]]></code>
     </UnusedClass>
   </file>
-  <file src="src/Service/Player/PlayerManagementService.php">
-    <PossiblyUnusedMethod>
-      <code><![CDATA[__construct]]></code>
-    </PossiblyUnusedMethod>
-  </file>
   <file src="src/Service/Registration/RegistrationService.php">
     <UnusedClass>
       <code><![CDATA[RegistrationService]]></code>

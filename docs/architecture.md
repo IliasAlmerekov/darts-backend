@@ -17,7 +17,7 @@ why the project does not move to hexagonal or a rich domain model.
 
 | Layer | Directory | Owns |
 | --- | --- | --- |
-| Controller | `app/src/Controller/` | Routing, request binding into DTOs, access checks, picking the use case, building the response DTO. |
+| Controller | `app/src/Controller/` | Routing, request binding into DTOs, access checks, picking the use case, building the response DTO. A use-case service may return the response DTO itself when the response is exactly its result, as `RematchService::createRematch()` and `GameFinishService::finishGame()` do; the controller then returns it unchanged. |
 | Service | `app/src/Service/<Area>/` | One use case per service: start a game, record a throw, accept an invitation. Business rules and the write transaction live here. |
 | Repository | `app/src/Repository/` | Queries. Reads by key, locking reads (`...ForUpdate`), and the statistics aggregates. |
 | Entity | `app/src/Entity/` | Doctrine mapping and the invariants of its own state. |
@@ -39,7 +39,7 @@ cannot mock a final class. Unit tests mock the interface so they run without the
 database. Callers depend on the interface, not on the class.
 
 One exception: a stateless rule class with only static methods and no injected
-dependencies, such as `NewestGameRule`, has no interface. It holds
+dependencies, such as `NewestGameRule` or `GameSetupRule`, has no interface. It holds
 nothing a test would replace, so a test passes it its repository instead. The exception
 ends once a rule class needs injected state.
 
@@ -48,8 +48,7 @@ a detail page that only reads data calls the repository from the controller, as
 `GameStatsController` does. Anything that changes state calls a use-case service.
 
 **The use-case service owns the write transaction.** It opens the transaction itself
-and calls `flush()`. The room create controller still opens its own; #205 moves it into a
-service.
+and calls `flush()`.
 
 **A write on an existing game goes through `LockedGameTransactionInterface`.** Start,
 reopen, finish, abort, record throw, undo throw, rematch and settings update run one

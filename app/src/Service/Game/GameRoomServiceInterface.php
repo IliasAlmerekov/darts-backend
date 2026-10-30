@@ -9,7 +9,9 @@ declare(strict_types=1);
 
 namespace App\Service\Game;
 
+use App\Dto\RoomCreateRequest;
 use App\Entity\Game;
+use App\Exception\Game\ConflictingOutRulesException;
 use App\Exception\Game\GameRoomFullException;
 use App\Exception\Game\PlayerNotFoundException;
 use Doctrine\ORM\Exception\ORMException;
@@ -20,19 +22,22 @@ use Doctrine\ORM\Exception\ORMException;
 interface GameRoomServiceInterface
 {
     /**
-     * Return the game in the lobby. Only when this call creates it, place the players from
-     * the include list into it.
+     * Return the game in the lobby (ADR 0003). Only when this call creates it, place the
+     * players from `playerIds` without `excludePlayerIds` into it. Then apply `startScore`,
+     * `doubleOut` and `tripleOut` when the request sends any of them. Opens its own
+     * transaction through RetryingTransactionInterface::run(), so a rejected request leaves
+     * no new lobby behind.
      *
-     * @param list<int>|null $includePlayerIds Explicit list of players to place into the new game
-     * @param list<int>|null $excludePlayerIds Players to omit from the include list
+     * @param RoomCreateRequest $request
      *
      * @return Game The lobby game
      *
      * @throws ORMException
-     * @throws PlayerNotFoundException When an included player id belongs to no user
-     * @throws GameRoomFullException   When a new lobby would seat more than Game::MAX_PARTICIPANTS players
+     * @throws PlayerNotFoundException      When an included player id belongs to no user
+     * @throws GameRoomFullException        When a new lobby would seat more than Game::MAX_PARTICIPANTS players
+     * @throws ConflictingOutRulesException When the lobby would end up with double out and triple out
      */
-    public function openRoom(?array $includePlayerIds = null, ?array $excludePlayerIds = null): Game;
+    public function openRoom(RoomCreateRequest $request): Game;
 
     /**
      * Find a game by its ID.

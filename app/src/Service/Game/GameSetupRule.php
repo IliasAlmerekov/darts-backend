@@ -12,10 +12,9 @@ namespace App\Service\Game;
 use App\Entity\Game;
 
 /**
- * Service to handle game setup.
- * This class is responsible for setting up the initial game state.
+ * Sets the initial scores and positions when a game starts.
  */
-final class GameSetupService
+final class GameSetupRule
 {
     /**
      * Sets the starting score and position of the players in a game.
@@ -25,7 +24,7 @@ final class GameSetupService
      *
      * @return void
      */
-    public function applyInitialScoresAndPositions(Game $game, ?array $playerPositions = null): void
+    public static function applyInitialScoresAndPositions(Game $game, ?array $playerPositions = null): void
     {
         $players = $game->getGamePlayers();
         $startScore = $game->getStartScore();

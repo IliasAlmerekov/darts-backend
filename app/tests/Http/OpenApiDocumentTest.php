@@ -463,6 +463,20 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertStringContainsString('PLAYER_NOT_FOUND', $responses['404']['description'] ?? '');
     }
 
+    public function testRoomCreateDocumentsTheGameIdAsANonNullableInteger(): void
+    {
+        $document = $this->document();
+        $schema = $document['paths']['/api/room/create']['post']['responses']['200']['content']['application/json']['schema'];
+        if (isset($schema['$ref'])) {
+            $schema = $document['components']['schemas'][substr($schema['$ref'], strlen('#/components/schemas/'))];
+        }
+
+        $gameId = $schema['properties']['gameId'];
+        self::assertSame('integer', $gameId['type'] ?? null);
+        self::assertFalse($gameId['nullable'] ?? false);
+        self::assertSame(['success', 'gameId'], $schema['required'] ?? null);
+    }
+
     public function testRoomCreateDocumentsPreviousGameIdAsDeprecated(): void
     {
         $previousGameId = $this->document()['components']['schemas']['RoomCreateRequest']['properties']['previousGameId'];

@@ -1,9 +1,15 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
 namespace App\Tests\Service;
 
+use App\Dto\RematchResponseDto;
 use App\Entity\Game;
 use App\Enum\GameStatus;
 use App\Exception\Game\GameNotFoundException;
@@ -91,12 +97,7 @@ final class RematchServiceTest extends TestCase
         $result = $service->createRematch(42);
 
         self::assertSame(['runWithRetry'], $lockedGame->calls);
-        self::assertTrue($result['success']);
-        self::assertSame(100, $result['gameId']);
-        self::assertSame('/join/uuid', $result['invitationLink']);
-        self::assertArrayNotHasKey('finishedPlayers', $result);
-        self::assertArrayNotHasKey('winner', $result);
-        self::assertArrayNotHasKey('winnerRoundsPlayed', $result);
+        self::assertEquals(new RematchResponseDto(100, '/join/uuid'), $result);
     }
 
     /**

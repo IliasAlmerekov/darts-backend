@@ -33,5 +33,5 @@ over their own state only.
 ## Consequences
 
 - New code follows the rules in `docs/architecture.md`; a reviewer cites that file.
-- The room create controller still opens its own write transaction. #195 moved start, reopen and rematch into their services; #205 tracks room create.
+- Every write use case opens its own transaction in its service. #195 moved start, reopen and rematch there; #205 moved room create into `GameRoomService::openRoom()`.
 - If the rules start to slip in review, revisit the automated check.

@@ -1,4 +1,9 @@
 <?php
+/**
+ * This file is part of the darts backend.
+ *
+ * @license Proprietary
+ */
 
 declare(strict_types=1);
 
@@ -13,7 +18,6 @@ use App\Exception\Game\GameMustHaveValidPlayerCountException;
 use App\Exception\Game\GameStartNotAllowedException;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\RoundRepositoryInterface;
-use App\Service\Game\GameSetupService;
 use App\Service\Game\GameStartService;
 use App\Tests\Support\LockedGameTransactionFake;
 use Doctrine\ORM\EntityManagerInterface;
@@ -39,12 +43,10 @@ final class GameStartServiceTest extends TestCase
         $dto->tripleOut = false;
         $dto->playerPositions = [1 => 2, 2 => 1];
 
-        $setupService = new GameSetupService();
-
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects(self::once())->method('flush');
 
-        $service = new GameStartService($setupService, $em, $this->createRoundRepository(false), $this->createStub(GameRepositoryInterface::class), $lockedGame = new LockedGameTransactionFake($game));
+        $service = new GameStartService($em, $this->createRoundRepository(false), $this->createStub(GameRepositoryInterface::class), $lockedGame = new LockedGameTransactionFake($game));
         $service->start($game, $dto);
 
         self::assertSame(['runWithRetry'], $lockedGame->calls);
@@ -65,10 +67,9 @@ final class GameStartServiceTest extends TestCase
         $game = (new Game())->setGameId(1);
         $game->addGamePlayer(new GamePlayers());
 
-        $setupService = new GameSetupService();
         $em = $this->createMock(EntityManagerInterface::class);
 
-        $service = new GameStartService($setupService, $em, $this->createRoundRepository(false), $this->createStub(GameRepositoryInterface::class), new LockedGameTransactionFake($game));
+        $service = new GameStartService($em, $this->createRoundRepository(false), $this->createStub(GameRepositoryInterface::class), new LockedGameTransactionFake($game));
 
         $this->expectException(GameMustHaveValidPlayerCountException::class);
         $service->start($game, new StartGameRequest());
@@ -81,11 +82,10 @@ final class GameStartServiceTest extends TestCase
         $game->addGamePlayer(new GamePlayers()->setPlayer(new User()->setUsername('p1')));
         $game->addGamePlayer(new GamePlayers()->setPlayer(new User()->setUsername('p2')));
 
-        $setupService = new GameSetupService();
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects(self::never())->method('flush');
 
-        $service = new GameStartService($setupService, $em, $this->createRoundRepository(false), $this->createStub(GameRepositoryInterface::class), new LockedGameTransactionFake($game));
+        $service = new GameStartService($em, $this->createRoundRepository(false), $this->createStub(GameRepositoryInterface::class), new LockedGameTransactionFake($game));
 
         $this->expectException(GameStartNotAllowedException::class);
         $service->start($game, new StartGameRequest());
@@ -98,11 +98,10 @@ final class GameStartServiceTest extends TestCase
         $game->addGamePlayer(new GamePlayers()->setPlayer(new User()->setUsername('p1')));
         $game->addGamePlayer(new GamePlayers()->setPlayer(new User()->setUsername('p2')));
 
-        $setupService = new GameSetupService();
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects(self::never())->method('flush');
 
-        $service = new GameStartService($setupService, $em, $this->createRoundRepository(false), $this->createStub(GameRepositoryInterface::class), new LockedGameTransactionFake($game));
+        $service = new GameStartService($em, $this->createRoundRepository(false), $this->createStub(GameRepositoryInterface::class), new LockedGameTransactionFake($game));
 
         $this->expectException(GameStartNotAllowedException::class);
         $service->start($game, new StartGameRequest());
@@ -121,12 +120,11 @@ final class GameStartServiceTest extends TestCase
 
         $dto = new StartGameRequest();
 
-        $setupService = new GameSetupService();
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects(self::once())->method('flush');
 
         $roundRepository = $this->createRoundRepositoryForGame(42, true);
-        $service = new GameStartService($setupService, $em, $roundRepository, $this->createStub(GameRepositoryInterface::class), new LockedGameTransactionFake($game));
+        $service = new GameStartService($em, $roundRepository, $this->createStub(GameRepositoryInterface::class), new LockedGameTransactionFake($game));
         $service->start($game, $dto);
 
         self::assertSame(GameStatus::Started, $game->getStatus());
@@ -145,12 +143,11 @@ final class GameStartServiceTest extends TestCase
 
         $dto = new StartGameRequest();
 
-        $setupService = new GameSetupService();
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects(self::once())->method('flush');
 
         $roundRepository = $this->createRoundRepositoryForGame(43, false);
-        $service = new GameStartService($setupService, $em, $roundRepository, $this->createStub(GameRepositoryInterface::class), new LockedGameTransactionFake($game));
+        $service = new GameStartService($em, $roundRepository, $this->createStub(GameRepositoryInterface::class), new LockedGameTransactionFake($game));
         $service->start($game, $dto);
 
         self::assertSame(GameStatus::Started, $game->getStatus());
