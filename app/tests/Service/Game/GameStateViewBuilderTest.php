@@ -565,17 +565,6 @@ final class GameStateViewBuilderTest extends TestCase
         $game->addGamePlayer($playerOne);
         $game->addGamePlayer($playerTwo);
 
-        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
-        $roundThrowsRepository->expects(self::never())
-            ->method('findCurrentRoundStateSnapshot');
-        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
-
-        $service = new GameStateViewBuilder(
-            $gamePlayersRepository,
-            $roundThrowsRepository,
-            new GameStateVersionService($roundThrowsRepository),
-        );
-
         $activePlayerId = TurnOrder::activePlayerId($game, [
             1 => [
                 'throwsCount' => 3,

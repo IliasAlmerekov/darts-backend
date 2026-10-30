@@ -41,7 +41,11 @@ final class GameDeltaServiceTest extends TestCase
             ->setScore(26);
         $game->addGamePlayer($gamePlayer);
 
-        $roundThrowsRepository = $this->createStub(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository->expects(self::once())
+            ->method('findCurrentRoundStateSnapshot')
+            ->with(44, 2)
+            ->willReturn([10 => ['throwsCount' => 1, 'lastThrowNumber' => 1, 'lastThrowValue' => 25, 'lastThrowBust' => true]]);
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $gamePlayersRepository->expects(self::once())
             ->method('findGameStatePlayersByGameId')
@@ -83,6 +87,7 @@ final class GameDeltaServiceTest extends TestCase
         self::assertSame(26, $ack->throw->score);
         self::assertCount(1, $ack->scoreboardDelta->changedPlayers);
         self::assertTrue($ack->scoreboardDelta->changedPlayers[0]->isBust ?? false);
+        self::assertFalse($ack->scoreboardDelta->changedPlayers[0]->isActive);
     }
 
     /**
@@ -216,7 +221,11 @@ final class GameDeltaServiceTest extends TestCase
             ->setScore(51);
         $game->addGamePlayer($gamePlayer);
 
-        $roundThrowsRepository = $this->createStub(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $roundThrowsRepository->expects(self::once())
+            ->method('findCurrentRoundStateSnapshot')
+            ->with(55, 2)
+            ->willReturn([]);
         $roundThrowsRepository->method('findCurrentRoundThrowsForGamePlayers')
             ->with(55, 2)
             ->willReturn([]);
@@ -267,6 +276,7 @@ final class GameDeltaServiceTest extends TestCase
         self::assertSame(2, $ack->scoreboardDelta->currentRound);
         self::assertCount(1, $ack->scoreboardDelta->changedPlayers);
         self::assertNull($ack->scoreboardDelta->changedPlayers[0]->isBust);
+        self::assertTrue($ack->scoreboardDelta->changedPlayers[0]->isActive);
     }
 
     /**
