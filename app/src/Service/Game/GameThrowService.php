@@ -11,6 +11,8 @@ declare(strict_types=1);
 namespace App\Service\Game;
 
 use App\Dto\ThrowRecordingResultDto;
+use App\Dto\ThrowAckDto;
+use App\Dto\UndoAckDto;
 use App\Dto\ThrowRequest;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
@@ -72,6 +74,23 @@ final readonly class GameThrowService implements GameThrowServiceInterface
     }
 
     /**
+     * @param int                      $gameId
+     * @param ThrowRequest             $dto
+     * @param GameStateReaderInterface $reader
+     *
+     * @return ThrowAckDto
+     */
+    #[Override]
+    public function recordThrowAck(int $gameId, ThrowRequest $dto, GameStateReaderInterface $reader): ThrowAckDto
+    {
+        return $this->lockedGameTransaction->run($gameId, function (Game $game) use ($dto, $reader): ThrowAckDto {
+            $result = $this->recordThrowUnlocked($game, $dto);
+
+            return $reader->buildThrowAck($result->game, $result->latestThrow);
+        });
+    }
+
+    /**
      * @param Game $game
      *
      * @return RoundThrows|null
@@ -81,14 +100,40 @@ final readonly class GameThrowService implements GameThrowServiceInterface
     {
         $gameId = $game->getGameId() ?? throw new GameNotFoundException();
 
-        return $this->lockedGameTransaction->run($gameId, function (Game $game): ?RoundThrows {
-            $status = $game->getStatus();
-            if (!$status->canUndo()) {
-                throw new GameThrowNotAllowedException($status);
-            }
+        return $this->lockedGameTransaction->run($gameId, fn (Game $locked): ?RoundThrows => $this->undoUnlocked($locked));
+    }
 
-            return $this->undoThrowService->undo($game);
+    /**
+     * @param Game                     $game
+     * @param GameStateReaderInterface $reader
+     *
+     * @return UndoAckDto
+     */
+    #[Override]
+    public function undoThrowAck(Game $game, GameStateReaderInterface $reader): UndoAckDto
+    {
+        $gameId = $game->getGameId() ?? throw new GameNotFoundException();
+
+        return $this->lockedGameTransaction->run($gameId, function (Game $locked) use ($reader): UndoAckDto {
+            $throw = $this->undoUnlocked($locked);
+
+            return $reader->buildUndoAck($locked, $throw);
         });
+    }
+
+    /**
+     * @param Game $game
+     *
+     * @return RoundThrows|null
+     */
+    private function undoUnlocked(Game $game): ?RoundThrows
+    {
+        $status = $game->getStatus();
+        if (!$status->canUndo()) {
+            throw new GameThrowNotAllowedException($status);
+        }
+
+        return $this->undoThrowService->undo($game);
     }
 
     /**

@@ -61,12 +61,10 @@ final class GameThrowController extends AbstractController
     public function throwDelta(int $gameId, GameThrowServiceInterface $gameThrowService, GameStateReaderInterface $gameStateReader, #[MapRequestPayload] ThrowRequest $dto): ThrowAckDto
     {
         try {
-            $throwRecordingResult = $gameThrowService->recordThrowByGameId($gameId, $dto);
+            return $gameThrowService->recordThrowAck($gameId, $dto, $gameStateReader);
         } catch (GameNotFoundException) {
             throw new NotFoundHttpException();
         }
-
-        return $gameStateReader->buildThrowAck($throwRecordingResult->game, $throwRecordingResult->latestThrow);
     }
 
     /**
@@ -90,8 +88,6 @@ final class GameThrowController extends AbstractController
     #[Route('/api/game/{gameId}/throw/delta', name: 'app_game_throw_undo_delta', methods: ['DELETE'], format: 'json')]
     public function undoThrowDelta(#[AttributeMapEntity(id: 'gameId')] Game $game, GameThrowServiceInterface $gameThrowService, GameStateReaderInterface $gameStateReader): UndoAckDto
     {
-        $undoneThrow = $gameThrowService->undoLastThrow($game);
-
-        return $gameStateReader->buildUndoAck($game, $undoneThrow);
+        return $gameThrowService->undoThrowAck($game, $gameStateReader);
     }
 }
