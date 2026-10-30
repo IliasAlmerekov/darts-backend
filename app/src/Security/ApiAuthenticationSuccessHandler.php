@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Security;
 
+use App\Http\ApiRequest;
+
 use App\Entity\User;
 use App\Exception\Security\UserNotAuthenticatedException;
 use App\Service\Security\SecurityServiceInterface;
@@ -42,7 +44,7 @@ final readonly class ApiAuthenticationSuccessHandler implements AuthenticationSu
     #[\Override]
     public function onAuthenticationSuccess(Request $request, TokenInterface $token): Response
     {
-        if ($this->isApiRequest($request)) {
+        if (ApiRequest::matches($request)) {
             $user = $token->getUser();
 
             if (!$user instanceof User) {
@@ -55,21 +57,5 @@ final readonly class ApiAuthenticationSuccessHandler implements AuthenticationSu
         }
 
         return new RedirectResponse($this->urlGenerator->generate('login_success'));
-    }
-
-    /**
-     * @param Request $request
-     *
-     * @return bool
-     */
-    private function isApiRequest(Request $request): bool
-    {
-        if (str_starts_with($request->getPathInfo(), '/api/')) {
-            return true;
-        }
-
-        $accept = (string) $request->headers->get('Accept', '');
-
-        return str_contains($accept, 'application/json');
     }
 }

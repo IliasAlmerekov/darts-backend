@@ -24,6 +24,9 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 
 ### Geändert
 
+- **API-Anfragen**: Die gemeinsame Prüfung von Pfad und Accept-Header ersetzt die Kopien in der Antwortverarbeitung und Authentifizierung (#61).
+- **Einladungen**: Rematches nutzen den gemeinsamen Einladungsservice und behalten die bestehende Einladungs-URL (#61).
+
 - **Spiel**: Zugreihenfolge und Rundenabschluss zentral berechnet (#202).
 
 - **Spiel**: Platzierungen und Sieger werden beim Checkout und Spielende aus den geladenen Teilnehmern berechnet (#203).

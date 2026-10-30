@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Security;
 
+use App\Http\ApiRequest;
+
 use App\Exception\ApiHttpException;
 use App\Exception\Security\CrossOriginRequestException;
 use App\Exception\Security\LoginInvalidCredentialsException;
@@ -51,7 +53,7 @@ final readonly class ApiAuthenticationFailureHandler implements AuthenticationFa
             'reason' => '' !== $exception->getMessage() ? $exception->getMessage() : $exception->getMessageKey(),
         ]);
 
-        if ($this->isApiRequest($request)) {
+        if (ApiRequest::matches($request)) {
             $error = $this->toApiException($exception);
 
             return new JsonResponse(
@@ -86,21 +88,5 @@ final readonly class ApiAuthenticationFailureHandler implements AuthenticationFa
         $minutes = $exception->getMessageData()['%minutes%'] ?? null;
 
         return new LoginRateLimitedException(is_int($minutes) ? $minutes * 60 : null);
-    }
-
-    /**
-     * @param Request $request
-     *
-     * @return bool
-     */
-    private function isApiRequest(Request $request): bool
-    {
-        if (str_starts_with($request->getPathInfo(), '/api/')) {
-            return true;
-        }
-
-        $accept = (string) $request->headers->get('Accept', '');
-
-        return str_contains($accept, 'application/json');
     }
 }

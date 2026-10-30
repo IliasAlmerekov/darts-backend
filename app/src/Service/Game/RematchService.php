@@ -11,16 +11,14 @@ namespace App\Service\Game;
 
 use App\Dto\RematchResponseDto;
 use App\Entity\Game;
-use App\Entity\Invitation;
 use App\Enum\GameStatus;
 use App\Repository\GameRepositoryInterface;
-use App\Repository\InvitationRepositoryInterface;
+use App\Service\Invitation\InvitationServiceInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
 use LogicException;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use Symfony\Component\Uid\Uuid;
 use Override;
 
 /**
@@ -33,7 +31,7 @@ final readonly class RematchService implements RematchServiceInterface
 {
     /**
      * @param PlayerManagementServiceInterface $playerManagementService
-     * @param InvitationRepositoryInterface    $invitationRepository
+     * @param InvitationServiceInterface       $invitationService
      * @param EntityManagerInterface           $entityManager
      * @param UrlGeneratorInterface            $urlGenerator
      * @param OpenLobbyServiceInterface        $openLobbyService
@@ -42,7 +40,7 @@ final readonly class RematchService implements RematchServiceInterface
      *
      * @psalm-suppress PossiblyUnusedMethod
      */
-    public function __construct(private PlayerManagementServiceInterface $playerManagementService, private InvitationRepositoryInterface $invitationRepository, private EntityManagerInterface $entityManager, private UrlGeneratorInterface $urlGenerator, private OpenLobbyServiceInterface $openLobbyService, private GameRepositoryInterface $gameRepository, private LockedGameTransactionInterface $lockedGameTransaction)
+    public function __construct(private PlayerManagementServiceInterface $playerManagementService, private InvitationServiceInterface $invitationService, private EntityManagerInterface $entityManager, private UrlGeneratorInterface $urlGenerator, private OpenLobbyServiceInterface $openLobbyService, private GameRepositoryInterface $gameRepository, private LockedGameTransactionInterface $lockedGameTransaction)
     {
     }
 
@@ -78,30 +76,10 @@ final readonly class RematchService implements RematchServiceInterface
                 $this->playerManagementService->appendMissingPlayers($oldGameId, $lobbyGameId, $lastPlacedFirst);
             }
 
-            return new RematchResponseDto($lobbyGameId, $this->createInvitation($lobbyGame, $lobbyGameId));
+            $invitation = $this->invitationService->createOrGetInvitation($lobbyGame);
+            $url = $this->urlGenerator->generate('join_invitation', ['uuid' => $invitation->getUuid()]);
+
+            return new RematchResponseDto($lobbyGameId, $url);
         });
-    }
-
-    /**
-     * @param Game $game
-     * @param int  $gameId
-     *
-     * @return string
-     */
-    private function createInvitation(Game $game, int $gameId): string
-    {
-        // A plain read would use the snapshot taken before the lobby lock and miss the
-        // invitation of a rematch that committed while this one waited.
-        $invitation = $this->invitationRepository->findOneByGameIdForShare($gameId);
-        if (null === $invitation) {
-            $uuid = Uuid::v4();
-            $invitation = new Invitation();
-            $invitation->setUuid($uuid);
-            $invitation->setGame($game);
-            $this->entityManager->persist($invitation);
-            $this->entityManager->flush();
-        }
-
-        return $this->urlGenerator->generate('join_invitation', ['uuid' => $invitation->getUuid()]);
     }
 }
