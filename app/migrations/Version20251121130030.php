@@ -13,6 +13,13 @@ namespace DoctrineMigrations;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
+/**
+ * Irreversible on purpose (#60), an exception to the rule that down() reverses up().
+ *
+ * up() turns the TINYINT(1) game.status into string statuses and maps every value other
+ * than 0 and 1 to 'lobby', so the old values cannot be restored. Later statuses such as
+ * 'started' or 'finished' have no integer at all. down() throws before it queues any SQL.
+ */
 final class Version20251121130030 extends AbstractMigration
 {
     public function getDescription(): string
