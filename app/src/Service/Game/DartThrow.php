@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace App\Service\Game;
 
 /**
- * A dart's value as the API shows it.
+ * A dart's value as the API shows it, and which base values a single, double and triple dart can hit.
  */
 final class DartThrow
 {
@@ -27,14 +27,14 @@ final class DartThrow
     {
         if ($isTriple && 0 === $storedValue % 3) {
             $baseValue = intdiv($storedValue, 3);
-            if (self::isBoardSegment($baseValue, false, true)) {
+            if (self::isBoardSegment($baseValue, isDouble: false, isTriple: true)) {
                 return $baseValue;
             }
         }
 
         if ($isDouble && 0 === $storedValue % 2) {
             $baseValue = intdiv($storedValue, 2);
-            if (self::isBoardSegment($baseValue, true, false)) {
+            if (self::isBoardSegment($baseValue, isDouble: true, isTriple: false)) {
                 return $baseValue;
             }
         }
