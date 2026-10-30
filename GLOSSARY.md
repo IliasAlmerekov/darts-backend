@@ -92,6 +92,10 @@ _Avoid_: Visit, throw (for the whole turn)
 A dart that leaves a negative score, a dead score, or zero without the dart the out rule asks for. The whole turn then scores nothing and the participant's score returns to where the turn began (WDF rule 2.05).
 _Avoid_: Overthrow, no score
 
+**Bust mark**:
+The sign on the scoreboard that a participant's last turn ended in a bust. It stays on through the other participants' turns, across a round change too, and goes out when that participant's next turn begins.
+_Avoid_: Bust status, bust flag
+
 **Profile**:
 The page a player lands on when they open the app without an invitation and without a current game. It shows their own recent finished games and statistics.
 _Avoid_: Dashboard, home page

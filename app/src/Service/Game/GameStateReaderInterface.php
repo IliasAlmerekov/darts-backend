@@ -11,13 +11,16 @@ namespace App\Service\Game;
 
 use App\Dto\GameResponseDto;
 use App\Entity\Game;
+use App\Entity\RoundThrows;
+use App\Dto\ThrowAckDto;
+use App\Dto\UndoAckDto;
 
 /**
  * Builds the game state view: the game response DTO, the active player, and the state version.
  *
  * @phpstan-type RoundStateSnapshot array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}>
  */
-interface GameStateViewBuilderInterface
+interface GameStateReaderInterface
 {
 
 
@@ -42,5 +45,18 @@ interface GameStateViewBuilderInterface
      *
      * @return string Deterministic version hash for the current game state
      */
-    public function buildStateVersion(Game $game, ?int $latestThrowId = null): string;
+    public function stateVersion(Game $game, ?int $latestThrowId = null): string;
+    /** @param Game             $game
+     * @param RoundThrows|null $throw
+     *
+     * @return ThrowAckDto
+     */
+    public function buildThrowAck(Game $game, ?RoundThrows $throw): ThrowAckDto;
+
+    /** @param Game             $game
+     * @param RoundThrows|null $throw
+     *
+     * @return UndoAckDto
+     */
+    public function buildUndoAck(Game $game, ?RoundThrows $throw): UndoAckDto;
 }

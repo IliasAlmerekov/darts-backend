@@ -11,7 +11,8 @@ declare(strict_types=1);
 namespace App\Service\Game;
 
 use App\Dto\ThrowRecordingResultDto;
-use App\Dto\ThrowDeltaDto;
+use App\Dto\ThrowAckDto;
+use App\Dto\UndoAckDto;
 use App\Dto\ThrowRequest;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
@@ -27,8 +28,6 @@ use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
 use DateTime;
-use DateTimeImmutable;
-use DateTimeInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Override;
 
@@ -75,23 +74,66 @@ final readonly class GameThrowService implements GameThrowServiceInterface
     }
 
     /**
-     * @param Game $game
+     * @param int                      $gameId
+     * @param ThrowRequest             $dto
+     * @param GameStateReaderInterface $reader
      *
-     * @return ThrowDeltaDto|null
+     * @return ThrowAckDto
      */
     #[Override]
-    public function undoLastThrow(Game $game): ?ThrowDeltaDto
+    public function recordThrowAck(int $gameId, ThrowRequest $dto, GameStateReaderInterface $reader): ThrowAckDto
+    {
+        return $this->lockedGameTransaction->run($gameId, function (Game $game) use ($dto, $reader): ThrowAckDto {
+            $result = $this->recordThrowUnlocked($game, $dto);
+
+            return $reader->buildThrowAck($result->game, $result->latestThrow);
+        });
+    }
+
+    /**
+     * @param Game $game
+     *
+     * @return RoundThrows|null
+     */
+    #[Override]
+    public function undoLastThrow(Game $game): ?RoundThrows
     {
         $gameId = $game->getGameId() ?? throw new GameNotFoundException();
 
-        return $this->lockedGameTransaction->run($gameId, function (Game $game): ?ThrowDeltaDto {
-            $status = $game->getStatus();
-            if (!$status->canUndo()) {
-                throw new GameThrowNotAllowedException($status);
-            }
+        return $this->lockedGameTransaction->run($gameId, fn (Game $locked): ?RoundThrows => $this->undoUnlocked($locked));
+    }
 
-            return $this->undoThrowService->undo($game);
+    /**
+     * @param Game                     $game
+     * @param GameStateReaderInterface $reader
+     *
+     * @return UndoAckDto
+     */
+    #[Override]
+    public function undoThrowAck(Game $game, GameStateReaderInterface $reader): UndoAckDto
+    {
+        $gameId = $game->getGameId() ?? throw new GameNotFoundException();
+
+        return $this->lockedGameTransaction->run($gameId, function (Game $locked) use ($reader): UndoAckDto {
+            $throw = $this->undoUnlocked($locked);
+
+            return $reader->buildUndoAck($locked, $throw);
         });
+    }
+
+    /**
+     * @param Game $game
+     *
+     * @return RoundThrows|null
+     */
+    private function undoUnlocked(Game $game): ?RoundThrows
+    {
+        $status = $game->getStatus();
+        if (!$status->canUndo()) {
+            throw new GameThrowNotAllowedException($status);
+        }
+
+        return $this->undoThrowService->undo($game);
     }
 
     /**
@@ -166,17 +208,14 @@ final readonly class GameThrowService implements GameThrowServiceInterface
             }
         }
 
-        $latestThrowPlayerName = PlayerDisplayName::forSeat($player);
-
         $this->entityManager->persist($roundThrow);
         $updatedRoundStateSnapshot = TurnOrder::recordThrow($roundStateSnapshot, $requestedPlayerId, $throwNumber, $finalValue, $isBust);
 
-        $hasAdvancedRound = $this->maybeAdvanceRound($game, $round, $updatedRoundStateSnapshot);
+        $this->maybeAdvanceRound($game, $round, $updatedRoundStateSnapshot);
         $this->entityManager->flush();
 
         return new ThrowRecordingResultDto(
-            latestThrow: $this->createLatestThrowSnapshot($roundThrow, $latestThrowPlayerName),
-            currentRoundStateSnapshot: $hasAdvancedRound ? [] : $updatedRoundStateSnapshot,
+            latestThrow: $roundThrow,
             game: $game,
         );
     }
@@ -248,42 +287,6 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         }
 
         throw new GamePlayerNotActiveException($requestedPlayerId, $activePlayerId);
-    }
-
-    /**
-     * @param RoundThrows $throw
-     * @param string      $playerName
-     *
-     * @return array{id:int,playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool,score:int,playerName:string,timestamp:string}|null
-     */
-    private function createLatestThrowSnapshot(RoundThrows $throw, string $playerName): ?array
-    {
-        $throwId = $throw->getThrowId();
-        $playerId = $throw->getPlayer()?->getId();
-        $roundNumber = $throw->getRound()?->getRoundNumber();
-        $throwNumber = $throw->getThrowNumber();
-        $value = $throw->getValue();
-        $score = $throw->getScore();
-
-        if (null === $throwId || null === $playerId || null === $roundNumber || null === $throwNumber || null === $value || null === $score) {
-            return null;
-        }
-
-        $timestamp = $throw->getTimestamp();
-
-        return [
-            'id' => $throwId,
-            'playerId' => $playerId,
-            'roundNumber' => $roundNumber,
-            'throwNumber' => $throwNumber,
-            'value' => $value,
-            'isDouble' => $throw->isDouble(),
-            'isTriple' => $throw->isTriple(),
-            'isBust' => $throw->isBust(),
-            'score' => $score,
-            'playerName' => $playerName,
-            'timestamp' => $timestamp instanceof DateTimeInterface ? $timestamp->format(DateTimeInterface::ATOM) : (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
-        ];
     }
 
     /**

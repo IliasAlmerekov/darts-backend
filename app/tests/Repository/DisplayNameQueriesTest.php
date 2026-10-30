@@ -17,7 +17,6 @@ use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Repository\GamePlayersRepository;
 use App\Repository\GameRepository;
-use App\Repository\RoundThrowsRepository;
 use App\Service\Game\PlayerDisplayName;
 use App\Service\Game\TurnOrder;
 use DateTime;
@@ -115,9 +114,6 @@ final class DisplayNameQueriesTest extends KernelTestCase
     {
         $annName = PlayerDisplayName::forSeat($this->seats['ann']);
         $gameId = (int) $this->game->getGameId();
-
-        $latestThrow = static::getContainer()->get(RoundThrowsRepository::class)->findLatestForGame($gameId);
-        self::assertSame($annName, $latestThrow['playerName'] ?? null);
 
         $overview = static::getContainer()->get(GameRepository::class)->findFinishedOverview(1, 0);
         self::assertSame($gameId, $overview[0]['id'] ?? null);

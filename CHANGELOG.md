@@ -78,6 +78,8 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 
 ### Behoben
 
+- **Spielstand**: Das Bust-Zeichen erlischt beim Beginn des nächsten eigenen Turns; Wurf- und Undo-Bestätigungen liefern für alle Teilnehmer einen booleschen Wert statt `null` (#206).
+
 - **Authentifizierung**: Gespeicherte Spieleranmeldungen erhalten bei fehlender Berechtigung 403 statt 401 (#182).
 - **Spielerstatistik**: `GET /api/players/stats` nennt einen Spieler, dessen Anzeigename leer ist oder nur aus Leerzeichen besteht, mit seinem Benutzernamen und sortiert ihn bei `sort=name` auch unter diesem Namen (#169).
 - **Fehlerformat**: Ein Request-Body, der an einem `#[MapRequestPayload]`-Endpunkt die Validierung nicht besteht, beantwortet die API mit 422 `REQUEST_VALIDATION_FAILED` und `violations: [{field, code, message}]`, ein Eintrag pro Verstoß, statt mit `HTTP_ERROR` ohne Felder. `code` kommt aus einer Tabelle je Constraint (`App\Http\ViolationCode`), ein Constraint kann ihn mit `payload: ['code' => …]` überschreiben. Ungültiges JSON beantwortet jeder dieser Endpunkte mit 400 `REQUEST_INVALID_JSON_BODY`; die Meldungen von `REQUEST_INVALID_JSON_BODY` und `REQUEST_CONFLICTING_SETTING_KEYS` sind englisch. Die OpenAPI-Doku beschreibt den 422-Body einmal als Schema `RequestValidationFailed`, ADR 0006 hält das Format fest. Die Registrierung behält vorerst ihren 400-Body (#175)

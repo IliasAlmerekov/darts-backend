@@ -392,7 +392,7 @@ final class GameThrowServiceTest extends TestCase
         $result = $service->recordThrowByGameId((int) $game->getGameId(), $dto);
 
         self::assertNotNull($result->latestThrow);
-        self::assertSame('Snapshot Name', $result->latestThrow['playerName']);
+        self::assertSame($game, $result->latestThrow->getGame());
     }
 
     /**
@@ -486,7 +486,7 @@ final class GameThrowServiceTest extends TestCase
         $result = $service->recordThrowByGameId((int) $game->getGameId(), $dto);
 
         self::assertNotNull($result->latestThrow);
-        self::assertSame('Fallback Name', $result->latestThrow['playerName']);
+        self::assertSame($game, $result->latestThrow->getGame());
     }
 
     /**
@@ -1143,7 +1143,7 @@ final class GameThrowServiceTest extends TestCase
         $result = $service->recordThrowByGameId((int) $game->getGameId(), $dto);
 
         self::assertSame(2, $game->getRound());
-        self::assertSame([], $result->currentRoundStateSnapshot);
+        self::assertSame(2, $result->game->getRound());
         self::assertCount(2, $persistedEntities);
         self::assertInstanceOf(RoundThrows::class, $persistedEntities[0]);
         self::assertInstanceOf(Round::class, $persistedEntities[1]);
@@ -1249,9 +1249,9 @@ final class GameThrowServiceTest extends TestCase
         self::assertFalse((bool) $otherPlayer->isWinner());
         self::assertSame(5, $game->getRound());
         self::assertNotNull($undoneThrow);
-        self::assertSame(40, $undoneThrow->value);
-        self::assertSame(1, $undoneThrow->playerId);
-        self::assertSame(5, $undoneThrow->roundNumber);
+        self::assertSame(40, $undoneThrow->getValue());
+        self::assertSame(1, $undoneThrow->getPlayer()?->getId());
+        self::assertSame(5, $undoneThrow->getRound()?->getRoundNumber());
     }
 
     /**
@@ -1342,9 +1342,9 @@ final class GameThrowServiceTest extends TestCase
         self::assertFalse((bool) $otherPlayer->isWinner());
         self::assertSame(5, $game->getRound());
         self::assertNotNull($undoneThrow);
-        self::assertSame(40, $undoneThrow->value);
-        self::assertSame(1, $undoneThrow->playerId);
-        self::assertSame(5, $undoneThrow->roundNumber);
+        self::assertSame(40, $undoneThrow->getValue());
+        self::assertSame(1, $undoneThrow->getPlayer()?->getId());
+        self::assertSame(5, $undoneThrow->getRound()?->getRoundNumber());
     }
 
     /**
@@ -1455,9 +1455,9 @@ final class GameThrowServiceTest extends TestCase
         self::assertFalse((bool) $otherPlayer->isWinner());
         self::assertSame(5, $game->getRound());
         self::assertNotNull($undoneThrow);
-        self::assertSame(40, $undoneThrow->value);
-        self::assertSame(1, $undoneThrow->playerId);
-        self::assertSame(5, $undoneThrow->roundNumber);
+        self::assertSame(40, $undoneThrow->getValue());
+        self::assertSame(1, $undoneThrow->getPlayer()?->getId());
+        self::assertSame(5, $undoneThrow->getRound()?->getRoundNumber());
     }
 
     /**
@@ -1669,7 +1669,7 @@ final class GameThrowServiceTest extends TestCase
         $undoneThrow = $service->undoLastThrow($game);
 
         self::assertNotNull($undoneThrow);
-        self::assertTrue($undoneThrow->isBust);
+        self::assertTrue($undoneThrow->isBust());
         self::assertSame(181, $player->getScore());
         self::assertSame(1, $player->getPosition());
         self::assertSame(2, $otherPlayer->getPosition());

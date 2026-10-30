@@ -12,6 +12,10 @@ namespace App\Tests\Repository;
 use App\Dto\GameSettingsRequest;
 use App\Dto\StartGameRequest;
 use App\Dto\ThrowRequest;
+use App\Controller\GameThrowController;
+use App\Dto\ThrowAckDto;
+use App\Dto\UndoAckDto;
+use App\Entity\RoundThrows;
 use App\Entity\Game;
 use App\Entity\User;
 use App\Enum\GameStatus;
@@ -32,6 +36,9 @@ use App\Service\Game\GameSettingsService;
 use App\Service\Game\GameSetupService;
 use App\Service\Game\GameStartService;
 use App\Service\Game\GameThrowService;
+use App\Service\Game\GameStateReader;
+use App\Service\Game\GameStateReaderInterface;
+use App\Service\Game\GameStateVersionService;
 use App\Service\Game\FinishedGameTransition;
 use App\Service\Game\UndoThrowService;
 use App\Service\Game\LockedGameTransaction;
@@ -368,6 +375,61 @@ final class ConcurrentSeatingTest extends KernelTestCase
         }
 
         self::assertSame(2, (int) $this->other->fetchOne('SELECT COUNT(*) FROM round_throws WHERE game_id = ?', [$game]));
+    }
+
+    public function testThrowAcknowledgementExcludesAConcurrentGameChange(): void
+    {
+        [$gameId, , $bob] = $this->startGameWithOneThrow();
+        $request = new ThrowRequest();
+        $request->playerId = $bob;
+        $request->value = 5;
+        $reader = $this->readerWithConcurrentChange($gameId, $bob);
+
+        $ack = (new GameThrowController())->throwDelta($gameId, $this->throwService(), $reader, $request);
+
+        self::assertSame(15, $ack->scoreboardDelta->changedPlayers[0]->score);
+        self::assertSame(15, $ack->throw?->score);
+    }
+
+    public function testUndoAcknowledgementExcludesAConcurrentGameChange(): void
+    {
+        [$gameId, , $bob] = $this->startGameWithOneThrow();
+        $game = $this->entityManager->find(Game::class, $gameId);
+        self::assertInstanceOf(Game::class, $game);
+        $reader = $this->readerWithConcurrentChange($gameId, $bob);
+
+        $ack = (new GameThrowController())->undoThrowDelta($game, $this->throwService(), $reader);
+
+        self::assertSame(301, $ack->scoreboardDelta->changedPlayers[0]->score);
+        self::assertSame(20, $ack->undoneThrow?->score);
+    }
+
+    private function readerWithConcurrentChange(int $gameId, int $playerId): GameStateReaderInterface
+    {
+        $throws = new RoundThrowsRepository($this->registry());
+        $real = new GameStateReader($this->gamePlayersRepository, $throws, new GameStateVersionService($throws));
+        $reader = $this->createMock(GameStateReaderInterface::class);
+        $change = function () use ($gameId, $playerId): void {
+            $this->other->executeStatement('SET SESSION innodb_lock_wait_timeout = 1');
+            try {
+                $this->other->beginTransaction();
+                $this->other->fetchOne('SELECT game_id FROM game WHERE game_id = ? FOR UPDATE', [$gameId]);
+                $this->other->update('game_players', ['score' => 123], ['game_id' => $gameId, 'player_id' => $playerId]);
+                $this->other->commit();
+            } catch (LockWaitTimeoutException) {
+                $this->other->rollBack();
+            }
+        };
+        $reader->method('buildThrowAck')->willReturnCallback(function (Game $game, ?RoundThrows $throw) use ($real, $change): ThrowAckDto {
+            $change();
+            return $real->buildThrowAck($game, $throw);
+        });
+        $reader->method('buildUndoAck')->willReturnCallback(function (Game $game, ?RoundThrows $throw) use ($real, $change): UndoAckDto {
+            $change();
+            return $real->buildUndoAck($game, $throw);
+        });
+
+        return $reader;
     }
 
     public function testUndoReopensAGameWonAfterItWasLoaded(): void

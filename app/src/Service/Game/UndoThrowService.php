@@ -10,7 +10,6 @@ declare(strict_types=1);
 
 namespace App\Service\Game;
 
-use App\Dto\ThrowDeltaDto;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\Round;
@@ -18,8 +17,6 @@ use App\Entity\RoundThrows;
 use App\Enum\GameStatus;
 use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
-use DateTimeImmutable;
-use DateTimeInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Override;
 
@@ -43,10 +40,10 @@ final readonly class UndoThrowService implements UndoThrowServiceInterface
     /**
      * @param Game $game
      *
-     * @return ThrowDeltaDto|null
+     * @return RoundThrows|null
      */
     #[Override]
-    public function undo(Game $game): ?ThrowDeltaDto
+    public function undo(Game $game): ?RoundThrows
     {
         $status = $game->getStatus();
 
@@ -66,7 +63,7 @@ final readonly class UndoThrowService implements UndoThrowServiceInterface
         }
 
         $seat = $this->findSeat($game, $lastThrow);
-        $undoneThrow = $this->createThrowDeltaFromEntity($lastThrow, $seat);
+        $undoneThrow = clone $lastThrow;
         $this->restoreScore($game, $lastThrow, $seat);
         if ($finished) {
             $this->finishedGameTransition->reopenFinished($game);
@@ -147,37 +144,5 @@ final readonly class UndoThrowService implements UndoThrowServiceInterface
         $game->removeRound($next);
         $this->entityManager->remove($next);
         $round->setFinishedAt(null);
-    }
-
-    /**
-     * @param RoundThrows      $throw
-     * @param GamePlayers|null $seat  the thrower's seat, from the game's loaded seats; null once the player left the room
-     *
-     * @return ThrowDeltaDto
-     */
-    private function createThrowDeltaFromEntity(RoundThrows $throw, ?GamePlayers $seat): ThrowDeltaDto
-    {
-        $player = $throw->getPlayer();
-        $playerId = $player?->getId() ?? 0;
-        $playerName = match (true) {
-            null !== $seat => PlayerDisplayName::forSeat($seat),
-            null !== $player => PlayerDisplayName::forUser($player),
-            default => '',
-        };
-        $timestamp = $throw->getTimestamp();
-        $storedValue = $throw->getValue() ?? 0;
-
-        return new ThrowDeltaDto(
-            id: $throw->getThrowId() ?? 0,
-            playerId: $playerId,
-            playerName: $playerName,
-            value: DartThrow::baseValue($storedValue, $throw->isDouble(), $throw->isTriple()),
-            isDouble: $throw->isDouble(),
-            isTriple: $throw->isTriple(),
-            isBust: $throw->isBust(),
-            score: $throw->getScore() ?? 0,
-            roundNumber: $throw->getRound()?->getRoundNumber() ?? 0,
-            timestamp: $timestamp instanceof DateTimeInterface ? $timestamp->format(DateTimeInterface::ATOM) : (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
-        );
     }
 }

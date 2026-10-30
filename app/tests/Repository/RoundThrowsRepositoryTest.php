@@ -36,23 +36,6 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
         $this->em->close();
     }
 
-    public function testFindLatestForGame(): void
-    {
-        $game = $this->createGame(GameStatus::Started);
-        $round = $this->createRound($game, 1);
-        $user = $this->createUser('p1');
-
-        $older = $this->createThrow($game, $round, $user, throwNumber: 1, value: 10, score: 10);
-        $latest = $this->createThrow($game, $round, $user, throwNumber: 2, value: 20, score: 30);
-        $this->em->flush();
-
-        $result = $this->repo->findLatestForGame($game->getGameId());
-
-        self::assertNotNull($result);
-        self::assertSame($latest->getThrowId(), $result['id']);
-        self::assertSame($latest->getThrowNumber(), $result['throwNumber']);
-    }
-
     public function testFindEntityLatestForGameAndPlayer(): void
     {
         $game = $this->createGame(GameStatus::Started);
@@ -95,54 +78,6 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
             $throwA2->getThrowId(),
             $throwB2->getThrowId(),
         ], array_map(static fn(RoundThrows $throw): ?int => $throw->getThrowId(), $orderedThrows));
-    }
-
-    public function testFindCurrentRoundThrowsForGamePlayersReturnsScalarRows(): void
-    {
-        $game = $this->createGame(GameStatus::Started);
-        $round1 = $this->createRound($game, 1, finished: true);
-        $round2 = $this->createRound($game, 2);
-
-        $playerA = $this->createUser('current-a');
-        $playerB = $this->createUser('current-b');
-
-        $this->createThrow($game, $round1, $playerA, 1, 10, 10);
-        $this->createThrow($game, $round2, $playerA, 1, 20, 30);
-        $this->createThrow($game, $round2, $playerA, 2, 40, 70, isBust: true);
-        $this->createThrow($game, $round2, $playerB, 1, 50, 50);
-        $this->em->flush();
-
-        $rows = $this->repo->findCurrentRoundThrowsForGamePlayers($game->getGameId(), 2);
-
-        self::assertSame([
-            [
-                'playerId' => $playerA->getId(),
-                'roundNumber' => 2,
-                'throwNumber' => 1,
-                'value' => 20,
-                'isDouble' => false,
-                'isTriple' => false,
-                'isBust' => false,
-            ],
-            [
-                'playerId' => $playerA->getId(),
-                'roundNumber' => 2,
-                'throwNumber' => 2,
-                'value' => 40,
-                'isDouble' => false,
-                'isTriple' => false,
-                'isBust' => true,
-            ],
-            [
-                'playerId' => $playerB->getId(),
-                'roundNumber' => 2,
-                'throwNumber' => 1,
-                'value' => 50,
-                'isDouble' => false,
-                'isTriple' => false,
-                'isBust' => false,
-            ],
-        ], $rows);
     }
 
     public function testFindCurrentRoundStateSnapshotReturnsAggregatedPerPlayerState(): void

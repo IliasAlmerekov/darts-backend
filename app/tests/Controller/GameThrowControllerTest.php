@@ -7,13 +7,12 @@ namespace App\Tests\Controller;
 use App\Controller\GameThrowController;
 use App\Dto\ScoreboardDeltaDto;
 use App\Dto\ThrowAckDto;
-use App\Dto\ThrowRecordingResultDto;
 use App\Dto\ThrowDeltaDto;
 use App\Dto\ThrowRequest;
 use App\Dto\UndoAckDto;
 use App\Entity\Game;
 use App\Exception\Game\GameNotFoundException;
-use App\Service\Game\GameDeltaServiceInterface;
+use App\Service\Game\GameStateReaderInterface;
 use App\Service\Game\GameThrowServiceInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -38,50 +37,27 @@ final class GameThrowControllerTest extends TestCase
     {
         $game = $this->createMock(Game::class);
         $throwService = $this->createMock(GameThrowServiceInterface::class);
-        $undoneThrow = new ThrowDeltaDto(
-            id: 501,
-            playerId: 10,
-            playerName: 'Alex',
-            value: 25,
-            isDouble: false,
-            isTriple: false,
-            isBust: true,
-            score: 26,
-            roundNumber: 2,
-            timestamp: '2026-02-13T09:00:00+00:00',
-        );
+        $undoAck = $this->dummyUndoAckDto();
+        $deltaService = $this->createMock(GameStateReaderInterface::class);
         $throwService->expects($this->once())
-            ->method('undoLastThrow')
-            ->with($game)
-            ->willReturn($undoneThrow);
-
-        $deltaService = $this->createMock(GameDeltaServiceInterface::class);
-        $deltaService->expects(self::once())
-            ->method('buildUndoAck')
-            ->with($game, $undoneThrow)
-            ->willReturn($this->dummyUndoAckDto($undoneThrow));
+            ->method('undoThrowAck')
+            ->with($game, $deltaService)
+            ->willReturn($undoAck);
 
         $response = $this->controller->undoThrowDelta($game, $throwService, $deltaService);
 
         $this->assertInstanceOf(UndoAckDto::class, $response);
-        $this->assertSame($undoneThrow, $response->undoneThrow);
+        $this->assertSame($undoAck, $response);
     }
 
     public function testThrowDeltaSuccess(): void
     {
-        $game = (new Game())->setGameId(777);
         $dto = new ThrowRequest();
-        $throwRecordingResult = $this->dummyThrowRecordingResultDto($game);
         $throwService = $this->createMock(GameThrowServiceInterface::class);
+        $deltaService = $this->createMock(GameStateReaderInterface::class);
         $throwService->expects(self::once())
-            ->method('recordThrowByGameId')
-            ->with(777, $dto)
-            ->willReturn($throwRecordingResult);
-
-        $deltaService = $this->createMock(GameDeltaServiceInterface::class);
-        $deltaService->expects(self::once())
-            ->method('buildThrowAck')
-            ->with($game, $throwRecordingResult->latestThrow, $throwRecordingResult->currentRoundStateSnapshot)
+            ->method('recordThrowAck')
+            ->with(777, $dto, $deltaService)
             ->willReturn($this->dummyThrowAckDto());
 
         $response = $this->controller->throwDelta(777, $throwService, $deltaService, $dto);
@@ -94,11 +70,11 @@ final class GameThrowControllerTest extends TestCase
     {
         $dto = new ThrowRequest();
         $throwService = $this->createMock(GameThrowServiceInterface::class);
+        $deltaService = $this->createMock(GameStateReaderInterface::class);
         $throwService->expects(self::once())
-            ->method('recordThrowByGameId')
-            ->with(777, $dto)
+            ->method('recordThrowAck')
+            ->with(777, $dto, $deltaService)
             ->willThrowException(new GameNotFoundException());
-        $deltaService = $this->createMock(GameDeltaServiceInterface::class);
 
         $this->expectException(NotFoundHttpException::class);
         $this->controller->throwDelta(777, $throwService, $deltaService, $dto);
@@ -138,31 +114,4 @@ final class GameThrowControllerTest extends TestCase
         );
     }
 
-    private function dummyThrowRecordingResultDto(Game $game): ThrowRecordingResultDto
-    {
-        return new ThrowRecordingResultDto(
-            latestThrow: [
-                'id' => 501,
-                'playerId' => 10,
-                'playerName' => 'Alex',
-                'value' => 25,
-                'isDouble' => false,
-                'isTriple' => false,
-                'isBust' => true,
-                'score' => 26,
-                'roundNumber' => 2,
-                'throwNumber' => 1,
-                'timestamp' => '2026-02-13T09:00:00+00:00',
-            ],
-            currentRoundStateSnapshot: [
-                10 => [
-                    'throwsCount' => 1,
-                    'lastThrowNumber' => 1,
-                    'lastThrowValue' => 25,
-                    'lastThrowBust' => true,
-                ],
-            ],
-            game: $game,
-        );
-    }
 }

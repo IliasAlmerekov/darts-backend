@@ -10,7 +10,7 @@ declare(strict_types=1);
 
 namespace App\Service\Game;
 
-use App\Dto\ThrowDeltaDto;
+use App\Entity\RoundThrows;
 use App\Entity\Game;
 
 /** Undoes the latest throw inside the caller's transaction. */
@@ -19,7 +19,7 @@ interface UndoThrowServiceInterface
     /**
      * @param Game $game
      *
-     * @return ThrowDeltaDto|null
+     * @return RoundThrows|null
      */
-    public function undo(Game $game): ?ThrowDeltaDto;
+    public function undo(Game $game): ?RoundThrows;
 }
