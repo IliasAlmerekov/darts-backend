@@ -15,7 +15,10 @@ FROM php:8.4.27-fpm-alpine AS base
 
 WORKDIR /app
 
-RUN apk add --no-cache \
+# php:8.4.27-fpm-alpine still ships brotli-libs 1.2.0-r1 (CVE-2026-111497, #230). Drop the
+# upgrade once the base image carries 1.2.1-r0 or later.
+RUN apk upgrade --no-cache brotli-libs \
+    && apk add --no-cache \
         icu-libs \
     && apk add --no-cache --virtual .build-deps \
         $PHPIZE_DEPS \
