@@ -1943,9 +1943,6 @@ final class GameThrowServiceTest extends TestCase
         $gamePlayersRepository->method('findOneBy')
             ->with(['game' => 10, 'player' => 4])
             ->willReturn($normalThird);
-        $gamePlayersRepository->method('countFinishedPlayers')
-            ->with(10)
-            ->willReturn(2);
 
         $roundRepository = $this->createMock(RoundRepositoryInterface::class);
         $roundRepository->method('findOneBy')
@@ -2037,9 +2034,6 @@ final class GameThrowServiceTest extends TestCase
         $gamePlayersRepository->method('findOneBy')
             ->with(['game' => 10, 'player' => 3])
             ->willReturn($guestSecond);
-        $gamePlayersRepository->method('countFinishedPlayers')
-            ->with(10)
-            ->willReturn(1);
 
         $roundRepository = $this->createMock(RoundRepositoryInterface::class);
         $roundRepository->method('findOneBy')

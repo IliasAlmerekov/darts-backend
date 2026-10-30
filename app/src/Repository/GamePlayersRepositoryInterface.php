@@ -47,13 +47,6 @@ interface GamePlayersRepositoryInterface
     public function count(array $criteria): int;
 
     /**
-     * @param int $gameId
-     *
-     * @return int
-     */
-    public function countFinishedPlayers(int $gameId): int;
-
-    /**
      * @param int    $gameId
      * @param string $name
      *

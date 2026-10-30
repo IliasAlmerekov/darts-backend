@@ -306,25 +306,6 @@ SQL,
     }
 
     /**
-     * Counts how many players in a game have already finished (score == 0).
-     *
-     * @param int $gameId
-     *
-     * @return int
-     */
-    #[\Override]
-    public function countFinishedPlayers(int $gameId): int
-    {
-        return (int) $this->createQueryBuilder('gp')
-            ->select('COUNT(gp.gamePlayerId)')
-            ->andWhere('gp.game = :gameId')
-            ->andWhere('gp.score = 0')
-            ->setParameter('gameId', $gameId)
-            ->getQuery()
-            ->getSingleScalarResult();
-    }
-
-    /**
      * The game's seats in seat order.
      *
      * @param int $gameId

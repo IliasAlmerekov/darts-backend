@@ -33,7 +33,6 @@ final class GameFinishServiceTest extends TestCase
         $third = (new GamePlayers())->setPlayer(new User())->setPosition(3)->setScore(40);
         $game->addGamePlayer($winner)->addGamePlayer($second)->addGamePlayer($third);
         $seats = $this->createMock(GamePlayersRepositoryInterface::class);
-        $seats->method('countFinishedPlayers')->willReturnOnConsecutiveCalls(0, 1);
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects(self::never())->method('wrapInTransaction');
         $service = $this->createService($em, $seats, $this->createMock(PlayerStatisticsRepositoryInterface::class), $game);
@@ -76,13 +75,12 @@ final class GameFinishServiceTest extends TestCase
             ->setPosition(1)
             ->setScore(10);
 
+        $game->addGamePlayer($player1)->addGamePlayer($player2);
+
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $gamePlayersRepository->method('findByGameId')
             ->with(42)
             ->willReturn([$player1, $player2]);
-        $gamePlayersRepository->method('countFinishedPlayers')
-            ->with(42)
-            ->willReturn(1);
 
         $playerStatisticsRepository = $this->createMock(PlayerStatisticsRepositoryInterface::class);
         $playerStatisticsRepository->method('getParticipantTotalsForGames')
@@ -164,8 +162,6 @@ final class GameFinishServiceTest extends TestCase
         $gamePlayersRepository->method('findByGameId')
             ->with(99)
             ->willReturn($players);
-        $gamePlayersRepository->method('countFinishedPlayers')
-            ->willReturn(1);
 
         $playerStatisticsRepository = $this->createMock(PlayerStatisticsRepositoryInterface::class);
         $playerStatisticsRepository->method('getParticipantTotalsForGames')

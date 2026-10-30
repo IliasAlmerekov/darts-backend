@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Game;
 
 use App\Dto\ParticipantTotalsDto;
+use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Service\Game\ParticipantResult;
@@ -17,6 +18,70 @@ use PHPUnit\Framework\TestCase;
 
 final class ParticipantResultTest extends TestCase
 {
+    public function testFirstCheckoutAssignsWinnerAndClearsOtherWinnerFlags(): void
+    {
+        $game = new Game();
+        $winner = (new GamePlayers())->setPlayer(new User())->setScore(0);
+        $other = (new GamePlayers())->setScore(100)->setIsWinner(true);
+        $third = (new GamePlayers())->setScore(50);
+        $game->addGamePlayer($winner)->addGamePlayer($other)->addGamePlayer($third);
+
+        self::assertFalse(ParticipantResult::recordCheckout($game, $winner));
+        self::assertSame(1, $winner->getPlacement());
+        self::assertSame($winner->getPlayer(), $game->getWinner());
+        self::assertTrue($winner->isWinner());
+        self::assertFalse($other->isWinner());
+    }
+
+    public function testLaterCheckoutCompletesGameAndRanksSeats(): void
+    {
+        $game = new Game();
+        $first = (new GamePlayers())->setPlayer(new User())->setScore(0)->setPlacement(1)->setIsWinner(true);
+        $second = (new GamePlayers())->setPlayer(new User())->setScore(0)->setPosition(2);
+        $last = (new GamePlayers())->setScore(50)->setPosition(1);
+        $game->addGamePlayer($last)->addGamePlayer($second)->addGamePlayer($first);
+        $game->setWinner($first->getPlayer());
+
+        self::assertTrue(ParticipantResult::recordCheckout($game, $second));
+        self::assertSame(2, $second->getPlacement());
+        self::assertFalse($second->isWinner());
+        ParticipantResult::rankFinishedGame($game);
+        self::assertSame([1, 2, 3], [$first->getPlacement(), $second->getPlacement(), $last->getPlacement()]);
+        self::assertSame($first->getPlayer(), $game->getWinner());
+    }
+
+    public function testManualEndRanksCheckoutsThenScoresAndTurnOrder(): void
+    {
+        $game = new Game();
+        $first = (new GamePlayers())->setPlayer(new User())->setScore(0)->setPlacement(1);
+        $second = (new GamePlayers())->setScore(0)->setPlacement(2);
+        $low = (new GamePlayers())->setScore(20)->setPosition(3);
+        $tieFirst = (new GamePlayers())->setScore(40)->setPosition(1);
+        $tieSecond = (new GamePlayers())->setScore(40)->setPosition(2);
+        foreach ([$tieSecond, $second, $low, $tieFirst, $first] as $seat) {
+            $game->addGamePlayer($seat);
+        }
+
+        ParticipantResult::rankFinishedGame($game);
+        self::assertSame([1, 2, 3, 4, 5], [$first->getPlacement(), $second->getPlacement(), $low->getPlacement(), $tieFirst->getPlacement(), $tieSecond->getPlacement()]);
+        self::assertSame($first->getPlayer(), $game->getWinner());
+        self::assertTrue($first->isWinner());
+        self::assertFalse($second->isWinner());
+    }
+
+    public function testManualEndWithoutCheckoutSelectsLowestScore(): void
+    {
+        $game = new Game();
+        $winner = (new GamePlayers())->setPlayer(new User())->setScore(20)->setPosition(2);
+        $other = (new GamePlayers())->setScore(50)->setPosition(1)->setIsWinner(true);
+        $game->addGamePlayer($other)->addGamePlayer($winner);
+
+        ParticipantResult::rankFinishedGame($game);
+        self::assertSame([1, 2], [$winner->getPlacement(), $other->getPlacement()]);
+        self::assertSame($winner->getPlayer(), $game->getWinner());
+        self::assertTrue($winner->isWinner());
+        self::assertFalse($other->isWinner());
+    }
     public function testSeatsSortByPlacementWithUnplacedSeatsLastByRemainingScore(): void
     {
         // The positions are the turn order and contradict the placements.
