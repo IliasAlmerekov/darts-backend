@@ -49,9 +49,9 @@ final class RequestProcessor
         $extra = $record->extra;
         $extra['request_id'] = $id;
         if (preg_match('~^/api/invite/join/([^/]+)~', $request->getPathInfo(), $matches)) {
-            $secret = rawurldecode($matches[1]);
+            $secrets = [$matches[1], rawurldecode($matches[1])];
 
-            return $record->with(message: str_replace($secret, '[redacted]', $record->message), context: $this->redact($record->context, $secret), extra: $extra);
+            return $record->with(message: str_replace($secrets, '[redacted]', $record->message), context: $this->redact($record->context, $secrets), extra: $this->redact($extra, $secrets));
         }
 
         return $record->with(extra: $extra);
@@ -59,19 +59,19 @@ final class RequestProcessor
 
     /**
      * @param array<array-key, mixed> $context
-     * @param string                  $secret
+     * @param list<string>            $secrets
      *
      * @return array<array-key, mixed>
      */
-    private function redact(array $context, string $secret): array
+    private function redact(array $context, array $secrets): array
     {
         foreach ($context as $key => $value) {
             if (is_string($value)) {
-                $context[$key] = str_replace($secret, '[redacted]', $value);
+                $context[$key] = str_replace($secrets, '[redacted]', $value);
             } elseif (is_array($value)) {
-                $context[$key] = $this->redact($value, $secret);
+                $context[$key] = $this->redact($value, $secrets);
             } elseif ($value instanceof Throwable) {
-                $context[$key] = $value::class.': '.str_replace($secret, '[redacted]', $value->getMessage());
+                $context[$key] = str_replace($secrets, '[redacted]', $value::class.': '.$value->getMessage()."\n".$value->getTraceAsString());
             }
         }
 

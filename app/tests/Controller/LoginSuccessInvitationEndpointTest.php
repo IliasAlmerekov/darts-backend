@@ -50,6 +50,36 @@ final class LoginSuccessInvitationEndpointTest extends WebTestCase
         }
     }
 
+    public function testEncodedInvitationAndExtraAreRedactedInHttpLogs(): void
+    {
+        $client = static::createClient();
+        $entityManager = static::getContainer()->get(EntityManagerInterface::class);
+        $invitation = $this->createInvitation($entityManager, $this->createGame($entityManager, GameStatus::Lobby));
+        $uuid = (string) $invitation->getUuid();
+        $encodedUuid = preg_replace('/-/', '%2D', $uuid, 1);
+        $handler = new \Monolog\Handler\TestHandler();
+        $requests = static::getContainer()->get(\Symfony\Component\HttpFoundation\RequestStack::class);
+        foreach (['logger', 'monolog.logger.request', 'monolog.logger.security', 'monolog.logger.doctrine', 'monolog.logger.event', 'monolog.logger.router', 'monolog.logger.php'] as $channel) {
+            $logger = static::getContainer()->get($channel);
+            self::assertInstanceOf(\Monolog\Logger::class, $logger);
+            $logger->pushHandler($handler);
+            $logger->pushProcessor(static function (\Monolog\LogRecord $record) use ($uuid, $encodedUuid, $requests): \Monolog\LogRecord {
+                return null === $requests->getMainRequest() ? $record : $record->with(extra: ['nested' => [$uuid, $encodedUuid]]);
+            });
+        }
+        $client->request(Request::METHOD_GET, '/api/invite/join/'.$encodedUuid);
+        self::assertResponseStatusCodeSame(Response::HTTP_FOUND);
+        self::assertNotEmpty($handler->getRecords());
+        foreach ($handler->getRecords() as $record) {
+            $logged = print_r([$record->message, $record->context, $record->extra], true);
+            self::assertStringNotContainsString($uuid, $logged);
+            self::assertStringNotContainsString($encodedUuid, $logged);
+            if (isset($record->extra['nested'])) {
+                self::assertNotEmpty($record->extra['request_id'] ?? null);
+            }
+        }
+    }
+
     public function testUnknownInvitationRequestLogsDoNotContainUuid(): void
     {
         $client = static::createClient();
