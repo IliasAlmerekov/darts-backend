@@ -31,14 +31,12 @@ final class ThrowScoring
         if ($isDouble && $isTriple) {
             throw new InvalidThrowException('Throw cannot be both double and triple at the same time.');
         }
-        if ($isTriple && ($baseValue < 1 || $baseValue > 20)) {
-            throw new InvalidThrowException('Triple throws require a base value between 1 and 20.');
-        }
-        if ($isDouble && ($baseValue < 1 || $baseValue > 20) && 25 !== $baseValue) {
-            throw new InvalidThrowException('Double throws require a base value between 1 and 20, or 25 for bull.');
-        }
-        if (!$isDouble && !$isTriple && ($baseValue < 0 || $baseValue > 20) && 25 !== $baseValue) {
-            throw new InvalidThrowException('Single throws require a base value between 0 and 20, or 25 for bull.');
+        if (!DartThrow::isBoardSegment($baseValue, $isDouble, $isTriple)) {
+            throw new InvalidThrowException(match (true) {
+                $isTriple => 'Triple throws require a base value between 1 and 20.',
+                $isDouble => 'Double throws require a base value between 1 and 20, or 25 for bull.',
+                default => 'Single throws require a base value between 0 and 20, or 25 for bull.',
+            });
         }
         $value = $baseValue * ($isTriple ? 3 : ($isDouble ? 2 : 1));
         $remaining = $score - $value;
