@@ -20,8 +20,6 @@ container="$(docker run -d --rm -p 127.0.0.1::10000 \
     -e DATABASE_URL='mysql://check:check@127.0.0.1:1/check?serverVersion=8.4&charset=utf8mb4' \
     -e CORS_ALLOW_ORIGIN='^https?://localhost$' \
     -e LOCK_DSN=flock \
-    -e MAILER_DSN=null://null \
-    -e MESSENGER_TRANSPORT_DSN=sync:// \
     -e FRONTEND_URL=http://localhost \
     "${IMAGE}")"
 ready_file="$(mktemp)"
