@@ -23,7 +23,6 @@ final class RememberedLoginSubscriber implements EventSubscriberInterface
      * @param RememberedLoginPolicy      $policy
      * @param RememberedLoginTokenPurger $purger
      *
-     * @psalm-suppress PossiblyUnusedMethod Reason: constructor is used by Symfony autowiring.
      */
     public function __construct(
         private readonly RememberedLoginPolicy $policy,

@@ -19,8 +19,8 @@ final class GameSetupRule
     /**
      * Sets the starting score and position of the players in a game.
      *
-     * @param Game                 $game
-     * @param array<int, int>|null $playerPositions
+     * @param Game                         $game
+     * @param array<array-key, mixed>|null $playerPositions
      *
      * @return void
      */

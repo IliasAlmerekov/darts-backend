@@ -22,6 +22,6 @@ final class ApiRequest
     public static function matches(Request $request): bool
     {
         return str_starts_with($request->getPathInfo(), '/api/')
-            || str_contains((string) $request->headers->get('Accept', ''), 'application/json');
+            || str_contains($request->headers->get('Accept', ''), 'application/json');
     }
 }

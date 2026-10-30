@@ -42,7 +42,6 @@ interface GameRepositoryInterface
     public function find(mixed $id, LockMode|int|null $lockMode = null, ?int $lockVersion = null): ?object;
 
     /**
-     * @psalm-suppress PossiblyUnusedMethod
      *
      * @param string      $alias
      * @param string|null $indexBy
@@ -75,7 +74,6 @@ interface GameRepositoryInterface
      * holds is reloaded, so it shows what other transactions committed before the lock.
      * Must be called inside an open transaction.
      *
-     * @psalm-suppress PossiblyUnusedMethod
      *
      * @param int $gameId
      *

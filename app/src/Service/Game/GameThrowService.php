@@ -48,7 +48,6 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      * @param UndoThrowServiceInterface      $undoThrowService
      * @param GameFinishServiceInterface     $gameFinishService
      *
-     * @psalm-suppress PossiblyUnusedMethod
      */
     public function __construct(
         private GamePlayersRepositoryInterface $gamePlayersRepository,

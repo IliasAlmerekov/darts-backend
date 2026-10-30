@@ -20,7 +20,6 @@ final readonly class RememberedLoginTokenPurger
      * @param Connection $connection
      * @param int        $lifetime
      *
-     * @psalm-suppress PossiblyUnusedMethod Reason: constructor is used by Symfony autowiring.
      */
     public function __construct(
         private Connection $connection,

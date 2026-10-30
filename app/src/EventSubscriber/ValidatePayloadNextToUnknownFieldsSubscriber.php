@@ -38,7 +38,6 @@ final readonly class ValidatePayloadNextToUnknownFieldsSubscriber implements Eve
     /**
      * @param ValidatorInterface $validator
      *
-     * @psalm-suppress PossiblyUnusedMethod Reason: constructor is used by Symfony autowiring.
      */
     public function __construct(private ValidatorInterface $validator)
     {
@@ -60,7 +59,6 @@ final readonly class ValidatePayloadNextToUnknownFieldsSubscriber implements Eve
      *
      * @return void
      *
-     * @psalm-suppress PossiblyUnusedMethod Reason: Symfony event dispatcher invokes this listener.
      */
     public function onKernelException(ExceptionEvent $event): void
     {

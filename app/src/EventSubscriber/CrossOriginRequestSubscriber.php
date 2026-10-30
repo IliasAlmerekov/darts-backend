@@ -56,7 +56,6 @@ final readonly class CrossOriginRequestSubscriber implements EventSubscriberInte
      *
      * @return void
      *
-     * @psalm-suppress PossiblyUnusedMethod Reason: Symfony event dispatcher invokes this listener.
      */
     public function onKernelRequest(RequestEvent $event): void
     {

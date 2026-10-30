@@ -20,8 +20,6 @@ final class UserRepository extends ServiceEntityRepository implements UserReposi
     /**
      * @param ManagerRegistry $registry
      *
-     * @psalm-suppress PossiblyUnusedMethod
-     * @psalm-suppress UnusedParam
      */
     public function __construct(ManagerRegistry $registry)
     {

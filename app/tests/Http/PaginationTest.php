@@ -24,5 +24,11 @@ final class PaginationTest extends TestCase
         self::assertSame(100, $pagination->limit);
         self::assertSame(5, $pagination->offset);
     }
+    public function testLimitCannotBeChanged(): void
+    {
+        $pagination = Pagination::from(20, 0);
+        $this->expectException(\Error::class);
+        $pagination->limit = 10;
+    }
 }
 

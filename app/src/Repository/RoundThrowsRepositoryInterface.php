@@ -38,7 +38,6 @@ interface RoundThrowsRepositoryInterface
     public function findOneBy(array $criteria, ?array $orderBy = null): ?object;
 
     /**
-     * @psalm-suppress PossiblyUnusedMethod
      *
      * @param array<string, mixed> $criteria
      *
@@ -104,7 +103,6 @@ interface RoundThrowsRepositoryInterface
     public function getRoundAveragesForGame(int $gameId): array;
 
     /**
-     * @psalm-suppress PossiblyUnusedMethod
      *
      * @param string      $alias
      * @param string|null $indexBy

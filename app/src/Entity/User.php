@@ -11,6 +11,8 @@ use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 /**
+ * @psalm-suppress ClassMustBeFinal Doctrine lazy-loading proxies extend entities.
+ *
  * @ORM\Entity(repositoryClass: UserRepository::class)
  * This class represents a registered user.
  */
@@ -191,7 +193,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     /**
      * @return bool
      *
-     * @psalm-suppress PossiblyUnusedMethod
      */
     public function isGuest(): bool
     {

@@ -26,7 +26,6 @@ interface GamePlayersRepositoryInterface
     public function findOneBy(array $criteria, ?array $orderBy = null): ?object;
 
     /**
-     * @psalm-suppress PossiblyUnusedMethod
      *
      * @param array<string, mixed>       $criteria
      * @param array<string, string>|null $orderBy
@@ -38,7 +37,6 @@ interface GamePlayersRepositoryInterface
     public function findBy(array $criteria, ?array $orderBy = null, ?int $limit = null, ?int $offset = null): array;
 
     /**
-     * @psalm-suppress PossiblyUnusedMethod
      *
      * @param array<string, mixed> $criteria
      *

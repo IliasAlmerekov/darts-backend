@@ -29,7 +29,6 @@ final readonly class LockedGameTransaction implements LockedGameTransactionInter
      * @param RetryingTransactionInterface $retryingTransaction
      * @param GameRepositoryInterface      $gameRepository
      *
-     * @psalm-suppress PossiblyUnusedMethod Reason: constructor is used by Symfony autowiring.
      */
     public function __construct(
         private GameAccessServiceInterface $gameAccessService,

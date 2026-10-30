@@ -21,7 +21,6 @@ final readonly class LoginSuccessResponder
     /**
      * @param string $frontendUrl
      *
-     * @psalm-suppress PossiblyUnusedMethod Reason: constructor is used by Symfony autowiring.
      */
     public function __construct(
         private string $frontendUrl,

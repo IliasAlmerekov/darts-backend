@@ -66,6 +66,7 @@ jobs:
       - run: composer audit
       - run: mkdir -p build
       - run: php -d memory_limit=-1 vendor/bin/phpcs
+      - run: php bin/console cache:warmup --env=dev
       - run: php vendor/bin/psalm --show-info=false --report=build/psalm-quality-report.json
 
   tests:

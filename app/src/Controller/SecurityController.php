@@ -110,7 +110,6 @@ final class SecurityController extends AbstractController
      *
      * @return Response
      *
-     * @psalm-suppress PossiblyUnusedMethod Symfony route entry point
      */
     #[OA\Response(
         response: Response::HTTP_OK,
@@ -149,7 +148,6 @@ final class SecurityController extends AbstractController
      *
      * @return void
      *
-     * @psalm-suppress PossiblyUnusedMethod Handled by Symfony firewall logout
      */
     #[OA\Response(response: Response::HTTP_NO_CONTENT, description: 'Abgemeldet, die Session ist beendet. Die Antwort hat keinen Body.')]
     #[Route(path: '/api/logout', name: 'app_logout', methods: ['POST'])]

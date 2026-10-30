@@ -33,7 +33,6 @@ final readonly class SseStreamService implements SseStreamServiceInterface
      * @param float                    $maxLifetimeSeconds Each open stream holds a php-fpm worker and a DB
      *                                                     connection; EventSource reconnects after the cap.
      *
-     * @psalm-suppress PossiblyUnusedMethod
      */
     public function __construct(
         private GameRoomServiceInterface $gameRoomService,

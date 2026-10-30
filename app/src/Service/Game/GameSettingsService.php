@@ -41,7 +41,6 @@ final readonly class GameSettingsService implements GameSettingsServiceInterface
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
      * @param LockedGameTransactionInterface $lockedGameTransaction
      *
-     * @psalm-suppress PossiblyUnusedMethod Reason: constructor is used by Symfony autowiring.
      */
     public function __construct(
         private EntityManagerInterface $entityManager,

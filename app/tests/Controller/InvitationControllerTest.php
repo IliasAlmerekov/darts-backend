@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\Controller\InvitationController;
+use App\Controller\HealthController;
 use App\Entity\Game;
 use App\Entity\Invitation;
 use App\Exception\Game\GameNotFoundException;
@@ -35,7 +36,9 @@ final class InvitationControllerTest extends TestCase
 
     public function testHealthReturnsReadyPayload(): void
     {
-        $response = $this->controller->health();
+        $controller = new HealthController($this->logger);
+        $controller->setContainer($this->container);
+        $response = $controller->health();
 
         self::assertSame(Response::HTTP_OK, $response->getStatusCode());
         self::assertSame(
@@ -123,9 +126,7 @@ final class InvitationControllerTest extends TestCase
 
         $this->logger->expects(self::once())
             ->method('warning')
-            ->with('Invite join request is missing a game id.', [
-                'invitationUuid' => 'missing-game-id',
-            ]);
+            ->with('Invite join request is missing a game id.');
 
         $this->expectException(GameNotFoundException::class);
 
@@ -162,5 +163,21 @@ final class InvitationControllerTest extends TestCase
         self::assertSame($uuid, $setCalls['invitation_uuid']);
         self::assertSame(Response::HTTP_FOUND, $response->getStatusCode());
         self::assertSame('http://example.test/app/', $response->headers->get('Location'));
+    }
+    public function testJoinLogsDoNotContainInvitationUuid(): void
+    {
+        $uuid = Uuid::v4()->toRfc4122();
+        $invitation = $this->createMock(Invitation::class);
+        $invitation->method("getGameId")->willReturn(77);
+        $invitation->method("getUuid")->willReturn($uuid);
+        $handler = new \Monolog\Handler\TestHandler();
+        $logger = new \Monolog\Logger("test", [$handler]);
+        $controller = new InvitationController("http://example.test", $logger);
+        $controller->setContainer($this->container);
+        $controller->joinInvitation($invitation, $this->createMock(SessionInterface::class));
+        self::assertNotEmpty($handler->getRecords());
+        foreach ($handler->getRecords() as $record) {
+            self::assertStringNotContainsString($uuid, json_encode([$record->message, $record->context], JSON_THROW_ON_ERROR));
+        }
     }
 }

@@ -25,7 +25,6 @@ final class RememberedLoginCookieSubscriber implements EventSubscriberInterface
      * @param string $cookieName
      * @param int    $lifetime
      *
-     * @psalm-suppress PossiblyUnusedMethod Reason: constructor is used by Symfony autowiring.
      */
     public function __construct(
         private readonly string $cookieName,

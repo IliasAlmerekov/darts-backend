@@ -17,7 +17,6 @@ final class PlayerIdPayload
     /**
      * @param int|null $playerId
      *
-     * @psalm-suppress PossiblyUnusedMethod
      */
     public function __construct(public ?int $playerId = null)
     {

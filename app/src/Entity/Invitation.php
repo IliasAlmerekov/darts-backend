@@ -9,6 +9,8 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\UuidV4;
 
 /**
+ * @psalm-suppress ClassMustBeFinal Doctrine lazy-loading proxies extend entities.
+ *
  * @ORM\Entity(repositoryClass: InvitationRepository::class)
  * This class represents an invitation to join a game.
  */
@@ -26,7 +28,6 @@ class Invitation
     private ?Game $game = null;
 
     /**
-     * @psalm-suppress PossiblyUnusedMethod
      *
      * @return string|null
      */
@@ -48,7 +49,6 @@ class Invitation
     }
 
     /**
-     * @psalm-suppress PossiblyUnusedMethod
      *
      * @return int|null
      */

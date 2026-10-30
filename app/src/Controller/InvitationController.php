@@ -12,16 +12,13 @@ namespace App\Controller;
 use App\Entity\Game;
 use App\Entity\Invitation;
 use App\Exception\Game\GameNotFoundException;
-use App\Exception\Health\DatabaseUnavailableException;
 use App\Security\InvitationSession;
 use App\Service\Invitation\InvitationServiceInterface;
-use Doctrine\DBAL\Connection;
 use Nelmio\ApiDocBundle\Attribute\Security;
 use OpenApi\Attributes as OA;
 use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -46,71 +43,6 @@ final class InvitationController extends AbstractController
         private readonly LoggerInterface $logger,
     ) {
         $this->frontendUrl = rtrim($frontendUrl, '/');
-    }
-
-    /**
-     * Lightweight readiness endpoint for proxy health checks.
-     *
-     * @return JsonResponse
-     */
-    #[OA\Response(
-        response: Response::HTTP_OK,
-        description: 'Backend is reachable and ready to accept API traffic.',
-        content: new OA\JsonContent(
-            type: 'object',
-            required: ['success', 'status'],
-            properties: [
-                new OA\Property(property: 'success', type: 'boolean', example: true),
-                new OA\Property(property: 'status', type: 'string', example: 'ok'),
-            ]
-        )
-    )]
-    #[Security(name: null)]
-    #[Route('/api/health', name: 'api_health', methods: ['GET'], format: 'json')]
-    public function health(): JsonResponse
-    {
-        return $this->json([
-            'success' => true,
-            'status' => 'ok',
-        ]);
-    }
-
-    /**
-     * Readiness endpoint: answers 200 only while the database answers a trivial query.
-     *
-     * @param Connection $connection
-     *
-     * @return JsonResponse
-     *
-     * @throws DatabaseUnavailableException
-     */
-    #[OA\Response(
-        response: Response::HTTP_OK,
-        description: 'The database answers; the backend can serve API traffic.',
-        content: new OA\JsonContent(
-            type: 'object',
-            required: ['success', 'status'],
-            properties: [
-                new OA\Property(property: 'success', type: 'boolean', example: true),
-                new OA\Property(property: 'status', type: 'string', example: 'ready'),
-            ]
-        )
-    )]
-    #[OA\Response(response: Response::HTTP_SERVICE_UNAVAILABLE, description: 'Die Datenbankprüfung ist fehlgeschlagen (`DATABASE_UNAVAILABLE`), ohne Fehlerdetails.', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
-    #[Security(name: null)]
-    #[Route('/api/ready', name: 'api_ready', methods: ['GET'], format: 'json')]
-    public function ready(Connection $connection): JsonResponse
-    {
-        try {
-            $connection->fetchOne('SELECT 1');
-        } catch (Throwable $exception) {
-            // Only the log gets the cause: its text can carry the DSN or host.
-            $this->logger->error('Readiness check failed: database unavailable.', ['exception' => $exception]);
-
-            throw new DatabaseUnavailableException();
-        }
-
-        return $this->json(['success' => true, 'status' => 'ready']);
     }
 
     /**
@@ -154,7 +86,7 @@ final class InvitationController extends AbstractController
     public function createInvitation(#[MapEntity(id: 'id')] Game $game, InvitationServiceInterface $invitationService): array
     {
         $payload = $invitationService->getInvitationPayload($game);
-        if (!($payload['success'] ?? false)) {
+        if (!(bool) ($payload['success'] ?? false)) {
             throw new GameNotFoundException();
         }
 
@@ -188,9 +120,7 @@ final class InvitationController extends AbstractController
     {
         $gameId = $invitation->getGameId();
         if (null === $gameId) {
-            $this->logger->warning('Invite join request is missing a game id.', [
-                'invitationUuid' => $invitation->getUuid(),
-            ]);
+            $this->logger->warning('Invite join request is missing a game id.');
             throw new GameNotFoundException();
         }
 
@@ -199,7 +129,6 @@ final class InvitationController extends AbstractController
 
         $this->logger->info('Invite join request received.', [
             'gameId' => $gameId,
-            'invitationUuid' => $invitationUuid,
         ]);
 
         try {
@@ -209,7 +138,6 @@ final class InvitationController extends AbstractController
 
             $this->logger->info('Invite join session prepared successfully.', [
                 'gameId' => $gameId,
-                'invitationUuid' => $invitationUuid,
                 'redirect' => $redirectTarget,
             ]);
 
@@ -217,9 +145,7 @@ final class InvitationController extends AbstractController
         } catch (Throwable $throwable) {
             $this->logger->error('Invite join request failed.', [
                 'gameId' => $gameId,
-                'invitationUuid' => $invitationUuid,
                 'exceptionClass' => $throwable::class,
-                'exceptionMessage' => $throwable->getMessage(),
             ]);
 
             throw $throwable;
