@@ -12,6 +12,7 @@ services:
     volumes:
       - unix-socks:/var/run
       - ./app:/var/www/html
+      - ./docs/contract:/var/www/docs/contract:ro
   nginx:
     image: registry.deepblue.technology/library/nginx:1.28.0-1
     ports:
