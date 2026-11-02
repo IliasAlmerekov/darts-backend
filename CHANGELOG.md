@@ -25,6 +25,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **ErrorCode**: Neuer Fehlercode `SecurityAccessDenied` für API-Fehlerbehandlung.
 
 ### Geändert
+- **Architektur**: `GamePlayers::setPlayer()` setzt nur noch den Spieler und füllt den Namens-Snapshot nicht mehr über `PlayerDisplayName`; die Entity hängt damit von keinem Service mehr ab. Den Snapshot setzt allein `PlayerManagementService::createGamePlayer()`, wie bisher. Tests legen Plätze mit Snapshot über `TestSeatFactory` an (#237)
 
 - **Protokollierung**: Einladungs-UUIDs aus Logs entfernt und Anfrage-IDs ergänzt (#63).
 

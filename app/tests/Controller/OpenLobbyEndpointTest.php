@@ -13,6 +13,7 @@ use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Enum\GameStatus;
+use App\Tests\Support\TestSeatFactory;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
 use DateTimeImmutable;
@@ -209,7 +210,7 @@ final class OpenLobbyEndpointTest extends WebTestCase
         $first = $this->postJson(sprintf('/api/room/%d/rematch', $finished->getGameId()));
         $lobby = $this->entityManager->find(Game::class, $first['gameId']);
         self::assertInstanceOf(Game::class, $lobby);
-        $seat = (new GamePlayers())->setPlayer($this->entityManager->find(User::class, $anna->getId()))->setPosition(3);
+        $seat = TestSeatFactory::create($this->entityManager->find(User::class, $anna->getId()))->setPosition(3);
         $lobby->addGamePlayer($seat);
         $this->entityManager->persist($seat);
         $this->entityManager->flush();
@@ -312,7 +313,7 @@ final class OpenLobbyEndpointTest extends WebTestCase
         }
         $this->entityManager->persist($game);
         foreach ($players as $index => $player) {
-            $seat = (new GamePlayers())->setPlayer($player)->setPosition($index + 1);
+            $seat = TestSeatFactory::create($player)->setPosition($index + 1);
             $game->addGamePlayer($seat);
             $this->entityManager->persist($seat);
         }

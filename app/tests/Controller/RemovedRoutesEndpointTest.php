@@ -10,9 +10,9 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\Entity\Game;
-use App\Entity\GamePlayers;
 use App\Enum\GameStatus;
 use App\Enum\OutRule;
+use App\Tests\Support\TestSeatFactory;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
@@ -56,7 +56,7 @@ final class RemovedRoutesEndpointTest extends WebTestCase
             ->setOutRule(OutRule::Single)
             ->setStatus(GameStatus::Finished);
         $entityManager->persist($game);
-        $seat = (new GamePlayers())->setPlayer($player)->setPosition(1)->setScore(0)->setIsWinner(true);
+        $seat = TestSeatFactory::create($player)->setPosition(1)->setScore(0)->setIsWinner(true);
         $game->addGamePlayer($seat);
         $entityManager->persist($seat);
         $entityManager->flush();

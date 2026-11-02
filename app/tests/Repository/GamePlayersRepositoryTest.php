@@ -14,6 +14,7 @@ use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Repository\GamePlayersRepository;
+use App\Tests\Support\TestSeatFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -253,9 +254,8 @@ final class GamePlayersRepositoryTest extends KernelTestCase
 
     private function persistGamePlayer(Game $game, User $user, ?int $score = null, int $position = 1): GamePlayers
     {
-        $gamePlayer = (new GamePlayers())
+        $gamePlayer = TestSeatFactory::create($user)
             ->setGame($game)
-            ->setPlayer($user)
             ->setPosition($position)
             ->setScore($score ?? 50);
 

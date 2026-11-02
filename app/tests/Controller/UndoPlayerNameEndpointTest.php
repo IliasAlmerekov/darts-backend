@@ -10,8 +10,8 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\Entity\Game;
-use App\Entity\GamePlayers;
 use App\Enum\GameStatus;
+use App\Tests\Support\TestSeatFactory;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
@@ -31,7 +31,7 @@ final class UndoPlayerNameEndpointTest extends WebTestCase
         $player = TestUserFactory::create($entityManager, 'undoname', 'player', ['ROLE_PLAYER'])->setDisplayName('Joined Name');
         $game = (new Game())->setDate(new DateTime())->setStatus(GameStatus::Started)->setRound(1);
         $entityManager->persist($game);
-        $seat = (new GamePlayers())->setPlayer($player)->setPosition(1)->setScore(301);
+        $seat = TestSeatFactory::create($player)->setPosition(1)->setScore(301);
         $game->addGamePlayer($seat);
         $entityManager->persist($seat);
         $player->setDisplayName('Renamed Later');
@@ -62,7 +62,7 @@ final class UndoPlayerNameEndpointTest extends WebTestCase
         $player = TestUserFactory::create($entityManager, 'undoleft', 'player', ['ROLE_PLAYER'])->setDisplayName(' Left Player ');
         $game = (new Game())->setDate(new DateTime())->setStatus(GameStatus::Started)->setRound(1);
         $entityManager->persist($game);
-        $seat = (new GamePlayers())->setPlayer($player)->setPosition(1)->setScore(301);
+        $seat = TestSeatFactory::create($player)->setPosition(1)->setScore(301);
         $game->addGamePlayer($seat);
         $entityManager->persist($seat);
         $entityManager->flush();

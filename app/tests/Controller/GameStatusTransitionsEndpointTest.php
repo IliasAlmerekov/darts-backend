@@ -10,9 +10,9 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\Entity\Game;
-use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Enum\GameStatus;
+use App\Tests\Support\TestSeatFactory;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
 use DateTimeImmutable;
@@ -216,7 +216,7 @@ final class GameStatusTransitionsEndpointTest extends WebTestCase
         // The first player leads on score; a finished game places them second to show the stored placements win.
         $seats = [[$this->first, 20, 1, GameStatus::Finished === $status ? 2 : null], [$this->second, 50, 2, GameStatus::Finished === $status ? 1 : null]];
         foreach ($seats as [$user, $score, $position, $placement]) {
-            $seat = (new GamePlayers())->setPlayer($user)->setScore($score)->setPosition($position)->setPlacement($placement)->setIsWinner(1 === $placement);
+            $seat = TestSeatFactory::create($user)->setScore($score)->setPosition($position)->setPlacement($placement)->setIsWinner(1 === $placement);
             $game->addGamePlayer($seat);
             $this->entityManager->persist($seat);
         }

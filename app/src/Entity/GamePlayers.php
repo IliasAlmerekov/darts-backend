@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Repository\GamePlayersRepository;
-use App\Service\Game\PlayerDisplayName;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -75,12 +74,6 @@ class GamePlayers
     public function setPlayer(?User $player): static
     {
         $this->player = $player;
-        if (null !== $player && '' === trim($this->displayNameSnapshot ?? '', ' ')) {
-            $displayName = PlayerDisplayName::forUser($player);
-            if ('' !== $displayName) {
-                $this->displayNameSnapshot = $displayName;
-            }
-        }
 
         return $this;
     }

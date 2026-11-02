@@ -10,9 +10,9 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\Entity\Game;
-use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Enum\GameStatus;
+use App\Tests\Support\TestSeatFactory;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
@@ -240,9 +240,8 @@ final class PlayerCurrentGameEndpointTest extends WebTestCase
     {
         $entityManager = static::getContainer()->get(EntityManagerInterface::class);
 
-        $seat = (new GamePlayers())
+        $seat = TestSeatFactory::create($player)
             ->setGame($game)
-            ->setPlayer($player)
             ->setPosition($game->getGamePlayers()->count() + 1)
             ->setScore(301)
             ->setIsWinner(false);

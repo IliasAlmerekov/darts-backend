@@ -10,10 +10,10 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\Entity\Game;
-use App\Entity\GamePlayers;
 use App\Entity\RoundThrows;
 use App\Enum\GameStatus;
 use App\Enum\OutRule;
+use App\Tests\Support\TestSeatFactory;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
@@ -51,7 +51,7 @@ final class ThrowClientBustFlagEndpointTest extends WebTestCase
             ->setOutRule(OutRule::Single)
             ->setStatus(GameStatus::Started);
         $entityManager->persist($game);
-        $seat = (new GamePlayers())->setPlayer($player)->setPosition(1)->setScore(301)->setIsWinner(false);
+        $seat = TestSeatFactory::create($player)->setPosition(1)->setScore(301)->setIsWinner(false);
         $game->addGamePlayer($seat);
         $entityManager->persist($seat);
         $entityManager->flush();

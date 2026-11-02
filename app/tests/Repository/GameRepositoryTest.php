@@ -12,6 +12,7 @@ use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Repository\GameRepository;
 use App\Service\Game\GameFinishServiceInterface;
+use App\Tests\Support\TestSeatFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
@@ -239,9 +240,8 @@ final class GameRepositoryTest extends KernelTestCase
 
     private function createGamePlayer(Game $game, User $user, int $position, int $score): GamePlayers
     {
-        $gamePlayer = (new GamePlayers())
+        $gamePlayer = TestSeatFactory::create($user)
             ->setGame($game)
-            ->setPlayer($user)
             ->setPosition($position)
             ->setScore($score);
 

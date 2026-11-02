@@ -15,11 +15,11 @@ use PHPUnit\Framework\TestCase;
 
 final class GamePlayersTest extends TestCase
 {
-    public function testSetPlayerFillsASpacesOnlySnapshot(): void
+    public function testSetPlayerLeavesAMissingSnapshotMissing(): void
     {
-        $seat = (new GamePlayers())->setDisplayNameSnapshot('   ')->setPlayer((new User())->setUsername('tom'));
+        $seat = (new GamePlayers())->setPlayer((new User())->setUsername('tom'));
 
-        self::assertSame('tom', $seat->getDisplayNameSnapshot());
+        self::assertNull($seat->getDisplayNameSnapshot());
     }
 
     public function testSetPlayerKeepsAnExistingSnapshot(): void

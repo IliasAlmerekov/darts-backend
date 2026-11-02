@@ -10,11 +10,11 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\Entity\Game;
-use App\Entity\GamePlayers;
 use App\Entity\Invitation;
 use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Tests\Support\SameOriginLogin;
+use App\Tests\Support\TestSeatFactory;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
@@ -225,9 +225,8 @@ final class LoginSuccessRedirectEndpointTest extends WebTestCase
             ->setStatus($status);
         $entityManager->persist($game);
 
-        $seat = (new GamePlayers())
+        $seat = TestSeatFactory::create($player)
             ->setGame($game)
-            ->setPlayer($player)
             ->setPosition(1)
             ->setScore(301)
             ->setIsWinner(false);

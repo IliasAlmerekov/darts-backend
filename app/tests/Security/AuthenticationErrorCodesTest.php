@@ -10,12 +10,12 @@ declare(strict_types=1);
 namespace App\Tests\Security;
 
 use App\Entity\Game;
-use App\Entity\GamePlayers;
 use App\Enum\GameStatus;
 use App\Exception\Request\UsernameAlreadyTakenException;
 use App\Exception\Security\SecurityAccessDeniedException;
 use App\Exception\Security\UserNotAuthenticatedException;
 use App\Controller\ErrorController;
+use App\Tests\Support\TestSeatFactory;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
@@ -91,7 +91,7 @@ final class AuthenticationErrorCodesTest extends WebTestCase
         $taken = TestUserFactory::create($entityManager, 'authcodes', 'taken', ['ROLE_PLAYER'])->setDisplayName('Alex');
         $game = (new Game())->setDate(new DateTime())->setStartScore(301)->setStatus(GameStatus::Lobby)->setRound(1);
         $entityManager->persist($game);
-        $seat = (new GamePlayers())->setPlayer($taken)->setScore(301)->setPosition(1);
+        $seat = TestSeatFactory::create($taken)->setScore(301)->setPosition(1);
         $game->addGamePlayer($seat);
         $entityManager->persist($seat);
         $entityManager->flush();
