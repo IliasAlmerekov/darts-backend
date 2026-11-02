@@ -84,6 +84,9 @@ same commit as the response. The frontend validates responses against a dump of 
 `../dartsapp/docs/backend-api-contract.json`, so a changed response also gets a frontend
 issue to refresh that dump.
 
+The frontend vendors `docs/contract/throw-scoring-cases.json`. A change to `OutRule` or
+`ThrowScoring` updates that file in the same PR and gets a frontend issue to refresh its copy.
+
 ## Doctrine
 
 Every schema change ships with a migration in `app/migrations`. Generate it against the
@@ -125,8 +128,9 @@ or `vendor/bin/*` runs only when the user accepts the deviation.
 Locally backend and frontend run as one Compose stack, the project `darts`: nginx on :8001,
 php, mysql, and the frontend on :5173. Start it with `docker compose up -d` in the
 workspace folder that holds both repos. The php container mounts this checkout's `app/`.
+Run `docker compose up -d php` from this repository to mount the scoring contract too.
 
-The `scripts/` checks run on the host, because the container mounts only `app/`.
+The `scripts/` checks run on the host.
 `check-test-db-env.sh` fails when `app/.env.test` and `docker-compose.yaml` disagree on the
 MySQL root password; put the matching `DATABASE_URL` in `app/.env.test.local` to fix it.
 `check-image-eol.sh` fails when a shell script, a Dockerfile, or a file under `app/docker/`
