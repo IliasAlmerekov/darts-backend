@@ -10,9 +10,9 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\Entity\Game;
-use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Enum\GameStatus;
+use App\Tests\Support\TestSeatFactory;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
@@ -42,7 +42,7 @@ final class StartPlayerPositionsEndpointTest extends WebTestCase
         $game = (new Game())->setDate(new DateTime())->setStartScore(301)->setStatus(GameStatus::Lobby);
         $this->entityManager->persist($game);
         foreach ([1 => $this->first, 2 => $this->second] as $position => $user) {
-            $seat = (new GamePlayers())->setPlayer($user)->setPosition($position)->setScore(0)->setIsWinner(false);
+            $seat = TestSeatFactory::create($user)->setPosition($position)->setScore(0)->setIsWinner(false);
             $game->addGamePlayer($seat);
             $this->entityManager->persist($seat);
         }

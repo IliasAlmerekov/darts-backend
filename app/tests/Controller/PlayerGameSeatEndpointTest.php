@@ -10,10 +10,10 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\Entity\Game;
-use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Enum\OutRule;
+use App\Tests\Support\TestSeatFactory;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
@@ -169,9 +169,8 @@ final class PlayerGameSeatEndpointTest extends WebTestCase
         $entityManager->persist($game);
 
         if (null !== $player) {
-            $seat = (new GamePlayers())
+            $seat = TestSeatFactory::create($player)
                 ->setGame($game)
-                ->setPlayer($player)
                 ->setPosition(1)
                 ->setScore(301)
                 ->setIsWinner(false);

@@ -13,6 +13,7 @@ use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Enum\GameStatus;
 use App\Repository\GameRepository;
+use App\Tests\Support\TestSeatFactory;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
 use DateTimeImmutable;
@@ -45,7 +46,7 @@ final class RematchStartEndpointTest extends WebTestCase
             ->setFinishedAt(new DateTimeImmutable());
         $entityManager->persist($oldGame);
         foreach ([1 => $first, 2 => $second] as $position => $player) {
-            $seat = (new GamePlayers())->setPlayer($player)->setPosition($position)->setScore(0)->setIsWinner(1 === $position);
+            $seat = TestSeatFactory::create($player)->setPosition($position)->setScore(0)->setIsWinner(1 === $position);
             $oldGame->addGamePlayer($seat);
             $entityManager->persist($seat);
         }

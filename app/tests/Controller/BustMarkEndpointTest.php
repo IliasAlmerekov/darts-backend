@@ -10,8 +10,8 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\Entity\Game;
-use App\Entity\GamePlayers;
 use App\Enum\GameStatus;
+use App\Tests\Support\TestSeatFactory;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
@@ -35,7 +35,7 @@ final class BustMarkEndpointTest extends WebTestCase
         $em->persist($game);
         foreach (['anna', 'boris', 'vika'] as $index => $name) {
             $player = TestUserFactory::create($em, 'bustmark', $name, ['ROLE_PLAYER']);
-            $seat = (new GamePlayers())->setPlayer($player)->setPosition($index + 1)->setScore(2 === $index ? 2 : 301);
+            $seat = TestSeatFactory::create($player)->setPosition($index + 1)->setScore(2 === $index ? 2 : 301);
             $game->addGamePlayer($seat);
             $em->persist($seat);
             $em->flush();

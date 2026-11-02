@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Security;
 
 use App\Entity\Game;
-use App\Entity\GamePlayers;
 use App\Entity\Invitation;
 use App\Entity\Round;
 use App\Entity\User;
 use App\Enum\GameStatus;
 use App\Tests\Support\SameOriginLogin;
+use App\Tests\Support\TestSeatFactory;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
 use DateTimeImmutable;
@@ -381,18 +381,16 @@ final class ApiAccessMatrixTest extends WebTestCase
             $game->setRound(1);
         }
 
-        $gamePlayer = (new GamePlayers())
+        $gamePlayer = TestSeatFactory::create($personas[self::PERSONA_PLAYER_PARTICIPANT])
             ->setGame($game)
-            ->setPlayer($personas[self::PERSONA_PLAYER_PARTICIPANT])
             ->setPosition(1)
             ->setScore(301)
             ->setIsWinner(false);
         $game->addGamePlayer($gamePlayer);
         $entityManager->persist($gamePlayer);
 
-        $opponentSeat = (new GamePlayers())
+        $opponentSeat = TestSeatFactory::create($opponent)
             ->setGame($game)
-            ->setPlayer($opponent)
             ->setPosition(2)
             ->setScore(301)
             ->setIsWinner(false);

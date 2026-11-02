@@ -10,9 +10,9 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\Entity\Game;
-use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Enum\GameStatus;
+use App\Tests\Support\TestSeatFactory;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
@@ -164,7 +164,7 @@ final class ThreeDartAverageEndpointTest extends WebTestCase
             ->setOutRule(\App\Enum\OutRule::Double);
         $this->entityManager->persist($game);
         foreach ([1 => $this->anna, 2 => $this->boris] as $position => $player) {
-            $seat = (new GamePlayers())->setPlayer($player)->setPosition($position)->setScore(101);
+            $seat = TestSeatFactory::create($player)->setPosition($position)->setScore(101);
             $game->addGamePlayer($seat);
             $this->entityManager->persist($seat);
         }

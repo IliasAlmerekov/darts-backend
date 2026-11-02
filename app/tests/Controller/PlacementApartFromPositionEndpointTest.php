@@ -10,9 +10,9 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\Entity\Game;
-use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Enum\GameStatus;
+use App\Tests\Support\TestSeatFactory;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
@@ -148,7 +148,7 @@ final class PlacementApartFromPositionEndpointTest extends WebTestCase
         $game = (new Game())->setDate(new DateTime())->setStartScore($startScore)->setOutRule(\App\Enum\OutRule::Single)->setStatus(GameStatus::Started)->setRound(1);
         $this->entityManager->persist($game);
         foreach ($seats as [$user, $position, $score]) {
-            $seat = (new GamePlayers())->setPlayer($user)->setPosition($position)->setScore($score);
+            $seat = TestSeatFactory::create($user)->setPosition($position)->setScore($score);
             $game->addGamePlayer($seat);
             $this->entityManager->persist($seat);
         }

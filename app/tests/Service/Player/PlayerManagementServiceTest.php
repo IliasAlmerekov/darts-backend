@@ -235,6 +235,17 @@ final class PlayerManagementServiceTest extends TestCase
         self::assertSame('tom', $result->getDisplayNameSnapshot());
     }
 
+    public function testSnapshotTrimsTheSpacesAroundADisplayName(): void
+    {
+        $player = $this->userWithId(405, 'tom', '  Tommy  ');
+        $this->gamePlayersRepository->expects(self::once())->method('findNextPositionForGame')->willReturn(1);
+        $this->entityManager->expects(self::once())->method('getReference')->willReturn((new Game())->setGameId(305));
+
+        $result = $this->service->addPlayerEntity(305, $player, flush: false);
+
+        self::assertSame('Tommy', $result->getDisplayNameSnapshot());
+    }
+
     public function testSnapshotOfAUserWithoutAnyNameStaysEmptyInsteadOfPlayerN(): void
     {
         $player = $this->userWithId(404, '   ');

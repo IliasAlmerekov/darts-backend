@@ -10,6 +10,7 @@ use App\Entity\Round;
 use App\Entity\RoundThrows;
 use App\Entity\User;
 use App\Enum\GameStatus;
+use App\Tests\Support\TestSeatFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\Group;
@@ -285,9 +286,8 @@ final class GameSettingsReadBaselineTest extends WebTestCase
         $game = $this->createGame($entityManager, GameStatus::Lobby);
         $players = $this->createPlayers($entityManager, $benchmarkUser, $name, $playerCount);
         foreach ($players as $position => $player) {
-            $gamePlayer = (new GamePlayers())
+            $gamePlayer = TestSeatFactory::create($player)
                 ->setGame($game)
-                ->setPlayer($player)
                 ->setPosition($position + 1)
                 ->setScore($game->getStartScore())
                 ->setIsWinner(false);
@@ -308,9 +308,8 @@ final class GameSettingsReadBaselineTest extends WebTestCase
         $players = $this->createPlayers($entityManager, $benchmarkUser, $name, $playerCount);
         $gamePlayers = [];
         foreach ($players as $position => $player) {
-            $gamePlayer = (new GamePlayers())
+            $gamePlayer = TestSeatFactory::create($player)
                 ->setGame($game)
-                ->setPlayer($player)
                 ->setPosition($position + 1)
                 ->setScore($game->getStartScore())
                 ->setIsWinner(false);

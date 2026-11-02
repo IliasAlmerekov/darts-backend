@@ -10,9 +10,9 @@ declare(strict_types=1);
 namespace App\Tests\Controller;
 
 use App\Entity\Game;
-use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Enum\GameStatus;
+use App\Tests\Support\TestSeatFactory;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
@@ -38,7 +38,7 @@ final class UndoRoundBoundaryEndpointTest extends WebTestCase
         $this->player = TestUserFactory::create($this->entityManager, 'undoround', 'player', ['ROLE_PLAYER']);
         $game = (new Game())->setDate(new DateTime())->setStatus(GameStatus::Started)->setRound(1);
         $this->entityManager->persist($game);
-        $seat = (new GamePlayers())->setPlayer($this->player)->setPosition(1)->setScore(301);
+        $seat = TestSeatFactory::create($this->player)->setPosition(1)->setScore(301);
         $game->addGamePlayer($seat);
         $this->entityManager->persist($seat);
         $this->entityManager->flush();
