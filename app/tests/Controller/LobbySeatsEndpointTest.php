@@ -24,6 +24,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Seats change only in the lobby: remove participant, add guest and reorder answer 409 outside it (#38).
+ * Removal takes the playerId from the query, then the JSON body, then the signed-in user (#235).
  */
 final class LobbySeatsEndpointTest extends WebTestCase
 {
@@ -119,6 +120,46 @@ final class LobbySeatsEndpointTest extends WebTestCase
         self::assertSame($usersBefore, $this->userCount());
     }
 
+    public function testAdminRemovesTheBodyPlayerWhenTheQueryHasNone(): void
+    {
+        $gameId = $this->createGame(GameStatus::Lobby, [$this->first, $this->second]);
+
+        $this->request(Request::METHOD_DELETE, sprintf('/api/room/%d', $gameId), ['playerId' => (int) $this->first->getId()]);
+
+        self::assertResponseIsSuccessful((string) $this->client->getResponse()->getContent());
+        self::assertSame([[(int) $this->second->getId(), 2]], $this->storedSeats($gameId));
+    }
+
+    public function testQueryPlayerIdWinsOverTheBodyPlayerId(): void
+    {
+        $gameId = $this->createGame(GameStatus::Lobby, [$this->first, $this->second]);
+
+        $this->request(Request::METHOD_DELETE, sprintf('/api/room/%d?playerId=%d', $gameId, (int) $this->first->getId()), ['playerId' => (int) $this->second->getId()]);
+
+        self::assertResponseIsSuccessful((string) $this->client->getResponse()->getContent());
+        self::assertSame([[(int) $this->second->getId(), 2]], $this->storedSeats($gameId));
+    }
+
+    public function testNonPositiveBodyPlayerIdIsRejected(): void
+    {
+        $gameId = $this->createGame(GameStatus::Lobby, [$this->first, $this->second]);
+
+        $this->request(Request::METHOD_DELETE, sprintf('/api/room/%d', $gameId), ['playerId' => 0]);
+
+        $this->assertError(Response::HTTP_BAD_REQUEST, 'REQUEST_PLAYER_ID_REQUIRED');
+        self::assertCount(2, $this->storedSeats($gameId));
+    }
+
+    public function testWithoutPlayerIdTheUnseatedAdminIsNotFound(): void
+    {
+        $gameId = $this->createGame(GameStatus::Lobby, [$this->first, $this->second]);
+
+        $this->request(Request::METHOD_DELETE, sprintf('/api/room/%d', $gameId));
+
+        $this->assertError(Response::HTTP_NOT_FOUND, 'GAME_PLAYER_NOT_FOUND');
+        self::assertCount(2, $this->storedSeats($gameId));
+    }
+
     /**
      * @param list<User> $players
      */
@@ -165,9 +206,13 @@ final class LobbySeatsEndpointTest extends WebTestCase
     private function assertConflict(string $method, string $uri, string $errorCode, array $payload = []): void
     {
         $this->request($method, $uri, $payload);
+        $this->assertError(Response::HTTP_CONFLICT, $errorCode);
+    }
 
+    private function assertError(int $status, string $errorCode): void
+    {
         $content = (string) $this->client->getResponse()->getContent();
-        self::assertResponseStatusCodeSame(Response::HTTP_CONFLICT, $content);
+        self::assertResponseStatusCodeSame($status, $content);
         $body = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
         self::assertSame($errorCode, $body['error'] ?? null);

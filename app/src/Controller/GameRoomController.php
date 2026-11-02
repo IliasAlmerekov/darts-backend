@@ -112,13 +112,13 @@ final class GameRoomController extends AbstractController
     #[OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
     #[OA\Parameter(
         name: 'playerId',
-        description: 'Spieler-ID, die entfernt werden soll. Wenn nicht angegeben, wird der authentifizierte User oder der Request-Body verwendet.',
+        description: 'Spieler-ID, die entfernt werden soll. Hat Vorrang vor der playerId im Request-Body; fehlen beide, wird der authentifizierte User verwendet.',
         in: 'query',
         required: false,
         schema: new OA\Schema(type: 'integer', example: 42, nullable: true)
     )]
     #[OA\RequestBody(
-        description: 'Alternative Übergabe der playerId (falls nicht als Query-Parameter).',
+        description: 'Alternative Übergabe der playerId, wenn kein Query-Parameter gesetzt ist.',
         required: false,
         content: new OA\JsonContent(ref: new Model(type: PlayerIdPayload::class))
     )]
@@ -135,11 +135,11 @@ final class GameRoomController extends AbstractController
     #[Route(path: '/api/room/{id}', name: 'room_player_leave', methods: ['DELETE'], format: 'json')]
     public function playerLeave(int $id, #[MapQueryParameter] ?int $playerId = null, #[MapRequestPayload] ?PlayerIdPayload $payload = null): SuccessMessageDto
     {
+        $playerId ??= $payload?->playerId;
         $user = $this->getUser();
         if ($user instanceof User) {
             $playerId ??= $user->getId();
         }
-        $playerId ??= $payload?->playerId;
         if (null === $playerId || $playerId <= 0) {
             throw new PlayerIdRequiredException();
         }
