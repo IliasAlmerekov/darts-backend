@@ -350,6 +350,31 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertSame(['lobby', 'started', null], $properties['status']['enum'] ?? null);
     }
 
+    public function testGameSeatDocumentsExamplesSchemaAnd401And403And404(): void
+    {
+        $document = $this->document();
+
+        $operation = $document['paths']['/api/player/games/{gameId}/seat']['get'];
+        self::assertSame(['Player'], $operation['tags']);
+        foreach (['200', '401', '403', '404'] as $status) {
+            self::assertArrayHasKey($status, $operation['responses'], $status);
+        }
+        self::assertStringContainsString('GAME_NOT_FOUND', $operation['responses']['404']['description']);
+        $examples = $operation['responses']['200']['content']['application/json']['examples'];
+        self::assertSame(['gameId' => 12, 'status' => 'lobby', 'seated' => true], $examples['seated']['value']);
+        self::assertSame(['gameId' => 12, 'status' => 'lobby', 'seated' => false], $examples['removed']['value']);
+        self::assertSame('finished', $examples['finished']['value']['status']);
+        self::assertSame('aborted', $examples['aborted']['value']['status']);
+
+        $schema = $document['components']['schemas']['GameSeatResponseDto'];
+        self::assertSame(['gameId', 'status', 'seated'], $schema['required'] ?? null);
+        $properties = $schema['properties'];
+        self::assertSame(['gameId', 'status', 'seated'], array_keys($properties));
+        self::assertSame('integer', $properties['gameId']['type']);
+        self::assertSame('boolean', $properties['seated']['type']);
+        self::assertSame(['lobby', 'started', 'finished', 'aborted'], $properties['status']['enum'] ?? null);
+    }
+
     public function testProfileDocumentsResponseSchemaAnd401And403(): void
     {
         $document = $this->document();

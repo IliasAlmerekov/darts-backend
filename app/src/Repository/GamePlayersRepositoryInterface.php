@@ -98,8 +98,6 @@ interface GamePlayersRepositoryInterface
      * @param int $gameId
      * @param int $playerId
      *
-     * @psalm-suppress PossiblyUnusedMethod Reason: retained for the separate dead-code cleanup in #71.
-     *
      * @return bool
      */
     public function isPlayerInGame(int $gameId, int $playerId): bool;
