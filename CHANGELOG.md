@@ -8,6 +8,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 ## [Unreleased]
 
 ### Hinzugefügt
+- **Avatar**: Das Glossar definiert den Begriff Avatar; ADR 0009 hält fest, dass das Backend Avatare per E-Mail aus einem privaten Cloudflare-R2-Bucket liest und über einen eigenen Endpunkt ausliefert, statt Ordner, Presigned URLs, öffentlichen Bucket oder ein Feld an `User` zu nutzen. Nur Dokumentation, die Umsetzung folgt in #233 (#233)
 - **Wurfwertung**: JSON-Vertragsfälle und PHPUnit-Test halten die Bust- und Checkout-Regeln für das Frontend fest (#239).
 - **Wartezimmer**: Neuer Spieler-Endpunkt `GET /api/player/games/{gameId}/seat` liefert für ein Spiel dessen Status (`lobby`, `started`, `finished`, `aborted`) und ob der angemeldete Spieler darin noch einen Platz hat (`seated`). So unterscheidet das Wartezimmer eine Entfernung durch den Admin von einem beendeten oder abgebrochenen Spiel. Nur `ROLE_PLAYER`, rein lesend, ohne Daten anderer Spieler; ein unbekanntes Spiel antwortet mit 404 `GAME_NOT_FOUND`. Die OpenAPI-Doku zeigt Beispiele für sitzend, entfernt, beendet und abgebrochen; das Frontend frischt seinen Contract-Dump auf (IliasAlmerekov/darts#381) (#234)
 - **Architektur**: `docs/architecture.md` beschreibt die Schichten (Controller, Use-Case-Service, Repository, Entity) und ihre Regeln; ADR 0008 hält fest, warum das Backend bei dieser Schichtung bleibt statt MVC, Rich Domain Model oder Hexagonal. `AGENTS.md` verweist darauf. Controller, die ihre Schreibtransaktion selbst öffnen, sind in #195 erfasst (#196)
