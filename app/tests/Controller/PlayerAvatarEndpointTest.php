@@ -131,6 +131,33 @@ final class PlayerAvatarEndpointTest extends WebTestCase
         }
     }
 
+    public function testDirectoryWithoutSearchPermissionReturns503(): void
+    {
+        $client = static::createClient();
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $player = TestUserFactory::create($em, 'avatar', 'player', ['ROLE_PLAYER']);
+        $admin = TestUserFactory::create($em, 'avatar', 'admin', ['ROLE_ADMIN']);
+        $em->flush();
+        $dir = sys_get_temp_dir().'/darts-avatar-'.bin2hex(random_bytes(8));
+        mkdir($dir);
+        chmod($dir, 0444);
+        clearstatcache(true, $dir);
+        try {
+            if (is_executable($dir)) {
+                self::markTestSkipped('The process can search a directory without execute permission.');
+            }
+            self::assertTrue(is_readable($dir));
+            $_ENV['AVATAR_DIR'] = $_SERVER['AVATAR_DIR'] = $dir;
+            $client->loginUser($admin);
+            $client->request('GET', '/api/player/'.$player->getId().'/avatar');
+            self::assertResponseStatusCodeSame(503);
+            self::assertStringContainsString('AVATAR_DIRECTORY_UNAVAILABLE', (string) $client->getResponse()->getContent());
+        } finally {
+            chmod($dir, 0700);
+            rmdir($dir);
+        }
+    }
+
     public function testPlayerCannotReadAnotherPlayersAvatarEvenWithEtag(): void
     {
         $client = static::createClient();

@@ -31,7 +31,7 @@ final class AvatarStore implements AvatarStoreInterface
     #[\Override]
     public function find(string $email): ?array
     {
-        if (!is_dir($this->directory) || !is_readable($this->directory)) {
+        if (!is_dir($this->directory) || !is_readable($this->directory) || !is_executable($this->directory)) {
             $this->logger->error('Avatar directory is unavailable.');
             throw new AvatarDirectoryUnavailableException();
         }
