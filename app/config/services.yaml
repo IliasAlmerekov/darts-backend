@@ -19,6 +19,11 @@ services:
     App\:
         resource: "../src/"
 
+    App\Service\Player\AvatarStoreInterface: '@App\Service\Player\AvatarStore'
+    App\Service\Player\AvatarStore:
+        arguments:
+            $directory: '%env(resolve:AVATAR_DIR)%'
+
     App\Logging\RequestProcessor:
         tags: [monolog.processor]
 
