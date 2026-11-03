@@ -38,6 +38,10 @@ _Avoid_: Login name, handle; "username" for a guest's name
 The name shown for a participant in a game: a player's display name, else their username, or the name the admin typed for a guest. A participant keeps the display name their seat got when they joined the game. The admin cannot add a guest under a display name already used in that game; two participants can still share one when a player joins after a guest of the same name.
 _Avoid_: Nickname, username (for guests)
 
+**Avatar**:
+The picture of a player's character, taken from the company's set of employee pictures by the player's email. A player whose email has no picture has no avatar; a guest never has one. A player sees their own avatar, the admin sees every player's.
+_Avoid_: Character picture, profile picture, photo
+
 ### Game flow
 
 **Lobby**:
