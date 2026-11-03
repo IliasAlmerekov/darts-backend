@@ -55,4 +55,5 @@ enum ErrorCode: string
     case UsernameTaken = 'USERNAME_TAKEN';
     case AvatarDirectoryUnavailable = 'AVATAR_DIRECTORY_UNAVAILABLE';
     case DatabaseUnavailable = 'DATABASE_UNAVAILABLE';
+    case ConcurrentChange = 'CONCURRENT_CHANGE';
 }

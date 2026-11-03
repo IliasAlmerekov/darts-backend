@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Exception\Persistence\ConcurrentChangeException;
 use App\Exception\Security\UserNotAuthenticatedException;
 use App\Http\Attribute\ApiResponse;
 use App\Security\InvitationSession;
@@ -77,6 +78,7 @@ final class SecurityController extends AbstractController
         ],
         content: new OA\JsonContent(ref: '#/components/schemas/ApiError')
     )]
+    #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Vor allem bei POST mit gespeicherter Einladung: '.ConcurrentChangeException::OPENAPI_DESCRIPTION.' '.InvitationSession::OPENAPI_SPENT_ON_CONFLICT, content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[Security(name: null)]
     #[ApiResponse]
     #[Route(path: '/api/login', name: 'app_login', methods: ['GET', 'POST'], format: 'json')]
@@ -130,6 +132,7 @@ final class SecurityController extends AbstractController
         )
     )]
     #[OA\Response(response: Response::HTTP_UNAUTHORIZED, description: 'Keine Session (`AUTHENTICATION_REQUIRED`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
+    #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Vor allem mit gespeicherter Einladung: '.ConcurrentChangeException::OPENAPI_DESCRIPTION.' '.InvitationSession::OPENAPI_SPENT_ON_CONFLICT, content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[Route('/api/login/success', name: 'login_success', methods: ['GET'], format: 'json')]
     public function loginSuccess(Request $request, SecurityServiceInterface $securityService, LoginSuccessResponder $responder): Response
     {

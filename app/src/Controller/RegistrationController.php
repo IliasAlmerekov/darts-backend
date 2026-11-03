@@ -10,7 +10,9 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Dto\RegistrationRequest;
+use App\Exception\Persistence\ConcurrentChangeException;
 use App\Http\Attribute\ApiResponse;
+use App\Security\InvitationSession;
 use App\Service\Registration\RegistrationServiceInterface;
 use LogicException;
 use Nelmio\ApiDocBundle\Attribute\Security as ApiDocSecurity;
@@ -85,7 +87,7 @@ final class RegistrationController extends AbstractController
     )]
     #[OA\Response(
         response: Response::HTTP_CONFLICT,
-        description: 'E-Mail-Adresse oder Benutzername gehören schon zu einem Konto. Die Antwort nennt nicht, welches Feld betroffen ist. Es wird kein Konto angelegt und niemand angemeldet.',
+        description: 'E-Mail-Adresse oder Benutzername gehören schon zu einem Konto. Die Antwort nennt nicht, welches Feld betroffen ist. Es wird kein Konto angelegt und niemand angemeldet. Auch: '.ConcurrentChangeException::OPENAPI_CAUSE.' Rollt schon das Anlegen des Kontos zurück, gibt es kein Konto, und die Registrierung kann wiederholt werden. '.InvitationSession::OPENAPI_SPENT_ON_CONFLICT.' Das Konto ist in diesem Fall schon angelegt, eine erneute Registrierung antwortet mit `REGISTRATION_ACCOUNT_EXISTS`.',
         content: new OA\JsonContent(
             type: 'object',
             required: ['success', 'error', 'message'],
