@@ -12,3 +12,4 @@
 .codex/
 
 /app/.env*.bak
+/avatars/
