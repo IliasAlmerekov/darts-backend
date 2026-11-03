@@ -182,6 +182,39 @@ SQL,
     }
 
     /**
+     * @param int $gameId
+     * @param int $roundNumber
+     *
+     * @return array<int, array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>
+     */
+    #[\Override]
+    public function findRoundAndLatestThrowsForGame(int $gameId, int $roundNumber): array
+    {
+        // Throws are only appended or undone from the end, so a player's highest throw id is the
+        // last row findRoundHistoryForGame() returns for that player.
+        $latestThrowIds = $this->getEntityManager()->createQueryBuilder()
+            ->select('MAX(latest.throwId)')
+            ->from(RoundThrows::class, 'latest')
+            ->andWhere('latest.game = :gameId')
+            ->groupBy('latest.player')
+            ->getDQL();
+
+        $rows = $this->createGameStateThrowQueryBuilder()
+            ->andWhere('rt.game = :gameId')
+            ->andWhere(sprintf('r.roundNumber = :roundNumber OR rt.throwId IN (%s)', $latestThrowIds))
+            ->setParameter('gameId', $gameId)
+            ->setParameter('roundNumber', $roundNumber)
+            ->orderBy('r.roundNumber', 'ASC')
+            ->addOrderBy('rt.player', 'ASC')
+            ->addOrderBy('rt.throwNumber', 'ASC')
+            ->addOrderBy('rt.throwId', 'ASC')
+            ->getQuery()
+            ->getArrayResult();
+
+        return $this->normalizeGameStateThrowRows($rows);
+    }
+
+    /**
      * Returns average throw value per round for each player in a game.
      *
      * @param int $gameId

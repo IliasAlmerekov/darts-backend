@@ -209,6 +209,44 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
         ], $rows);
     }
 
+    public function testFindRoundAndLatestThrowsForGameSkipsEarlierRoundsButKeepsEachPlayersLatestThrow(): void
+    {
+        $game = $this->createGame(GameStatus::Started);
+        $round1 = $this->createRound($game, 1, finished: true);
+        $round2 = $this->createRound($game, 2, finished: true);
+        $round3 = $this->createRound($game, 3);
+        $playerA = $this->createUser('ack-a');
+        $playerB = $this->createUser('ack-b');
+
+        $this->createThrow($game, $round1, $playerA, 1, 20, 281);
+        $this->createThrow($game, $round1, $playerB, 1, 20, 281);
+        $this->createThrow($game, $round2, $playerA, 1, 60, 221);
+        $this->createThrow($game, $round2, $playerB, 1, 20, 261);
+        $this->createThrow($game, $round2, $playerB, 2, 60, 261, isBust: true);
+        $this->createThrow($game, $round3, $playerA, 1, 5, 216);
+        $this->createThrow($game, $round3, $playerA, 2, 1, 215);
+        $this->em->flush();
+
+        $history = $this->repo->findRoundHistoryForGame((int) $game->getGameId());
+        $latestRowPerPlayer = [];
+        foreach ($history as $index => $row) {
+            $latestRowPerPlayer[$row['playerId']] = $index;
+        }
+        $expected = array_values(array_filter(
+            $history,
+            static fn (array $row, int $index): bool => 3 === $row['roundNumber'] || in_array($index, $latestRowPerPlayer, true),
+            ARRAY_FILTER_USE_BOTH,
+        ));
+
+        $rows = $this->repo->findRoundAndLatestThrowsForGame((int) $game->getGameId(), 3);
+
+        self::assertSame($expected, $rows);
+        self::assertSame([[$playerB->getId(), 2, 2, true], [$playerA->getId(), 3, 1, false], [$playerA->getId(), 3, 2, false]], array_map(
+            static fn (array $row): array => [$row['playerId'], $row['roundNumber'], $row['throwNumber'], $row['isBust']],
+            $rows,
+        ));
+    }
+
     public function testGetRoundAveragesForGameAveragesEachPlayersThrowsPerRound(): void
     {
         $game = $this->createGame(GameStatus::Started);

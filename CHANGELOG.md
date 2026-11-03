@@ -26,6 +26,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **ErrorCode**: Neuer Fehlercode `SecurityAccessDenied` für API-Fehlerbehandlung.
 
 ### Geändert
+- **Spielstand**: Die Antworten von `POST /api/game/{id}/throw/delta` und `DELETE /api/game/{id}/throw/delta` lesen nicht mehr die Würfe des ganzen Spiels, sondern nur die der aktuellen Runde und den letzten Wurf jedes Spielers (`RoundThrowsRepository::findRoundAndLatestThrowsForGame()`). Felder, `isBust`, aktiver Spieler und `stateVersion` bleiben gleich; die gesperrte Schreibtransaktion liest bei langen Spielen weniger Zeilen (#236)
 - **Abhängigkeiten**: `app/composer.json` hält `zircote/swagger-php` auf `^6.1`. Version 7 markiert alle `OpenApi\Attributes` als veraltet, Psalm meldet dann 386 Fehler; der Umstieg auf `OpenApi\Spec` ist eine eigene Aufgabe (#246)
 - **Architektur**: `GamePlayers::setPlayer()` setzt nur noch den Spieler und füllt den Namens-Snapshot nicht mehr über `PlayerDisplayName`; die Entity hängt damit von keinem Service mehr ab. Den Snapshot setzt allein `PlayerManagementService::createGamePlayer()`, wie bisher. Tests legen Plätze mit Snapshot über `TestSeatFactory` an (#237)
 

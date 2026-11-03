@@ -39,7 +39,8 @@ final class GameStateReaderAckTest extends TestCase
             'score' => 26, 'isGuest' => true,
         ]]);
         $throws = $this->createMock(RoundThrowsRepositoryInterface::class);
-        $throws->method('findRoundHistoryForGame')->willReturn([[
+        $throws->expects(self::never())->method('findRoundHistoryForGame');
+        $throws->expects(self::once())->method('findRoundAndLatestThrowsForGame')->with(44, 2)->willReturn([[
             'playerId' => 10, 'roundNumber' => 2, 'throwNumber' => 1, 'value' => 25,
             'isDouble' => false, 'isTriple' => false, 'isBust' => true,
         ]]);
@@ -52,5 +53,34 @@ final class GameStateReaderAckTest extends TestCase
         self::assertTrue($ack->throw->isBust);
         self::assertTrue($ack->scoreboardDelta->changedPlayers[0]->isGuest);
         self::assertTrue($ack->scoreboardDelta->changedPlayers[0]->isBust);
+    }
+
+    public function testUndoAckReadsOnlyTheCurrentRoundAndTheLatestThrows(): void
+    {
+        $game = (new Game())->setGameId(45)->setStatus(GameStatus::Started)->setRound(7)->setStartScore(301);
+        $players = $this->createMock(GamePlayersRepositoryInterface::class);
+        $players->method('findGameStatePlayersByGameId')->willReturn([
+            ['playerId' => 10, 'name' => 'Anna', 'position' => 1, 'placement' => null, 'score' => 120, 'isGuest' => false],
+            ['playerId' => 11, 'name' => 'Boris', 'position' => 2, 'placement' => null, 'score' => 90, 'isGuest' => false],
+        ]);
+        $throws = $this->createMock(RoundThrowsRepositoryInterface::class);
+        $throws->expects(self::never())->method('findRoundHistoryForGame');
+        // Boris busted in round 6 and has not thrown in round 7; Anna is on her second dart.
+        $throws->expects(self::once())->method('findRoundAndLatestThrowsForGame')->with(45, 7)->willReturn([
+            ['playerId' => 11, 'roundNumber' => 6, 'throwNumber' => 2, 'value' => 60, 'isDouble' => false, 'isTriple' => true, 'isBust' => true],
+            ['playerId' => 10, 'roundNumber' => 7, 'throwNumber' => 1, 'value' => 20, 'isDouble' => false, 'isTriple' => false, 'isBust' => false],
+        ]);
+        $versions = $this->createMock(GameStateVersionServiceInterface::class);
+        $versions->method('buildStateVersion')->willReturn('state-v7');
+
+        $ack = (new GameStateReader($players, $throws, $versions))->buildUndoAck($game, null);
+
+        self::assertSame('state-v7', $ack->stateVersion);
+        self::assertNull($ack->undoneThrow);
+        $scoreboard = $ack->scoreboardDelta->changedPlayers;
+        self::assertSame([[10, true, false], [11, false, true]], [
+            [$scoreboard[0]->playerId, $scoreboard[0]->isActive, $scoreboard[0]->isBust],
+            [$scoreboard[1]->playerId, $scoreboard[1]->isActive, $scoreboard[1]->isBust],
+        ]);
     }
 }
