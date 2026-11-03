@@ -94,6 +94,16 @@ interface RoundThrowsRepositoryInterface
     public function findRoundHistoryForGame(int $gameId): array;
 
     /**
+     * The throws of the given round plus each player's latest throw, in round-history order.
+     *
+     * @param int $gameId
+     * @param int $roundNumber
+     *
+     * @return array<int, array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>
+     */
+    public function findRoundAndLatestThrowsForGame(int $gameId, int $roundNumber): array;
+
+    /**
      * @psalm-suppress PossiblyUnusedMethod
      *
      * @param int $gameId

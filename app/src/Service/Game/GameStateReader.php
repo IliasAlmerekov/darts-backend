@@ -58,14 +58,96 @@ final readonly class GameStateReader implements GameStateReaderInterface
     #[Override]
     public function createGameDto(Game $game): GameResponseDto
     {
-        $gameId = $game->getGameId();
-        if (null === $gameId) {
-            throw new GameIdMissingException();
-        }
+        return $this->buildGameDto($game, $this->roundThrowsRepository->findRoundHistoryForGame($this->gameId($game)));
+    }
 
+    /**
+     * @param Game     $game
+     * @param int|null $latestThrowId
+     *
+     * @return string
+     */
+    #[Override]
+    public function stateVersion(Game $game, ?int $latestThrowId = null): string
+    {
+        return $this->gameStateVersionService->buildStateVersion($game, $latestThrowId);
+    }
+
+    /** @param Game             $game
+     * @param RoundThrows|null $throw
+     *
+     * @return ThrowAckDto
+     */
+    #[Override]
+    public function buildThrowAck(Game $game, ?RoundThrows $throw): ThrowAckDto
+    {
+        $state = $this->createAckState($game);
+
+        return new ThrowAckDto(
+            success: true,
+            gameId: $state->id,
+            stateVersion: $this->stateVersion($game, $throw?->getThrowId()),
+            throw: $this->throwDelta($throw, $state),
+            scoreboardDelta: $this->scoreboard($state),
+            serverTs: (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
+        );
+    }
+
+    /** @param Game             $game
+     * @param RoundThrows|null $throw
+     *
+     * @return UndoAckDto
+     */
+    #[Override]
+    public function buildUndoAck(Game $game, ?RoundThrows $throw): UndoAckDto
+    {
+        $state = $this->createAckState($game);
+
+        return new UndoAckDto(
+            success: true,
+            gameId: $state->id,
+            stateVersion: $this->stateVersion($game),
+            undoneThrow: $this->throwDelta($throw, $state),
+            scoreboardDelta: $this->scoreboard($state),
+            serverTs: (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
+        );
+    }
+
+    /**
+     * The state the acks read: the current round and each player's latest throw decide isActive and
+     * isBust, so the earlier rounds stay unread and the roundHistory of this state is incomplete.
+     *
+     * @param Game $game
+     *
+     * @return GameResponseDto
+     */
+    private function createAckState(Game $game): GameResponseDto
+    {
+        return $this->buildGameDto($game, $this->roundThrowsRepository->findRoundAndLatestThrowsForGame($this->gameId($game), $game->getRound() ?? 1));
+    }
+
+    /**
+     * @param Game $game
+     *
+     * @return int
+     */
+    private function gameId(Game $game): int
+    {
+        return $game->getGameId() ?? throw new GameIdMissingException();
+    }
+
+    /**
+     * @param Game                                                                                                              $game
+     * @param array<int, array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}> $throwRows
+     *
+     * @return GameResponseDto
+     */
+    private function buildGameDto(Game $game, array $throwRows): GameResponseDto
+    {
+        $gameId = $this->gameId($game);
         $currentRoundNumber = $game->getRound() ?? 1;
         $gamePlayers = $this->gamePlayersRepository->findGameStatePlayersByGameId($gameId);
-        $batchedThrowData = $this->loadBatchedThrowData($gameId, $currentRoundNumber);
+        $batchedThrowData = $this->groupThrowRows($throwRows, $currentRoundNumber);
         $calculatedActivePlayerId = $this->resolveActivePlayerFromData($game, $gamePlayers, $batchedThrowData['currentRoundByPlayer']);
 
         $playerDtos = [];
@@ -167,58 +249,6 @@ final readonly class GameStateReader implements GameStateReaderInterface
         );
     }
 
-    /**
-     * @param Game     $game
-     * @param int|null $latestThrowId
-     *
-     * @return string
-     */
-    #[Override]
-    public function stateVersion(Game $game, ?int $latestThrowId = null): string
-    {
-        return $this->gameStateVersionService->buildStateVersion($game, $latestThrowId);
-    }
-
-    /** @param Game             $game
-     * @param RoundThrows|null $throw
-     *
-     * @return ThrowAckDto
-     */
-    #[Override]
-    public function buildThrowAck(Game $game, ?RoundThrows $throw): ThrowAckDto
-    {
-        $state = $this->createGameDto($game);
-
-        return new ThrowAckDto(
-            success: true,
-            gameId: $state->id,
-            stateVersion: $this->stateVersion($game, $throw?->getThrowId()),
-            throw: $this->throwDelta($throw, $state),
-            scoreboardDelta: $this->scoreboard($state),
-            serverTs: (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
-        );
-    }
-
-    /** @param Game             $game
-     * @param RoundThrows|null $throw
-     *
-     * @return UndoAckDto
-     */
-    #[Override]
-    public function buildUndoAck(Game $game, ?RoundThrows $throw): UndoAckDto
-    {
-        $state = $this->createGameDto($game);
-
-        return new UndoAckDto(
-            success: true,
-            gameId: $state->id,
-            stateVersion: $this->stateVersion($game),
-            undoneThrow: $this->throwDelta($throw, $state),
-            scoreboardDelta: $this->scoreboard($state),
-            serverTs: (new DateTimeImmutable())->format(DateTimeInterface::ATOM),
-        );
-    }
-
     /** @param GameResponseDto $state
      *
      * @return ScoreboardDeltaDto
@@ -278,8 +308,8 @@ final readonly class GameStateReader implements GameStateReaderInterface
     }
 
     /**
-     * @param int $gameId
-     * @param int $currentRoundNumber
+     * @param array<int, array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}> $throwRows
+     * @param int                                                                                                               $currentRoundNumber
      *
      * @return array{
      *     currentRoundByPlayer: array<int, list<array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>>,
@@ -287,13 +317,13 @@ final readonly class GameStateReader implements GameStateReaderInterface
      *     latestByPlayer: array<int, array{playerId:int,roundNumber:int,throwNumber:int,value:int,isDouble:bool,isTriple:bool,isBust:bool}>
      * }
      */
-    private function loadBatchedThrowData(int $gameId, int $currentRoundNumber): array
+    private function groupThrowRows(array $throwRows, int $currentRoundNumber): array
     {
         $currentRoundByPlayer = [];
         $historyByPlayerAndRound = [];
         $latestByPlayer = [];
 
-        foreach ($this->roundThrowsRepository->findRoundHistoryForGame($gameId) as $throwRow) {
+        foreach ($throwRows as $throwRow) {
             $playerId = $throwRow['playerId'];
             $roundNumber = $throwRow['roundNumber'];
 
