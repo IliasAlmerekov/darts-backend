@@ -230,7 +230,9 @@ final class PlayerAvatarEndpointTest extends WebTestCase
         $unsafe = TestUserFactory::create($em, 'avatar', 'unsafe', ['ROLE_PLAYER'])->setEmail('../outside');
         $admin = TestUserFactory::create($em, 'avatar', 'admin', ['ROLE_ADMIN']);
         $em->flush();
-        $dir = sys_get_temp_dir().'/darts-avatar-'.bin2hex(random_bytes(8));
+        $root = sys_get_temp_dir().'/darts-avatar-'.bin2hex(random_bytes(8));
+        $dir = $root.'/avatars';
+        mkdir($root);
         mkdir($dir);
         $_ENV['AVATAR_DIR'] = $_SERVER['AVATAR_DIR'] = $dir;
         $base = $dir.'/'.strtolower((string) $player->getEmail());
@@ -238,6 +240,7 @@ final class PlayerAvatarEndpointTest extends WebTestCase
         self::assertNotFalse($image);
         imagepng($image, $base.'.png');
         imagejpeg($image, $base.'.jpg');
+        imagepng($image, $root.'/outside.png');
         $client->loginUser($admin);
         try {
             $client->request('GET', '/api/player/'.$player->getId().'/avatar');
@@ -248,7 +251,9 @@ final class PlayerAvatarEndpointTest extends WebTestCase
         } finally {
             unlink($base.'.png');
             unlink($base.'.jpg');
+            unlink($root.'/outside.png');
             rmdir($dir);
+            rmdir($root);
         }
     }
 
