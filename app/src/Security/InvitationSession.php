@@ -20,9 +20,10 @@ final class InvitationSession
     public const string GAME_ID = 'game_id';
 
     /**
-     * OpenAPI note for routes that take() the invitation before the join can roll back.
+     * OpenAPI note for routes that take() the invitation before the join can roll back. A conflict
+     * before take(), such as on the password upgrade or the account insert, leaves it in the session.
      */
-    public const string OPENAPI_SPENT_ON_CONFLICT = 'Die Einladung ist dann schon verbraucht: Ein erneuter Request tritt dem Spiel nicht bei, dafür muss der Einladungslink neu geöffnet werden.';
+    public const string OPENAPI_SPENT_ON_CONFLICT = 'Rollt erst der Beitritt zum Spiel zurück, ist die Einladung schon verbraucht: Ein erneuter Request tritt dem Spiel nicht bei, dafür muss der Einladungslink neu geöffnet werden.';
 
     /**
      * Returns the invited game id and removes the invitation from the session.

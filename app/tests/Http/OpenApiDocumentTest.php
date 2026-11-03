@@ -363,6 +363,18 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertSame([], $offences);
     }
 
+    public function testInvitationRoutesTieTheSpentInvitationToARolledBackJoin(): void
+    {
+        $paths = $this->document()['paths'];
+        $joinRollback = 'Rollt erst der Beitritt zum Spiel zurück';
+
+        self::assertStringContainsString($joinRollback, $paths['/api/login']['post']['responses']['409']['description']);
+        self::assertStringContainsString($joinRollback, $paths['/api/login/success']['get']['responses']['409']['description']);
+        $register = $paths['/api/register']['post']['responses']['409']['description'];
+        self::assertStringContainsString($joinRollback, $register);
+        self::assertStringContainsString('Rollt schon das Anlegen des Kontos zurück, gibt es kein Konto, und die Registrierung kann wiederholt werden.', $register);
+    }
+
     public function testCurrentGameDocumentsNullableFieldsAnd401And403(): void
     {
         $document = $this->document();
