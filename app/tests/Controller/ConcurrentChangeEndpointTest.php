@@ -46,10 +46,10 @@ final class ConcurrentChangeEndpointTest extends WebTestCase
         self::ensureKernelShutdown();
 
         $this->client = static::createClient();
-        $request = $this->database->connect();
-        $request->executeStatement('SET SESSION innodb_lock_wait_timeout = 1');
+        $requestConnection = $this->database->connect();
+        $requestConnection->executeStatement('SET SESSION innodb_lock_wait_timeout = 1');
         // Holds for one request only: the client reboots the kernel before a second one.
-        static::getContainer()->set('doctrine.dbal.default_connection', $request);
+        static::getContainer()->set('doctrine.dbal.default_connection', $requestConnection);
         $this->holder = $this->database->connect();
     }
 

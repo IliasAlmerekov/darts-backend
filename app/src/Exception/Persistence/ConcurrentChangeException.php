@@ -21,9 +21,14 @@ use Symfony\Component\HttpFoundation\Response;
 final class ConcurrentChangeException extends ApiHttpException
 {
     /**
+     * Why the 409 happens, for routes whose retry advice differs from OPENAPI_DESCRIPTION.
+     */
+    public const string OPENAPI_CAUSE = 'Eine parallele Anfrage hat dieselben Daten gesperrt, und MySQL hat die Transaktion als Deadlock oder nach einem Lock-Wait-Timeout zurückgerollt (`CONCURRENT_CHANGE`).';
+
+    /**
      * The 409 description in the OpenAPI document of every route that writes in a transaction.
      */
-    public const string OPENAPI_DESCRIPTION = 'Eine parallele Anfrage hat dieselben Daten gesperrt, und MySQL hat die Transaktion als Deadlock oder nach einem Lock-Wait-Timeout zurückgerollt (`CONCURRENT_CHANGE`). Der Request kann wiederholt werden.';
+    public const string OPENAPI_DESCRIPTION = self::OPENAPI_CAUSE.' Der Request kann wiederholt werden.';
 
     /**
      * @return void
