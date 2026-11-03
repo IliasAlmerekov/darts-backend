@@ -17,5 +17,5 @@ Every employee has a character picture, and a player should get theirs without u
 
 - No list response says whether a player has an avatar. The frontend always requests the endpoint and draws a placeholder on `404`; listing a lobby would otherwise cost one R2 request per participant.
 - The endpoint answers `404` for a guest, a player without a picture, a player who has not confirmed their email (#251), a player whose object has another `Content-Type` than PNG or JPEG, and an avatar the caller may not see. An unreachable R2 answers `503` with the error body of ADR 0006.
-- Responses carry `Cache-Control: private, max-age=86400` and an `ETag`, so a changed picture can take up to a day to show.
+- Responses carry `Cache-Control: private, no-cache` and an `ETag`. The browser keeps the picture but asks the backend before each use, so the access rule runs every time and an unchanged picture costs a `304` without a body. A longer `max-age` was rejected: the browser cache is not split by who is logged in, so a player could get an avatar cached for the admin on the same browser.
 - Functional tests read from an in-memory fake; dev reads from its own bucket with keys in `.env.local`.
