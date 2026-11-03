@@ -85,7 +85,7 @@ final class RegistrationController extends AbstractController
     )]
     #[OA\Response(
         response: Response::HTTP_CONFLICT,
-        description: 'E-Mail-Adresse oder Benutzername gehören schon zu einem Konto. Die Antwort nennt nicht, welches Feld betroffen ist. Es wird kein Konto angelegt und niemand angemeldet.',
+        description: 'E-Mail-Adresse oder Benutzername gehören schon zu einem Konto. Die Antwort nennt nicht, welches Feld betroffen ist. Es wird kein Konto angelegt und niemand angemeldet. Mit gespeicherter Einladung auch `CONCURRENT_CHANGE`, wenn MySQL den Beitritt zum Spiel als Deadlock oder nach einem Lock-Wait-Timeout zurückrollt. Das Konto ist dann schon angelegt: Ein Login tritt dem Spiel bei, eine erneute Registrierung antwortet mit `REGISTRATION_ACCOUNT_EXISTS`.',
         content: new OA\JsonContent(
             type: 'object',
             required: ['success', 'error', 'message'],

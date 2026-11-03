@@ -18,6 +18,12 @@ use App\Exception\Game\GameRoomFullException;
 use App\Exception\Game\GameStartNotAllowedException;
 use App\Enum\GameStatus;
 use App\Controller\ErrorController;
+use Doctrine\DBAL\Driver\PDO\Exception as PdoDriverException;
+use Doctrine\DBAL\Exception\DeadlockException;
+use Doctrine\DBAL\Exception\LockWaitTimeoutException;
+use Doctrine\DBAL\Exception\RetryableException;
+use PDOException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -133,6 +139,31 @@ final class ErrorControllerTest extends TestCase
 
         $data = json_decode((string) $response->getContent(), true);
         self::assertSame('INTERNAL_SERVER_ERROR', $data['error'] ?? null);
+    }
+
+    /**
+     * @return iterable<string, array{RetryableException}>
+     */
+    public static function retryableExceptions(): iterable
+    {
+        yield 'deadlock' => [new DeadlockException(PdoDriverException::new(new PDOException('Deadlock found when trying to get lock')), null)];
+        yield 'lock wait timeout' => [new LockWaitTimeoutException(PdoDriverException::new(new PDOException('Lock wait timeout exceeded')), null)];
+    }
+
+    #[DataProvider('retryableExceptions')]
+    public function testRendersARolledBackTransactionAsConcurrentChange(RetryableException $exception): void
+    {
+        $response = (new ErrorController())->show($exception);
+
+        self::assertSame(Response::HTTP_CONFLICT, $response->getStatusCode());
+        self::assertSame(
+            [
+                'success' => false,
+                'error' => 'CONCURRENT_CHANGE',
+                'message' => 'A concurrent request changed the same data. Retry the request.',
+            ],
+            json_decode((string) $response->getContent(), true),
+        );
     }
 
     public function testRendersAPayloadCodeAndAClassLevelViolation(): void

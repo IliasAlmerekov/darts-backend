@@ -11,8 +11,10 @@ namespace App\Controller;
 
 use App\Exception\ApiExceptionInterface;
 use App\Exception\ErrorCode;
+use App\Exception\Persistence\ConcurrentChangeException;
 use App\Exception\Request\InvalidJsonBodyException;
 use App\Http\ViolationCode;
+use Doctrine\DBAL\Exception\RetryableException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -45,6 +47,11 @@ final class ErrorController extends AbstractController
         // body is answered as invalid JSON; another format keeps the generic 400.
         if ($exception instanceof HttpExceptionInterface && $previous instanceof NotEncodableValueException && 'json' === $request?->getContentTypeFormat()) {
             $exception = new InvalidJsonBodyException();
+        }
+
+        // A deadlock or lock wait timeout that no retry absorbed (ADR 0004). The client may retry.
+        if ($exception instanceof RetryableException) {
+            $exception = new ConcurrentChangeException();
         }
 
         if ($exception instanceof ApiExceptionInterface && $exception instanceof HttpExceptionInterface) {

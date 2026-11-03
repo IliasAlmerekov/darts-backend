@@ -327,6 +327,42 @@ final class OpenApiDocumentTest extends WebTestCase
         }
     }
 
+    /**
+     * #255: a write whose transaction MySQL rolls back as a deadlock or lock wait timeout answers 409.
+     */
+    public function testEveryTransactionalWriteDocumentsTheConcurrentChangeConflict(): void
+    {
+        $paths = $this->document()['paths'];
+        $writes = [
+            ['/api/game/{gameId}/throw/delta', 'post'],
+            ['/api/game/{gameId}/throw/delta', 'delete'],
+            ['/api/game/{gameId}/start', 'post'],
+            ['/api/game/{gameId}/finish', 'post'],
+            ['/api/game/{gameId}/reopen', 'patch'],
+            ['/api/game/{gameId}/abort', 'patch'],
+            ['/api/game/{gameId}/settings', 'patch'],
+            ['/api/room/create', 'post'],
+            ['/api/room/{id}', 'delete'],
+            ['/api/room/{id}/guest', 'post'],
+            ['/api/room/{id}/positions', 'post'],
+            ['/api/room/{id}/rematch', 'post'],
+            ['/api/invite/create/{id}', 'post'],
+            ['/api/login', 'post'],
+            ['/api/login/success', 'get'],
+            ['/api/register', 'post'],
+        ];
+
+        $offences = [];
+        foreach ($writes as [$path, $method]) {
+            $description = $paths[$path][$method]['responses']['409']['description'] ?? '';
+            if (!is_string($description) || !str_contains($description, '`CONCURRENT_CHANGE`')) {
+                $offences[] = strtoupper($method).' '.$path;
+            }
+        }
+
+        self::assertSame([], $offences);
+    }
+
     public function testCurrentGameDocumentsNullableFieldsAnd401And403(): void
     {
         $document = $this->document();
