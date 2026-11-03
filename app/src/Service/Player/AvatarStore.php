@@ -47,7 +47,7 @@ final class AvatarStore implements AvatarStoreInterface
             if (false === $bytes || (new \finfo(FILEINFO_MIME_TYPE))->buffer($bytes) !== $type) {
                 $this->logger->warning('Avatar file could not be read or has an invalid type.');
 
-                return null;
+                continue;
             }
 
             return ['bytes' => $bytes, 'contentType' => $type];

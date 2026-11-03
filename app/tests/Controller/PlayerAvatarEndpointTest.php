@@ -114,6 +114,33 @@ final class PlayerAvatarEndpointTest extends WebTestCase
         }
     }
 
+    public function testInvalidPngFallsBackToJpeg(): void
+    {
+        $client = static::createClient();
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $player = TestUserFactory::create($em, 'avatar', 'player', ['ROLE_PLAYER']);
+        $em->flush();
+        $dir = sys_get_temp_dir().'/darts-avatar-'.bin2hex(random_bytes(8));
+        mkdir($dir);
+        $_ENV['AVATAR_DIR'] = $_SERVER['AVATAR_DIR'] = $dir;
+        $base = $dir.'/'.strtolower((string) $player->getEmail());
+        $image = imagecreatetruecolor(2, 2);
+        self::assertNotFalse($image);
+        imagegif($image, $base.'.png');
+        imagejpeg($image, $base.'.jpg');
+        $client->loginUser($player);
+        try {
+            $client->request('GET', '/api/player/'.$player->getId().'/avatar');
+            self::assertResponseStatusCodeSame(200);
+            self::assertSame('image/jpeg', $client->getResponse()->headers->get('Content-Type'));
+            self::assertSame(file_get_contents($base.'.jpg'), $client->getResponse()->getContent());
+        } finally {
+            unlink($base.'.png');
+            unlink($base.'.jpg');
+            rmdir($dir);
+        }
+    }
+
     public function testMissingDirectoryReturns503(): void
     {
         $client = static::createClient();
