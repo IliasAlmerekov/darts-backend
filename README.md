@@ -20,6 +20,7 @@ cp app/.env.local.example app/.env.local
 - `APP_SECRET`
 - `DATABASE_URL`
 - (optional) `CORS_ALLOW_ORIGIN`, `FRONTEND_URL`
+- `AVATAR_DIR`: directory of avatar files, named by lower-case email with `.png` or `.jpg`. Development defaults to `app/var/avatars`; production must mount the directory read-only and set this variable.
 
 Notes:
 - Symfony loads `.env.local` for `dev` and `prod`, but **not** for `test`.

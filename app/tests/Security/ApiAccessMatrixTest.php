@@ -41,6 +41,7 @@ final class ApiAccessMatrixTest extends WebTestCase
     private const string ACCESS_PUBLIC = 'public';
     private const string ACCESS_PLAYER = 'player';
     private const string ACCESS_ADMIN = 'admin';
+    private const string ACCESS_PLAYER_ADMIN = 'player_admin';
 
     private const string PERSONA_ANONYMOUS = 'anonymous';
     private const string PERSONA_ROLE_USER_ONLY = 'role_user_only';
@@ -103,6 +104,7 @@ final class ApiAccessMatrixTest extends WebTestCase
             // Players
             self::entry('app_player_current_game', Request::METHOD_GET, self::ACCESS_PLAYER, expected: Response::HTTP_OK),
             self::entry('app_player_profile', Request::METHOD_GET, self::ACCESS_PLAYER, expected: Response::HTTP_OK),
+            self::entry('app_player_avatar', Request::METHOD_GET, self::ACCESS_PLAYER_ADMIN, ['id' => self::FIXTURE_MISSING_GAME], expected: Response::HTTP_NOT_FOUND),
             self::entry('app_player_game_seat', Request::METHOD_GET, self::ACCESS_PLAYER, $game, expected: Response::HTTP_OK),
 
             // Admin: invitations
@@ -272,6 +274,7 @@ final class ApiAccessMatrixTest extends WebTestCase
             self::ACCESS_PUBLIC => true,
             self::ACCESS_PLAYER => in_array($persona, [self::PERSONA_PLAYER_OUTSIDER, self::PERSONA_PLAYER_PARTICIPANT], true),
             self::ACCESS_ADMIN => self::PERSONA_ADMIN === $persona,
+            self::ACCESS_PLAYER_ADMIN => in_array($persona, [self::PERSONA_PLAYER_OUTSIDER, self::PERSONA_PLAYER_PARTICIPANT, self::PERSONA_ADMIN], true),
             default => throw new \LogicException(sprintf('Unknown access level "%s".', $access)),
         };
     }

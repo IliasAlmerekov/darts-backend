@@ -66,6 +66,17 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertSame([], $offences, 'Operations that no route with explicit methods accepts.');
     }
 
+    public function testAvatarDocumentsImagesAndErrors(): void
+    {
+        $operation = $this->document()['paths']['/api/player/{id}/avatar']['get'];
+        self::assertArrayHasKey('image/png', $operation['responses']['200']['content']);
+        self::assertArrayHasKey('image/jpeg', $operation['responses']['200']['content']);
+        self::assertArrayHasKey('304', $operation['responses']);
+        foreach (['404', '503'] as $status) {
+            self::assertSame('#/components/schemas/ApiError', $operation['responses'][$status]['content']['application/json']['schema']['$ref']);
+        }
+    }
+
     public function testRematchAndInvitationDocumentTheSharedNotFoundBody(): void
     {
         $paths = $this->document()['paths'];

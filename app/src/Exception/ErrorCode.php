@@ -53,6 +53,7 @@ enum ErrorCode: string
     case AccessDenied = 'ACCESS_DENIED';
     case CrossOriginRequest = 'CROSS_ORIGIN_REQUEST';
     case UsernameTaken = 'USERNAME_TAKEN';
+    case AvatarDirectoryUnavailable = 'AVATAR_DIRECTORY_UNAVAILABLE';
     case DatabaseUnavailable = 'DATABASE_UNAVAILABLE';
     case ConcurrentChange = 'CONCURRENT_CHANGE';
 }
