@@ -25,6 +25,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **ErrorCode**: Neuer Fehlercode `SecurityAccessDenied` für API-Fehlerbehandlung.
 
 ### Geändert
+- **Abhängigkeiten**: `app/composer.json` hält `zircote/swagger-php` auf `^6.1`. Version 7 markiert alle `OpenApi\Attributes` als veraltet, Psalm meldet dann 386 Fehler; der Umstieg auf `OpenApi\Spec` ist eine eigene Aufgabe (#246)
 - **Architektur**: `GamePlayers::setPlayer()` setzt nur noch den Spieler und füllt den Namens-Snapshot nicht mehr über `PlayerDisplayName`; die Entity hängt damit von keinem Service mehr ab. Den Snapshot setzt allein `PlayerManagementService::createGamePlayer()`, wie bisher. Tests legen Plätze mit Snapshot über `TestSeatFactory` an (#237)
 
 - **Protokollierung**: Einladungs-UUIDs aus Logs entfernt und Anfrage-IDs ergänzt (#63).
@@ -118,6 +119,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **Rematch**: `POST /api/room/{id}/rematch` für ein unbekanntes Spiel antwortet mit 404 und `GAME_NOT_FOUND` im gemeinsamen Fehler-Body; bisher kam 404 nur mit `message` (#177)
 
 ### Tests
+- **OpenAPI**: `OpenApiDocumentTest` akzeptiert eine nullable `$ref`-Eigenschaft in beiden Formen von swagger-php 6.x: `nullable` neben einem `oneOf` mit einem Zweig, oder ein zweiter `oneOf`-Zweig, der nur `null` erlaubt (#246)
 - **Spielstart**: Ein Regressionstest in `ConcurrentSeatingTest` startet eine Lobby, die eine zweite Verbindung nach dem Laden schon gestartet und committet hat. `GameStartService::start()` muss mit `GameStartNotAllowedException` (409) ablehnen und darf keine zweite erste Runde anlegen; ohne den sperrenden Refresh schlägt der Test fehl (#42)
 - **Aktualisierungen**: Alle Tests (z. B. `RegistrationControllerTest`, `SecurityControllerTest`, `GameFinishServiceTest` usw.) angepasst, um mit dem neuen `GameAccessService` zu arbeiten. Mocks für Zugriffskontrollen hinzugefügt.
 
