@@ -403,11 +403,9 @@ final class OpenApiDocumentTest extends WebTestCase
             array_keys($stats)
         );
         self::assertSame('#/components/schemas/PlayerProfileSegmentHitsDto', $stats['hitDistribution']['items']['$ref']);
-        self::assertSame('#/components/schemas/PlayerProfileMostHitSegmentDto', $stats['mostHitSegment']['oneOf'][0]['$ref']);
-        self::assertTrue($stats['mostHitSegment']['nullable']);
+        $this->assertNullableReference('#/components/schemas/PlayerProfileMostHitSegmentDto', $stats['mostHitSegment']);
         self::assertSame('#/components/schemas/PlayerProfileDoubleDto', $stats['favoriteDoubles']['items']['$ref']);
-        self::assertSame('#/components/schemas/PlayerProfileFinishDto', $stats['highestFinish']['oneOf'][0]['$ref']);
-        self::assertTrue($stats['highestFinish']['nullable']);
+        $this->assertNullableReference('#/components/schemas/PlayerProfileFinishDto', $stats['highestFinish']);
         self::assertSame(['segment', 'hits'], array_keys($schemas['PlayerProfileSegmentHitsDto']['properties']));
         self::assertSame(['segment', 'hits', 'share'], array_keys($schemas['PlayerProfileMostHitSegmentDto']['properties']));
         self::assertSame(['double', 'hits', 'attempts', 'hitRate'], array_keys($schemas['PlayerProfileDoubleDto']['properties']));
@@ -508,6 +506,30 @@ final class OpenApiDocumentTest extends WebTestCase
 
         self::assertTrue($previousGameId['deprecated'] ?? false);
         self::assertStringContainsString('ignoriert', $previousGameId['description'] ?? '');
+    }
+
+    /**
+     * Asserts a property that is either the referenced schema or null.
+     *
+     * swagger-php 6.1.0 marks the property itself `nullable`; 6.20.1 moves the null into a
+     * second `oneOf` branch that accepts only null. Both say the same in OpenAPI 3.0.
+     *
+     * @param array<string, mixed> $property
+     */
+    private function assertNullableReference(string $ref, array $property): void
+    {
+        self::assertIsArray($property['oneOf'] ?? null);
+        $branches = $property['oneOf'];
+        self::assertSame($ref, $branches[0]['$ref'] ?? null);
+        if (true === ($property['nullable'] ?? null)) {
+            self::assertCount(1, $branches);
+
+            return;
+        }
+
+        self::assertCount(2, $branches);
+        self::assertTrue($branches[1]['nullable'] ?? null);
+        self::assertSame([null], $branches[1]['enum'] ?? null);
     }
 
     /**
