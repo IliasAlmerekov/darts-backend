@@ -39,7 +39,7 @@ The name shown for a participant in a game: a player's display name, else their 
 _Avoid_: Nickname, username (for guests)
 
 **Avatar**:
-The picture of a player's character, taken from the company's set of employee pictures by the player's email. Only a player who confirmed their email has one; a guest never does. A player sees their own avatar, the admin sees every player's.
+The picture of a player's character, taken from the company's set of employee pictures by the player's email. A player whose email has no picture has no avatar; a guest never has one. A player sees their own avatar, the admin sees every player's.
 _Avoid_: Character picture, profile picture, photo
 
 ### Game flow
