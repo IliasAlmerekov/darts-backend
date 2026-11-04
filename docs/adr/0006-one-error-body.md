@@ -34,5 +34,5 @@ Nested constraints (`Sequentially`, `All`, `Collection`) report the inner constr
 
 - `ErrorController` renders the violations of every `#[MapRequestPayload]` failure; no DTO needs setup. The table lives in `App\Http\ViolationCode`.
 - OpenAPI documents the body once, as the `RequestValidationFailed` schema, and every `#[MapRequestPayload]` operation references it in its 422 response.
-- Registration moves onto this body in #176; until then it keeps its own 400 body. `#[MapQueryParameter]` failures keep their current handling.
+- Registration uses this body since #176: a failed `POST /api/register` answers 422 `REQUEST_VALIDATION_FAILED` with `violations`. `#[MapQueryParameter]` failures keep their current handling.
 - The frontend reads errors by code (IliasAlmerekov/darts#371). Backend changes from #45 merge one by one, but deploy together with that frontend release.
