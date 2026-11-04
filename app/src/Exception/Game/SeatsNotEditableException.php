@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Exception\Game;
 
+use App\Enum\GameStatus;
 use App\Exception\ApiHttpException;
 use App\Exception\ErrorCode;
 use Symfony\Component\HttpFoundation\Response;
@@ -19,9 +20,11 @@ use Symfony\Component\HttpFoundation\Response;
 final class SeatsNotEditableException extends ApiHttpException
 {
     /**
+     * @param GameStatus $status The status of the game that rejected the seat change
+     *
      * @return void
      */
-    public function __construct()
+    public function __construct(public readonly GameStatus $status)
     {
         parent::__construct(
             ErrorCode::GameSeatsNotEditable,

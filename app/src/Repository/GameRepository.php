@@ -155,25 +155,6 @@ SQL,
      * @return Game|null
      */
     #[\Override]
-    public function findOneByGameIdForUpdate(int $gameId): ?Game
-    {
-        return $this->createQueryBuilder('g')
-            ->andWhere('g.gameId = :gameId')
-            ->setParameter('gameId', $gameId)
-            ->getQuery()
-            ->setLockMode(LockMode::PESSIMISTIC_WRITE)
-            // A game this request already loaded would come back as loaded, missing what other
-            // transactions committed while this one waited for the lock.
-            ->setHint(Query::HINT_REFRESH, true)
-            ->getOneOrNullResult();
-    }
-
-    /**
-     * @param int $gameId
-     *
-     * @return Game|null
-     */
-    #[\Override]
     public function findOneByGameIdWithSeatsForUpdate(int $gameId): ?Game
     {
         return $this->createQueryBuilder('g')
@@ -185,25 +166,6 @@ SQL,
             ->setLockMode(LockMode::PESSIMISTIC_WRITE)
             ->setHint(Query::HINT_REFRESH, true)
             ->getOneOrNullResult();
-    }
-
-    /**
-     * @param Game $game
-     *
-     * @return void
-     */
-    #[\Override]
-    public function refreshWithSeatsForUpdate(Game $game): void
-    {
-        $this->createQueryBuilder('g')
-            ->addSelect('seat')
-            ->leftJoin('g.gamePlayers', 'seat')
-            ->andWhere('g.gameId = :gameId')
-            ->setParameter('gameId', $game->getGameId())
-            ->getQuery()
-            ->setLockMode(LockMode::PESSIMISTIC_WRITE)
-            ->setHint(Query::HINT_REFRESH, true)
-            ->getResult();
     }
 
     /**

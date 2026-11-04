@@ -17,7 +17,6 @@ use App\Exception\Game\GameRoomFullException;
 use App\Exception\Game\PlayerNotFoundException;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\GamePlayersRepositoryInterface;
-use App\Repository\UserRepositoryInterface;
 use App\Service\Persistence\RetryingTransactionInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
 use App\Service\Security\GameAccessServiceInterface;
@@ -35,11 +34,10 @@ final readonly class GameRoomService implements GameRoomServiceInterface
      * @param PlayerManagementServiceInterface $playerManagementService
      * @param GameAccessServiceInterface       $gameAccessService
      * @param OpenLobbyServiceInterface        $openLobbyService
-     * @param UserRepositoryInterface          $userRepository
      * @param RetryingTransactionInterface     $transaction
      * @param GameSettingsServiceInterface     $gameSettingsService
      */
-    public function __construct(private GameRepositoryInterface $gameRepository, private GamePlayersRepositoryInterface $gamePlayersRepository, private PlayerManagementServiceInterface $playerManagementService, private GameAccessServiceInterface $gameAccessService, private OpenLobbyServiceInterface $openLobbyService, private UserRepositoryInterface $userRepository, private RetryingTransactionInterface $transaction, private GameSettingsServiceInterface $gameSettingsService)
+    public function __construct(private GameRepositoryInterface $gameRepository, private GamePlayersRepositoryInterface $gamePlayersRepository, private PlayerManagementServiceInterface $playerManagementService, private GameAccessServiceInterface $gameAccessService, private OpenLobbyServiceInterface $openLobbyService, private RetryingTransactionInterface $transaction, private GameSettingsServiceInterface $gameSettingsService)
     {
     }
 
@@ -121,18 +119,7 @@ final readonly class GameRoomService implements GameRoomServiceInterface
                 $excludeSet = array_fill_keys($excludePlayerIds, true);
                 $ids = array_values(array_filter($ids, static fn(int $pid): bool => !isset($excludeSet[$pid])));
             }
-            if (count($ids) > Game::MAX_PARTICIPANTS) {
-                throw new GameRoomFullException(Game::MAX_PARTICIPANTS);
-            }
-
-            $players = [];
-            foreach ($this->userRepository->findByIds($ids) as $player) {
-                $players[(int) $player->getId()] = $player;
-            }
-            foreach ($ids as $playerId) {
-                $player = $players[$playerId] ?? throw new PlayerNotFoundException();
-                $this->playerManagementService->addPlayerEntity((int) $game->getGameId(), $player);
-            }
+            $this->playerManagementService->addPlayers((int) $game->getGameId(), $ids);
         }
     }
 }

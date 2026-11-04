@@ -12,39 +12,31 @@ namespace App\Tests\Service;
 use App\Dto\GameSettingsRequest;
 use App\Dto\RoomCreateRequest;
 use App\Entity\Game;
-use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Exception\Game\ConflictingOutRulesException;
-use App\Exception\Game\PlayerNotFoundException;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
-use App\Repository\UserRepositoryInterface;
 use App\Service\Game\GameRoomService;
 use App\Service\Game\GameSettingsServiceInterface;
 use App\Service\Game\OpenLobby;
 use App\Service\Game\OpenLobbyServiceInterface;
 use App\Service\Persistence\RetryingTransactionInterface;
-use App\Service\Player\PlayerManagementService;
+use App\Service\Player\PlayerManagementServiceInterface;
 use App\Service\Security\GameAccessServiceInterface;
 use DateTime;
-use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use ReflectionException;
-use ReflectionProperty;
 
 #[AllowMockObjectsWithoutExpectations]
 final class GameRoomServiceTest extends TestCase
 {
     private GameRepositoryInterface $gameRepository;
     private GamePlayersRepositoryInterface $gamePlayersRepository;
-    private EntityManagerInterface $entityManager;
-    private PlayerManagementService $playerManagementService;
+    private PlayerManagementServiceInterface&MockObject $playerManagementService;
     private GameAccessServiceInterface $gameAccessService;
     private OpenLobbyServiceInterface&MockObject $openLobbyService;
-    private UserRepositoryInterface&MockObject $userRepository;
     private GameSettingsServiceInterface&MockObject $gameSettingsService;
     private RetryingTransactionInterface&MockObject $transaction;
     private Game $lobbyGame;
@@ -54,42 +46,12 @@ final class GameRoomServiceTest extends TestCase
     {
         $this->gameRepository = $this->createMock(GameRepositoryInterface::class);
         $this->gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
-        $this->gamePlayersRepository->method('findBy')->willReturn([]);
-        $this->gamePlayersRepository->method('findNextPositionForGame')->willReturn(1);
-        $this->entityManager = $this->createMock(EntityManagerInterface::class);
-        $this->entityManager->method('getReference')
-            ->willReturnCallback(function (string $class, int $id): object {
-                if (Game::class === $class) {
-                    return (new Game())->setGameId($id);
-                }
-
-                if (User::class === $class) {
-                    $user = new User();
-                    $this->setPrivateProperty($user, 'id', $id);
-
-                    return $user;
-                }
-
-                throw new \LogicException('Unexpected getReference call');
-            });
-        $this->playerManagementService = new PlayerManagementService(
-            $this->gamePlayersRepository,
-            $this->entityManager,
-            $this->gameRepository
-        );
+        $this->playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
         $this->gameAccessService = $this->createMock(GameAccessServiceInterface::class);
         $this->gameAccessService->method('requireAuthenticatedUser')->willReturn(new User());
         $this->gameAccessService->method('assertAdmin')->willReturn(new User());
         $this->lobbyGame = (new Game())->setGameId(99)->setDate(new DateTime());
         $this->openLobbyService = $this->createMock(OpenLobbyServiceInterface::class);
-        $this->userRepository = $this->createMock(UserRepositoryInterface::class);
-        $this->userRepository->method('findByIds')
-            ->willReturnCallback(fn (array $ids): array => array_map(function (int $id): User {
-                $user = new User();
-                $this->setPrivateProperty($user, 'id', $id);
-
-                return $user;
-            }, $ids));
         $this->gameSettingsService = $this->createMock(GameSettingsServiceInterface::class);
         $this->transaction = $this->createMock(RetryingTransactionInterface::class);
         $this->transaction->method('run')->willReturnCallback(function (\Closure $operation): mixed {
@@ -109,7 +71,7 @@ final class GameRoomServiceTest extends TestCase
     {
         $this->openLobbyService->method('findOrCreate')->willReturn(new OpenLobby($this->lobbyGame, false));
         $this->gameRepository->expects(self::never())->method('find');
-        $this->entityManager->expects(self::never())->method('persist');
+        $this->playerManagementService->expects(self::never())->method('addPlayers');
         $this->gameSettingsService->expects(self::never())->method('applySettings');
 
         $service = $this->createService();
@@ -127,7 +89,7 @@ final class GameRoomServiceTest extends TestCase
     public function testOpenRoomAppliesTheRequestSettingsToAnExistingLobbyInsideTheTransaction(): void
     {
         $this->openLobbyService->method('findOrCreate')->willReturn(new OpenLobby($this->lobbyGame, false));
-        $this->entityManager->expects(self::never())->method('persist');
+        $this->playerManagementService->expects(self::never())->method('addPlayers');
         $this->gameSettingsService->expects(self::once())
             ->method('applySettings')
             ->with(
@@ -189,40 +151,19 @@ final class GameRoomServiceTest extends TestCase
      */
     public function testOpenRoomSeatsTheRequestedPlayersInOrderWithoutTheExcludedOnes(): void
     {
-        $seatedPlayerIds = [];
-        $this->entityManager->method('persist')
-            ->willReturnCallback(static function (object $entity) use (&$seatedPlayerIds): void {
-                if ($entity instanceof GamePlayers) {
-                    $seatedPlayerIds[] = $entity->getPlayer()?->getId();
-                }
+        $this->playerManagementService->expects(self::once())
+            ->method('addPlayers')
+            ->willReturnCallback(function (int $gameId, array $playerIds): void {
+                self::assertTrue($this->inTransaction, 'The players are seated outside the transaction.');
+                self::assertSame([99, [3, 1]], [$gameId, $playerIds]);
             });
-        $this->entityManager->expects(self::atLeast(1))->method('flush');
 
         $this->openLobbyService->method('findOrCreate')->willReturn(new OpenLobby($this->lobbyGame, true));
         $service = $this->createService();
 
-        $game = $service->openRoom(new RoomCreateRequest(playerIds: [3, 2, 1], excludePlayerIds: [2]));
+        $game = $service->openRoom(new RoomCreateRequest(playerIds: [3, 2, 1, 3], excludePlayerIds: [2]));
 
         self::assertSame($this->lobbyGame, $game);
-        self::assertSame([3, 1], $seatedPlayerIds);
-    }
-
-    /**
-     * @throws ORMException
-     */
-    public function testOpenRoomRejectsAnUnknownPlayer(): void
-    {
-        $this->userRepository = $this->createMock(UserRepositoryInterface::class);
-        $knownPlayer = new User();
-        $this->setPrivateProperty($knownPlayer, 'id', 1);
-        $this->userRepository->method('findByIds')->willReturn([$knownPlayer]);
-
-        $this->openLobbyService->method('findOrCreate')->willReturn(new OpenLobby($this->lobbyGame, true));
-        $service = $this->createService();
-
-        $this->expectException(PlayerNotFoundException::class);
-
-        $service->openRoom(new RoomCreateRequest(playerIds: [1, 404]));
     }
 
     public function testFindGameByIdReturnsGame(): void
@@ -266,15 +207,6 @@ final class GameRoomServiceTest extends TestCase
         self::assertSame($players, $result);
     }
 
-    /**
-     * @throws ReflectionException
-     */
-    private function setPrivateProperty(object $object, string $property, mixed $value): void
-    {
-        $ref = new ReflectionProperty($object, $property);
-        $ref->setValue($object, $value);
-    }
-
     private function createService(): GameRoomService
     {
         return new GameRoomService(
@@ -283,7 +215,6 @@ final class GameRoomServiceTest extends TestCase
             $this->playerManagementService,
             $this->gameAccessService,
             $this->openLobbyService,
-            $this->userRepository,
             $this->transaction,
             $this->gameSettingsService,
         );

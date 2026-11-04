@@ -16,6 +16,7 @@ use App\Enum\GameStatus;
 use App\Exception\Game\GameNotFoundException;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
+use App\Repository\UserRepositoryInterface;
 use App\Service\Invitation\InvitationServiceInterface;
 use App\Service\Game\OpenLobby;
 use App\Service\Game\OpenLobbyServiceInterface;
@@ -36,7 +37,7 @@ final class RematchServiceTest extends TestCase
 
         $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $playerManagementService = new PlayerManagementService($gamePlayersRepository, $entityManager, $gameRepository);
+        $playerManagementService = new PlayerManagementService($gamePlayersRepository, $entityManager, $gameRepository, $this->createStub(UserRepositoryInterface::class));
         $openLobbyService = $this->createMock(OpenLobbyServiceInterface::class);
         $openLobbyService->expects(self::never())->method('findOrCreate');
         $invitationService = $this->createMock(InvitationServiceInterface::class);
@@ -72,10 +73,12 @@ final class RematchServiceTest extends TestCase
 
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects(self::atLeastOnce())->method('flush');
+        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $func): mixed => $func());
 
-        $playerManagementService = new PlayerManagementService($gamePlayersRepository, $entityManager, $gameRepository);
+        $playerManagementService = new PlayerManagementService($gamePlayersRepository, $entityManager, $gameRepository, $this->createStub(UserRepositoryInterface::class));
         $newLobby = new Game();
         $this->setPrivateProperty($newLobby, 'gameId', 100);
+        $gameRepository->method('findOneByGameIdWithSeatsForUpdate')->with(100)->willReturn($newLobby);
         $openLobbyService = $this->createMock(OpenLobbyServiceInterface::class);
         $openLobbyService->method('findOrCreate')->willReturn(new OpenLobby($newLobby, true));
 

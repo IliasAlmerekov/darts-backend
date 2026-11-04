@@ -112,7 +112,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $lobby = $this->insertGame('lobby');
         $this->insertSeat($finished, $bob, 1);
         $this->insertSeat($finished, $vanya, 2);
-        $service = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager, new GameRepository($this->registry()));
+        $service = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager, new GameRepository($this->registry()), $this->createStub(UserRepositoryInterface::class));
 
         $this->request->beginTransaction();
         $this->takeSnapshot();
@@ -132,10 +132,9 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $bob = $this->insertUser('bob');
         $anna = $this->insertUser('anna');
         $lobby = $this->insertGame('lobby');
-        $gameRepository = new GameRepository($this->registry());
-        $service = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager, new GameRepository($this->registry()));
+        $service = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager, new GameRepository($this->registry()), $this->createStub(UserRepositoryInterface::class));
 
-        // The join's query order: find() takes the snapshot, then the locking reload.
+        // The join's query order: the route's find() takes the snapshot, then addPlayer's locking reload.
         $this->request->beginTransaction();
         $game = $this->entityManager->find(Game::class, $lobby);
         self::assertInstanceOf(Game::class, $game);
@@ -144,7 +143,6 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $this->other->fetchOne('SELECT game_id FROM game WHERE game_id = ? FOR UPDATE', [$lobby]);
         $this->insertSeat($lobby, $bob, 1);
         $this->other->commit();
-        $gameRepository->refreshWithSeatsForUpdate($game);
         $service->addPlayer($lobby, $anna);
         $this->request->commit();
 
@@ -193,21 +191,6 @@ final class ConcurrentSeatingTest extends KernelTestCase
         self::assertSame(0, (int) $this->other->fetchOne('SELECT COUNT(*) FROM user WHERE is_guest = 1'));
     }
 
-    public function testIsPlayerInGameForShareSeesASeatCommittedAfterTheSnapshot(): void
-    {
-        $anna = $this->insertUser('anna');
-        $lobby = $this->insertGame('lobby');
-
-        $this->request->beginTransaction();
-        $this->takeSnapshot();
-        // A rematch seats Anna and commits while her join waits for the lobby lock.
-        $this->insertSeat($lobby, $anna, 1);
-        $seated = $this->gamePlayersRepository->isPlayerInGameForShare($lobby, $anna);
-        $this->request->commit();
-
-        self::assertTrue($seated);
-    }
-
     public function testFindOneByGameIdForShareSeesAnInvitationCommittedAfterTheSnapshot(): void
     {
         $lobby = $this->insertGame('lobby');
@@ -228,13 +211,12 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $lobby = $this->insertGame('lobby');
         $finished = $this->insertGame('finished');
         $gameRepository = new GameRepository($this->registry());
-        $players = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager, $gameRepository);
+        $players = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager, $gameRepository, $this->createStub(UserRepositoryInterface::class));
         $access = $this->createMock(GameAccessServiceInterface::class);
         $access->method('assertAdmin')->willReturn(new User());
         $invitations = new InvitationService(
             new InvitationRepository($this->registry()),
             $this->gamePlayersRepository,
-            $gameRepository,
             $this->createMock(UserRepositoryInterface::class),
             $players,
             $this->entityManager,
@@ -256,7 +238,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         self::assertSame(1, (int) $this->other->fetchOne('SELECT COUNT(*) FROM invitation WHERE game_id = ?', [$lobby]));
     }
 
-    public function testRefreshWithSeatsForUpdateSeesTheGameAndSeatsCommittedAfterTheSnapshot(): void
+    public function testFindOneByGameIdWithSeatsForUpdateSeesTheGameAndSeatsCommittedAfterTheSnapshot(): void
     {
         $bob = $this->insertUser('bob');
         $anna = $this->insertUser('anna');
@@ -272,7 +254,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         // request waits for the lock.
         $this->other->update('game', ['start_score' => 501], ['game_id' => $lobby]);
         $this->insertSeat($lobby, $anna, 2);
-        $gameRepository->refreshWithSeatsForUpdate($game);
+        self::assertSame($game, $gameRepository->findOneByGameIdWithSeatsForUpdate($lobby));
         $this->request->commit();
 
         self::assertSame(501, $game->getStartScore());
@@ -283,7 +265,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
     {
         $finished = $this->insertGame('finished');
         $gameRepository = new GameRepository($this->registry());
-        $playerManagementService = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager, new GameRepository($this->registry()));
+        $playerManagementService = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager, new GameRepository($this->registry()), $this->createStub(UserRepositoryInterface::class));
         $access = $this->createMock(GameAccessServiceInterface::class);
         $access->method('assertAdmin')->willReturn(new User());
         $openLobbyService = new OpenLobbyService($gameRepository, $this->entityManager);
@@ -631,9 +613,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $gameRepository = new GameRepository($this->registry());
         $service = new GuestPlayerService(
             $this->gamePlayersRepository,
-            new PlayerManagementService($this->gamePlayersRepository, $this->entityManager, $gameRepository),
-            $this->entityManager,
-            $gameRepository,
+            new PlayerManagementService($this->gamePlayersRepository, $this->entityManager, $gameRepository, $this->createStub(UserRepositoryInterface::class)),
         );
 
         try {
@@ -656,7 +636,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         self::assertInstanceOf(Game::class, $this->entityManager->find(Game::class, $game));
         // The game starts after the reorder request loaded it.
         $this->other->update('game', ['status' => 'started'], ['game_id' => $game]);
-        $service = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager, new GameRepository($this->registry()));
+        $service = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager, new GameRepository($this->registry()), $this->createStub(UserRepositoryInterface::class));
 
         try {
             $service->updatePlayerPositions($game, [['playerId' => $bob, 'position' => 2], ['playerId' => $vanya, 'position' => 1]]);
@@ -757,9 +737,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         self::assertInstanceOf(Game::class, $game);
         $service = new GuestPlayerService(
             $gamePlayersRepository,
-            new PlayerManagementService($gamePlayersRepository, $this->entityManager, new GameRepository($this->registry())),
-            $this->entityManager,
-            new GameRepository($this->registry()),
+            new PlayerManagementService($gamePlayersRepository, $this->entityManager, new GameRepository($this->registry()), $this->createStub(UserRepositoryInterface::class)),
         );
 
         return $service->createGuestPlayer($game, $name);
