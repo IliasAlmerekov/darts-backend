@@ -148,6 +148,35 @@ final class ApiContractEndpointTest extends WebTestCase
     }
 
     /**
+     * @return array<string, array{string, string}>
+     */
+    public static function badQueryParameters(): array
+    {
+        return [
+            'player leave playerId abc' => [Request::METHOD_DELETE, '/api/room/%d?playerId=abc'],
+            'game state since array' => [Request::METHOD_GET, '/api/game/%d?since[]=x'],
+            'player stats sort array' => [Request::METHOD_GET, '/api/players/stats?sort[]=x'],
+        ];
+    }
+
+    #[DataProvider('badQueryParameters')]
+    public function testUnmappableQueryParameterAnswers400(string $method, string $uri): void
+    {
+        $client = static::createClient();
+        [$admin, $player] = $this->users();
+        $gameId = $this->createGame($player, GameStatus::Lobby);
+        $client->loginUser($admin);
+
+        $client->request($method, sprintf($uri, $gameId));
+
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST, (string) $client->getResponse()->getContent());
+        self::assertSame(
+            ['success' => false, 'error' => 'BAD_REQUEST', 'message' => 'Bad Request'],
+            json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR),
+        );
+    }
+
+    /**
      * @return array{0: User, 1: User}
      */
     private function users(): array

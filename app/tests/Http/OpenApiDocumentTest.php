@@ -17,6 +17,7 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Routing\RouterInterface;
+use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 
 /**
@@ -123,6 +124,28 @@ final class OpenApiDocumentTest extends WebTestCase
         }
 
         self::assertSame([], $offences);
+    }
+
+    /**
+     * #262: a #[MapQueryParameter] value that does not map answers 400 with the shared error body.
+     */
+    public function testEveryQueryParameterOperationDocumentsItsBadRequestBody(): void
+    {
+        $offences = [];
+        $seen = 0;
+        foreach ($this->operations() as [$path, $method, $operation]) {
+            $route = $this->routeFor($path, $method);
+            if (null === $route || !$this->bindsQueryParameter($route['controller'])) {
+                continue;
+            }
+            ++$seen;
+            if ('#/components/schemas/ApiError' !== ($operation['responses']['400']['content']['application/json']['schema']['$ref'] ?? null)) {
+                $offences[] = strtoupper($method).' '.$path;
+            }
+        }
+
+        self::assertSame([], $offences);
+        self::assertGreaterThan(0, $seen);
     }
 
     /**
@@ -662,5 +685,21 @@ final class OpenApiDocumentTest extends WebTestCase
         }
 
         return null;
+    }
+
+    private function bindsQueryParameter(string $controller): bool
+    {
+        if (!str_contains($controller, '::')) {
+            return false;
+        }
+
+        [$class, $action] = explode('::', $controller, 2);
+        foreach ((new ReflectionMethod($class, $action))->getParameters() as $parameter) {
+            if ([] !== $parameter->getAttributes(MapQueryParameter::class)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
