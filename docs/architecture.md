@@ -64,8 +64,10 @@ rolled-back undo must reach its client (ADR 0004, ADR 0005).
 `PlayerManagementServiceInterface`.** Join by invitation, add guest, remove participant,
 reorder positions, room create and rematch seat or move players only through it. They skip
 `LockedGameTransactionInterface`, because its `assertAdmin()` would reject the invitation
-join, which comes from a player. Each method of the seat module runs in its own transaction,
-nested in the caller's when there is one, and starts with one locking read of the game and
+join, which comes from a player. Each method of the seat module runs in the caller's
+transaction when there is one, without a savepoint, so a deadlock still reaches
+`RetryingTransaction` as a `RetryableException`; without one it opens its own. Its flush
+writes the caller's pending changes too. Each method starts with one locking read of the game and
 its seats, `GameRepository::findOneByGameIdWithSeatsForUpdate()`, the read
 `LockedGameTransactionInterface` uses too. Under that lock the module checks
 `GameStatus::canChangeSeats()` and `Game::MAX_PARTICIPANTS`, gives a new seat the next

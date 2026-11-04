@@ -30,7 +30,7 @@ use Override;
 /**
  * The seat module: every seat write of a game goes through here.
  *
- * Each write runs in its own transaction (nested in the caller's, if any) and starts with one
+ * Each write runs in the caller's transaction, or in its own when there is none, and starts with one
  * locking read of the game and its seats. Under that lock it checks that the game is in the
  * lobby and below Game::MAX_PARTICIPANTS, gives a new seat the next position and the display
  * name snapshot, and flushes.
@@ -65,7 +65,7 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     #[Override]
     public function removePlayer(int $gameId, int $playerId): bool
     {
-        return $this->entityManager->wrapInTransaction(function () use ($gameId, $playerId): bool {
+        return $this->inSeatTransaction(function () use ($gameId, $playerId): bool {
             $this->lockEditableSeats($gameId);
 
             $gamePlayer = $this->gamePlayersRepository->findOneBy(
@@ -99,7 +99,7 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     #[Override]
     public function addPlayer(int $gameId, int $playerId): void
     {
-        $this->entityManager->wrapInTransaction(function () use ($gameId, $playerId): void {
+        $this->inSeatTransaction(function () use ($gameId, $playerId): void {
             $game = $this->lockGame($gameId);
             foreach ($game->getGamePlayers() as $seat) {
                 if ($playerId === $seat->getPlayer()?->getId()) {
@@ -128,7 +128,7 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     #[Override]
     public function addNewPlayer(int $gameId, Closure $createPlayer): GamePlayers
     {
-        return $this->entityManager->wrapInTransaction(function () use ($gameId, $createPlayer): GamePlayers {
+        return $this->inSeatTransaction(function () use ($gameId, $createPlayer): GamePlayers {
             $game = $this->lockEditableSeats($gameId);
             $this->assertSeatsFree($game, 1);
             $player = $createPlayer();
@@ -152,7 +152,7 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     #[Override]
     public function addPlayers(int $gameId, array $playerIds): void
     {
-        $this->entityManager->wrapInTransaction(function () use ($gameId, $playerIds): void {
+        $this->inSeatTransaction(function () use ($gameId, $playerIds): void {
             $game = $this->lockEditableSeats($gameId);
             $this->assertSeatsFree($game, count($playerIds));
             if ([] === $playerIds) {
@@ -187,7 +187,7 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     #[Override]
     public function copyPlayers(int $fromGameId, int $toGameId, bool $reverseByPlacement = false): void
     {
-        $this->entityManager->wrapInTransaction(function () use ($fromGameId, $toGameId, $reverseByPlacement): void {
+        $this->inSeatTransaction(function () use ($fromGameId, $toGameId, $reverseByPlacement): void {
             $game = $this->lockEditableSeats($toGameId);
             $orderIndex = 0;
             foreach ($this->seatsToCopy($fromGameId, $reverseByPlacement) as $oldGamePlayer) {
@@ -228,7 +228,7 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     #[Override]
     public function appendMissingPlayers(int $fromGameId, int $toGameId, bool $reverseByPlacement = false): void
     {
-        $this->entityManager->wrapInTransaction(function () use ($fromGameId, $toGameId, $reverseByPlacement): void {
+        $this->inSeatTransaction(function () use ($fromGameId, $toGameId, $reverseByPlacement): void {
             $game = $this->lockEditableSeats($toGameId);
             $seatedPlayerIds = [];
             foreach ($game->getGamePlayers() as $seat) {
@@ -267,7 +267,7 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     #[Override]
     public function updatePlayerPositions(int $gameId, array $positions): void
     {
-        $this->entityManager->wrapInTransaction(function () use ($gameId, $positions): void {
+        $this->inSeatTransaction(function () use ($gameId, $positions): void {
             $this->lockEditableSeats($gameId);
             if ([] === $positions) {
                 return;
@@ -370,6 +370,31 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
 
             $this->entityManager->flush();
         });
+    }
+
+    /**
+     * Runs a seat write in the caller's transaction when there is one, else in its own.
+     *
+     * A nested wrapInTransaction() would set a savepoint. A deadlock rolls back the whole MySQL
+     * transaction, savepoint included, so its ROLLBACK TO SAVEPOINT would fail and hide the
+     * RetryableException from RetryingTransaction (ADR 0003).
+     *
+     * @template T
+     *
+     * @param Closure(): T $write
+     *
+     * @return T
+     */
+    private function inSeatTransaction(Closure $write): mixed
+    {
+        if (!$this->entityManager->getConnection()->isTransactionActive()) {
+            return $this->entityManager->wrapInTransaction($write);
+        }
+
+        $result = $write();
+        $this->entityManager->flush();
+
+        return $result;
     }
 
     /**

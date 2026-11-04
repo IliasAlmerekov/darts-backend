@@ -152,6 +152,25 @@ final class ConcurrentSeatingTest extends KernelTestCase
         );
     }
 
+    public function testJoinKeepsTheSeatARematchCommittedAfterTheSnapshot(): void
+    {
+        $anna = $this->insertUser('anna');
+        $lobby = $this->insertGame('lobby');
+        $service = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager, new GameRepository($this->registry()), $this->createStub(UserRepositoryInterface::class));
+
+        $this->request->beginTransaction();
+        $this->takeSnapshot();
+        // A rematch seats Anna and commits while her join waits for the lobby lock.
+        $this->insertSeat($lobby, $anna, 1);
+        $service->addPlayer($lobby, $anna);
+        $this->request->commit();
+
+        self::assertSame(
+            [[$anna, 1]],
+            $this->other->fetchAllNumeric('SELECT player_id, position FROM game_players WHERE game_id = ? ORDER BY position, game_player_id', [$lobby]),
+        );
+    }
+
     public function testGuestGetsTheNextPositionAfterASeatCommittedAfterTheSnapshot(): void
     {
         $bob = $this->insertUser('bob');

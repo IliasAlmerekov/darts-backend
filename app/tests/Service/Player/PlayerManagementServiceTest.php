@@ -22,6 +22,7 @@ use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\UserRepositoryInterface;
 use App\Service\Player\PlayerManagementService;
+use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -38,12 +39,21 @@ final class PlayerManagementServiceTest extends TestCase
     private PlayerManagementService $service;
     /** @var list<object> */
     private array $persisted = [];
+    private bool $callerTransaction = false;
+    private int $ownTransactions = 0;
 
     protected function setUp(): void
     {
         $this->gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
-        $this->entityManager->method('wrapInTransaction')->willReturnCallback(static fn (callable $func): mixed => $func());
+        $this->entityManager->method('wrapInTransaction')->willReturnCallback(function (callable $func): mixed {
+            $this->ownTransactions++;
+
+            return $func();
+        });
+        $connection = $this->createStub(Connection::class);
+        $connection->method('isTransactionActive')->willReturnCallback(fn (): bool => $this->callerTransaction);
+        $this->entityManager->method('getConnection')->willReturn($connection);
         $this->entityManager->method('persist')->willReturnCallback(function (object $entity): void {
             $this->persisted[] = $entity;
         });
@@ -129,6 +139,30 @@ final class PlayerManagementServiceTest extends TestCase
         } finally {
             self::assertSame([], $this->persisted);
         }
+    }
+
+    public function testASeatWriteWithoutACallerTransactionOpensItsOwn(): void
+    {
+        $this->lockGame(GameStatus::Lobby, []);
+
+        $this->service->addPlayer(100, 200);
+
+        self::assertSame(1, $this->ownTransactions);
+        self::assertCount(1, $this->persistedSeats());
+    }
+
+    public function testASeatWriteInTheCallersTransactionFlushesWithoutASavepoint(): void
+    {
+        // Room create and rematch: RetryingTransaction already holds a transaction.
+        $this->callerTransaction = true;
+        $this->lockGame(GameStatus::Lobby, []);
+        $this->userRepository->method('findByIds')->willReturn([$this->userWithId(200, 'anna')]);
+        $this->entityManager->expects(self::once())->method('flush');
+
+        $this->service->addPlayers(100, [200]);
+
+        self::assertSame(0, $this->ownTransactions);
+        self::assertCount(1, $this->persistedSeats());
     }
 
     public function testAddPlayerToAMissingGameThrows(): void
