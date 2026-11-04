@@ -27,8 +27,9 @@ interface PlayerManagementServiceInterface
      * @param int $gameId   The game ID
      * @param int $playerId The player ID to remove
      *
-     * @return bool True if the player was removed, false if not found
+     * @return bool True if the player was removed, false if the player has no seat in the game
      *
+     * @throws GameNotFoundException     When the game does not exist
      * @throws SeatsNotEditableException When the game is no longer in the lobby
      */
     public function removePlayer(int $gameId, int $playerId): bool;

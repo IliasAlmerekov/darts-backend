@@ -87,6 +87,18 @@ final class OpenApiDocumentTest extends WebTestCase
         }
     }
 
+    public function testRoomLeaveNamesBothNotFoundCodesAndNoSignedInFallback(): void
+    {
+        $operation = $this->document()['paths']['/api/room/{id}']['delete'];
+        $playerId = array_values(array_filter($operation['parameters'], static fn (array $parameter): bool => 'playerId' === $parameter['name']))[0];
+
+        self::assertStringNotContainsString('authentifizierte', $playerId['description']);
+        self::assertStringContainsString('REQUEST_PLAYER_ID_REQUIRED', $playerId['description']);
+        self::assertStringContainsString('GAME_NOT_FOUND', $operation['responses']['404']['description']);
+        self::assertStringContainsString('GAME_PLAYER_NOT_FOUND', $operation['responses']['404']['description']);
+        self::assertSame('#/components/schemas/ApiError', $operation['responses']['404']['content']['application/json']['schema']['$ref'] ?? null);
+    }
+
     /**
      * Most payloads fail validation with 422; registration keeps its 400 (#52).
      */

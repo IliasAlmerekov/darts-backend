@@ -12,6 +12,7 @@ namespace App\Tests\Service\Player;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\User;
+use App\Exception\Game\GameNotFoundException;
 use App\Exception\Game\InvalidPlayerOrderException;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
@@ -46,6 +47,19 @@ final class PlayerManagementServiceTest extends TestCase
 
         self::assertFalse($this->service->removePlayer(1, 2));
         $this->entityManager->expects(self::never())->method('remove');
+    }
+
+    public function testRemovePlayerFromAMissingGameThrowsAndRemovesNothing(): void
+    {
+        $gameRepository = $this->createStub(GameRepositoryInterface::class);
+        $gameRepository->method('findOneByGameIdForUpdate')->willReturn(null);
+        $service = new PlayerManagementService($this->gamePlayersRepository, $this->entityManager, $gameRepository);
+        $this->gamePlayersRepository->expects(self::never())->method('findOneBy');
+        $this->entityManager->expects(self::never())->method('remove');
+
+        $this->expectException(GameNotFoundException::class);
+
+        $service->removePlayer(999, 2);
     }
 
     public function testRemovePlayerDeletesEntity(): void
