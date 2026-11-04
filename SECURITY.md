@@ -35,8 +35,6 @@ rule below gives the severity of a break. P0 is Critical, P1 is High, and P2 is 
   `DATABASE_URL`.
 - The two `GET` routes that write, listed under `### CSRF and CORS`, unless a diff widens
   what they write.
-- The invitation UUID in the logs of `InvitationController`, described below, unless a diff
-  widens it.
 - Swagger UI and `/api/doc.json` in the dev environment.
 
 ### Access control
@@ -101,9 +99,11 @@ hasher outside `when@test` is a P0.
 
 The invitation UUID is a bearer secret. It is a random `UuidV4`, and joining a game uses
 the game id the join link stored in the session. A join that trusts a game id from the
-client is a P0. `InvitationController::joinInvitation()` writes the UUID to its info,
-warning, and error logs today. That is a known exposure, to be removed, and a new log line
-with the UUID is a P1.
+client is a P0. `InvitationController::joinInvitation()` logs no UUID, and
+`App\Logging\RequestProcessor` replaces the raw and URL-decoded UUID from the
+`/api/invite/join/{uuid}` path with `[redacted]` in the message, context, and extra of every
+log record of that request. A new log line with the UUID is a P1, and so is weakening or
+removing that redaction.
 
 ### Input and queries
 
@@ -124,9 +124,8 @@ dev environment is a P0.
 
 A secret committed in any file is a P0. `app/.env` holds only local development defaults;
 real values come from the environment or `APP_SECRET_FILE`. A password, session id,
-remember-me cookie, CSRF token, or invitation UUID written to a log is a P1. The invitation
-UUID logs in `InvitationController` are the one existing case, described under
-`### Authentication and sessions`.
+remember-me cookie, CSRF token, or invitation UUID written to a log is a P1. The redaction of the
+invitation UUID is described under `### Authentication and sessions`.
 
 ### Dependencies
 
