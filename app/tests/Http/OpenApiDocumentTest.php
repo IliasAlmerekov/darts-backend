@@ -87,6 +87,24 @@ final class OpenApiDocumentTest extends WebTestCase
         }
     }
 
+    public function testEveryGameIdRouteDocumentsGameNotFound(): void
+    {
+        $offences = [];
+        foreach ($this->operations() as [$path, $method]) {
+            if (1 !== preg_match('#^/api/(game/\{gameId\}|invite/create/\{id\}|room/\{id\})#', $path)) {
+                continue;
+            }
+
+            $notFound = $this->document()['paths'][$path][$method]['responses']['404'] ?? [];
+            if (!str_contains($notFound['description'] ?? '', '`GAME_NOT_FOUND`')
+                || '#/components/schemas/ApiError' !== ($notFound['content']['application/json']['schema']['$ref'] ?? null)) {
+                $offences[] = strtoupper($method).' '.$path;
+            }
+        }
+
+        self::assertSame([], $offences, 'Game id routes whose 404 does not name GAME_NOT_FOUND in the ApiError body.');
+    }
+
     public function testRoomLeaveNamesBothNotFoundCodesAndNoSignedInFallback(): void
     {
         $operation = $this->document()['paths']['/api/room/{id}']['delete'];

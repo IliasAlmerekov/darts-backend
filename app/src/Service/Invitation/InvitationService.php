@@ -103,11 +103,7 @@ final readonly class InvitationService implements InvitationServiceInterface
     public function getInvitationPayload(Game $game): array
     {
         $this->gameAccessService->assertAdmin();
-        $gameId = $game->getGameId();
-        if (null === $gameId) {
-            return ['success' => false, 'message' => 'Game not found'];
-        }
-
+        $gameId = $game->getGameId() ?? throw new GameNotFoundException();
         $invitation = $this->createOrGetInvitation($game);
         $users = $this->getUsersForGame($game);
         $invitationLink = $this->router->generate('join_invitation', ['uuid' => $invitation->getUuid()]);

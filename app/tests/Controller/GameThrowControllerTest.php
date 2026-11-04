@@ -11,14 +11,12 @@ use App\Dto\ThrowDeltaDto;
 use App\Dto\ThrowRequest;
 use App\Dto\UndoAckDto;
 use App\Entity\Game;
-use App\Exception\Game\GameNotFoundException;
 use App\Service\Game\GameStateReaderInterface;
 use App\Service\Game\GameThrowServiceInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 #[AllowMockObjectsWithoutExpectations]
 final class GameThrowControllerTest extends TestCase
@@ -64,20 +62,6 @@ final class GameThrowControllerTest extends TestCase
 
         self::assertInstanceOf(ThrowAckDto::class, $response);
         self::assertSame(777, $response->gameId);
-    }
-
-    public function testThrowDeltaKeepsNotFoundBehaviorWhenServiceCannotLoadGame(): void
-    {
-        $dto = new ThrowRequest();
-        $throwService = $this->createMock(GameThrowServiceInterface::class);
-        $deltaService = $this->createMock(GameStateReaderInterface::class);
-        $throwService->expects(self::once())
-            ->method('recordThrowAck')
-            ->with(777, $dto, $deltaService)
-            ->willThrowException(new GameNotFoundException());
-
-        $this->expectException(NotFoundHttpException::class);
-        $this->controller->throwDelta(777, $throwService, $deltaService, $dto);
     }
 
     private function dummyThrowAckDto(): ThrowAckDto

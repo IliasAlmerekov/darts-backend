@@ -202,6 +202,7 @@ final class GameRoomController extends AbstractController
     #[ApiResponse]
     #[OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Der Request-Body ist kein gültiges JSON (`REQUEST_INVALID_JSON_BODY`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht. Das wird vor dem Status geprüft, also auch außerhalb der Lobby mit 422 statt 409 beantwortet.', content: new OA\JsonContent(ref: '#/components/schemas/RequestValidationFailed'))]
+    #[OA\Response(response: Response::HTTP_NOT_FOUND, description: GameNotFoundException::OPENAPI_DESCRIPTION, content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[Route(path: '/api/room/{id}/guest', name: 'room_player_guest_add', methods: ['POST'], format: 'json')]
     public function addGuestPlayer(int $id, #[MapRequestPayload] GuestPlayerRequest $dto): Response
     {
@@ -243,11 +244,11 @@ final class GameRoomController extends AbstractController
             type: 'object'
         )
     )]
-    #[OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Spiel nicht gefunden.')]
     #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Das Spiel ist nicht mehr in der Lobby (`GAME_SEATS_NOT_EDITABLE`), auch bei leerem `positions`. Die Positionen bleiben unverändert. '.ConcurrentChangeException::OPENAPI_DESCRIPTION)]
     #[ApiResponse]
     #[OA\Response(response: Response::HTTP_BAD_REQUEST, description: 'Der Request-Body ist kein gültiges JSON (`REQUEST_INVALID_JSON_BODY`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht. Das wird vor dem Status geprüft, also auch außerhalb der Lobby mit 422 statt 409 beantwortet.', content: new OA\JsonContent(ref: '#/components/schemas/RequestValidationFailed'))]
+    #[OA\Response(response: Response::HTTP_NOT_FOUND, description: GameNotFoundException::OPENAPI_DESCRIPTION, content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[Route(path: '/api/room/{id}/positions', name: 'room_update_player_positions', methods: ['POST'], format: 'json')]
     public function updatePlayerOrder(int $id, #[MapRequestPayload] UpdatePlayerOrderRequest $dto): array
     {
@@ -276,7 +277,7 @@ final class GameRoomController extends AbstractController
         content: new OA\MediaType(mediaType: 'text/event-stream')
     )]
     #[OA\Response(response: Response::HTTP_NO_CONTENT, description: 'Das Spiel ist nicht in der Lobby (gestartet, beendet oder abgebrochen). Ohne Body, damit EventSource nicht neu verbindet.')]
-    #[OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Spiel nicht gefunden.')]
+    #[OA\Response(response: Response::HTTP_NOT_FOUND, description: GameNotFoundException::OPENAPI_DESCRIPTION, content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[Route(path: '/api/room/{id}/stream', name: 'room_stream', methods: ['GET'])]
     public function roomStream(int $id, Request $request): Response
     {

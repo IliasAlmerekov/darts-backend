@@ -77,22 +77,16 @@ final class InvitationController extends AbstractController
                         ]
                     )
                 ),
-                new OA\Property(property: 'message', type: 'string', nullable: true, example: 'Spiel nicht gefunden'),
             ]
         )
     )]
-    #[OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Unbekannte Spiel-ID (`NOT_FOUND`, schon vom Entity-Resolver). Meldet der Service ein fehlendes Spiel, antwortet der Endpoint mit `GAME_NOT_FOUND`.', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
+    #[OA\Response(response: Response::HTTP_NOT_FOUND, description: GameNotFoundException::OPENAPI_DESCRIPTION, content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: Nur ROLE_ADMIN (das Tablet) darf diese Route nutzen (`ACCESS_DENIED`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[OA\Response(response: Response::HTTP_CONFLICT, description: ConcurrentChangeException::OPENAPI_DESCRIPTION, content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[Route('/api/invite/create/{id}', name: 'create_invitation', methods: ['POST'], format: 'json')]
     public function createInvitation(#[MapEntity(id: 'id')] Game $game, InvitationServiceInterface $invitationService): array
     {
-        $payload = $invitationService->getInvitationPayload($game);
-        if (!(bool) ($payload['success'] ?? false)) {
-            throw new GameNotFoundException();
-        }
-
-        return $payload;
+        return $invitationService->getInvitationPayload($game);
     }
 
     /**

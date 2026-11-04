@@ -32,6 +32,8 @@ interface InvitationServiceInterface
      * @param Game $game
      *
      * @return array<string, mixed>
+     *
+     * @throws GameNotFoundException when the game has no id
      */
     public function getInvitationPayload(Game $game): array;
 
