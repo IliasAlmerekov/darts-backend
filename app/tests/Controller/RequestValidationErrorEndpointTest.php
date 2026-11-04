@@ -102,9 +102,31 @@ final class RequestValidationErrorEndpointTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST, (string) $this->client->getResponse()->getContent());
         self::assertSame(
-            ['success' => false, 'error' => 'HTTP_ERROR', 'message' => 'Bad Request'],
+            ['success' => false, 'error' => 'BAD_REQUEST', 'message' => 'Bad Request'],
             $this->payload(),
         );
+    }
+
+    /**
+     * @return iterable<string, array{string, string, string, int, array{success: false, error: string, message: string}}>
+     */
+    public static function genericHttpErrors(): iterable
+    {
+        yield 'unknown route' => [Request::METHOD_GET, '/api/nope', 'application/json', Response::HTTP_NOT_FOUND, ['success' => false, 'error' => 'NOT_FOUND', 'message' => 'Not Found']];
+        yield 'wrong method' => [Request::METHOD_DELETE, '/api/register', 'application/json', Response::HTTP_METHOD_NOT_ALLOWED, ['success' => false, 'error' => 'METHOD_NOT_ALLOWED', 'message' => 'Method Not Allowed']];
+        yield 'non-JSON registration' => [Request::METHOD_POST, '/api/register', 'text/plain', Response::HTTP_UNSUPPORTED_MEDIA_TYPE, ['success' => false, 'error' => 'UNSUPPORTED_MEDIA_TYPE', 'message' => 'Unsupported Media Type']];
+    }
+
+    /**
+     * @param array{success: false, error: string, message: string} $body
+     */
+    #[DataProvider('genericHttpErrors')]
+    public function testGenericHttpErrorsTakeTheirCodeFromTheStatus(string $method, string $uri, string $contentType, int $status, array $body): void
+    {
+        $this->client->request($method, $uri, [], [], ['CONTENT_TYPE' => $contentType], '{}');
+
+        self::assertResponseStatusCodeSame($status, (string) $this->client->getResponse()->getContent());
+        self::assertSame($body, $this->payload());
     }
 
     private function post(string $uri, string $body, string $contentType = 'application/json'): void

@@ -142,6 +142,24 @@ final class ErrorControllerTest extends TestCase
     }
 
     /**
+     * @return iterable<string, array{int, string, string}>
+     */
+    public static function unnamedStatuses(): iterable
+    {
+        yield '413' => [Response::HTTP_REQUEST_ENTITY_TOO_LARGE, 'REQUEST_REJECTED', 'Content Too Large'];
+        yield '503' => [Response::HTTP_SERVICE_UNAVAILABLE, 'INTERNAL_SERVER_ERROR', 'Service Unavailable'];
+    }
+
+    #[DataProvider('unnamedStatuses')]
+    public function testRendersAnUnnamedStatusWithItsCatchAllCode(int $status, string $error, string $message): void
+    {
+        $response = (new ErrorController())->show(new HttpException($status));
+
+        self::assertSame($status, $response->getStatusCode());
+        self::assertSame(['success' => false, 'error' => $error, 'message' => $message], json_decode((string) $response->getContent(), true));
+    }
+
+    /**
      * @return iterable<string, array{RetryableException}>
      */
     public static function retryableExceptions(): iterable
