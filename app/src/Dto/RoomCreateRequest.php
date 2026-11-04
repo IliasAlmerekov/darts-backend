@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace App\Dto;
 
 use OpenApi\Attributes as OA;
+use App\Entity\Game;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -52,7 +53,7 @@ final class RoomCreateRequest
         ])]
         #[Assert\Unique]
         public ?array $excludePlayerIds = null,
-        #[Assert\Choice(choices: [101, 201, 301, 401, 501])]
+        #[Assert\Choice(choices: Game::ALLOWED_START_SCORES)]
         public ?int $startScore = null,
         #[Assert\Type('bool')]
         public ?bool $doubleOut = null,

@@ -76,7 +76,7 @@ final readonly class GameStartService implements GameStartServiceInterface
                 $game->setStartScore($dto->startScore);
             }
 
-            $game->setOutRule($doubleOut ? OutRule::Double : ($tripleOut ? OutRule::Triple : OutRule::Single));
+            $game->setOutRule(OutRule::fromFlags($doubleOut, $tripleOut));
 
             // Initialize the first round if none exists
             if (!$this->hasExistingRounds($game)) {

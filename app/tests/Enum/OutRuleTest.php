@@ -16,6 +16,13 @@ use PHPUnit\Framework\TestCase;
 
 final class OutRuleTest extends TestCase
 {
+    public function testFromFlags(): void
+    {
+        self::assertSame(OutRule::Single, OutRule::fromFlags(false, false));
+        self::assertSame(OutRule::Double, OutRule::fromFlags(true, false));
+        self::assertSame(OutRule::Triple, OutRule::fromFlags(false, true));
+    }
+
     public function testDeadScores(): void
     {
         foreach ([-1, 0, 1, 2, 3] as $score) {

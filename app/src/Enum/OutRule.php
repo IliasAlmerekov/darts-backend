@@ -18,6 +18,19 @@ enum OutRule: string
     case Triple = 'tripleout';
 
     /**
+     * Double out wins over triple out; callers reject a conflicting pair first.
+     *
+     * @param bool $doubleOut
+     * @param bool $tripleOut
+     *
+     * @return self
+     */
+    public static function fromFlags(bool $doubleOut, bool $tripleOut): self
+    {
+        return $doubleOut ? self::Double : ($tripleOut ? self::Triple : self::Single);
+    }
+
+    /**
      * @param int $remaining
      *
      * @return bool
