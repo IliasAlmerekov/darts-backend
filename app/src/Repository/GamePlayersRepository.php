@@ -11,7 +11,6 @@ namespace App\Repository;
 
 use App\Entity\GamePlayers;
 use App\Enum\GameStatus;
-use Doctrine\DBAL\LockMode;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
@@ -85,29 +84,6 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
     }
 
     /**
-     * @param int $gameId
-     * @param int $playerId
-     *
-     * @return bool
-     */
-    #[\Override]
-    public function isPlayerInGameForShare(int $gameId, int $playerId): bool
-    {
-        $seats = $this->createQueryBuilder('gp')
-            ->select('gp.gamePlayerId')
-            ->andWhere('gp.game = :gameId')
-            ->andWhere('gp.player = :playerId')
-            ->setParameter('gameId', $gameId)
-            ->setParameter('playerId', $playerId)
-            ->setMaxResults(1)
-            ->getQuery()
-            ->setLockMode(LockMode::PESSIMISTIC_READ)
-            ->getScalarResult();
-
-        return [] !== $seats;
-    }
-
-    /**
      * @return GamePlayers[]
      *
      * @param int $gameId
@@ -150,20 +126,6 @@ final class GamePlayersRepository extends ServiceEntityRepository implements Gam
         }
 
         return $seatsByGameId;
-    }
-
-    /**
-     * @return GamePlayers[]
-     *
-     * @param int $gameId
-     */
-    #[\Override]
-    public function findByGameIdForShare(int $gameId): array
-    {
-        return $this->createSeatsQueryBuilder($gameId)
-            ->getQuery()
-            ->setLockMode(LockMode::PESSIMISTIC_READ)
-            ->getResult();
     }
 
     /**
@@ -211,35 +173,6 @@ SQL,
         );
 
         return false !== $result;
-    }
-
-    /**
-     * @param int $gameId
-     *
-     * @return int
-     */
-    #[\Override]
-    public function findNextPositionForGame(int $gameId): int
-    {
-        $row = $this->getEntityManager()->getConnection()->fetchAssociative(
-            <<<'SQL'
-SELECT
-    MAX(gp.position) AS maxPosition,
-    COUNT(gp.game_player_id) AS playersCount
-FROM game_players gp
-WHERE gp.game_id = :gameId
-FOR SHARE
-SQL,
-            ['gameId' => $gameId],
-            ['gameId' => ParameterType::INTEGER]
-        );
-
-        $maxPosition = $row['maxPosition'] ?? null;
-        if (null !== $maxPosition) {
-            return (int) $maxPosition + 1;
-        }
-
-        return (int) ($row['playersCount'] ?? 0) + 1;
     }
 
     /**

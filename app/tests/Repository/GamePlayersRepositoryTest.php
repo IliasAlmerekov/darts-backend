@@ -142,37 +142,6 @@ final class GamePlayersRepositoryTest extends KernelTestCase
         self::assertTrue($this->repository->existsNameInGame($game->getGameId(), 'USERNAME-ONLY'));
     }
 
-    public function testFindNextPositionForGameStartsAtOneWhenGameHasNoPlayers(): void
-    {
-        $game = $this->createGame();
-        $this->entityManager->flush();
-
-        self::assertSame(1, $this->repository->findNextPositionForGame($game->getGameId()));
-    }
-
-    public function testFindNextPositionForGameUsesPlayerCountWhenExistingPositionsAreNull(): void
-    {
-        $game = $this->createGame();
-        $first = $this->persistGamePlayer($game, $this->createUser('one'), position: 1);
-        $second = $this->persistGamePlayer($game, $this->createUser('two'), position: 1);
-        (new \ReflectionProperty(GamePlayers::class, 'position'))->setValue($first, null);
-        (new \ReflectionProperty(GamePlayers::class, 'position'))->setValue($second, null);
-        $this->entityManager->flush();
-
-        self::assertSame(3, $this->repository->findNextPositionForGame($game->getGameId()));
-    }
-
-    public function testFindNextPositionForGameUsesHighestExistingPosition(): void
-    {
-        $game = $this->createGame();
-        $this->persistGamePlayer($game, $this->createUser('one'), position: 2);
-        $this->persistGamePlayer($game, $this->createUser('two'), position: 10);
-        $this->persistGamePlayer($game, $this->createUser('three'), position: 5);
-        $this->entityManager->flush();
-
-        self::assertSame(11, $this->repository->findNextPositionForGame($game->getGameId()));
-    }
-
     public function testFindGameStatePlayersByGameIdReturnsScalarShapeForDtoAssembly(): void
     {
         $game = $this->createGame();

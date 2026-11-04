@@ -13,19 +13,27 @@ use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Exception\Game\GameNotFoundException;
+use App\Exception\Game\GameRoomFullException;
 use App\Exception\Game\InvalidPlayerOrderException;
+use App\Exception\Game\PlayerNotFoundException;
 use App\Exception\Game\SeatsNotEditableException;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
+use App\Repository\UserRepositoryInterface;
 use App\Service\Game\ParticipantResult;
 use App\Service\Game\PlayerDisplayName;
+use Closure;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
 use Override;
 
 /**
- * Service to handle player management.
- * This class is responsible for adding and removing players from games.
+ * The seat module: every seat write of a game goes through here.
+ *
+ * Each write runs in the caller's transaction, or in its own when there is none, and starts with one
+ * locking read of the game and its seats. Under that lock it checks that the game is in the
+ * lobby and below Game::MAX_PARTICIPANTS, gives a new seat the next position and the display
+ * name snapshot, and flushes.
  *
  * @psalm-suppress UnusedClass Reason: service is auto-wired and used via interface.
  */
@@ -35,11 +43,13 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
      * @param GamePlayersRepositoryInterface $gamePlayersRepository
      * @param EntityManagerInterface         $entityManager
      * @param GameRepositoryInterface        $gameRepository
+     * @param UserRepositoryInterface        $userRepository
      */
     public function __construct(
         private GamePlayersRepositoryInterface $gamePlayersRepository,
         private EntityManagerInterface $entityManager,
         private GameRepositoryInterface $gameRepository,
+        private UserRepositoryInterface $userRepository,
     ) {
     }
 
@@ -55,7 +65,7 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     #[Override]
     public function removePlayer(int $gameId, int $playerId): bool
     {
-        return $this->entityManager->wrapInTransaction(function () use ($gameId, $playerId): bool {
+        return $this->inSeatTransaction(function () use ($gameId, $playerId): bool {
             $this->lockEditableSeats($gameId);
 
             $gamePlayer = $this->gamePlayersRepository->findOneBy(
@@ -76,43 +86,89 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     }
 
     /**
-     * @param int      $gameId
-     * @param int      $playerId
-     * @param int|null $position
+     * @param int $gameId
+     * @param int $playerId
      *
+     * @throws GameNotFoundException     When no game has this ID
+     * @throws SeatsNotEditableException When the player has no seat and the game is no longer in the lobby
+     * @throws GameRoomFullException     When the player has no seat and the game is full
      * @throws ORMException
      *
-     * @return GamePlayers
-     *
+     * @return void
      */
     #[Override]
-    public function addPlayer(int $gameId, int $playerId, ?int $position = null): GamePlayers
+    public function addPlayer(int $gameId, int $playerId): void
     {
-        /** @var User $player */
-        $player = $this->entityManager->getReference(User::class, $playerId);
+        $this->inSeatTransaction(function () use ($gameId, $playerId): void {
+            $game = $this->lockGame($gameId);
+            foreach ($game->getGamePlayers() as $seat) {
+                if ($playerId === $seat->getPlayer()?->getId()) {
+                    return;
+                }
+            }
 
-        return $this->addPlayerEntity($gameId, $player, $position);
+            $this->assertSeatsEditable($game);
+            $this->assertSeatsFree($game, 1);
+            /** @var User $player */
+            $player = $this->entityManager->getReference(User::class, $playerId);
+            $this->createGamePlayer($game, $player);
+        });
     }
 
     /**
-     * @param int      $gameId
-     * @param User     $player
-     * @param int|null $position
-     * @param bool     $flush
+     * @param int             $gameId
+     * @param Closure(): User $createPlayer
      *
-     * @throws ORMException
+     * @throws GameNotFoundException     When no game has this ID
+     * @throws SeatsNotEditableException When the game is no longer in the lobby
+     * @throws GameRoomFullException     When the game is full
      *
      * @return GamePlayers
      */
     #[Override]
-    public function addPlayerEntity(int $gameId, User $player, ?int $position = null, bool $flush = true): GamePlayers
+    public function addNewPlayer(int $gameId, Closure $createPlayer): GamePlayers
     {
-        $gamePlayer = $this->createGamePlayer($gameId, $player, $position);
-        if (true === $flush) {
-            $this->entityManager->flush();
-        }
+        return $this->inSeatTransaction(function () use ($gameId, $createPlayer): GamePlayers {
+            $game = $this->lockEditableSeats($gameId);
+            $this->assertSeatsFree($game, 1);
+            $player = $createPlayer();
+            $this->entityManager->persist($player);
 
-        return $gamePlayer;
+            return $this->createGamePlayer($game, $player);
+        });
+    }
+
+    /**
+     * @param int       $gameId
+     * @param list<int> $playerIds
+     *
+     * @throws GameNotFoundException     When no game has this ID
+     * @throws SeatsNotEditableException When the game is no longer in the lobby
+     * @throws GameRoomFullException     When the players do not fit into the free seats
+     * @throws PlayerNotFoundException   When an id belongs to no user
+     *
+     * @return void
+     */
+    #[Override]
+    public function addPlayers(int $gameId, array $playerIds): void
+    {
+        $this->inSeatTransaction(function () use ($gameId, $playerIds): void {
+            $game = $this->lockEditableSeats($gameId);
+            $this->assertSeatsFree($game, count($playerIds));
+            if ([] === $playerIds) {
+                return;
+            }
+
+            $playersById = [];
+            foreach ($this->userRepository->findByIds($playerIds) as $player) {
+                $playersById[(int) $player->getId()] = $player;
+            }
+            // Every id resolves before the first seat, so an unknown id seats nobody.
+            $players = array_map(static fn (int $playerId): User => $playersById[$playerId] ?? throw new PlayerNotFoundException(), $playerIds);
+            foreach ($players as $player) {
+                $this->createGamePlayer($game, $player);
+            }
+        });
     }
 
     /**
@@ -122,6 +178,8 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
      * @param int  $toGameId
      * @param bool $reverseByPlacement Seat the last placed first and number the seats 1, 2, 3
      *
+     * @throws GameNotFoundException     When the target game does not exist
+     * @throws SeatsNotEditableException When the target game is no longer in the lobby
      * @throws ORMException
      *
      * @return void
@@ -129,16 +187,18 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     #[Override]
     public function copyPlayers(int $fromGameId, int $toGameId, bool $reverseByPlacement = false): void
     {
-        $oldGamePlayers = $this->seatsToCopy($fromGameId, $reverseByPlacement);
-        $orderIndex = 0;
-        $hasCopiedPlayers = false;
-        foreach ($oldGamePlayers as $oldGamePlayer) {
-            $player = $oldGamePlayer->getPlayer();
-            if (null === $player) {
-                continue;
-            }
+        $this->inSeatTransaction(function () use ($fromGameId, $toGameId, $reverseByPlacement): void {
+            $game = $this->lockEditableSeats($toGameId);
+            $orderIndex = 0;
+            foreach ($this->seatsToCopy($fromGameId, $reverseByPlacement) as $oldGamePlayer) {
+                if (!$this->hasFreeSeat($game)) {
+                    break;
+                }
+                $player = $oldGamePlayer->getPlayer();
+                if (null === $player || null === $player->getId()) {
+                    continue;
+                }
 
-            if (null !== $player->getId()) {
                 $position = $reverseByPlacement ? null : $oldGamePlayer->getPosition();
                 if (!is_int($position)) {
                     $orderIndex++;
@@ -147,14 +207,9 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
                     $orderIndex = max($orderIndex, $position);
                 }
 
-                $this->createGamePlayer($toGameId, $player, $position);
-                $hasCopiedPlayers = true;
+                $this->createGamePlayer($game, $player, $position);
             }
-        }
-
-        if (true === $hasCopiedPlayers) {
-            $this->entityManager->flush();
-        }
+        });
     }
 
     /**
@@ -164,6 +219,8 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
      * @param int  $toGameId
      * @param bool $reverseByPlacement Append the last placed first
      *
+     * @throws GameNotFoundException     When the target game does not exist
+     * @throws SeatsNotEditableException When the target game is no longer in the lobby
      * @throws ORMException
      *
      * @return void
@@ -171,41 +228,30 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     #[Override]
     public function appendMissingPlayers(int $fromGameId, int $toGameId, bool $reverseByPlacement = false): void
     {
-        $seatedPlayerIds = [];
-        $lastPosition = 0;
-        // A plain read inside the caller's transaction could miss seats another request
-        // committed after the snapshot, and seat those players twice.
-        $seats = $this->gamePlayersRepository->findByGameIdForShare($toGameId);
-        $seatCount = count($seats);
-        foreach ($seats as $seat) {
-            $playerId = $seat->getPlayer()?->getId();
-            if (null !== $playerId) {
+        $this->inSeatTransaction(function () use ($fromGameId, $toGameId, $reverseByPlacement): void {
+            $game = $this->lockEditableSeats($toGameId);
+            $seatedPlayerIds = [];
+            foreach ($game->getGamePlayers() as $seat) {
+                $playerId = $seat->getPlayer()?->getId();
+                if (null !== $playerId) {
+                    $seatedPlayerIds[$playerId] = true;
+                }
+            }
+
+            foreach ($this->seatsToCopy($fromGameId, $reverseByPlacement) as $oldSeat) {
+                if (!$this->hasFreeSeat($game)) {
+                    break;
+                }
+                $player = $oldSeat->getPlayer();
+                $playerId = $player?->getId();
+                if (null === $player || null === $playerId || isset($seatedPlayerIds[$playerId])) {
+                    continue;
+                }
+
+                $this->createGamePlayer($game, $player);
                 $seatedPlayerIds[$playerId] = true;
             }
-            $lastPosition = max($lastPosition, $seat->getPosition() ?? 0);
-        }
-
-        $hasAddedPlayers = false;
-        foreach ($this->seatsToCopy($fromGameId, $reverseByPlacement) as $oldSeat) {
-            if ($seatCount >= Game::MAX_PARTICIPANTS) {
-                break;
-            }
-            $player = $oldSeat->getPlayer();
-            $playerId = $player?->getId();
-            if (null === $player || null === $playerId || isset($seatedPlayerIds[$playerId])) {
-                continue;
-            }
-
-            $lastPosition++;
-            $this->createGamePlayer($toGameId, $player, $lastPosition);
-            $seatedPlayerIds[$playerId] = true;
-            $seatCount++;
-            $hasAddedPlayers = true;
-        }
-
-        if (true === $hasAddedPlayers) {
-            $this->entityManager->flush();
-        }
+        });
     }
 
     /**
@@ -221,7 +267,7 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     #[Override]
     public function updatePlayerPositions(int $gameId, array $positions): void
     {
-        $this->entityManager->wrapInTransaction(function () use ($gameId, $positions): void {
+        $this->inSeatTransaction(function () use ($gameId, $positions): void {
             $this->lockEditableSeats($gameId);
             if ([] === $positions) {
                 return;
@@ -327,59 +373,134 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     }
 
     /**
-     * Locks the game and rejects a seat change outside the lobby. Must be called inside a transaction.
+     * Runs a seat write in the caller's transaction when there is one, else in its own.
      *
+     * A nested wrapInTransaction() would set a savepoint. A deadlock rolls back the whole MySQL
+     * transaction, savepoint included, so its ROLLBACK TO SAVEPOINT would fail and hide the
+     * RetryableException from RetryingTransaction (ADR 0003).
+     *
+     * @template T
+     *
+     * @param Closure(): T $write
+     *
+     * @return T
+     */
+    private function inSeatTransaction(Closure $write): mixed
+    {
+        if (!$this->entityManager->getConnection()->isTransactionActive()) {
+            return $this->entityManager->wrapInTransaction($write);
+        }
+
+        $result = $write();
+        $this->entityManager->flush();
+
+        return $result;
+    }
+
+    /**
+     * The one locking read of every seat write. It reloads a game this request already holds,
+     * so the status and the seats show what other transactions committed before the lock.
+     *
+     * @param int $gameId
+     *
+     * @throws GameNotFoundException When no game has this ID
+     *
+     * @return Game
+     */
+    private function lockGame(int $gameId): Game
+    {
+        return $this->gameRepository->findOneByGameIdWithSeatsForUpdate($gameId) ?? throw new GameNotFoundException();
+    }
+
+    /**
      * @param int $gameId
      *
      * @throws GameNotFoundException     When no game has this ID
      * @throws SeatsNotEditableException When the game is no longer in the lobby
      *
+     * @return Game
+     */
+    private function lockEditableSeats(int $gameId): Game
+    {
+        $game = $this->lockGame($gameId);
+        $this->assertSeatsEditable($game);
+
+        return $game;
+    }
+
+    /**
+     * @param Game $game
+     *
+     * @throws SeatsNotEditableException When the game is no longer in the lobby
+     *
      * @return void
      */
-    private function lockEditableSeats(int $gameId): void
+    private function assertSeatsEditable(Game $game): void
     {
-        $game = $this->gameRepository->findOneByGameIdForUpdate($gameId) ?? throw new GameNotFoundException();
         if (!$game->getStatus()->canChangeSeats()) {
-            throw new SeatsNotEditableException();
+            throw new SeatsNotEditableException($game->getStatus());
         }
     }
 
     /**
-     * @param int|null $position
-     * @param int      $gameId
+     * @param Game $game
+     * @param int  $seats
+     *
+     * @throws GameRoomFullException When the game has fewer free seats
+     *
+     * @return void
+     */
+    private function assertSeatsFree(Game $game, int $seats): void
+    {
+        if ($game->getGamePlayers()->count() + $seats > Game::MAX_PARTICIPANTS) {
+            throw new GameRoomFullException(Game::MAX_PARTICIPANTS);
+        }
+    }
+
+    /**
+     * @param Game $game
+     *
+     * @return bool
+     */
+    private function hasFreeSeat(Game $game): bool
+    {
+        return $game->getGamePlayers()->count() < Game::MAX_PARTICIPANTS;
+    }
+
+    /**
+     * The position after the highest one in the locked seats, or after the seat count when no seat has one.
+     *
+     * @param Game $game
      *
      * @return int
      */
-    private function resolvePosition(?int $position, int $gameId): int
+    private function nextPosition(Game $game): int
     {
-        if (is_int($position) && $position >= 0) {
-            return $position;
+        $maxPosition = null;
+        foreach ($game->getGamePlayers() as $seat) {
+            $position = $seat->getPosition();
+            if (null !== $position) {
+                $maxPosition = max($maxPosition ?? $position, $position);
+            }
         }
 
-        return $this->gamePlayersRepository->findNextPositionForGame($gameId);
+        return null !== $maxPosition ? $maxPosition + 1 : $game->getGamePlayers()->count() + 1;
     }
 
     /**
-     * @param int      $gameId
+     * @param Game     $game     The game locked by lockGame()
      * @param User     $player
      * @param int|null $position
      *
-     * @throws ORMException
-     *
      * @return GamePlayers
      */
-    private function createGamePlayer(int $gameId, User $player, ?int $position = null): GamePlayers
+    private function createGamePlayer(Game $game, User $player, ?int $position = null): GamePlayers
     {
         $gamePlayer = new GamePlayers();
-        // getReference() returns the managed Game when it is already loaded, so add the
-        // seat through the inverse side too; otherwise getGamePlayers() misses it until reload.
-        // The first add loads the game's seats (and the game, if still a proxy); later adds reuse them.
-        /** @var Game $game */
-        $game = $this->entityManager->getReference(Game::class, $gameId);
-        $game->addGamePlayer($gamePlayer);
         $gamePlayer->setPlayer($player);
         $gamePlayer->setDisplayNameSnapshot(PlayerDisplayName::forUser($player));
-        $gamePlayer->setPosition($this->resolvePosition($position, $gameId));
+        $gamePlayer->setPosition($position ?? $this->nextPosition($game));
+        $game->addGamePlayer($gamePlayer);
         $this->entityManager->persist($gamePlayer);
 
         return $gamePlayer;

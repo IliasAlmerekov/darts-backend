@@ -53,16 +53,6 @@ interface GamePlayersRepositoryInterface
     public function existsNameInGame(int $gameId, string $name): bool;
 
     /**
-     * Reads with a shared lock (FOR SHARE), so the next position also counts seats
-     * committed after the transaction's snapshot was taken.
-     *
-     * @param int $gameId
-     *
-     * @return int
-     */
-    public function findNextPositionForGame(int $gameId): int;
-
-    /**
      * @param int $gameId
      *
      * @return array<int, array{id:int|null,name:string|null,position:int|null,placement:int|null,isGuest:bool}>
@@ -75,17 +65,6 @@ interface GamePlayersRepositoryInterface
      * @return GamePlayers[]
      */
     public function findByGameId(int $gameId): array;
-
-    /**
-     * Returns the game's seats with a shared lock (FOR SHARE), so the read also sees seats
-     * committed after the transaction's snapshot was taken. Players stay unloaded proxies.
-     * Must be called inside a transaction.
-     *
-     * @param int $gameId
-     *
-     * @return GamePlayers[]
-     */
-    public function findByGameIdForShare(int $gameId): array;
 
     /**
      * @param int $gameId
@@ -101,18 +80,6 @@ interface GamePlayersRepositoryInterface
      * @return bool
      */
     public function isPlayerInGame(int $gameId, int $playerId): bool;
-
-    /**
-     * Like isPlayerInGame, but reads with a shared lock (FOR SHARE), so it also sees a seat
-     * committed after the transaction's snapshot was taken. Must be called inside a
-     * transaction.
-     *
-     * @param int $gameId
-     * @param int $playerId
-     *
-     * @return bool
-     */
-    public function isPlayerInGameForShare(int $gameId, int $playerId): bool;
 
     /**
      * The game the player joined most recently (highest GamePlayers id) among the games

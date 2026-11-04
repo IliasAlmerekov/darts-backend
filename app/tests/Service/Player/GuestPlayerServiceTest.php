@@ -13,71 +13,38 @@ use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\User;
 use App\Exception\Game\GameIdMissingException;
-use App\Exception\Game\GameNotFoundException;
 use App\Exception\Request\UsernameAlreadyTakenException;
 use App\Repository\GamePlayersRepositoryInterface;
-use App\Repository\GameRepositoryInterface;
 use App\Service\Player\GuestPlayerService;
 use App\Service\Player\PlayerManagementServiceInterface;
-use Doctrine\ORM\EntityManagerInterface;
+use Closure;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 final class GuestPlayerServiceTest extends TestCase
 {
-    public function testCreateGuestPlayerCreatesUserAndAddsToGame(): void
+    private GamePlayersRepositoryInterface&MockObject $gamePlayersRepository;
+    private PlayerManagementServiceInterface&MockObject $playerManagementService;
+    private GuestPlayerService $service;
+
+    protected function setUp(): void
+    {
+        $this->gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
+        $this->playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
+        $this->service = new GuestPlayerService($this->gamePlayersRepository, $this->playerManagementService);
+    }
+
+    public function testCreateGuestPlayerSeatsANewGuestUser(): void
     {
         $game = (new Game())->setGameId(10);
-        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
-        $playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn(callable $func): mixed => $func());
-        $gameRepository = $this->createStub(GameRepositoryInterface::class);
-        $gameRepository->method('findOneByGameIdForUpdate')->willReturn($game);
-        $service = new GuestPlayerService(
-            $gamePlayersRepository,
-            $playerManagementService,
-            $entityManager,
-            $gameRepository,
-        );
-
-        $gamePlayersRepository
+        $this->gamePlayersRepository
             ->expects(self::once())
             ->method('existsNameInGame')
             ->with(10, 'Alex')
             ->willReturn(false);
+        $this->seatTheCreatedPlayer(10);
 
-        $gamePlayersRepository
-            ->expects(self::never())
-            ->method('findByGameId');
-
-        $playerManagementService
-            ->expects(self::once())
-            ->method('addPlayerEntity')
-            ->with(10, self::isInstanceOf(User::class), null, false)
-            ->willReturn((new GamePlayers())->setPosition(2));
-
-        $playerManagementService
-            ->expects(self::never())
-            ->method('addPlayer');
-
-        $entityManager
-            ->expects(self::once())
-            ->method('persist')
-            ->with(self::isInstanceOf(User::class))
-            ->willReturnCallback(static function (User $user): void {
-                self::assertSame('Alex', $user->getDisplayNameRaw());
-                self::assertTrue($user->isGuest());
-                self::assertNull($user->getRegisteredAt());
-                self::assertNotNull($user->getUsername());
-                self::assertStringStartsWith('guest_', (string) $user->getUsername());
-                (new \ReflectionProperty(User::class, 'id'))->setValue($user, 55);
-            });
-
-        $entityManager
-            ->expects(self::once())
-            ->method('flush');
-
-        $result = $service->createGuestPlayer($game, 'Alex');
+        $result = $this->service->createGuestPlayer($game, 'Alex');
 
         self::assertSame(55, $result['playerId']);
         self::assertSame('Alex', $result['name']);
@@ -86,46 +53,32 @@ final class GuestPlayerServiceTest extends TestCase
         self::assertTrue($result['isGuest']);
     }
 
+    public function testTheGuestUserIsAGuestWithItsDisplayName(): void
+    {
+        $this->gamePlayersRepository->expects(self::once())->method('existsNameInGame')->willReturn(false);
+        $seat = $this->seatTheCreatedPlayer(10);
+
+        $this->service->createGuestPlayer((new Game())->setGameId(10), 'Alex');
+
+        $guest = $seat->getPlayer();
+        self::assertInstanceOf(User::class, $guest);
+        self::assertSame('Alex', $guest->getDisplayNameRaw());
+        self::assertTrue($guest->isGuest());
+        self::assertNull($guest->getRegisteredAt());
+        self::assertStringStartsWith('guest_', (string) $guest->getUsername());
+    }
+
     public function testCreateGuestPlayerThrowsWhenUsernameTaken(): void
     {
-        $game = (new Game())->setGameId(10);
-        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
-        $playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn(callable $func): mixed => $func());
-        $gameRepository = $this->createStub(GameRepositoryInterface::class);
-        $gameRepository->method('findOneByGameIdForUpdate')->willReturn($game);
-        $service = new GuestPlayerService(
-            $gamePlayersRepository,
-            $playerManagementService,
-            $entityManager,
-            $gameRepository,
-        );
-
-        $gamePlayersRepository
+        $this->gamePlayersRepository
             ->expects(self::once())
             ->method('existsNameInGame')
             ->with(10, 'Alex')
             ->willReturn(true);
-
-        $gamePlayersRepository
-            ->expects(self::never())
-            ->method('findByGameId');
-
-        $playerManagementService
-            ->expects(self::never())
-            ->method('addPlayerEntity');
-
-        $entityManager
-            ->expects(self::never())
-            ->method('persist');
-
-        $entityManager
-            ->expects(self::never())
-            ->method('flush');
+        $this->seatTheCreatedPlayer(10);
 
         try {
-            $service->createGuestPlayer($game, 'Alex');
+            $this->service->createGuestPlayer((new Game())->setGameId(10), 'Alex');
             self::fail('Expected exception was not thrown.');
         } catch (UsernameAlreadyTakenException $exception) {
             self::assertSame('Alex', $exception->getUsername());
@@ -133,46 +86,17 @@ final class GuestPlayerServiceTest extends TestCase
         }
     }
 
-    public function testCreateGuestPlayerTreatsExistingNameCaseInsensitively(): void
+    public function testCreateGuestPlayerChecksTheTrimmedName(): void
     {
-        $game = (new Game())->setGameId(10);
-        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
-        $playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn(callable $func): mixed => $func());
-        $gameRepository = $this->createStub(GameRepositoryInterface::class);
-        $gameRepository->method('findOneByGameIdForUpdate')->willReturn($game);
-        $service = new GuestPlayerService(
-            $gamePlayersRepository,
-            $playerManagementService,
-            $entityManager,
-            $gameRepository,
-        );
-
-        $gamePlayersRepository
+        $this->gamePlayersRepository
             ->expects(self::once())
             ->method('existsNameInGame')
             ->with(10, 'Alex')
             ->willReturn(true);
-
-        $gamePlayersRepository
-            ->expects(self::never())
-            ->method('findByGameId');
-
-        $playerManagementService
-            ->expects(self::never())
-            ->method('addPlayerEntity');
-
-        $entityManager
-            ->expects(self::never())
-            ->method('persist');
-
-        $entityManager
-            ->expects(self::never())
-            ->method('flush');
+        $this->seatTheCreatedPlayer(10);
 
         try {
-            $service->createGuestPlayer($game, ' Alex ');
+            $this->service->createGuestPlayer((new Game())->setGameId(10), ' Alex ');
             self::fail('Expected exception was not thrown.');
         } catch (UsernameAlreadyTakenException $exception) {
             self::assertSame('Alex', $exception->getUsername());
@@ -181,83 +105,37 @@ final class GuestPlayerServiceTest extends TestCase
 
     public function testCreateGuestPlayerThrowsBeforeWritesWhenGameIdMissing(): void
     {
-        $game = new Game();
-        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
-        $playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn(callable $func): mixed => $func());
-        $gameRepository = $this->createStub(GameRepositoryInterface::class);
-        $gameRepository->method('findOneByGameIdForUpdate')->willReturn($game);
-        $service = new GuestPlayerService(
-            $gamePlayersRepository,
-            $playerManagementService,
-            $entityManager,
-            $gameRepository,
-        );
+        $this->gamePlayersRepository->expects(self::never())->method('existsNameInGame');
+        $this->playerManagementService->expects(self::never())->method('addNewPlayer');
 
-        $gamePlayersRepository
-            ->expects(self::never())
-            ->method('existsNameInGame');
+        $this->expectException(GameIdMissingException::class);
 
-        $playerManagementService
-            ->expects(self::never())
-            ->method('addPlayerEntity');
-
-        $entityManager
-            ->expects(self::never())
-            ->method('persist');
-
-        $entityManager
-            ->expects(self::never())
-            ->method('flush');
-
-        try {
-            $service->createGuestPlayer($game, 'Alex');
-            self::fail('Expected exception was not thrown.');
-        } catch (GameIdMissingException) {
-            self::assertTrue(true);
-        }
+        $this->service->createGuestPlayer(new Game(), 'Alex');
     }
 
-    public function testCreateGuestPlayerThrowsBeforeWritesWhenGameIsGoneUnderTheLock(): void
+    /**
+     * Lets the seat module run the closure, as it does once the seat rules pass, and seat
+     * the player it builds at position 2. The flush gives the player id 55.
+     *
+     * @param int $gameId
+     *
+     * @return GamePlayers
+     */
+    private function seatTheCreatedPlayer(int $gameId): GamePlayers
     {
-        $game = (new Game())->setGameId(10);
-        $gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
-        $playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->method('wrapInTransaction')->willReturnCallback(static fn(callable $func): mixed => $func());
-        $gameRepository = $this->createMock(GameRepositoryInterface::class);
-        $service = new GuestPlayerService(
-            $gamePlayersRepository,
-            $playerManagementService,
-            $entityManager,
-            $gameRepository,
-        );
-
-        $gameRepository
+        $seat = (new GamePlayers())->setPosition(2);
+        $this->playerManagementService
             ->expects(self::once())
-            ->method('findOneByGameIdForUpdate')
-            ->with(10)
-            ->willReturn(null);
+            ->method('addNewPlayer')
+            ->with($gameId, self::isInstanceOf(Closure::class))
+            ->willReturnCallback(static function (int $gameId, Closure $createPlayer) use ($seat): GamePlayers {
+                $player = $createPlayer();
+                self::assertInstanceOf(User::class, $player);
+                (new \ReflectionProperty(User::class, 'id'))->setValue($player, 55);
 
-        $gamePlayersRepository
-            ->expects(self::never())
-            ->method('existsNameInGame');
+                return $seat->setPlayer($player);
+            });
 
-        $playerManagementService
-            ->expects(self::never())
-            ->method('addPlayerEntity');
-
-        $entityManager
-            ->expects(self::never())
-            ->method('persist');
-
-        $entityManager
-            ->expects(self::never())
-            ->method('flush');
-
-        $this->expectException(GameNotFoundException::class);
-
-        $service->createGuestPlayer($game, 'Alex');
+        return $seat;
     }
 }

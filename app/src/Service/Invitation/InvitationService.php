@@ -16,10 +16,9 @@ use App\Enum\GameStatus;
 use App\Exception\Game\GameAlreadyStartedException;
 use App\Exception\Game\GameJoinNotAllowedException;
 use App\Exception\Game\GameNotFoundException;
-use App\Exception\Game\GameRoomFullException;
+use App\Exception\Game\SeatsNotEditableException;
 use App\Exception\Security\UserNotAuthenticatedException;
 use App\Repository\GamePlayersRepositoryInterface;
-use App\Repository\GameRepositoryInterface;
 use App\Repository\InvitationRepositoryInterface;
 use App\Repository\UserRepositoryInterface;
 use App\Service\Game\PlayerDisplayName;
@@ -41,7 +40,6 @@ final readonly class InvitationService implements InvitationServiceInterface
     /**
      * @param InvitationRepositoryInterface    $invitationRepository
      * @param GamePlayersRepositoryInterface   $gamePlayersRepository
-     * @param GameRepositoryInterface          $gameRepository
      * @param UserRepositoryInterface          $userRepository
      * @param PlayerManagementServiceInterface $playerManagementService
      * @param EntityManagerInterface           $entityManager
@@ -51,7 +49,6 @@ final readonly class InvitationService implements InvitationServiceInterface
     public function __construct(
         private InvitationRepositoryInterface $invitationRepository,
         private GamePlayersRepositoryInterface $gamePlayersRepository,
-        private GameRepositoryInterface $gameRepository,
         private UserRepositoryInterface $userRepository,
         private PlayerManagementServiceInterface $playerManagementService,
         private EntityManagerInterface $entityManager,
@@ -166,48 +163,14 @@ final readonly class InvitationService implements InvitationServiceInterface
             throw new UserNotAuthenticatedException();
         }
 
-        return $this->entityManager->wrapInTransaction(function () use ($gameId, $userId): int {
-            $game = $this->gameRepository->find($gameId);
-            if (!$game instanceof Game) {
-                throw new GameNotFoundException();
-            }
-
-            // find() above took the snapshot. A rematch or start that committed while this
-            // request waited for the lock is visible only to the reload and the locking reads.
-            $this->gameRepository->refreshWithSeatsForUpdate($game);
-
-            if (false === $this->gamePlayersRepository->isPlayerInGameForShare($gameId, $userId)) {
-                $this->assertGameJoinableForGame($game);
-                $this->playerManagementService->addPlayer($gameId, $userId);
-            }
-
-            return $gameId;
-        });
-    }
-
-    /**
-     * @param Game $game
-     *
-     * @return void
-     */
-    private function assertGameJoinableForGame(Game $game): void
-    {
-        $gameId = $game->getGameId();
-        if (null === $gameId) {
-            throw new GameNotFoundException();
+        try {
+            $this->playerManagementService->addPlayer($gameId, $userId);
+        } catch (SeatsNotEditableException $exception) {
+            throw GameStatus::Started === $exception->status
+                ? new GameAlreadyStartedException()
+                : new GameJoinNotAllowedException($exception->status);
         }
 
-        $status = $game->getStatus();
-        if (GameStatus::Started === $status) {
-            throw new GameAlreadyStartedException();
-        }
-
-        if (GameStatus::Lobby !== $status) {
-            throw new GameJoinNotAllowedException($status);
-        }
-
-        if ($game->getGamePlayers()->count() >= Game::MAX_PARTICIPANTS) {
-            throw new GameRoomFullException(Game::MAX_PARTICIPANTS);
-        }
+        return $gameId;
     }
 }

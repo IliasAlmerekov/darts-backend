@@ -17,10 +17,9 @@ use App\Enum\GameStatus;
 use App\Exception\Game\GameAlreadyStartedException;
 use App\Exception\Game\GameJoinNotAllowedException;
 use App\Exception\Game\GameNotFoundException;
-use App\Exception\Game\GameRoomFullException;
+use App\Exception\Game\SeatsNotEditableException;
 use App\Exception\Security\UserNotAuthenticatedException;
 use App\Repository\GamePlayersRepositoryInterface;
-use App\Repository\GameRepositoryInterface;
 use App\Repository\InvitationRepositoryInterface;
 use App\Repository\UserRepositoryInterface;
 use App\Service\Invitation\InvitationService;
@@ -39,7 +38,6 @@ final class InvitationServiceTest extends TestCase
 {
     private InvitationRepositoryInterface&MockObject $invitationRepository;
     private GamePlayersRepositoryInterface&MockObject $gamePlayersRepository;
-    private GameRepositoryInterface&MockObject $gameRepository;
     private UserRepositoryInterface&MockObject $userRepository;
     private PlayerManagementServiceInterface&MockObject $playerManagementService;
     private EntityManagerInterface&MockObject $entityManager;
@@ -51,7 +49,6 @@ final class InvitationServiceTest extends TestCase
     {
         $this->invitationRepository = $this->createMock(InvitationRepositoryInterface::class);
         $this->gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
-        $this->gameRepository = $this->createMock(GameRepositoryInterface::class);
         $this->userRepository = $this->createMock(UserRepositoryInterface::class);
         $this->playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
@@ -66,7 +63,6 @@ final class InvitationServiceTest extends TestCase
         $this->service = new InvitationService(
             $this->invitationRepository,
             $this->gamePlayersRepository,
-            $this->gameRepository,
             $this->userRepository,
             $this->playerManagementService,
             $this->entityManager,
@@ -187,7 +183,7 @@ final class InvitationServiceTest extends TestCase
 
     public function testJoinInvitedGameRejectsAnUnsavedUser(): void
     {
-        $this->gameRepository->expects(self::never())->method('find');
+        $this->playerManagementService->expects(self::never())->method('addPlayer');
 
         $this->expectException(UserNotAuthenticatedException::class);
 
@@ -239,81 +235,34 @@ final class InvitationServiceTest extends TestCase
         self::assertSame([['id' => 6, 'username' => 'Mia (joined)']], $this->service->getUsersForGame($game));
     }
 
-    public function testJoinInvitedGameAddsPlayerToGame(): void
+    public function testJoinInvitedGameSeatsThePlayer(): void
     {
-        $game = (new Game())->setGameId(50)->setStatus(GameStatus::Lobby);
-        $this->gameRepository
-            ->expects(self::once())
-            ->method('find')
-            ->with(50)
-            ->willReturn($game);
-        $this->seatParticipants($game, 4);
-        $this->gameRepository
-            ->expects(self::once())
-            ->method('refreshWithSeatsForUpdate')
-            ->with($game);
-
-        $user = $this->createUserWithId(5, 'player', 'p@test');
-
-        $this->gamePlayersRepository
-            ->expects(self::once())
-            ->method('isPlayerInGameForShare')
-            ->with(50, 5)
-            ->willReturn(false);
-
         $this->playerManagementService
             ->expects(self::once())
             ->method('addPlayer')
             ->with(50, 5);
 
-        self::assertSame(50, $this->service->joinInvitedGame(50, $user));
-    }
-
-    public function testJoinInvitedGameKeepsAnExistingSeat(): void
-    {
-        $game = (new Game())->setGameId(51)->setStatus(GameStatus::Started);
-        $this->gameRepository->method('find')->with(51)->willReturn($game);
-        $this->gamePlayersRepository
-            ->expects(self::once())
-            ->method('isPlayerInGameForShare')
-            ->with(51, 7)
-            ->willReturn(true);
-        $this->playerManagementService->expects(self::never())->method('addPlayer');
-
-        self::assertSame(51, $this->service->joinInvitedGame(51, $this->createUserWithId(7, 'seated', 's@test')));
+        self::assertSame(50, $this->service->joinInvitedGame(50, $this->createUserWithId(5, 'player', 'p@test')));
     }
 
     public function testJoinInvitedGameRejectsWhenGameAlreadyStarted(): void
     {
-        $game = (new Game())->setGameId(60)->setStatus(GameStatus::Started);
-        $this->gameRepository
-            ->expects(self::once())
-            ->method('find')
-            ->with(60)
-            ->willReturn($game);
-
-        $user = $this->createUserWithId(8, 'player2', 'p2@test');
+        $this->playerManagementService->method('addPlayer')->willThrowException(new SeatsNotEditableException(GameStatus::Started));
 
         $this->expectException(GameAlreadyStartedException::class);
 
-        $this->service->joinInvitedGame(60, $user);
+        $this->service->joinInvitedGame(60, $this->createUserWithId(8, 'player2', 'p2@test'));
     }
 
     #[DataProvider('endedGameStatuses')]
     public function testJoinInvitedGameRejectsEndedGameWithoutClaimingItStarted(GameStatus $status): void
     {
-        $game = (new Game())->setGameId(62)->setStatus($status);
-        $this->gameRepository
-            ->expects(self::once())
-            ->method('find')
-            ->with(62)
-            ->willReturn($game);
-
-        $user = $this->createUserWithId(9, 'player3', 'p3@test');
+        $this->playerManagementService->method('addPlayer')->willThrowException(new SeatsNotEditableException($status));
 
         $this->expectException(GameJoinNotAllowedException::class);
+        $this->expectExceptionMessage(sprintf('Game cannot be joined while it is %s.', $status->value));
 
-        $this->service->joinInvitedGame(62, $user);
+        $this->service->joinInvitedGame(62, $this->createUserWithId(9, 'player3', 'p3@test'));
     }
 
     /**
@@ -323,51 +272,6 @@ final class InvitationServiceTest extends TestCase
     {
         yield 'finished' => [GameStatus::Finished];
         yield 'aborted' => [GameStatus::Aborted];
-    }
-
-    public function testJoinInvitedGameRejectsWhenRoomIsFull(): void
-    {
-        $game = (new Game())->setGameId(61)->setStatus(GameStatus::Lobby);
-        $this->gameRepository
-            ->expects(self::once())
-            ->method('find')
-            ->with(61)
-            ->willReturn($game);
-        $this->seatParticipants($game, 10);
-        $this->gameRepository
-            ->expects(self::once())
-            ->method('refreshWithSeatsForUpdate')
-            ->with($game);
-        $this->gamePlayersRepository
-            ->expects(self::once())
-            ->method('isPlayerInGameForShare')
-            ->with(61, 9)
-            ->willReturn(false);
-        $this->playerManagementService
-            ->expects(self::never())
-            ->method('addPlayer');
-
-        $user = $this->createUserWithId(9, 'player3', 'p3@test');
-
-        $this->expectException(GameRoomFullException::class);
-        $this->expectExceptionMessage('The room is already full (10 players). Please wait for an available spot.');
-
-        $this->service->joinInvitedGame(61, $user);
-    }
-
-    public function testJoinInvitedGameRejectsAGameThatIsGone(): void
-    {
-        $this->gameRepository
-            ->expects(self::once())
-            ->method('find')
-            ->with(62)
-            ->willReturn(null);
-
-        $user = $this->createUserWithId(10, 'player4', 'p4@test');
-
-        $this->expectException(GameNotFoundException::class);
-
-        $this->service->joinInvitedGame(62, $user);
     }
 
     private function createUserWithId(int $id, string $username, string $email): User
@@ -381,12 +285,5 @@ final class InvitationServiceTest extends TestCase
         $ref->setValue($user, $id);
 
         return $user;
-    }
-
-    private function seatParticipants(Game $game, int $count): void
-    {
-        for ($position = 1; $position <= $count; $position++) {
-            $game->addGamePlayer((new GamePlayers())->setPosition($position));
-        }
     }
 }

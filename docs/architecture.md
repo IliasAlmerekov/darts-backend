@@ -60,6 +60,21 @@ game again on each attempt; start, reopen and rematch use it. `run()` opens a pl
 transaction without retry; finish, abort, the throws and settings use it, because a
 rolled-back undo must reach its client (ADR 0004, ADR 0005).
 
+**Seat writes are the exception: they go through the seat module,
+`PlayerManagementServiceInterface`.** Join by invitation, add guest, remove participant,
+reorder positions, room create and rematch seat or move players only through it. They skip
+`LockedGameTransactionInterface`, because its `assertAdmin()` would reject the invitation
+join, which comes from a player. Each method of the seat module runs in the caller's
+transaction when there is one, without a savepoint, so a deadlock still reaches
+`RetryingTransaction` as a `RetryableException`; without one it opens its own. Its flush
+writes the caller's pending changes too. Each method starts with one locking read of the game and
+its seats, `GameRepository::findOneByGameIdWithSeatsForUpdate()`, the read
+`LockedGameTransactionInterface` uses too. Under that lock the module checks
+`GameStatus::canChangeSeats()` and `Game::MAX_PARTICIPANTS`, gives a new seat the next
+position and its display name snapshot, and flushes. No other code checks these two rules
+before a seat write. Rematch locks two games: `runWithRetry()` locks the old game first, then
+the seat module locks the lobby, so every rematch takes the locks in that order.
+
 **Statistics aggregates live in repository SQL.** Averages, totals, and player rankings
 are SQL in `PlayerStatisticsRepository` and its neighbours, because the database computes them
 faster than PHP. The measurements are in `docs/benchmarks/BE-701` to `BE-704`. Game rules
