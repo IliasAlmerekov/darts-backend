@@ -405,7 +405,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $throw->value = 20;
 
         try {
-            $this->throwService()->recordThrowByGameId($game, $throw);
+            $this->throwService()->recordThrowAck($game, $throw, $this->realReader());
             self::fail('The throw used the status from before the winning throw.');
         } catch (GameThrowNotAllowedException) {
         }
@@ -440,10 +440,16 @@ final class ConcurrentSeatingTest extends KernelTestCase
         self::assertSame(20, $ack->undoneThrow?->score);
     }
 
-    private function readerWithConcurrentChange(int $gameId, int $playerId): GameStateReaderInterface
+    private function realReader(): GameStateReader
     {
         $throws = new RoundThrowsRepository($this->registry());
-        $real = new GameStateReader($this->gamePlayersRepository, $throws, new GameStateVersionService($throws));
+
+        return new GameStateReader($this->gamePlayersRepository, $throws, new GameStateVersionService($throws));
+    }
+
+    private function readerWithConcurrentChange(int $gameId, int $playerId): GameStateReaderInterface
+    {
+        $real = $this->realReader();
         $reader = $this->createMock(GameStateReaderInterface::class);
         $change = function () use ($gameId, $playerId): void {
             $this->other->executeStatement('SET SESSION innodb_lock_wait_timeout = 1');
@@ -477,7 +483,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         // The winning throw commits after this request loaded the game.
         $this->commitWinningThrow($game, $bob);
 
-        $this->throwService()->undoLastThrow($loaded);
+        $this->throwService()->undoThrowAck($loaded, $this->realReader());
 
         self::assertSame(
             [['started', null, null]],
@@ -498,7 +504,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $lobby = $this->insertGame('lobby');
 
         try {
-            $this->throwService()->undoLastThrow($loaded);
+            $this->throwService()->undoThrowAck($loaded, $this->realReader());
             self::fail('The undo used the status from before the winning throw.');
         } catch (GameNotNewestException) {
         }

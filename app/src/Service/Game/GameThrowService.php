@@ -61,18 +61,6 @@ final readonly class GameThrowService implements GameThrowServiceInterface
     }
 
     /**
-     * @param int          $gameId
-     * @param ThrowRequest $dto
-     *
-     * @return ThrowRecordingResultDto
-     */
-    #[Override]
-    public function recordThrowByGameId(int $gameId, ThrowRequest $dto): ThrowRecordingResultDto
-    {
-        return $this->lockedGameTransaction->run($gameId, fn (Game $game): ThrowRecordingResultDto => $this->recordThrowUnlocked($game, $dto));
-    }
-
-    /**
      * @param int                      $gameId
      * @param ThrowRequest             $dto
      * @param GameStateReaderInterface $reader
@@ -87,19 +75,6 @@ final readonly class GameThrowService implements GameThrowServiceInterface
 
             return $reader->buildThrowAck($result->game, $result->latestThrow);
         });
-    }
-
-    /**
-     * @param Game $game
-     *
-     * @return RoundThrows|null
-     */
-    #[Override]
-    public function undoLastThrow(Game $game): ?RoundThrows
-    {
-        $gameId = $game->getGameId() ?? throw new GameNotFoundException();
-
-        return $this->lockedGameTransaction->run($gameId, fn (Game $locked): ?RoundThrows => $this->undoUnlocked($locked));
     }
 
     /**
