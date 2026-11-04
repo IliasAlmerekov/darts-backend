@@ -114,14 +114,11 @@ final class InvitationServiceTest extends TestCase
         self::assertNotEmpty($result->getUuid());
     }
 
-    public function testGetInvitationPayloadReturnsErrorWhenNoGameId(): void
+    public function testGetInvitationPayloadThrowsGameNotFoundWhenNoGameId(): void
     {
-        $game = new Game(); // gameId null
+        $this->expectException(GameNotFoundException::class);
 
-        $payload = $this->service->getInvitationPayload($game);
-
-        self::assertFalse($payload['success']);
-        self::assertSame('Game not found', $payload['message']);
+        $this->service->getInvitationPayload(new Game()); // gameId null
     }
 
     public function testGetInvitationPayloadReturnsUsersAndLink(): void

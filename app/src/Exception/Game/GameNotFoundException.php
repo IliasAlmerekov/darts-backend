@@ -19,6 +19,11 @@ use Symfony\Component\HttpFoundation\Response;
 final class GameNotFoundException extends ApiHttpException
 {
     /**
+     * The 404 description in the OpenAPI document of every route that takes a game id.
+     */
+    public const string OPENAPI_DESCRIPTION = 'Kein Spiel hat diese ID (`GAME_NOT_FOUND`).';
+
+    /**
      * @return void
      */
     public function __construct()
