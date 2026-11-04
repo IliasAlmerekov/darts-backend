@@ -47,7 +47,8 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
      * @param int $gameId
      * @param int $playerId
      *
-     * @throws GameNotFoundException
+     * @throws GameNotFoundException     When no game has this ID
+     * @throws SeatsNotEditableException When the game is no longer in the lobby
      *
      * @return bool
      */
@@ -210,6 +211,10 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     /**
      * @param int                                           $gameId
      * @param list<array{playerId:int, position:int}>|array $positions
+     *
+     * @throws GameNotFoundException       When no game has this ID
+     * @throws SeatsNotEditableException   When the game is no longer in the lobby
+     * @throws InvalidPlayerOrderException When the positions do not cover every seat exactly once
      *
      * @return void
      */
