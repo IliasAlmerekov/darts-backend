@@ -121,10 +121,10 @@ final class GameStatsController extends AbstractController
         description: 'Aggregierte Spielerstatistiken (paginiert).',
         content: new OA\JsonContent(ref: new Model(type: PlayerStatsResponseDto::class, groups: ['stats:read']))
     )]
-    #[OA\Response(response: 400, description: '`limit` oder `offset` ist keine ganze Zahl.')]
+    #[OA\Response(response: 400, description: '`limit` oder `offset` ist keine ganze Zahl, oder `sort` ist kein einzelner String (`BAD_REQUEST`).')]
     #[ApiResponse(groups: ['stats:read'])]
     #[Route('/api/players/stats', name: 'app_players_stats', methods: ['GET'], format: 'json')]
-    public function playerStats(GameStatisticsServiceInterface $gameStatisticsService, PlayerStatisticsRepositoryInterface $playerStatisticsRepository, #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] int $limit = 20, #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] int $offset = 0, #[MapQueryParameter] string $sort = 'average:desc'): PlayerStatsResponseDto
+    public function playerStats(GameStatisticsServiceInterface $gameStatisticsService, PlayerStatisticsRepositoryInterface $playerStatisticsRepository, #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] int $limit = 20, #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] int $offset = 0, #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] string $sort = 'average:desc'): PlayerStatsResponseDto
     {
         $pagination = Pagination::from($limit, $offset, defaultLimit: 20, maxLimit: 100);
         [$sortField, $sortDirection] = $this->parseSort($sort);
