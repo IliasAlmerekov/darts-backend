@@ -91,7 +91,7 @@ final class OpenApiDocumentTest extends WebTestCase
     {
         $offences = [];
         foreach ($this->operations() as [$path, $method]) {
-            if (1 !== preg_match('#^/api/(game/\{gameId\}|invite/create/\{id\}|room/\{id\})#', $path)) {
+            if (1 !== preg_match('#^/api/(game/\{gameId\}|invite/create/\{id\}|room/\{id\}|player/games/\{gameId\})#', $path)) {
                 continue;
             }
 

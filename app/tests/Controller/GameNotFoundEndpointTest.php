@@ -63,6 +63,18 @@ final class GameNotFoundEndpointTest extends WebTestCase
         );
     }
 
+    public function testUnknownGameIdOnThePlayerSeatRouteAnswersGameNotFound(): void
+    {
+        $client = $this->signedInClient(['ROLE_PLAYER']);
+        $client->request(Request::METHOD_GET, '/api/player/games/'.self::UNKNOWN_GAME_ID.'/seat');
+
+        self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND, (string) $client->getResponse()->getContent());
+        self::assertSame(
+            '{"success":false,"error":"GAME_NOT_FOUND","message":"Game not found"}',
+            $client->getResponse()->getContent(),
+        );
+    }
+
     public function testUnknownInvitationKeepsTheGenericNotFound(): void
     {
         $client = static::createClient();
@@ -83,11 +95,19 @@ final class GameNotFoundEndpointTest extends WebTestCase
 
     private function adminClient(): KernelBrowser
     {
+        return $this->signedInClient(['ROLE_ADMIN']);
+    }
+
+    /**
+     * @param list<string> $roles
+     */
+    private function signedInClient(array $roles): KernelBrowser
+    {
         $client = static::createClient();
         $entityManager = static::getContainer()->get(EntityManagerInterface::class);
-        $admin = TestUserFactory::create($entityManager, 'gamenotfound', 'admin', ['ROLE_ADMIN']);
+        $user = TestUserFactory::create($entityManager, 'gamenotfound', 'user', $roles);
         $entityManager->flush();
-        $client->loginUser($admin);
+        $client->loginUser($user);
 
         return $client;
     }

@@ -89,7 +89,7 @@ final class PlayerCurrentGameController extends AbstractController
     )]
     #[OA\Response(response: 401, description: 'Nicht angemeldet.')]
     #[OA\Response(response: 403, description: 'Angemeldet ohne `ROLE_PLAYER` (z. B. der Admin) (`ACCESS_DENIED`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
-    #[OA\Response(response: 404, description: 'Spiel nicht gefunden (`GAME_NOT_FOUND`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
+    #[OA\Response(response: 404, description: GameNotFoundException::OPENAPI_DESCRIPTION, content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[ApiResponse]
     #[Route('/api/player/games/{gameId}/seat', name: 'app_player_game_seat', requirements: ['gameId' => '\d+'], methods: ['GET'], format: 'json')]
     public function seat(int $gameId, GameRepositoryInterface $gameRepository, GamePlayersRepositoryInterface $gamePlayersRepository): GameSeatResponseDto
