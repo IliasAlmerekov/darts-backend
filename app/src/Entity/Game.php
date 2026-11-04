@@ -31,6 +31,9 @@ class Game
     /** The most participants a game can have. */
     public const int MAX_PARTICIPANTS = 10;
 
+    /** @var list<int> The start scores a game can be set to. */
+    public const array ALLOWED_START_SCORES = [101, 201, 301, 401, 501];
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]

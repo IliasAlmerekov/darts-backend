@@ -18,7 +18,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  */
 final class StartGameRequest
 {
-    #[Assert\Choice(choices: [101, 201, 301, 401, 501])]
+    #[Assert\Choice(choices: Game::ALLOWED_START_SCORES)]
     public ?int $startScore = null;
     #[Assert\Type('bool')]
     public ?bool $doubleOut = null;

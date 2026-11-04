@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace App\Dto;
 
 use Symfony\Component\Serializer\Attribute\SerializedName;
+use App\Entity\Game;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -25,7 +26,7 @@ final class GameSettingsRequest
      * @param bool|null   $tripleOut
      */
     public function __construct(
-        #[Assert\Choice(choices: [101, 201, 301, 401, 501])]
+        #[Assert\Choice(choices: Game::ALLOWED_START_SCORES)]
         #[SerializedName('startScore')]
         public ?int $startScore = null,
         #[Assert\Choice(choices: ['singleout', 'doubleout', 'tripleout'])]

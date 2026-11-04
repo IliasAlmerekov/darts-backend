@@ -15,8 +15,6 @@ use App\Dto\GameSettingsRequest;
 use App\Entity\Game;
 use App\Exception\Game\ConflictingOutRulesException;
 use App\Exception\Game\GameNotFoundException;
-use App\Exception\Game\InvalidOutModeException;
-use App\Exception\Game\InvalidStartScoreException;
 use App\Exception\Game\NoSettingsProvidedException;
 use App\Exception\Game\OutRuleCannotBeChangedAfterFirstThrowException;
 use App\Exception\Game\SettingsNotEditableException;
@@ -34,8 +32,6 @@ use Override;
  */
 final readonly class GameSettingsService implements GameSettingsServiceInterface
 {
-    private const ALLOWED_START_SCORES = [101, 201, 301, 401, 501];
-
     /**
      * @param EntityManagerInterface         $entityManager
      * @param RoundThrowsRepositoryInterface $roundThrowsRepository
@@ -85,11 +81,8 @@ final readonly class GameSettingsService implements GameSettingsServiceInterface
             throw new NoSettingsProvidedException();
         }
 
-        if (null !== $dto->startScore) {
-            if ($isStarted) {
-                throw new StartScoreCannotBeChangedAfterStartException();
-            }
-            $this->guardStartScore($dto->startScore);
+        if (null !== $dto->startScore && $isStarted) {
+            throw new StartScoreCannotBeChangedAfterStartException();
         }
 
         $sendsOutRule = null !== $dto->outMode || null !== $dto->doubleOut || null !== $dto->tripleOut;
@@ -104,19 +97,8 @@ final readonly class GameSettingsService implements GameSettingsServiceInterface
         $tripleOut = $game->isTripleOut();
 
         if (null !== $dto->outMode) {
-            $outMode = strtolower($dto->outMode);
-            if ('singleout' === $outMode) {
-                $doubleOut = false;
-                $tripleOut = false;
-            } elseif ('doubleout' === $outMode) {
-                $doubleOut = true;
-                $tripleOut = false;
-            } elseif ('tripleout' === $outMode) {
-                $doubleOut = false;
-                $tripleOut = true;
-            } else {
-                throw new InvalidOutModeException();
-            }
+            $doubleOut = 'doubleout' === $dto->outMode;
+            $tripleOut = 'tripleout' === $dto->outMode;
         } else {
             if (null !== $dto->doubleOut) {
                 $doubleOut = $dto->doubleOut;
@@ -132,20 +114,8 @@ final readonly class GameSettingsService implements GameSettingsServiceInterface
         if (null !== $dto->startScore) {
             $game->setStartScore($dto->startScore);
         }
-        $game->setOutRule($doubleOut ? OutRule::Double : ($tripleOut ? OutRule::Triple : OutRule::Single));
+        $game->setOutRule(OutRule::fromFlags($doubleOut, $tripleOut));
 
         $this->entityManager->flush();
-    }
-
-    /**
-     * @param int $startScore
-     *
-     * @return void
-     */
-    private function guardStartScore(int $startScore): void
-    {
-        if (!in_array($startScore, self::ALLOWED_START_SCORES, true)) {
-            throw new InvalidStartScoreException();
-        }
     }
 }

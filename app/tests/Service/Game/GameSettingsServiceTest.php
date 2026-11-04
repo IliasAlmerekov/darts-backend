@@ -7,7 +7,6 @@ namespace App\Tests\Service;
 use App\Dto\GameSettingsRequest;
 use App\Entity\Game;
 use App\Enum\GameStatus;
-use App\Exception\Game\InvalidStartScoreException;
 use App\Exception\Game\NoSettingsProvidedException;
 use App\Exception\Game\SettingsNotEditableException;
 use App\Exception\Game\StartScoreCannotBeChangedAfterStartException;
@@ -68,21 +67,6 @@ final class GameSettingsServiceTest extends TestCase
         $service = $this->createService($entityManager, $game);
 
         $this->expectException(NoSettingsProvidedException::class);
-        $service->updateSettings($game, $dto);
-    }
-
-    public function testUpdateSettingsThrowsOnInvalidStartScore(): void
-    {
-        $game = (new Game())->setGameId(1);
-        $dto = new GameSettingsRequest();
-        $dto->startScore = 999;
-
-        $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->expects(self::never())->method('flush');
-
-        $service = $this->createService($entityManager, $game);
-
-        $this->expectException(InvalidStartScoreException::class);
         $service->updateSettings($game, $dto);
     }
 
