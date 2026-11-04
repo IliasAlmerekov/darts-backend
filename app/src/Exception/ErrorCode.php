@@ -54,4 +54,10 @@ enum ErrorCode: string
     case AvatarDirectoryUnavailable = 'AVATAR_DIRECTORY_UNAVAILABLE';
     case DatabaseUnavailable = 'DATABASE_UNAVAILABLE';
     case ConcurrentChange = 'CONCURRENT_CHANGE';
+    case BadRequest = 'BAD_REQUEST';
+    case NotFound = 'NOT_FOUND';
+    case MethodNotAllowed = 'METHOD_NOT_ALLOWED';
+    case UnsupportedMediaType = 'UNSUPPORTED_MEDIA_TYPE';
+    case RequestRejected = 'REQUEST_REJECTED';
+    case InternalServerError = 'INTERNAL_SERVER_ERROR';
 }

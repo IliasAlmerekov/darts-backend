@@ -106,7 +106,7 @@ final class RegistrationController extends AbstractController
             required: ['success', 'error', 'message'],
             properties: [
                 new OA\Property(property: 'success', type: 'boolean', example: false),
-                new OA\Property(property: 'error', type: 'string', example: 'HTTP_ERROR'),
+                new OA\Property(property: 'error', type: 'string', example: 'UNSUPPORTED_MEDIA_TYPE'),
                 new OA\Property(property: 'message', type: 'string', example: 'Unsupported Media Type'),
             ]
         )

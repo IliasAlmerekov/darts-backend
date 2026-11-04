@@ -20,7 +20,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Serializer\Exception\NotEncodableValueException;
 use Symfony\Component\Validator\Exception\ValidationFailedException;
 use Throwable;
@@ -66,44 +65,25 @@ final class ErrorController extends AbstractController
             );
         }
 
-        if ($exception instanceof NotFoundHttpException) {
-            return new JsonResponse(
-                [
-                    'success' => false,
-                    'error' => 'NOT_FOUND',
-                    'message' => 'Not Found',
-                ],
-                Response::HTTP_NOT_FOUND
-            );
-        }
-
-        if ($exception instanceof HttpExceptionInterface) {
-            $statusCode = $exception->getStatusCode();
-            $statusText = Response::$statusTexts[$statusCode] ?? 'HTTP Error';
-            $errorCode = match ($statusCode) {
-                Response::HTTP_UNAUTHORIZED => ErrorCode::AuthenticationRequired->value,
-                Response::HTTP_FORBIDDEN => ErrorCode::AccessDenied->value,
-                Response::HTTP_METHOD_NOT_ALLOWED => 'METHOD_NOT_ALLOWED',
-                default => 'HTTP_ERROR',
-            };
-
-            return new JsonResponse(
-                [
-                    'success' => false,
-                    'error' => $errorCode,
-                    'message' => $statusText,
-                ],
-                $statusCode
-            );
-        }
+        $statusCode = $exception instanceof HttpExceptionInterface ? $exception->getStatusCode() : Response::HTTP_INTERNAL_SERVER_ERROR;
+        $errorCode = match (true) {
+            Response::HTTP_BAD_REQUEST === $statusCode => ErrorCode::BadRequest,
+            Response::HTTP_UNAUTHORIZED === $statusCode => ErrorCode::AuthenticationRequired,
+            Response::HTTP_FORBIDDEN === $statusCode => ErrorCode::AccessDenied,
+            Response::HTTP_NOT_FOUND === $statusCode => ErrorCode::NotFound,
+            Response::HTTP_METHOD_NOT_ALLOWED === $statusCode => ErrorCode::MethodNotAllowed,
+            Response::HTTP_UNSUPPORTED_MEDIA_TYPE === $statusCode => ErrorCode::UnsupportedMediaType,
+            $statusCode < Response::HTTP_INTERNAL_SERVER_ERROR => ErrorCode::RequestRejected,
+            default => ErrorCode::InternalServerError,
+        };
 
         return new JsonResponse(
             [
                 'success' => false,
-                'error' => 'INTERNAL_SERVER_ERROR',
-                'message' => 'Internal Server Error',
+                'error' => $errorCode->value,
+                'message' => Response::$statusTexts[$statusCode] ?? 'HTTP Error',
             ],
-            Response::HTTP_INTERNAL_SERVER_ERROR
+            $statusCode
         );
     }
 
