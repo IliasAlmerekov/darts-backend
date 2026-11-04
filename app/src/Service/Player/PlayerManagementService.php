@@ -47,15 +47,15 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
      * @param int $gameId
      * @param int $playerId
      *
+     * @throws GameNotFoundException
+     *
      * @return bool
      */
     #[Override]
     public function removePlayer(int $gameId, int $playerId): bool
     {
         return $this->entityManager->wrapInTransaction(function () use ($gameId, $playerId): bool {
-            if (null === $this->lockEditableSeats($gameId)) {
-                return false;
-            }
+            $this->lockEditableSeats($gameId);
 
             $gamePlayer = $this->gamePlayersRepository->findOneBy(
                 [
@@ -217,9 +217,7 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
     public function updatePlayerPositions(int $gameId, array $positions): void
     {
         $this->entityManager->wrapInTransaction(function () use ($gameId, $positions): void {
-            if (null === $this->lockEditableSeats($gameId)) {
-                throw new GameNotFoundException();
-            }
+            $this->lockEditableSeats($gameId);
             if ([] === $positions) {
                 return;
             }
@@ -328,16 +326,17 @@ final readonly class PlayerManagementService implements PlayerManagementServiceI
      *
      * @param int $gameId
      *
-     * @return Game|null The locked game, or null when it does not exist
+     * @throws GameNotFoundException     When no game has this ID
+     * @throws SeatsNotEditableException When the game is no longer in the lobby
+     *
+     * @return void
      */
-    private function lockEditableSeats(int $gameId): ?Game
+    private function lockEditableSeats(int $gameId): void
     {
-        $game = $this->gameRepository->findOneByGameIdForUpdate($gameId);
-        if (null !== $game && !$game->getStatus()->canChangeSeats()) {
+        $game = $this->gameRepository->findOneByGameIdForUpdate($gameId) ?? throw new GameNotFoundException();
+        if (!$game->getStatus()->canChangeSeats()) {
             throw new SeatsNotEditableException();
         }
-
-        return $game;
     }
 
     /**

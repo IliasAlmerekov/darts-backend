@@ -24,7 +24,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Seats change only in the lobby: remove participant, add guest and reorder answer 409 outside it (#38).
- * Removal takes the playerId from the query, then the JSON body, then the signed-in user (#235).
+ * Removal takes the playerId from the query, then the JSON body (#235); without either it answers 400 (#261).
  */
 final class LobbySeatsEndpointTest extends WebTestCase
 {
@@ -150,14 +150,21 @@ final class LobbySeatsEndpointTest extends WebTestCase
         self::assertCount(2, $this->storedSeats($gameId));
     }
 
-    public function testWithoutPlayerIdTheUnseatedAdminIsNotFound(): void
+    public function testWithoutPlayerIdTheRequestIsRejected(): void
     {
         $gameId = $this->createGame(GameStatus::Lobby, [$this->first, $this->second]);
 
         $this->request(Request::METHOD_DELETE, sprintf('/api/room/%d', $gameId));
 
-        $this->assertError(Response::HTTP_NOT_FOUND, 'GAME_PLAYER_NOT_FOUND');
+        $this->assertError(Response::HTTP_BAD_REQUEST, 'REQUEST_PLAYER_ID_REQUIRED');
         self::assertCount(2, $this->storedSeats($gameId));
+    }
+
+    public function testRemovingFromAMissingGameIsNotFound(): void
+    {
+        $this->request(Request::METHOD_DELETE, sprintf('/api/room/%d?playerId=%d', 999999, (int) $this->first->getId()));
+
+        $this->assertError(Response::HTTP_NOT_FOUND, 'GAME_NOT_FOUND');
     }
 
     /**
