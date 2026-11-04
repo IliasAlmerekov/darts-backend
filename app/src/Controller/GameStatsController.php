@@ -57,7 +57,7 @@ final class GameStatsController extends AbstractController
         description: 'Liste der beendeten Spiele (paginiert).',
         content: new OA\JsonContent(ref: new Model(type: GameOverviewResponseDto::class))
     )]
-    #[OA\Response(response: 400, description: '`limit` oder `offset` ist keine ganze Zahl.')]
+    #[OA\Response(response: 400, description: '`limit` oder `offset` ist keine ganze Zahl (`BAD_REQUEST`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[ApiResponse]
     #[Route('/api/games/overview', name: 'app_games_overview', methods: ['GET'], format: 'json')]
     public function gamesOverview(GameRepositoryInterface $gameRepository, #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] int $limit = 100, #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] int $offset = 0): GameOverviewResponseDto
@@ -121,7 +121,7 @@ final class GameStatsController extends AbstractController
         description: 'Aggregierte Spielerstatistiken (paginiert).',
         content: new OA\JsonContent(ref: new Model(type: PlayerStatsResponseDto::class, groups: ['stats:read']))
     )]
-    #[OA\Response(response: 400, description: '`limit` oder `offset` ist keine ganze Zahl, oder `sort` ist kein einzelner String (`BAD_REQUEST`).')]
+    #[OA\Response(response: 400, description: '`limit` oder `offset` ist keine ganze Zahl, oder `sort` ist kein einzelner String (`BAD_REQUEST`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[ApiResponse(groups: ['stats:read'])]
     #[Route('/api/players/stats', name: 'app_players_stats', methods: ['GET'], format: 'json')]
     public function playerStats(GameStatisticsServiceInterface $gameStatisticsService, PlayerStatisticsRepositoryInterface $playerStatisticsRepository, #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] int $limit = 20, #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] int $offset = 0, #[MapQueryParameter(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)] string $sort = 'average:desc'): PlayerStatsResponseDto
