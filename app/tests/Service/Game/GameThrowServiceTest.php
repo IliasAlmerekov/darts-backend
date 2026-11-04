@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service;
 
+use App\Dto\ScoreboardDeltaDto;
+use App\Dto\ThrowAckDto;
+use App\Dto\ThrowRecordingResultDto;
 use App\Dto\ThrowRequest;
+use App\Dto\UndoAckDto;
 use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\Round;
@@ -20,6 +24,7 @@ use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\PlayerStatisticsRepositoryInterface;
 use App\Repository\RoundRepositoryInterface;
 use App\Repository\RoundThrowsRepositoryInterface;
+use App\Service\Game\GameStateReaderInterface;
 use App\Service\Game\GameThrowService;
 use App\Service\Game\FinishedGameTransition;
 use App\Service\Game\UndoThrowService;
@@ -47,7 +52,7 @@ final class GameThrowServiceTest extends TestCase
     /**
      * @throws ReflectionException
      */
-    public function testRecordThrowByGameIdLoadsGameWithinTransactionAndPersistsThrow(): void
+    public function testRecordThrowAckLoadsGameWithinTransactionAndPersistsThrow(): void
     {
         $game = new Game();
         $this->setPrivateProperty($game, 'gameId', 10);
@@ -123,12 +128,12 @@ final class GameThrowServiceTest extends TestCase
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
-        $service->recordThrowByGameId(10, $dto);
+        $this->recordThrow($service, 10, $dto);
 
         self::assertSame(30, $player1->getScore());
     }
 
-    public function testRecordThrowByGameIdThrowsWhenGameDoesNotExist(): void
+    public function testRecordThrowAckThrowsWhenGameDoesNotExist(): void
     {
         $dto = new ThrowRequest();
         $dto->playerId = 1;
@@ -159,13 +164,13 @@ final class GameThrowServiceTest extends TestCase
         );
 
         $this->expectException(GameNotFoundException::class);
-        $service->recordThrowByGameId(999, $dto);
+        $this->recordThrow($service, 999, $dto);
     }
 
     /**
      * @throws ReflectionException
      */
-    public function testRecordThrowByGameIdKeepsAuthorizationSemantics(): void
+    public function testRecordThrowAckKeepsAuthorizationSemantics(): void
     {
         $game = new Game();
         $this->setPrivateProperty($game, 'gameId', 10);
@@ -220,7 +225,7 @@ final class GameThrowServiceTest extends TestCase
         );
 
         $this->expectException(GamePlayerNotActiveException::class);
-        $service->recordThrowByGameId(10, $dto);
+        $this->recordThrow($service, 10, $dto);
     }
 
     /**
@@ -298,7 +303,7 @@ final class GameThrowServiceTest extends TestCase
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
-        $service->recordThrowByGameId((int) $game->getGameId(), $dto);
+        $this->recordThrow($service, (int) $game->getGameId(), $dto);
 
         self::assertSame(30, $player1->getScore());
         self::assertNotNull($persistedThrow);
@@ -389,7 +394,7 @@ final class GameThrowServiceTest extends TestCase
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
-        $result = $service->recordThrowByGameId((int) $game->getGameId(), $dto);
+        $result = $this->recordThrow($service, (int) $game->getGameId(), $dto);
 
         self::assertNotNull($result->latestThrow);
         self::assertSame($game, $result->latestThrow->getGame());
@@ -450,7 +455,7 @@ final class GameThrowServiceTest extends TestCase
         );
 
         $this->expectException(GameThrowNotAllowedException::class);
-        $service->recordThrowByGameId((int) $game->getGameId(), $dto);
+        $this->recordThrow($service, (int) $game->getGameId(), $dto);
     }
 
     /**
@@ -489,7 +494,7 @@ final class GameThrowServiceTest extends TestCase
         );
 
         $this->expectException(GameThrowNotAllowedException::class);
-        $service->recordThrowByGameId((int) $game->getGameId(), $dto);
+        $this->recordThrow($service, (int) $game->getGameId(), $dto);
     }
 
     /**
@@ -553,7 +558,7 @@ final class GameThrowServiceTest extends TestCase
         );
 
         $this->expectException(InvalidThrowException::class);
-        $service->recordThrowByGameId((int) $game->getGameId(), $dto);
+        $this->recordThrow($service, (int) $game->getGameId(), $dto);
     }
 
     /**
@@ -637,7 +642,7 @@ final class GameThrowServiceTest extends TestCase
         );
 
         $this->expectException(InvalidThrowException::class);
-        $service->recordThrowByGameId((int) $game->getGameId(), $dto);
+        $this->recordThrow($service, (int) $game->getGameId(), $dto);
     }
 
     /**
@@ -727,7 +732,7 @@ final class GameThrowServiceTest extends TestCase
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
-        $service->recordThrowByGameId((int) $game->getGameId(), $dto);
+        $this->recordThrow($service, (int) $game->getGameId(), $dto);
 
         self::assertNotNull($persistedThrow);
         self::assertSame($expectedValue, $persistedThrow->getValue());
@@ -801,7 +806,7 @@ final class GameThrowServiceTest extends TestCase
         );
 
         $this->expectException(GamePlayerNotActiveException::class);
-        $service->recordThrowByGameId((int) $game->getGameId(), $dto);
+        $this->recordThrow($service, (int) $game->getGameId(), $dto);
     }
 
     /**
@@ -888,7 +893,7 @@ final class GameThrowServiceTest extends TestCase
         );
 
         $this->expectException(GamePlayerNotActiveException::class);
-        $service->recordThrowByGameId((int) $game->getGameId(), $dto);
+        $this->recordThrow($service, (int) $game->getGameId(), $dto);
     }
 
     /**
@@ -967,7 +972,7 @@ final class GameThrowServiceTest extends TestCase
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
-        $service->recordThrowByGameId((int) $game->getGameId(), $dto);
+        $this->recordThrow($service, (int) $game->getGameId(), $dto);
 
         self::assertSame(281, $player1->getScore());
     }
@@ -1046,7 +1051,7 @@ final class GameThrowServiceTest extends TestCase
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
-        $result = $service->recordThrowByGameId((int) $game->getGameId(), $dto);
+        $result = $this->recordThrow($service, (int) $game->getGameId(), $dto);
 
         self::assertSame(2, $game->getRound());
         self::assertSame(2, $result->game->getRound());
@@ -1058,7 +1063,7 @@ final class GameThrowServiceTest extends TestCase
     /**
      * @throws ReflectionException
      */
-    public function testUndoLastThrowFromFinishedGameRestoresLastPlayerAndReopensGame(): void
+    public function testUndoThrowAckFromFinishedGameRestoresLastPlayerAndReopensGame(): void
     {
         $game = new Game();
         $this->setPrivateProperty($game, 'gameId', 10);
@@ -1141,7 +1146,7 @@ final class GameThrowServiceTest extends TestCase
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
-        $undoneThrow = $service->undoLastThrow($game);
+        $undoneThrow = $this->undoThrow($service, $game);
 
         self::assertSame(GameStatus::Started, $game->getStatus());
         self::assertNull($game->getFinishedAt());
@@ -1345,7 +1350,7 @@ final class GameThrowServiceTest extends TestCase
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
-        $undoneThrow = $service->undoLastThrow($game);
+        $undoneThrow = $this->undoThrow($service, $game);
 
         self::assertSame(GameStatus::Started, $game->getStatus());
         self::assertNull($game->getFinishedAt());
@@ -1453,7 +1458,7 @@ final class GameThrowServiceTest extends TestCase
         );
 
         try {
-            $service->undoLastThrow($game);
+            $this->undoThrow($service, $game);
             self::fail('Expected the newest game guard to reject undo.');
         } catch (\App\Exception\Game\GameNotNewestException) {
             self::assertSame(GameStatus::Finished, $game->getStatus());
@@ -1487,7 +1492,7 @@ final class GameThrowServiceTest extends TestCase
         $repository->expects(self::never())->method('abortStartedGames');
         $service = new GameThrowService($seats, $rounds, $throws, $em, $this->lockedGame($em, $game), new UndoThrowService($rounds, $throws, $em, $this->createReopenService($repository, 11)), new GameFinishService($seats, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)));
 
-        self::assertNull($service->undoLastThrow($game));
+        self::assertNull($this->undoThrow($service, $game));
         self::assertSame(GameStatus::Finished, $game->getStatus());
         self::assertSame($finishedAt, $game->getFinishedAt());
     }
@@ -1572,7 +1577,7 @@ final class GameThrowServiceTest extends TestCase
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
-        $undoneThrow = $service->undoLastThrow($game);
+        $undoneThrow = $this->undoThrow($service, $game);
 
         self::assertNotNull($undoneThrow);
         self::assertTrue($undoneThrow->isBust());
@@ -1677,7 +1682,7 @@ final class GameThrowServiceTest extends TestCase
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
-        $undoneThrow = $service->undoLastThrow($game);
+        $undoneThrow = $this->undoThrow($service, $game);
 
         self::assertNotNull($undoneThrow);
         self::assertSame(40, $winnerPlayer->getScore());
@@ -1769,7 +1774,7 @@ final class GameThrowServiceTest extends TestCase
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
-        $service->undoLastThrow($game);
+        $this->undoThrow($service, $game);
 
         // Round must stay at 2 — player 1 needs to re-throw in round 2,
         // not regress to round 1 where all throws are already completed.
@@ -1868,7 +1873,7 @@ final class GameThrowServiceTest extends TestCase
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
-        $service->recordThrowByGameId((int) $game->getGameId(), $dto);
+        $this->recordThrow($service, (int) $game->getGameId(), $dto);
 
         self::assertSame(GameStatus::Finished, $game->getStatus());
         self::assertNotNull($game->getFinishedAt());
@@ -1959,7 +1964,7 @@ final class GameThrowServiceTest extends TestCase
             new GameFinishService($gamePlayersRepository, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)),
         );
 
-        $service->recordThrowByGameId((int) $game->getGameId(), $dto);
+        $this->recordThrow($service, (int) $game->getGameId(), $dto);
 
         self::assertSame(GameStatus::Finished, $game->getStatus());
         self::assertNotNull($game->getFinishedAt());
@@ -2024,7 +2029,7 @@ final class GameThrowServiceTest extends TestCase
             $em->method('wrapInTransaction')->willReturnCallback(static fn (\Closure $fn) => $fn());
             $em->method('persist')->willReturnCallback(static function (object $entity) use (&$persisted): void { $persisted = $entity; });
             $service = new GameThrowService($seats, $rounds, $throws, $em, $this->lockedGame($em, $game), new UndoThrowService($rounds, $throws, $em, $this->createStub(FinishedGameTransitionInterface::class)), new GameFinishService($seats, $this->createStub(PlayerStatisticsRepositoryInterface::class), $this->createAccessService(), $this->createStub(LockedGameTransactionInterface::class)));
-            $service->recordThrowByGameId((int) $game->getGameId(), $dto);
+            $this->recordThrow($service, (int) $game->getGameId(), $dto);
             self::assertSame($expected, $seat->getScore());
             self::assertInstanceOf(RoundThrows::class, $persisted);
             self::assertSame($bust, $persisted->isBust());
@@ -2039,6 +2044,37 @@ final class GameThrowServiceTest extends TestCase
     /**
      * @throws ReflectionException
      */
+    /** Records through the ack path and returns what the service hands to the reader. */
+    private function recordThrow(GameThrowService $service, int $gameId, ThrowRequest $dto): ThrowRecordingResultDto
+    {
+        $captured = null;
+        $reader = $this->createStub(GameStateReaderInterface::class);
+        $reader->method('buildThrowAck')->willReturnCallback(static function (Game $game, ?RoundThrows $throw) use (&$captured): ThrowAckDto {
+            $captured = null === $throw ? null : new ThrowRecordingResultDto($throw, $game);
+
+            return new ThrowAckDto(true, 0, '', null, new ScoreboardDeltaDto([], null, '', 0), '');
+        });
+        $service->recordThrowAck($gameId, $dto, $reader);
+        self::assertInstanceOf(ThrowRecordingResultDto::class, $captured);
+
+        return $captured;
+    }
+
+    /** Undoes through the ack path and returns the removed throw the service hands to the reader. */
+    private function undoThrow(GameThrowService $service, Game $game): ?RoundThrows
+    {
+        $captured = null;
+        $reader = $this->createStub(GameStateReaderInterface::class);
+        $reader->method('buildUndoAck')->willReturnCallback(static function (Game $game, ?RoundThrows $throw) use (&$captured): UndoAckDto {
+            $captured = $throw;
+
+            return new UndoAckDto(true, 0, '', null, new ScoreboardDeltaDto([], null, '', 0), '');
+        });
+        $service->undoThrowAck($game, $reader);
+
+        return $captured;
+    }
+
     private function setPrivateProperty(object $object, string $property, mixed $value): void
     {
         $ref = new ReflectionProperty($object, $property);
