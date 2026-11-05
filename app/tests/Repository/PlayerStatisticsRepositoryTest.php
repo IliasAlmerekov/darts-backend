@@ -207,7 +207,32 @@ final class PlayerStatisticsRepositoryTest extends KernelTestCase
 
         $rows = $this->repo->findThrowsInCountedGamesForPlayer((int) $alice->getId());
 
-        self::assertSame([20, 25], array_column($rows, 'value'));
+        self::assertSame([20, 25], array_column(iterator_to_array($rows, false), 'value'));
+    }
+
+    /**
+     * The result stays on the driver's buffered mode, so a half-read result does not block
+     * another query on this connection. The memory itself is proven by PlayerProfileMemoryBaselineTest.
+     */
+    public function testThrowsComeAsATraversableOldestFirstAndLeaveTheConnectionUsable(): void
+    {
+        $game = $this->createGame(GameStatus::Finished);
+        $round = $this->createRound($game, 1);
+        $alice = $this->createUser('stream-alice');
+        $this->createThrow($game, $round, $alice, 1, 20, 281);
+        $this->createThrow($game, $round, $alice, 2, 5, 276);
+        $this->em->flush();
+        $gameId = (int) $game->getGameId();
+
+        $rows = $this->repo->findThrowsInCountedGamesForPlayer((int) $alice->getId());
+
+        self::assertInstanceOf(\Traversable::class, $rows);
+        $values = [];
+        foreach ($rows as $row) {
+            $values[] = $row['value'];
+            self::assertArrayHasKey($gameId, $this->repo->getParticipantTotalsForGames([$gameId]));
+        }
+        self::assertSame([20, 5], $values);
     }
 
     public function testPlayerStatisticsIncludeAPlayerWhoseOnlyTurnsSitInUnfinishedRounds(): void

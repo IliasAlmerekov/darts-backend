@@ -45,18 +45,19 @@ final class PlayerThrowStatistics
     private const int FAVORITE_DOUBLES_LIMIT = 3;
 
     /**
-     * @param int            $gamesPlayed  the counted games
-     * @param float|null     $scoreAverage
-     * @param list<ThrowRow> $throws       the player's throws in the counted games, oldest first
+     * @param int                $gamesPlayed  the counted games
+     * @param float|null         $scoreAverage
+     * @param iterable<ThrowRow> $throws       the player's throws in the counted games, oldest first
      *
      * @return PlayerProfileStatsDto
      */
-    public static function build(int $gamesPlayed, ?float $scoreAverage, array $throws): PlayerProfileStatsDto
+    public static function build(int $gamesPlayed, ?float $scoreAverage, iterable $throws): PlayerProfileStatsDto
     {
         $fieldHits = array_fill_keys(PlayerProfileFieldHitsDto::FIELDS, 0);
         $segmentHits = array_fill_keys(PlayerProfileMostHitSegmentDto::SEGMENTS, 0);
         $wonGames = [];
         $remainingByGame = [];
+        $throwCount = 0;
         $checkoutHits = 0;
         $checkoutAttempts = 0;
         /** @var array<int, array{hits:int, attempts:int}> $doubles per remaining score */
@@ -68,6 +69,7 @@ final class PlayerThrowStatistics
         $highestFinish = null;
 
         foreach ($throws as $throw) {
+            $throwCount++;
             $gameId = $throw['gameId'];
             $remaining = $remainingByGame[$gameId] ?? $throw['startScore'];
             $remainingByGame[$gameId] = $throw['score'];
@@ -130,7 +132,7 @@ final class PlayerThrowStatistics
                 array_keys($fieldHits),
                 array_values($fieldHits)
             ),
-            mostHitSegment: self::mostHitSegment($segmentHits, count($throws)),
+            mostHitSegment: self::mostHitSegment($segmentHits, $throwCount),
             favoriteDoubles: self::favoriteDoubles($doubles),
             highestFinish: $highestFinish,
         );

@@ -81,6 +81,21 @@ final class PlayerThrowStatisticsTest extends TestCase
     }
 
     /**
+     * The throws arrive one at a time, so the share cannot come from counting the input.
+     */
+    public function testThrowsArrivingOneAtATimeStillCountMissesInTheShare(): void
+    {
+        $throws = (function (): \Generator {
+            yield from $this->turn(301, 'single', [[25, 'S', 276], [20, 'S', 256], [0, 'S', 256]]);
+        })();
+
+        self::assertEquals(
+            new PlayerProfileMostHitSegmentDto('BULL', 1, 33.3),
+            PlayerThrowStatistics::build(1, 45.0, $throws)->mostHitSegment
+        );
+    }
+
+    /**
      * Under triple out only 3 to 60 divisible by 3 is checkable: 40 and 20 are not, 60 and 39 are.
      * A triple-out checkout is a Finish but never a favorite double.
      */
