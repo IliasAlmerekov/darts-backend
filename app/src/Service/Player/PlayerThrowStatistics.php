@@ -10,9 +10,9 @@ declare(strict_types=1);
 namespace App\Service\Player;
 
 use App\Dto\PlayerProfileDoubleDto;
+use App\Dto\PlayerProfileFieldHitsDto;
 use App\Dto\PlayerProfileFinishDto;
 use App\Dto\PlayerProfileMostHitSegmentDto;
-use App\Dto\PlayerProfileSegmentHitsDto;
 use App\Dto\PlayerProfileStatsDto;
 use App\Enum\OutRule;
 
@@ -53,7 +53,8 @@ final class PlayerThrowStatistics
      */
     public static function build(int $gamesPlayed, ?float $scoreAverage, array $throws): PlayerProfileStatsDto
     {
-        $segmentHits = array_fill_keys(PlayerProfileSegmentHitsDto::SEGMENTS, 0);
+        $fieldHits = array_fill_keys(PlayerProfileFieldHitsDto::FIELDS, 0);
+        $segmentHits = array_fill_keys(PlayerProfileMostHitSegmentDto::SEGMENTS, 0);
         $wonGames = [];
         $remainingByGame = [];
         $checkoutHits = 0;
@@ -86,6 +87,10 @@ final class PlayerThrowStatistics
             $turnDarts[] = $label ?? self::MISS;
             if (null !== $segment && isset($segmentHits[$segment])) {
                 $segmentHits[$segment]++;
+            }
+            // MISS is no board field, and neither is a label such as T21 from a stored value.
+            if (null !== $label && isset($fieldHits[$label])) {
+                $fieldHits[$label]++;
             }
 
             $isCheckout = !$throw['isBust'] && 0 === $throw['score'];
@@ -121,9 +126,9 @@ final class PlayerThrowStatistics
             checkoutHits: $checkoutHits,
             checkoutAttempts: $checkoutAttempts,
             hitDistribution: array_map(
-                static fn(string|int $segment, int $hits): PlayerProfileSegmentHitsDto => new PlayerProfileSegmentHitsDto((string) $segment, $hits),
-                array_keys($segmentHits),
-                array_values($segmentHits)
+                static fn(string $field, int $hits): PlayerProfileFieldHitsDto => new PlayerProfileFieldHitsDto($field, $hits),
+                array_keys($fieldHits),
+                array_values($fieldHits)
             ),
             mostHitSegment: self::mostHitSegment($segmentHits, count($throws)),
             favoriteDoubles: self::favoriteDoubles($doubles),
@@ -132,8 +137,9 @@ final class PlayerThrowStatistics
     }
 
     /**
-     * The board segment a dart hit: 1 to 20, BULL or BULLSEYE. Null for a miss, and for a single
-     * above 20 other than 25, which the throw endpoint used to accept but no dart can score.
+     * The board segment a dart hit: 1 to 20, BULL or BULLSEYE. Null for a miss, for a single above
+     * 20 other than 25, which the throw endpoint used to accept but no dart can score, and for a
+     * stored value that is no multiple of its ring, which only a manual database edit can produce.
      *
      * @param ThrowRow $throw
      *
@@ -145,8 +151,9 @@ final class PlayerThrowStatistics
 
         return match (true) {
             0 === $value => null,
-            $throw['isTriple'] => (string) intdiv($value, 3),
-            $throw['isDouble'] => 50 === $value ? self::BULLSEYE : (string) intdiv($value, 2),
+            $throw['isTriple'] => 0 === $value % 3 ? (string) intdiv($value, 3) : null,
+            $throw['isDouble'] && 50 === $value => self::BULLSEYE,
+            $throw['isDouble'] => 0 === $value % 2 ? (string) intdiv($value, 2) : null,
             25 === $value => self::BULL,
             $value > 20 => null,
             default => (string) $value,
@@ -157,7 +164,7 @@ final class PlayerThrowStatistics
      * @param string|null $segment
      * @param ThrowRow    $throw
      *
-     * @return string|null S<n>, D<n>, T<n>, BULL, BULLSEYE or MISS; null for an unreadable single
+     * @return string|null S<n>, D<n>, T<n>, BULL, BULLSEYE or MISS; null for an unreadable throw
      */
     private static function dartLabel(?string $segment, array $throw): ?string
     {

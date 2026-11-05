@@ -118,6 +118,14 @@ _Avoid_: Session, auto-login, remember me
 
 ### Statistics
 
+**Segment**:
+A number from 1 to 20 across all its rings, or BULL, or BULLSEYE. S20, D20 and T20 all belong to segment 20.
+_Avoid_: Field (for the number across its rings)
+
+**Board field**:
+One spot a dart can score: a single, double or triple of a number, such as T20, or BULL, or BULLSEYE. The board has 62. The inner and outer single field count as one board field, because the app records only the score, not where in the single field a dart landed.
+_Avoid_: Segment (for one ring of a number), ring
+
 **Checkout**:
 The dart that finishes a game for a participant: it brings their score to exactly zero under the game's out rule (single, double or triple out).
 _Avoid_: Finish (for the single dart), out
