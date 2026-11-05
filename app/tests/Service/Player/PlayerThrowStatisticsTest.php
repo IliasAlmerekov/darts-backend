@@ -191,6 +191,26 @@ final class PlayerThrowStatisticsTest extends TestCase
     }
 
     /**
+     * A triple of 61 or a double of 41 is no multiple of its ring, so no dart can score it.
+     */
+    public function testValueThatIsNoMultipleOfItsRingCountsInNoFieldOrSegmentButAsADart(): void
+    {
+        $throws = $this->turn(501, 'single', [[61, 'T', 440], [41, 'D', 399], [20, 'S', 379]]);
+
+        $stats = PlayerThrowStatistics::build(1, 122.0, $throws);
+
+        self::assertSame(['S20' => 1], $this->fieldsWithHits($stats));
+        self::assertEquals(new PlayerProfileMostHitSegmentDto('20', 1, 33.3), $stats->mostHitSegment);
+    }
+
+    public function testFinishWithValueThatIsNoMultipleOfItsRingIsLeftOut(): void
+    {
+        $throws = $this->turn(81, 'single', [[61, 'T', 20], [20, 'S', 0]]);
+
+        self::assertNull(PlayerThrowStatistics::build(1, 81.0, $throws)->highestFinish);
+    }
+
+    /**
      * @return array<string, int> the board fields that were hit, in the listed order
      */
     private function fieldsWithHits(PlayerProfileStatsDto $stats): array

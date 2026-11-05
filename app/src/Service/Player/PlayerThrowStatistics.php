@@ -137,8 +137,9 @@ final class PlayerThrowStatistics
     }
 
     /**
-     * The board segment a dart hit: 1 to 20, BULL or BULLSEYE. Null for a miss, and for a single
-     * above 20 other than 25, which the throw endpoint used to accept but no dart can score.
+     * The board segment a dart hit: 1 to 20, BULL or BULLSEYE. Null for a miss, for a single above
+     * 20 other than 25, which the throw endpoint used to accept but no dart can score, and for a
+     * stored value that is no multiple of its ring, which only a manual database edit can produce.
      *
      * @param ThrowRow $throw
      *
@@ -150,8 +151,9 @@ final class PlayerThrowStatistics
 
         return match (true) {
             0 === $value => null,
-            $throw['isTriple'] => (string) intdiv($value, 3),
-            $throw['isDouble'] => 50 === $value ? self::BULLSEYE : (string) intdiv($value, 2),
+            $throw['isTriple'] => 0 === $value % 3 ? (string) intdiv($value, 3) : null,
+            $throw['isDouble'] && 50 === $value => self::BULLSEYE,
+            $throw['isDouble'] => 0 === $value % 2 ? (string) intdiv($value, 2) : null,
             25 === $value => self::BULL,
             $value > 20 => null,
             default => (string) $value,
@@ -162,7 +164,7 @@ final class PlayerThrowStatistics
      * @param string|null $segment
      * @param ThrowRow    $throw
      *
-     * @return string|null S<n>, D<n>, T<n>, BULL, BULLSEYE or MISS; null for an unreadable single
+     * @return string|null S<n>, D<n>, T<n>, BULL, BULLSEYE or MISS; null for an unreadable throw
      */
     private static function dartLabel(?string $segment, array $throw): ?string
     {
