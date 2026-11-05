@@ -64,3 +64,14 @@ docker compose exec -T -w /var/www/html php php -d memory_limit=-1 vendor/bin/ph
 ```
 
 The test fails when a row does not answer 200, and writes its table to `app/var/benchmarks/be-259-player-profile-memory.md`.
+
+To measure the old code, keep this test and put the three source files back from `main` for the run:
+
+```bash
+git restore --source=6b6238f -- app/src/Repository/PlayerStatisticsRepository.php app/src/Repository/PlayerStatisticsRepositoryInterface.php app/src/Service/Player/PlayerThrowStatistics.php
+# run the command above, then:
+git restore -- app/src/Repository/PlayerStatisticsRepository.php app/src/Repository/PlayerStatisticsRepositoryInterface.php app/src/Service/Player/PlayerThrowStatistics.php
+```
+
+At 64M the old code is expected to fail the test at 60,000 throws; the table is written first. For the table without the
+limit, also change `memory_limit=64M` in `startServer()` to `memory_limit=2G` for that run.

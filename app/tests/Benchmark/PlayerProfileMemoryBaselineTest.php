@@ -49,7 +49,7 @@ final class PlayerProfileMemoryBaselineTest extends KernelTestCase
     {
         $this->stopServer();
         if (null !== $this->workDir) {
-            array_map('unlink', glob($this->workDir.'/*') ?: []);
+            $this->emptyWorkDir();
             rmdir($this->workDir);
         }
         parent::tearDown();
@@ -74,11 +74,11 @@ final class PlayerProfileMemoryBaselineTest extends KernelTestCase
             $env = $this->serverEnvironment($connection, $scratch->name);
             $this->clearProdCache($projectDir, $env);
 
-            foreach (self::OPCACHE_MODES as $mode => $opcache) {
+            foreach (self::OPCACHE_MODES as $label => $enabled) {
                 foreach ($emails as $throwCount => $email) {
                     // A server of its own for each row: exhausting the memory can kill the process.
-                    $origin = $this->startServer($projectDir, $env, $opcache);
-                    $rows[] = ['throws' => $throwCount, 'opcache' => $mode] + $this->measure($origin, $email);
+                    $origin = $this->startServer($projectDir, $env, $enabled);
+                    $rows[] = ['throws' => $throwCount, 'opcache' => $label] + $this->measure($origin, $email);
                     $this->stopServer();
                 }
             }
@@ -116,7 +116,7 @@ final class PlayerProfileMemoryBaselineTest extends KernelTestCase
         $connection->transactional(function (Connection $connection) use ($playerNumber, $playerId, $opponentId, $throwCount): void {
             $gameCount = (int) ceil($throwCount / self::DARTS_PER_GAME);
             $firstGameId = $playerNumber * 1_000_000;
-            $values = array_map(static fn(int $dart): int => self::DART_PATTERN[$dart % count(self::DART_PATTERN)][0], range(0, self::DARTS_PER_GAME - 2));
+            $values = array_map(static fn(int $dart): int => self::patternDart($dart)[0], range(0, self::DARTS_PER_GAME - 2));
             $startScore = array_sum($values) + 40;
             $throwRows = [];
             for ($game = 0; $game < $gameCount; $game++) {
@@ -142,7 +142,7 @@ final class PlayerProfileMemoryBaselineTest extends KernelTestCase
                             [$roundId, $gameId, intdiv($dart, 3) + 1, $date, $date],
                         );
                     }
-                    [$value, $isDouble, $isTriple] = self::DARTS_PER_GAME - 1 === $dart ? [40, 1, 0] : self::DART_PATTERN[$dart % count(self::DART_PATTERN)];
+                    [$value, $isDouble, $isTriple] = self::DARTS_PER_GAME - 1 === $dart ? [40, 1, 0] : self::patternDart($dart);
                     $remaining -= $value;
                     $throwRows[] = [$gameId, $roundId, $playerId, $dart % 3 + 1, $value, $isDouble, $isTriple, $remaining, $date];
                     if (count($throwRows) >= 1000) {
@@ -155,6 +155,14 @@ final class PlayerProfileMemoryBaselineTest extends KernelTestCase
         });
 
         return $email;
+    }
+
+    /**
+     * @return array{int, int, int} value, double, triple
+     */
+    private static function patternDart(int $dart): array
+    {
+        return self::DART_PATTERN[$dart % count(self::DART_PATTERN)];
     }
 
     /**
@@ -217,7 +225,7 @@ final class PlayerProfileMemoryBaselineTest extends KernelTestCase
     private function startServer(string $projectDir, array $env, int $opcache): string
     {
         $this->workDir ??= $this->createWorkDir();
-        array_map('unlink', glob($this->workDir.'/*') ?: []);
+        $this->emptyWorkDir();
         $peakFile = $this->workDir.'/peak.log';
         $prepend = $this->workDir.'/prepend.php';
         file_put_contents($prepend, sprintf(
@@ -259,7 +267,7 @@ final class PlayerProfileMemoryBaselineTest extends KernelTestCase
             }
             usleep(100_000);
         }
-        self::fail('The server did not answer /api/health: '.(string) file_get_contents($this->workDir.'/server.log'));
+        self::fail('The server did not answer /api/health: '.$this->serverLog());
     }
 
     private function stopServer(): void
@@ -277,6 +285,16 @@ final class PlayerProfileMemoryBaselineTest extends KernelTestCase
         mkdir($directory);
 
         return $directory;
+    }
+
+    private function emptyWorkDir(): void
+    {
+        array_map('unlink', glob($this->workDir.'/*') ?: []);
+    }
+
+    private function serverLog(): string
+    {
+        return (string) file_get_contents($this->workDir.'/server.log');
     }
 
     /**
@@ -305,7 +323,7 @@ final class PlayerProfileMemoryBaselineTest extends KernelTestCase
             $peaks[] = 200 === $response['status'] ? $this->lastPeak() : 0;
         }
         sort($times);
-        $log = (string) file_get_contents($this->workDir.'/server.log');
+        $log = $this->serverLog();
 
         return [
             'status' => $response['status'],
@@ -335,7 +353,7 @@ final class PlayerProfileMemoryBaselineTest extends KernelTestCase
             }
             usleep(20_000);
         }
-        self::fail('No peak memory was recorded for the profile request: '.substr((string) file_get_contents($this->workDir.'/server.log'), -1500));
+        self::fail('No peak memory was recorded for the profile request: '.substr($this->serverLog(), -1500));
     }
 
     /**

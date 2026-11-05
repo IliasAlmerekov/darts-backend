@@ -140,7 +140,9 @@ SQL,
      * default buffered mode, so another query can run on this connection before the last row.
      *
      * shortcut: reads every throw of the player on each Profile read, so the time grows with the
-     * games played; materialise the statistics once a Profile read gets slow.
+     * games played, and the driver's buffer keeps about 60 bytes per throw, which reaches
+     * memory_limit = 64M at about 900,000 throws; materialise the statistics once a Profile read
+     * gets slow or a player's history nears that size.
      *
      * @param int $playerId
      *
