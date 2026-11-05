@@ -10,14 +10,17 @@ declare(strict_types=1);
 namespace App\Tests\Service\Player;
 
 use App\Dto\PlayerProfileDoubleDto;
+use App\Dto\PlayerProfileFieldHitsDto;
 use App\Dto\PlayerProfileFinishDto;
 use App\Dto\PlayerProfileMostHitSegmentDto;
+use App\Dto\PlayerProfileStatsDto;
 use App\Enum\OutRule;
 use App\Service\Player\PlayerThrowStatistics;
 use PHPUnit\Framework\TestCase;
 
 /**
- * The tie-breaks of the Profile statistics. Each game here holds one turn of the player.
+ * The tie-breaks and the hit counting of the Profile statistics. Each game here holds one turn
+ * of the player.
  */
 final class PlayerThrowStatisticsTest extends TestCase
 {
@@ -116,8 +119,90 @@ final class PlayerThrowStatisticsTest extends TestCase
         self::assertSame(1, $stats->checkoutAttempts);
         self::assertSame(1, $stats->checkoutHits);
         self::assertEquals(new PlayerProfileMostHitSegmentDto('BULLSEYE', 1, 50.0), $stats->mostHitSegment);
-        self::assertSame(1, array_sum(array_map(static fn($entry): int => $entry->hits, $stats->hitDistribution)));
+        self::assertSame(['BULLSEYE' => 1], $this->fieldsWithHits($stats));
         self::assertNull($stats->highestFinish);
+    }
+
+    public function testHitDistributionListsEveryBoardFieldInOrderWithoutThrows(): void
+    {
+        $stats = PlayerThrowStatistics::build(0, null, []);
+
+        self::assertSame(
+            [
+                'S1', 'D1', 'T1', 'S2', 'D2', 'T2', 'S3', 'D3', 'T3', 'S4', 'D4', 'T4', 'S5', 'D5', 'T5',
+                'S6', 'D6', 'T6', 'S7', 'D7', 'T7', 'S8', 'D8', 'T8', 'S9', 'D9', 'T9', 'S10', 'D10', 'T10',
+                'S11', 'D11', 'T11', 'S12', 'D12', 'T12', 'S13', 'D13', 'T13', 'S14', 'D14', 'T14', 'S15', 'D15', 'T15',
+                'S16', 'D16', 'T16', 'S17', 'D17', 'T17', 'S18', 'D18', 'T18', 'S19', 'D19', 'T19', 'S20', 'D20', 'T20',
+                'BULL', 'BULLSEYE',
+            ],
+            array_map(static fn(PlayerProfileFieldHitsDto $entry): string => $entry->field, $stats->hitDistribution)
+        );
+        self::assertSame([], $this->fieldsWithHits($stats));
+    }
+
+    public function testSingleDoubleAndTripleCountInTheirOwnFieldsAndMostHitSegmentSumsThem(): void
+    {
+        $throws = $this->turn(501, 'single', [
+            ...array_fill(0, 15, [20, 'S', 501]),
+            ...array_fill(0, 3, [40, 'D', 501]),
+            ...array_fill(0, 12, [60, 'T', 501]),
+            ...array_fill(0, 90, [0, 'S', 501]),
+        ]);
+
+        $stats = PlayerThrowStatistics::build(1, 60.0, $throws);
+
+        self::assertSame(['S20' => 15, 'D20' => 3, 'T20' => 12], $this->fieldsWithHits($stats));
+        self::assertEquals(new PlayerProfileMostHitSegmentDto('20', 30, 25.0), $stats->mostHitSegment);
+    }
+
+    public function testBullAndBullseyeCountOnlyInTheirOwnFields(): void
+    {
+        $throws = $this->turn(501, 'single', [[25, 'S', 476], [25, 'S', 451], [50, 'D', 401]]);
+
+        self::assertSame(['BULL' => 2, 'BULLSEYE' => 1], $this->fieldsWithHits(PlayerThrowStatistics::build(1, 100.0, $throws)));
+    }
+
+    public function testBustDartCountsInItsField(): void
+    {
+        $stats = PlayerThrowStatistics::build(1, 20.0, $this->bustsThenCheckout(40, 2));
+
+        self::assertSame(['D20' => 1, 'T20' => 2], $this->fieldsWithHits($stats));
+    }
+
+    /**
+     * T21, D22 and T25 have a dart label but are no board field, so they must not add an entry.
+     */
+    public function testThrowsMatchingNoBoardFieldCountInNoFieldButStillCountAsDarts(): void
+    {
+        $throws = $this->turn(501, 'single', [
+            [0, 'S', 501],
+            [60, 'S', 441],
+            [63, 'T', 378],
+            [44, 'D', 334],
+            [75, 'T', 259],
+            [20, 'S', 239],
+        ]);
+
+        $stats = PlayerThrowStatistics::build(1, 262.0, $throws);
+
+        self::assertCount(62, $stats->hitDistribution);
+        self::assertSame(['S20' => 1], $this->fieldsWithHits($stats));
+        self::assertEquals(new PlayerProfileMostHitSegmentDto('20', 1, 16.7), $stats->mostHitSegment);
+    }
+
+    /**
+     * @return array<string, int> the board fields that were hit, in the listed order
+     */
+    private function fieldsWithHits(PlayerProfileStatsDto $stats): array
+    {
+        $hits = [];
+        foreach ($stats->hitDistribution as $entry) {
+            if ($entry->hits > 0) {
+                $hits[$entry->field] = $entry->hits;
+            }
+        }
+
+        return $hits;
     }
 
     /**

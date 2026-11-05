@@ -29,7 +29,7 @@ final class PlayerProfileStatsDto
      * @param float|null                          $checkoutRate     checkout hits per 100 attempts, null without attempts
      * @param int                                 $checkoutHits
      * @param int                                 $checkoutAttempts darts thrown while one dart could check out
-     * @param list<PlayerProfileSegmentHitsDto>   $hitDistribution  always 22 entries: 1 to 20, BULL, BULLSEYE
+     * @param list<PlayerProfileFieldHitsDto>     $hitDistribution  always 62 entries, one per board field: S1, D1, T1 to T20, BULL, BULLSEYE
      * @param PlayerProfileMostHitSegmentDto|null $mostHitSegment   null when no dart hit a segment
      * @param list<PlayerProfileDoubleDto>        $favoriteDoubles  top 3 in double-out games, empty without a hit
      * @param PlayerProfileFinishDto|null         $highestFinish    null without a finish
@@ -48,7 +48,7 @@ final class PlayerProfileStatsDto
         public int $checkoutHits,
         #[OA\Property(description: 'Darts, geworfen bei einem Rest, den ein Dart nach der Out-Regel des Spiels auschecken kann; Busts eingeschlossen.')]
         public int $checkoutAttempts,
-        #[OA\Property(description: 'Immer 22 Einträge in der Reihenfolge `1` bis `20`, `BULL`, `BULLSEYE`. Single, Double und Triple zählen für dasselbe Segment, Busts zählen mit, Fehlwürfe nicht.', maxItems: 22, minItems: 22)]
+        #[OA\Property(description: 'Immer 62 Einträge, einer pro Board-Feld, in der Reihenfolge `S1`, `D1`, `T1` bis `S20`, `D20`, `T20`, `BULL`, `BULLSEYE`. Single, Double und Triple zählen getrennt, Busts zählen mit, Fehlwürfe nicht.', maxItems: 62, minItems: 62)]
         public array $hitDistribution,
         #[OA\Property(description: 'Segment mit den meisten Treffern, bei Gleichstand das höhere; `null` ohne Treffer.')]
         public ?PlayerProfileMostHitSegmentDto $mostHitSegment,

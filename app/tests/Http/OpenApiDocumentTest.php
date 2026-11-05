@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Dto\PlayerProfileDoubleDto;
-use App\Dto\PlayerProfileSegmentHitsDto;
+use App\Dto\PlayerProfileFieldHitsDto;
 use App\Tests\Support\DevFunctionalKernel;
 use ReflectionMethod;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -514,20 +514,21 @@ final class OpenApiDocumentTest extends WebTestCase
             ],
             array_keys($stats)
         );
-        self::assertSame('#/components/schemas/PlayerProfileSegmentHitsDto', $stats['hitDistribution']['items']['$ref']);
+        self::assertSame('#/components/schemas/PlayerProfileFieldHitsDto', $stats['hitDistribution']['items']['$ref']);
+        self::assertSame(62, $stats['hitDistribution']['minItems']);
+        self::assertSame(62, $stats['hitDistribution']['maxItems']);
         $this->assertNullableReference('#/components/schemas/PlayerProfileMostHitSegmentDto', $stats['mostHitSegment']);
         self::assertSame('#/components/schemas/PlayerProfileDoubleDto', $stats['favoriteDoubles']['items']['$ref']);
         $this->assertNullableReference('#/components/schemas/PlayerProfileFinishDto', $stats['highestFinish']);
-        self::assertSame(['segment', 'hits'], array_keys($schemas['PlayerProfileSegmentHitsDto']['properties']));
+        self::assertSame(['field', 'hits'], array_keys($schemas['PlayerProfileFieldHitsDto']['properties']));
+        self::assertArrayNotHasKey('PlayerProfileSegmentHitsDto', $schemas);
         self::assertSame(['segment', 'hits', 'share'], array_keys($schemas['PlayerProfileMostHitSegmentDto']['properties']));
         self::assertSame(['double', 'hits', 'attempts', 'hitRate'], array_keys($schemas['PlayerProfileDoubleDto']['properties']));
         self::assertSame(['score', 'darts', 'throws'], array_keys($schemas['PlayerProfileFinishDto']['properties']));
+        self::assertCount(62, PlayerProfileFieldHitsDto::FIELDS);
+        self::assertSame(PlayerProfileFieldHitsDto::FIELDS, $schemas['PlayerProfileFieldHitsDto']['properties']['field']['enum']);
         self::assertSame(
-            PlayerProfileSegmentHitsDto::SEGMENTS,
-            $schemas['PlayerProfileSegmentHitsDto']['properties']['segment']['enum']
-        );
-        self::assertSame(
-            PlayerProfileSegmentHitsDto::SEGMENTS,
+            [...array_map(strval(...), range(1, 20)), 'BULL', 'BULLSEYE'],
             $schemas['PlayerProfileMostHitSegmentDto']['properties']['segment']['enum']
         );
         self::assertSame(PlayerProfileDoubleDto::DOUBLES, $schemas['PlayerProfileDoubleDto']['properties']['double']['enum']);

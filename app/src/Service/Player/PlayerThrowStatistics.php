@@ -10,9 +10,9 @@ declare(strict_types=1);
 namespace App\Service\Player;
 
 use App\Dto\PlayerProfileDoubleDto;
+use App\Dto\PlayerProfileFieldHitsDto;
 use App\Dto\PlayerProfileFinishDto;
 use App\Dto\PlayerProfileMostHitSegmentDto;
-use App\Dto\PlayerProfileSegmentHitsDto;
 use App\Dto\PlayerProfileStatsDto;
 use App\Enum\OutRule;
 
@@ -53,7 +53,8 @@ final class PlayerThrowStatistics
      */
     public static function build(int $gamesPlayed, ?float $scoreAverage, array $throws): PlayerProfileStatsDto
     {
-        $segmentHits = array_fill_keys(PlayerProfileSegmentHitsDto::SEGMENTS, 0);
+        $fieldHits = array_fill_keys(PlayerProfileFieldHitsDto::FIELDS, 0);
+        $segmentHits = array_fill_keys(PlayerProfileMostHitSegmentDto::SEGMENTS, 0);
         $wonGames = [];
         $remainingByGame = [];
         $checkoutHits = 0;
@@ -86,6 +87,10 @@ final class PlayerThrowStatistics
             $turnDarts[] = $label ?? self::MISS;
             if (null !== $segment && isset($segmentHits[$segment])) {
                 $segmentHits[$segment]++;
+            }
+            // MISS is no board field, and neither is a label such as T21 from a stored value.
+            if (null !== $label && isset($fieldHits[$label])) {
+                $fieldHits[$label]++;
             }
 
             $isCheckout = !$throw['isBust'] && 0 === $throw['score'];
@@ -121,9 +126,9 @@ final class PlayerThrowStatistics
             checkoutHits: $checkoutHits,
             checkoutAttempts: $checkoutAttempts,
             hitDistribution: array_map(
-                static fn(string|int $segment, int $hits): PlayerProfileSegmentHitsDto => new PlayerProfileSegmentHitsDto((string) $segment, $hits),
-                array_keys($segmentHits),
-                array_values($segmentHits)
+                static fn(string $field, int $hits): PlayerProfileFieldHitsDto => new PlayerProfileFieldHitsDto($field, $hits),
+                array_keys($fieldHits),
+                array_values($fieldHits)
             ),
             mostHitSegment: self::mostHitSegment($segmentHits, count($throws)),
             favoriteDoubles: self::favoriteDoubles($doubles),

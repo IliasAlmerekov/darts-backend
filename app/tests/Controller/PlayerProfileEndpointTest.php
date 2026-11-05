@@ -191,11 +191,29 @@ final class PlayerProfileEndpointTest extends WebTestCase
             'checkoutRate' => 50.0,
             'checkoutHits' => 1,
             'checkoutAttempts' => 2,
-            'hitDistribution' => $this->hitDistribution(['20' => 8]),
+            'hitDistribution' => $this->hitDistribution(['S20' => 4, 'D20' => 1, 'T20' => 3]),
             'mostHitSegment' => ['segment' => '20', 'hits' => 8, 'share' => 88.9],
             'favoriteDoubles' => [['double' => 'D20', 'hits' => 1, 'attempts' => 2, 'hitRate' => 50.0]],
             'highestFinish' => ['score' => 120, 'darts' => 3, 'throws' => ['T20', 'S20', 'D20']],
         ], $this->getProfile($client)['stats']);
+    }
+
+    /**
+     * The throw endpoint no longer accepts a single of 60, but old games still hold one.
+     */
+    public function testMissAndStoredSingleAboveTwentyCountInNoFieldButInTheShare(): void
+    {
+        $client = static::createClient();
+        $player = $this->createUser('player', 'ROLE_PLAYER');
+        $game = $this->createGame(GameStatus::Finished, [$player]);
+        $this->recordRound($game, 1, [[$player, [60, 0, 20]]]);
+        $this->settle($game, new DateTimeImmutable(), [[$player, 1, 0]]);
+        $client->loginUser($player);
+
+        $stats = $this->getProfile($client)['stats'];
+
+        self::assertSame($this->hitDistribution(['S20' => 1]), $stats['hitDistribution']);
+        self::assertSame(['segment' => '20', 'hits' => 1, 'share' => 33.3], $stats['mostHitSegment']);
     }
 
     public function testThrowsOutsideFinishedGamesLeaveTheThrowStatisticsUnchanged(): void
@@ -252,7 +270,7 @@ final class PlayerProfileEndpointTest extends WebTestCase
             'checkoutRate' => 20.0,
             'checkoutHits' => 1,
             'checkoutAttempts' => 5,
-            'hitDistribution' => $this->hitDistribution(['5' => 3, '10' => 1, '20' => 1]),
+            'hitDistribution' => $this->hitDistribution(['S5' => 3, 'S10' => 1, 'S20' => 1]),
             'mostHitSegment' => ['segment' => '5', 'hits' => 3, 'share' => 50.0],
             'favoriteDoubles' => [],
             'highestFinish' => ['score' => 25, 'darts' => 3, 'throws' => ['MISS', 'S5', 'S20']],
@@ -505,15 +523,20 @@ final class PlayerProfileEndpointTest extends WebTestCase
     }
 
     /**
-     * @param array<string, int> $hits per segment; every other segment has 0
+     * @param array<string, int> $hits per board field; every other field has 0
      *
-     * @return list<array{segment: string, hits: int}>
+     * @return list<array{field: string, hits: int}>
      */
     private function hitDistribution(array $hits = []): array
     {
+        $fields = [];
+        foreach (range(1, 20) as $number) {
+            array_push($fields, 'S'.$number, 'D'.$number, 'T'.$number);
+        }
+
         return array_map(
-            static fn(string $segment): array => ['segment' => $segment, 'hits' => $hits[$segment] ?? 0],
-            [...array_map(strval(...), range(1, 20)), 'BULL', 'BULLSEYE']
+            static fn(string $field): array => ['field' => $field, 'hits' => $hits[$field] ?? 0],
+            [...$fields, 'BULL', 'BULLSEYE']
         );
     }
 
