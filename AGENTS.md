@@ -261,6 +261,18 @@ Check these on every diff:
 
 ## Review feedback
 
+CodeRabbit reviews a PR only on request: with fewer than 10 stars the repo gets no
+automatic review. Request one with a PR comment that reads exactly `@coderabbitai review`:
+
+1. right after `gh pr create`;
+2. after every push of fixes for its findings, so the fixes get reviewed too.
+
+Each request covers the commits since the last review. The "Review triggered." reply is
+only the receipt. A review is finished when the `CodeRabbit` check in `gh pr checks` leaves
+`pending`. The loop ends when a review reports "No actionable comments were generated", or
+when every open finding has a reply with the evidence against it. Push all fixes for one
+review together: the plan allows only a few reviews per hour per repo.
+
 A CodeRabbit finding is a claim. Reproduce it on the current code first:
 
 - Confirmed: fix it with a test that fails before the fix.
