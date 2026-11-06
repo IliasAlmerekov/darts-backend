@@ -9,12 +9,14 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Dto\InvitationResponseDto;
 use App\Entity\Game;
 use App\Entity\Invitation;
 use App\Exception\Game\GameNotFoundException;
 use App\Exception\Persistence\ConcurrentChangeException;
 use App\Security\InvitationSession;
 use App\Service\Invitation\InvitationServiceInterface;
+use Nelmio\ApiDocBundle\Attribute\Model;
 use Nelmio\ApiDocBundle\Attribute\Security;
 use OpenApi\Attributes as OA;
 use Psr\Log\LoggerInterface;
@@ -52,39 +54,19 @@ final class InvitationController extends AbstractController
      * @param Game                       $game
      * @param InvitationServiceInterface $invitationService
      *
-     * @return array<array-key, mixed>
+     * @return InvitationResponseDto
      */
     #[OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
     #[OA\Response(
         response: Response::HTTP_OK,
         description: 'Einladungslink wurde erstellt oder existierte bereits.',
-        content: new OA\JsonContent(
-            type: 'object',
-            required: ['success'],
-            properties: [
-                new OA\Property(property: 'success', type: 'boolean', example: true),
-                new OA\Property(property: 'gameId', type: 'integer', nullable: true, example: 123),
-                new OA\Property(property: 'invitationLink', type: 'string', nullable: true, example: '/api/invite/join/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'),
-                new OA\Property(
-                    property: 'users',
-                    type: 'array',
-                    description: 'Spieler/Benutzer, die aktuell im Spiel sind (vereinfachte Darstellung).',
-                    items: new OA\Items(
-                        type: 'object',
-                        properties: [
-                            new OA\Property(property: 'id', type: 'integer', nullable: true, example: 1),
-                            new OA\Property(property: 'username', type: 'string', nullable: true, example: 'alice'),
-                        ]
-                    )
-                ),
-            ]
-        )
+        content: new OA\JsonContent(ref: new Model(type: InvitationResponseDto::class))
     )]
     #[OA\Response(response: Response::HTTP_NOT_FOUND, description: GameNotFoundException::OPENAPI_DESCRIPTION, content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Zugriff verweigert: Nur ROLE_ADMIN (das Tablet) darf diese Route nutzen (`ACCESS_DENIED`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[OA\Response(response: Response::HTTP_CONFLICT, description: ConcurrentChangeException::OPENAPI_DESCRIPTION, content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[Route('/api/invite/create/{id}', name: 'create_invitation', methods: ['POST'], format: 'json')]
-    public function createInvitation(#[MapEntity(id: 'id')] Game $game, InvitationServiceInterface $invitationService): array
+    public function createInvitation(#[MapEntity(id: 'id')] Game $game, InvitationServiceInterface $invitationService): InvitationResponseDto
     {
         return $invitationService->getInvitationPayload($game);
     }

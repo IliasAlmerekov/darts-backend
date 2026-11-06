@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Service\Invitation;
 
+use App\Dto\InvitationResponseDto;
 use App\Entity\Game;
 use App\Entity\Invitation;
 use App\Entity\User;
@@ -94,10 +95,10 @@ final readonly class InvitationService implements InvitationServiceInterface
     /**
      * @param Game $game
      *
-     * @return array<string, mixed>
+     * @return InvitationResponseDto
      */
     #[Override]
-    public function getInvitationPayload(Game $game): array
+    public function getInvitationPayload(Game $game): InvitationResponseDto
     {
         $this->gameAccessService->assertAdmin();
         $gameId = $game->getGameId() ?? throw new GameNotFoundException();
@@ -105,12 +106,7 @@ final readonly class InvitationService implements InvitationServiceInterface
         $users = $this->getUsersForGame($game);
         $invitationLink = $this->router->generate('join_invitation', ['uuid' => $invitation->getUuid()]);
 
-        return [
-            'success' => true,
-            'gameId' => $gameId,
-            'invitationLink' => $invitationLink,
-            'users' => $users,
-        ];
+        return new InvitationResponseDto($gameId, $invitationLink, $users);
     }
 
     /**

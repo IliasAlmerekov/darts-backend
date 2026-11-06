@@ -6,6 +6,7 @@ namespace App\Tests\Controller;
 
 use App\Controller\InvitationController;
 use App\Controller\HealthController;
+use App\Dto\InvitationResponseDto;
 use App\Entity\Game;
 use App\Entity\Invitation;
 use App\Exception\Game\GameNotFoundException;
@@ -62,18 +63,12 @@ final class InvitationControllerTest extends TestCase
         $invitationService->expects($this->once())
             ->method('getInvitationPayload')
             ->with($game)
-            ->willReturn([
-                'success' => true,
-                'gameId' => $gameId,
-                'invitationLink' => '/api/invite/join/'.$existingUuid,
-                'users' => [],
-            ]);
+            ->willReturn(new InvitationResponseDto($gameId, '/api/invite/join/'.$existingUuid, []));
 
         $response = $this->controller->createInvitation($game, $invitationService);
 
-        $this->assertIsArray($response);
-        $this->assertTrue($response['success']);
-        $this->assertEquals($gameId, $response['gameId']);
+        $this->assertTrue($response->success);
+        $this->assertEquals($gameId, $response->gameId);
     }
 
     public function testCreateInvitationCreatesNewInvitationWhenNotExists(): void
@@ -91,18 +86,12 @@ final class InvitationControllerTest extends TestCase
         $invitationService->expects($this->once())
             ->method('getInvitationPayload')
             ->with($game)
-            ->willReturn([
-                'success' => true,
-                'gameId' => $gameId,
-                'invitationLink' => '/api/invite/join/some-uuid',
-                'users' => [],
-            ]);
+            ->willReturn(new InvitationResponseDto($gameId, '/api/invite/join/some-uuid', []));
 
         $response = $this->controller->createInvitation($game, $invitationService);
 
-        $this->assertIsArray($response);
-        $this->assertTrue($response['success']);
-        $this->assertEquals($gameId, $response['gameId']);
+        $this->assertTrue($response->success);
+        $this->assertEquals($gameId, $response->gameId);
     }
 
     public function testJoinInvitationThrowsWhenGameIdMissing(): void
