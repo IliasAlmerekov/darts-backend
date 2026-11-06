@@ -40,7 +40,12 @@ echo "$* | worktrees: $(ls "$TEST_ROOT/ws/worktrees" | tr "\n" " ")" >> "$TEST_R
 case "$*" in
   "compose ps -q mysql"|"compose -p testproject ps -q mysql") echo mysql-id ;;
   "inspect "*) echo testproject ;;
-  "exec "*) [ ! -f "$TEST_ROOT/fail-drop" ] ;;
+  "exec "*)
+    if [ -f "$TEST_ROOT/block-drop" ]; then
+      : > "$TEST_ROOT/lock-held"
+      while [ ! -f "$TEST_ROOT/release-lock" ]; do sleep 0.1; done
+    fi
+    [ ! -f "$TEST_ROOT/fail-drop" ] ;;
 esac
 EOF
 export TEST_ROOT="$tmp"
@@ -169,5 +174,26 @@ pr feat/22-race MERGED "$(git rev-parse feat/22-race)"
 echo "git worktree add -q '$tmp/ws/race-22' feat/22-race" > "$tmp/prs/feat_22-race.hook"
 wt prune >/dev/null 2>&1 || fail "checkout race prune failed"
 branch_kept feat/22-race
+
+# Concurrent operations must not pass a pending cleanup check together.
+tip=$(mk feat/23-lock 23); pr feat/23-lock MERGED "$tip"
+touch "$tmp/block-drop"
+wt prune >"$tmp/first-prune" 2>&1 &
+first_pid=$!
+for _ in {1..100}; do [ -f "$tmp/lock-held" ] && break; sleep 0.1; done
+[ -f "$tmp/lock-held" ] || fail "first prune did not reach the lock fixture"
+wt new feat/24-concurrent >"$tmp/second-operation" 2>&1 || true
+if ! grep -q 'another worktree operation' "$tmp/second-operation"; then
+  touch "$tmp/release-lock"; wait "$first_pid" || true
+  fail "concurrent new was not blocked by the operation lock"
+fi
+wt prune >"$tmp/second-prune" 2>&1 || true
+if ! grep -q 'another worktree operation' "$tmp/second-prune"; then
+  touch "$tmp/release-lock"; wait "$first_pid" || true
+  fail "concurrent prune was not blocked by the operation lock"
+fi
+touch "$tmp/release-lock"
+wait "$first_pid" || fail "first prune failed"
+[ ! -e .git/worktree-operation.lock ] || fail "operation lock was not released"
 
 echo "worktree.sh tests passed"

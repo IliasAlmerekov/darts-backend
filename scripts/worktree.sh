@@ -187,6 +187,13 @@ prune() {
   return "$status"
 }
 
+# Serialize setup and cleanup across every checkout. A stale lock after SIGKILL can be
+# removed manually after confirming that no worktree.sh operation is running.
+operation_lock=$common_dir/worktree-operation.lock
+mkdir "$operation_lock" 2>/dev/null || die "another worktree operation is running; if none is running, remove stale lock $operation_lock"
+trap 'rmdir "$operation_lock"' EXIT
+trap 'exit 1' HUP INT TERM
+
 case ${1:-} in
   new) [ $# -eq 2 ] || die "usage: worktree.sh new <type>/<issue>-<topic>"; new "$2" ;;
   prune) prune ;;
