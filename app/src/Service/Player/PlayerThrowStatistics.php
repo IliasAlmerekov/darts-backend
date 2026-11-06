@@ -12,6 +12,7 @@ namespace App\Service\Player;
 use App\Dto\PlayerProfileDoubleDto;
 use App\Dto\PlayerProfileFieldHitsDto;
 use App\Dto\PlayerProfileFinishDto;
+use App\Dto\PlayerProfileHitDistributionByOutRuleDto;
 use App\Dto\PlayerProfileMostHitSegmentDto;
 use App\Dto\PlayerProfileStatsDto;
 use App\Enum\OutRule;
@@ -54,6 +55,10 @@ final class PlayerThrowStatistics
     public static function build(int $gamesPlayed, ?float $scoreAverage, iterable $throws): PlayerProfileStatsDto
     {
         $fieldHits = array_fill_keys(PlayerProfileFieldHitsDto::FIELDS, 0);
+        $fieldHitsByOutRule = [];
+        foreach (OutRule::cases() as $outRule) {
+            $fieldHitsByOutRule[$outRule->value] = $fieldHits;
+        }
         $segmentHits = array_fill_keys(PlayerProfileMostHitSegmentDto::SEGMENTS, 0);
         $wonGames = [];
         $remainingByGame = [];
@@ -93,6 +98,7 @@ final class PlayerThrowStatistics
             // MISS is no board field, and neither is a label such as T21 from a stored value.
             if (null !== $label && isset($fieldHits[$label])) {
                 $fieldHits[$label]++;
+                $fieldHitsByOutRule[$throw['outRule']->value][$label]++;
             }
 
             $isCheckout = !$throw['isBust'] && 0 === $throw['score'];
@@ -127,14 +133,29 @@ final class PlayerThrowStatistics
             checkoutRate: self::percent($checkoutHits, $checkoutAttempts),
             checkoutHits: $checkoutHits,
             checkoutAttempts: $checkoutAttempts,
-            hitDistribution: array_map(
-                static fn(string $field, int $hits): PlayerProfileFieldHitsDto => new PlayerProfileFieldHitsDto($field, $hits),
-                array_keys($fieldHits),
-                array_values($fieldHits)
+            hitDistribution: self::fieldHitsList($fieldHits),
+            hitDistributionByOutRule: new PlayerProfileHitDistributionByOutRuleDto(
+                singleout: self::fieldHitsList($fieldHitsByOutRule[OutRule::Single->value]),
+                doubleout: self::fieldHitsList($fieldHitsByOutRule[OutRule::Double->value]),
+                tripleout: self::fieldHitsList($fieldHitsByOutRule[OutRule::Triple->value]),
             ),
             mostHitSegment: self::mostHitSegment($segmentHits, $throwCount),
             favoriteDoubles: self::favoriteDoubles($doubles),
             highestFinish: $highestFinish,
+        );
+    }
+
+    /**
+     * @param array<string, int> $fieldHits hits per board field, in board field order
+     *
+     * @return list<PlayerProfileFieldHitsDto>
+     */
+    private static function fieldHitsList(array $fieldHits): array
+    {
+        return array_map(
+            static fn(string $field, int $hits): PlayerProfileFieldHitsDto => new PlayerProfileFieldHitsDto($field, $hits),
+            array_keys($fieldHits),
+            array_values($fieldHits)
         );
     }
 

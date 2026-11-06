@@ -22,17 +22,18 @@ use OpenApi\Attributes as OA;
 final class PlayerProfileStatsDto
 {
     /**
-     * @param int                                 $gamesPlayed      finished games in which the player threw
-     * @param float|null                          $scoreAverage     null when gamesPlayed is 0
-     * @param int                                 $wins             counted games with placement 1
-     * @param float|null                          $winRate          null when gamesPlayed is 0
-     * @param float|null                          $checkoutRate     checkout hits per 100 attempts, null without attempts
-     * @param int                                 $checkoutHits
-     * @param int                                 $checkoutAttempts darts thrown while one dart could check out
-     * @param list<PlayerProfileFieldHitsDto>     $hitDistribution  always 62 entries, one per board field: S1, D1, T1 to T20, BULL, BULLSEYE
-     * @param PlayerProfileMostHitSegmentDto|null $mostHitSegment   null when no dart hit a segment
-     * @param list<PlayerProfileDoubleDto>        $favoriteDoubles  top 3 in double-out games, empty without a hit
-     * @param PlayerProfileFinishDto|null         $highestFinish    null without a finish
+     * @param int                                      $gamesPlayed              finished games in which the player threw
+     * @param float|null                               $scoreAverage             null when gamesPlayed is 0
+     * @param int                                      $wins                     counted games with placement 1
+     * @param float|null                               $winRate                  null when gamesPlayed is 0
+     * @param float|null                               $checkoutRate             checkout hits per 100 attempts, null without attempts
+     * @param int                                      $checkoutHits
+     * @param int                                      $checkoutAttempts         darts thrown while one dart could check out
+     * @param list<PlayerProfileFieldHitsDto>          $hitDistribution          always 62 entries, one per board field: S1, D1, T1 to T20, BULL, BULLSEYE
+     * @param PlayerProfileHitDistributionByOutRuleDto $hitDistributionByOutRule hitDistribution split by each game's out rule
+     * @param PlayerProfileMostHitSegmentDto|null      $mostHitSegment           null when no dart hit a segment
+     * @param list<PlayerProfileDoubleDto>             $favoriteDoubles          top 3 in double-out games, empty without a hit
+     * @param PlayerProfileFinishDto|null              $highestFinish            null without a finish
      */
     public function __construct(
         public int $gamesPlayed,
@@ -50,6 +51,7 @@ final class PlayerProfileStatsDto
         public int $checkoutAttempts,
         #[OA\Property(description: 'Immer 62 Einträge, einer pro Board-Feld, in der Reihenfolge `S1`, `D1`, `T1` bis `S20`, `D20`, `T20`, `BULL`, `BULLSEYE`. Single, Double und Triple zählen getrennt, Busts zählen mit, Fehlwürfe nicht.', maxItems: 62, minItems: 62)]
         public array $hitDistribution,
+        public PlayerProfileHitDistributionByOutRuleDto $hitDistributionByOutRule,
         #[OA\Property(description: 'Segment mit den meisten Treffern, bei Gleichstand das höhere; `null` ohne Treffer.')]
         public ?PlayerProfileMostHitSegmentDto $mostHitSegment,
         #[OA\Property(description: 'Nur Double-Out-Spiele: höchstens 3 Doubles mit mindestens einem Checkout, nach Treffern, dann Trefferquote, dann höherem Double.', maxItems: 3)]
