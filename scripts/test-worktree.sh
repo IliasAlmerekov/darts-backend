@@ -153,6 +153,7 @@ tip=$(mk feat/20-retry 20); pr feat/20-retry MERGED "$tip"
 touch "$tmp/fail-drop"
 if TEST_DB_BASE=override wt prune >"$tmp/prune-output" 2>&1; then fail "failed drop was masked"; fi
 [ ! -d "$tmp/ws/worktrees/app-20" ] || fail "failed drop kept the removed worktree"
+[ ! -e .git/worktree-operation.lock ] || fail "failed prune left the operation lock"
 grep -q 'override_test_wt20' "$tmp/docker.log" || fail "effective database was not used"
 rm "$tmp/fail-drop"
 TEST_DB_BASE=changed wt prune >/dev/null 2>&1 || fail "retry failed"
@@ -182,12 +183,19 @@ wt prune >"$tmp/first-prune" 2>&1 &
 first_pid=$!
 for _ in {1..100}; do [ -f "$tmp/lock-held" ] && break; sleep 0.1; done
 [ -f "$tmp/lock-held" ] || fail "first prune did not reach the lock fixture"
-wt new feat/24-concurrent >"$tmp/second-operation" 2>&1 || true
+if wt new feat/24-concurrent >"$tmp/second-operation" 2>&1; then
+  touch "$tmp/release-lock"; wait "$first_pid" || true
+  fail "concurrent new succeeded"
+fi
+[ ! -e "$tmp/ws/worktrees/app-24" ] || fail "concurrent new created a worktree"
 if ! grep -q 'another worktree operation' "$tmp/second-operation"; then
   touch "$tmp/release-lock"; wait "$first_pid" || true
   fail "concurrent new was not blocked by the operation lock"
 fi
-wt prune >"$tmp/second-prune" 2>&1 || true
+if wt prune >"$tmp/second-prune" 2>&1; then
+  touch "$tmp/release-lock"; wait "$first_pid" || true
+  fail "concurrent prune succeeded"
+fi
 if ! grep -q 'another worktree operation' "$tmp/second-prune"; then
   touch "$tmp/release-lock"; wait "$first_pid" || true
   fail "concurrent prune was not blocked by the operation lock"
