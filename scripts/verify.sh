@@ -2,8 +2,6 @@
 # Runs the checks of .github/workflows/ci.yml locally and stops at the first failure.
 # Works from the main checkout and from a linked worktree: scripts/php.sh picks the PHP
 # container that serves this checkout. Needs the `darts` Compose stack.
-# Unlike CI, the runtime image is built and checked only when app/Dockerfile or app/docker/
-# differs from main (committed, uncommitted or untracked), or main cannot be resolved.
 #
 # Usage: scripts/verify.sh
 set -euo pipefail
@@ -11,21 +9,13 @@ set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 step() { printf '\n== %s\n' "$*"; }
 
-remote=$(git remote -v | awk '/github\.com/ && /\(push\)/ { print $1; exit }')
-image_paths=(app/Dockerfile app/docker)
-image_changed=yes
-if base=$(git merge-base HEAD "$remote/main" 2>/dev/null) &&
-  git diff --quiet "$base" -- "${image_paths[@]}" &&
-  [ -z "$(git ls-files --others --exclude-standard -- "${image_paths[@]}")" ]; then
-  image_changed=no
-fi
-
 step host checks
 sh scripts/check-test-db-env.sh
 sh scripts/check-image-eol.sh
 sh scripts/check-gitlab-dockerfiles.sh
 sh scripts/test-ci-checks.sh
 bash scripts/check-secrets.sh
+bash scripts/test-worktree.sh
 
 x() { bash scripts/php.sh "$@"; }
 
@@ -54,14 +44,12 @@ x php -d memory_limit=-1 bin/console doctrine:schema:validate --env=test
 step phpunit
 x php -d memory_limit=-1 vendor/bin/phpunit
 
-if [ "$image_changed" = yes ]; then
-  step runtime image
-  tag=darts-backend:verify-$(basename "$PWD")
-  docker build --pull -f app/Dockerfile --target runtime -t "$tag" .
-  status=0
-  sh scripts/check-runtime-image.sh "$tag" || status=$?
-  docker image rm "$tag" >/dev/null
-  [ "$status" -eq 0 ] || exit "$status"
-fi
+step runtime image
+tag=darts-backend:verify-$(basename "$PWD")
+docker build --pull -f app/Dockerfile --target runtime -t "$tag" .
+status=0
+sh scripts/check-runtime-image.sh "$tag" || status=$?
+docker image rm "$tag" >/dev/null
+[ "$status" -eq 0 ] || exit "$status"
 
 step all checks passed

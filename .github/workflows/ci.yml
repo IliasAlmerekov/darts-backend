@@ -28,6 +28,7 @@ jobs:
       - run: sh scripts/check-image-eol.sh
       - run: sh scripts/check-gitlab-dockerfiles.sh
       - run: sh scripts/test-ci-checks.sh
+      - run: bash scripts/test-worktree.sh
       - run: bash scripts/check-secrets.sh
 
   runtime-image:
