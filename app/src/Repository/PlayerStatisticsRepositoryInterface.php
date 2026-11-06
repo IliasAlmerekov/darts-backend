@@ -58,7 +58,7 @@ interface PlayerStatisticsRepositoryInterface
     /**
      * @param int $playerId
      *
-     * @return list<array{
+     * @return iterable<int, array{
      *     gameId:int,
      *     roundId:int,
      *     value:int,
@@ -71,7 +71,7 @@ interface PlayerStatisticsRepositoryInterface
      *     placement:int|null
      * }>
      */
-    public function findThrowsInCountedGamesForPlayer(int $playerId): array;
+    public function findThrowsInCountedGamesForPlayer(int $playerId): iterable;
 
     /**
      * @return int

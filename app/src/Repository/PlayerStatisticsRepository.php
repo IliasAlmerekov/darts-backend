@@ -136,12 +136,17 @@ SQL,
      * counts: finished games in which the player threw. Each row carries its
      * game's start score, out rule and the player's placement in that game.
      *
-     * shortcut: loads every throw of the player on each Profile read, so the payload grows with
-     * the games played; aggregate in SQL or materialise the statistics once a Profile read gets slow.
+     * The rows arrive one at a time and the query runs at the first one. They stay on the driver's
+     * default buffered mode, so another query can run on this connection before the last row.
+     *
+     * shortcut: reads every throw of the player on each Profile read, so the time grows with the
+     * games played, and the driver's buffer keeps about 60 bytes per throw, which reaches
+     * memory_limit = 64M at about 900,000 throws; materialise the statistics once a Profile read
+     * gets slow or a player's history nears that size.
      *
      * @param int $playerId
      *
-     * @return list<array{
+     * @return iterable<int, array{
      *     gameId:int,
      *     roundId:int,
      *     value:int,
@@ -155,9 +160,9 @@ SQL,
      * }>
      */
     #[\Override]
-    public function findThrowsInCountedGamesForPlayer(int $playerId): array
+    public function findThrowsInCountedGamesForPlayer(int $playerId): iterable
     {
-        $rows = $this->entityManager->getConnection()->fetchAllAssociative(
+        $rows = $this->entityManager->getConnection()->iterateAssociative(
             <<<'SQL'
 SELECT
     rt.game_id AS gameId,
@@ -181,18 +186,20 @@ SQL,
             ['playerId' => ParameterType::INTEGER, 'status' => ParameterType::STRING],
         );
 
-        return array_map(static fn(array $row): array => [
-            'gameId' => (int) $row['gameId'],
-            'roundId' => (int) $row['roundId'],
-            'value' => (int) $row['value'],
-            'isDouble' => (bool) $row['isDouble'],
-            'isTriple' => (bool) $row['isTriple'],
-            'isBust' => (bool) $row['isBust'],
-            'score' => (int) $row['score'],
-            'startScore' => (int) $row['startScore'],
-            'outRule' => OutRule::from((string) $row['outRule']),
-            'placement' => null !== $row['placement'] ? (int) $row['placement'] : null,
-        ], $rows);
+        foreach ($rows as $row) {
+            yield [
+                'gameId' => (int) $row['gameId'],
+                'roundId' => (int) $row['roundId'],
+                'value' => (int) $row['value'],
+                'isDouble' => (bool) $row['isDouble'],
+                'isTriple' => (bool) $row['isTriple'],
+                'isBust' => (bool) $row['isBust'],
+                'score' => (int) $row['score'],
+                'startScore' => (int) $row['startScore'],
+                'outRule' => OutRule::from((string) $row['outRule']),
+                'placement' => null !== $row['placement'] ? (int) $row['placement'] : null,
+            ];
+        }
     }
 
     /**
