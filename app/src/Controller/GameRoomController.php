@@ -78,7 +78,7 @@ final class GameRoomController extends AbstractController
      */
     #[OA\Post(
         summary: 'Spielraum erstellen oder die offene Lobby zurückgeben',
-        description: 'Es ist höchstens ein Spiel in der Lobby. Ist ein Spiel in der Lobby, liefert der Endpoint dessen `gameId` und legt kein Spiel an. Die Lobby übernimmt `startScore`, `doubleOut` und `tripleOut` aus dem Request und behält ihre Spieler; `playerIds` und `excludePlayerIds` werden dann ignoriert. Ohne offene Lobby wird eine neue Lobby mit den Spielern aus `playerIds` ohne `excludePlayerIds` angelegt. `previousGameId` ist veraltet und wird immer ignoriert.'
+        description: 'Es ist höchstens ein Spiel in der Lobby. Ist ein Spiel in der Lobby, liefert der Endpoint dessen `gameId` und legt kein Spiel an. Die Lobby übernimmt `startScore`, `doubleOut` und `tripleOut` aus dem Request und behält ihre Spieler; der Inhalt von `playerIds` und `excludePlayerIds` wird dann ignoriert. Die Längengrenze beider Listen wird zuerst geprüft und gilt auch bei einem Spiel in der Lobby: Eine längere Liste ergibt 422, und die Lobby bleibt unverändert. Ohne offene Lobby wird eine neue Lobby mit den Spielern aus `playerIds` ohne `excludePlayerIds` angelegt. `previousGameId` ist veraltet und wird immer ignoriert.'
     )]
     #[OA\RequestBody(
         required: false,
