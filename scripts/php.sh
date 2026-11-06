@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Runs a command in app/ inside a PHP container that serves this checkout.
+#
+# Main checkout: the `darts` stack's php container, which mounts this app/.
+# Worktree: a one-off container of the same image on the stack's network that mounts the
+# worktree's app/. Its test database gets the suffix `_wt<issue>` through TEST_TOKEN, so
+# the main checkout's test database keeps its own schema.
+#
+# Usage: scripts/php.sh php vendor/bin/phpunit --filter <TestClass>
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+if [ "$(git rev-parse --git-dir)" = "$(git rev-parse --git-common-dir)" ]; then
+  docker compose up -d --wait php mysql >/dev/null
+  exec docker compose exec -T -w /var/www/html php "$@"
+fi
+
+if [ "$(docker inspect -f '{{.State.Running}}' darts-mysql-1 2>/dev/null)" != true ]; then
+  echo "darts-mysql-1 is not running: run docker compose up -d in the workspace folder" >&2
+  exit 1
+fi
+image=$(docker compose config --format json | jq -r .services.php.image)
+token=_wt$(basename "$PWD" | sed -E 's/.*-([0-9]+)$/\1/')
+mkdir -p "$HOME/.cache/composer"
+exec docker run --rm -i --network darts_default -u "$(id -u):$(id -g)" \
+  -e COMPOSER_HOME=/tmp/composer -e TEST_TOKEN="$token" \
+  -v "$HOME/.cache/composer:/tmp/composer/cache" \
+  -v "$PWD/app:/var/www/html" -v "$PWD/docs/contract:/var/www/docs/contract:ro" \
+  -w /var/www/html --entrypoint "" "$image" "$@"
