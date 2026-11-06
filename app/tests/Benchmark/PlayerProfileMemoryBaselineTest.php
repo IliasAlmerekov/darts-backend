@@ -40,6 +40,10 @@ final class PlayerProfileMemoryBaselineTest extends KernelTestCase
     /** One dart of the repeating pattern: value, double, triple. */
     private const array DART_PATTERN = [[20, 0, 0], [5, 0, 0], [1, 0, 0], [0, 0, 0], [12, 1, 0], [9, 0, 1]];
 
+    /** Segment 20 is the most hit one: ten darts of the pattern and the checkout on double 20. */
+    private const int SEGMENT_20_HITS_PER_GAME = 11;
+    private const float SEGMENT_20_SHARE = 18.3;
+
     private ?string $workDir = null;
 
     /** @var resource|null */
@@ -93,7 +97,17 @@ final class PlayerProfileMemoryBaselineTest extends KernelTestCase
         file_put_contents($outputPath, $this->buildReport($rows));
 
         foreach ($rows as $row) {
-            self::assertSame(200, $row['status'], sprintf('%d throws, OPcache %s, see %s', $row['throws'], $row['opcache'], $outputPath));
+            $context = sprintf('%d throws, OPcache %s, see %s', $row['throws'], $row['opcache'], $outputPath);
+            self::assertSame(200, $row['status'], $context);
+            self::assertSame(
+                [
+                    'segment' => '20',
+                    'hits' => intdiv($row['throws'], self::DARTS_PER_GAME) * self::SEGMENT_20_HITS_PER_GAME,
+                    'share' => self::SEGMENT_20_SHARE,
+                ],
+                $row['mostHitSegment'],
+                $context,
+            );
         }
     }
 
@@ -300,7 +314,7 @@ final class PlayerProfileMemoryBaselineTest extends KernelTestCase
     /**
      * One warm-up request, then SAMPLES measured ones.
      *
-     * @return array{status:int, peakMb:float|null, medianMs:float, bytes:int, sha256:string, error:string}
+     * @return array{status:int, peakMb:float|null, medianMs:float, bytes:int, sha256:string, error:string, mostHitSegment:mixed}
      */
     private function measure(string $origin, string $email): array
     {
@@ -332,6 +346,7 @@ final class PlayerProfileMemoryBaselineTest extends KernelTestCase
             'bytes' => strlen($response['body']),
             'sha256' => hash('sha256', $response['body']),
             'error' => 1 === preg_match('/(?:Allowed|Hard) memory[^\n"]*?exhausted/', $log, $match) ? $match[0] : '',
+            'mostHitSegment' => json_decode($response['body'], true)['stats']['mostHitSegment'] ?? null,
         ];
     }
 
@@ -394,7 +409,7 @@ final class PlayerProfileMemoryBaselineTest extends KernelTestCase
     }
 
     /**
-     * @param list<array{throws:int, opcache:string, status:int, peakMb:float|null, medianMs:float, bytes:int, sha256:string, error:string}> $rows
+     * @param list<array{throws:int, opcache:string, status:int, peakMb:float|null, medianMs:float, bytes:int, sha256:string, error:string, mostHitSegment:mixed}> $rows
      */
     private function buildReport(array $rows): string
     {

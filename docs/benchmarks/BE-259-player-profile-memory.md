@@ -63,7 +63,7 @@ The response bodies of the old and the new code have the same hash at every size
 docker compose exec -T -w /var/www/html php php -d memory_limit=-1 vendor/bin/phpunit --group benchmark --filter PlayerProfileMemoryBaselineTest
 ```
 
-The test fails when a row does not answer 200, and writes its table to `app/var/benchmarks/be-259-player-profile-memory.md`.
+The test fails when a row does not answer 200 or `mostHitSegment` differs from what the seeded throws give, and writes its table to `app/var/benchmarks/be-259-player-profile-memory.md`.
 
 To measure the old code, keep this test and put the three source files back from `main` for the run:
 
