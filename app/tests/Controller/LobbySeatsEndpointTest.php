@@ -30,6 +30,7 @@ use Symfony\Component\HttpFoundation\Response;
  * Seats change only in the lobby: remove participant, add guest and reorder answer 409 outside it (#38).
  * Removal takes the playerId from the query, then the JSON body (#235); without either it answers 400 (#261).
  * A reorder lists at most Game::MAX_PARTICIPANTS entries (#267).
+ * Guest add and reorder read the game once, in the seat lock (#270).
  */
 final class LobbySeatsEndpointTest extends WebTestCase
 {
@@ -155,6 +156,30 @@ final class LobbySeatsEndpointTest extends WebTestCase
         $records = array_values(array_filter($handler->getRecords(), static fn ($record): bool => ($record->context['exception'] ?? null) instanceof GameRoomFullException));
         self::assertCount(1, $records);
         self::assertSame(Level::Warning, $records[0]->level);
+    }
+
+    public function testAddGuestReadsTheGameOnce(): void
+    {
+        $gameId = $this->createGame(GameStatus::Lobby, [$this->first, $this->second]);
+        $this->client->enableProfiler();
+
+        $this->request(Request::METHOD_POST, sprintf('/api/room/%d/guest', $gameId), ['username' => 'Alex']);
+
+        self::assertResponseIsSuccessful((string) $this->client->getResponse()->getContent());
+        $reads = $this->gameReads();
+        self::assertCount(1, $reads, implode("\n", $reads));
+    }
+
+    public function testReorderReadsTheGameOnce(): void
+    {
+        $gameId = $this->createGame(GameStatus::Lobby, [$this->first, $this->second]);
+        $this->client->enableProfiler();
+
+        $this->request(Request::METHOD_POST, sprintf('/api/room/%d/positions', $gameId), $this->swappedPositions());
+
+        self::assertResponseIsSuccessful((string) $this->client->getResponse()->getContent());
+        $reads = $this->gameReads();
+        self::assertCount(1, $reads, implode("\n", $reads));
     }
 
     public function testAdminRemovesTheBodyPlayerWhenTheQueryHasNone(): void
@@ -285,6 +310,32 @@ final class LobbySeatsEndpointTest extends WebTestCase
             static fn (array $row): array => [(int) $row[0], (int) $row[1]],
             $this->entityManager->getConnection()->fetchAllNumeric('SELECT player_id, position FROM game_players WHERE game_id = ? ORDER BY position', [$gameId]),
         );
+    }
+
+    /**
+     * Returns the SQL of the last request's queries that load a game row. Doctrine's refresh
+     * of the generated open_lobby column after an update selects only that column and is no
+     * read of the game.
+     *
+     * @return list<string>
+     */
+    private function gameReads(): array
+    {
+        $profile = $this->client->getProfile();
+        self::assertNotFalse($profile);
+        /** @var \Doctrine\Bundle\DoctrineBundle\DataCollector\DoctrineDataCollector $dbCollector */
+        $dbCollector = $profile->getCollector('db');
+        $reads = [];
+        foreach ($dbCollector->getQueries() as $queries) {
+            foreach ($queries as $query) {
+                $sql = (string) $query['sql'];
+                if (1 === preg_match('/\bFROM game\b/i', $sql) && str_contains($sql, 'start_score')) {
+                    $reads[] = $sql;
+                }
+            }
+        }
+
+        return $reads;
     }
 
     private function userCount(): int

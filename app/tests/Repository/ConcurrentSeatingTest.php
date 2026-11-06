@@ -636,7 +636,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         );
 
         try {
-            $service->createGuestPlayer($loaded, 'Alex');
+            $service->createGuestPlayer($game, 'Alex');
             self::fail('A guest was seated in a started game.');
         } catch (SeatsNotEditableException) {
         }
@@ -752,14 +752,12 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $testEntityManager = static::getContainer()->get(EntityManagerInterface::class);
         $this->entityManager = new EntityManager($this->request, $testEntityManager->getConfiguration());
         $gamePlayersRepository = new GamePlayersRepository($this->registry());
-        $game = $this->entityManager->find(Game::class, $gameId);
-        self::assertInstanceOf(Game::class, $game);
         $service = new GuestPlayerService(
             $gamePlayersRepository,
             new PlayerManagementService($gamePlayersRepository, $this->entityManager, new GameRepository($this->registry()), $this->createStub(UserRepositoryInterface::class)),
         );
 
-        return $service->createGuestPlayer($game, $name);
+        return $service->createGuestPlayer($gameId, $name);
     }
 
     private function throwService(): GameThrowService

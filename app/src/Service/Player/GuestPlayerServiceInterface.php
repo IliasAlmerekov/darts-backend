@@ -9,7 +9,7 @@ declare(strict_types=1);
 
 namespace App\Service\Player;
 
-use App\Entity\Game;
+use App\Exception\Game\GameNotFoundException;
 
 /**
  * Contract for creating guest players.
@@ -17,10 +17,12 @@ use App\Entity\Game;
 interface GuestPlayerServiceInterface
 {
     /**
-     * @param Game   $game
+     * @param int    $gameId
      * @param string $username
      *
      * @return array{playerId:int,name:string,position:int|null,placement:int|null,isGuest:bool}
+     *
+     * @throws GameNotFoundException When no game has this ID
      */
-    public function createGuestPlayer(Game $game, string $username): array;
+    public function createGuestPlayer(int $gameId, string $username): array;
 }

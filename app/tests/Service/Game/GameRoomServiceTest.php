@@ -14,8 +14,6 @@ use App\Dto\RoomCreateRequest;
 use App\Entity\Game;
 use App\Entity\User;
 use App\Exception\Game\ConflictingOutRulesException;
-use App\Repository\GamePlayersRepositoryInterface;
-use App\Repository\GameRepositoryInterface;
 use App\Service\Game\GameRoomService;
 use App\Service\Game\GameSettingsServiceInterface;
 use App\Service\Game\OpenLobby;
@@ -32,8 +30,6 @@ use PHPUnit\Framework\TestCase;
 #[AllowMockObjectsWithoutExpectations]
 final class GameRoomServiceTest extends TestCase
 {
-    private GameRepositoryInterface $gameRepository;
-    private GamePlayersRepositoryInterface $gamePlayersRepository;
     private PlayerManagementServiceInterface&MockObject $playerManagementService;
     private GameAccessServiceInterface $gameAccessService;
     private OpenLobbyServiceInterface&MockObject $openLobbyService;
@@ -44,8 +40,6 @@ final class GameRoomServiceTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->gameRepository = $this->createMock(GameRepositoryInterface::class);
-        $this->gamePlayersRepository = $this->createMock(GamePlayersRepositoryInterface::class);
         $this->playerManagementService = $this->createMock(PlayerManagementServiceInterface::class);
         $this->gameAccessService = $this->createMock(GameAccessServiceInterface::class);
         $this->gameAccessService->method('requireAuthenticatedUser')->willReturn(new User());
@@ -70,7 +64,6 @@ final class GameRoomServiceTest extends TestCase
     public function testOpenRoomLeavesAnExistingLobbyUnchanged(): void
     {
         $this->openLobbyService->method('findOrCreate')->willReturn(new OpenLobby($this->lobbyGame, false));
-        $this->gameRepository->expects(self::never())->method('find');
         $this->playerManagementService->expects(self::never())->method('addPlayers');
         $this->gameSettingsService->expects(self::never())->method('applySettings');
 
@@ -166,52 +159,9 @@ final class GameRoomServiceTest extends TestCase
         self::assertSame($this->lobbyGame, $game);
     }
 
-    public function testFindGameByIdReturnsGame(): void
-    {
-        $game = new Game();
-        $this->gameRepository->method('find')
-            ->with(42)
-            ->willReturn($game);
-
-        $service = $this->createService();
-
-        $result = $service->findGameById(42);
-
-        self::assertSame($game, $result);
-    }
-
-    public function testFindGameByIdReturnsNullWhenNotFound(): void
-    {
-        $this->gameRepository->method('find')
-            ->with(42)
-            ->willReturn(null);
-
-        $service = $this->createService();
-
-        $result = $service->findGameById(42);
-
-        self::assertNull($result);
-    }
-
-    public function testGetPlayersWithUserInfoDelegatesToRepository(): void
-    {
-        $players = [['id' => 1, 'username' => 'Player 1']];
-        $this->gamePlayersRepository->method('findPlayersWithUserInfo')
-            ->with(42)
-            ->willReturn($players);
-
-        $service = $this->createService();
-
-        $result = $service->getPlayersWithUserInfo(42);
-
-        self::assertSame($players, $result);
-    }
-
     private function createService(): GameRoomService
     {
         return new GameRoomService(
-            $this->gameRepository,
-            $this->gamePlayersRepository,
             $this->playerManagementService,
             $this->gameAccessService,
             $this->openLobbyService,
