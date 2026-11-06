@@ -1,0 +1,60 @@
+{
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "description": "Repo rules: scope, conventions, API contract, Doctrine, tests, guardrails."
+    },
+    {
+      "path": "docs/agents/review.md",
+      "description": "Review guidelines: severities P0-P2 and the checks for every diff."
+    },
+    {
+      "path": "SECURITY.md",
+      "description": "Threat model for security review."
+    },
+    {
+      "path": "GLOSSARY.md",
+      "description": "Domain terms."
+    },
+    {
+      "path": "docs/architecture.md",
+      "description": "Which layer owns what and where new code goes."
+    },
+    {
+      "path": "docs/adr/0001-single-tablet-admin.md",
+      "description": "Architecture decision record: a rule the code must keep."
+    },
+    {
+      "path": "docs/adr/0002-player-remembered-login.md",
+      "description": "Architecture decision record: a rule the code must keep."
+    },
+    {
+      "path": "docs/adr/0003-one-open-lobby.md",
+      "description": "Architecture decision record: a rule the code must keep."
+    },
+    {
+      "path": "docs/adr/0004-one-started-game.md",
+      "description": "Architecture decision record: a rule the code must keep."
+    },
+    {
+      "path": "docs/adr/0005-only-the-newest-game-reopens.md",
+      "description": "Architecture decision record: a rule the code must keep."
+    },
+    {
+      "path": "docs/adr/0006-one-error-body.md",
+      "description": "Architecture decision record: a rule the code must keep."
+    },
+    {
+      "path": "docs/adr/0007-origin-check-over-csrf-tokens.md",
+      "description": "Architecture decision record: a rule the code must keep."
+    },
+    {
+      "path": "docs/adr/0008-layered-architecture.md",
+      "description": "Architecture decision record: a rule the code must keep."
+    },
+    {
+      "path": "docs/adr/0009-avatars-from-a-folder-by-email.md",
+      "description": "Architecture decision record: a rule the code must keep."
+    }
+  ]
+}

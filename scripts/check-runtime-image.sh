@@ -15,7 +15,7 @@ MIN_PHP_VERSION="8.4.27"
 
 # The app needs this environment to answer HTTP at all. DATABASE_URL points at a closed
 # port on purpose: /api/health must stay 200 and /api/ready must answer 503.
-container="$(docker run -d --rm -p 127.0.0.1::10000 \
+container="$(docker run -d -p 127.0.0.1::10000 \
     -e APP_SECRET=check-runtime-image-secret \
     -e DATABASE_URL='mysql://check:check@127.0.0.1:1/check?serverVersion=8.4&charset=utf8mb4' \
     -e CORS_ALLOW_ORIGIN='^https?://localhost$' \
@@ -23,7 +23,7 @@ container="$(docker run -d --rm -p 127.0.0.1::10000 \
     -e FRONTEND_URL=http://localhost \
     "${IMAGE}")"
 ready_file="$(mktemp)"
-trap 'docker stop "${container}" > /dev/null; rm -f "${ready_file}"' EXIT
+trap 'docker rm -f "${container}" > /dev/null; rm -f "${ready_file}"' EXIT
 port="$(docker port "${container}" 10000/tcp | sed -n 's/^127\.0\.0\.1:\([0-9]*\)$/\1/p' | head -n 1)"
 base_url="http://127.0.0.1:${port}"
 
