@@ -140,6 +140,40 @@ final class PlayerThrowStatisticsTest extends TestCase
         self::assertSame([], $this->fieldsWithHits($stats));
     }
 
+    /**
+     * Each out rule counts only the hits from games that finished with it, and together they make
+     * up the all-games distribution.
+     */
+    public function testHitDistributionByOutRuleCountsEachHitUnderItsGamesOutRule(): void
+    {
+        $throws = [
+            ...$this->turn(501, 'single', [[20, 'S', 481], [60, 'T', 421]]),
+            ...$this->turn(501, 'double', [[20, 'S', 481], [25, 'S', 456], [0, 'S', 456]]),
+            ...$this->turn(501, 'double', [[50, 'D', 451]]),
+        ];
+
+        $stats = PlayerThrowStatistics::build(3, 60.0, $throws);
+        $byOutRule = $stats->hitDistributionByOutRule;
+
+        self::assertSame(['S20' => 1, 'T20' => 1], $this->withHits($byOutRule->singleout));
+        self::assertSame(['S20' => 1, 'BULL' => 1, 'BULLSEYE' => 1], $this->withHits($byOutRule->doubleout));
+        self::assertSame([], $this->withHits($byOutRule->tripleout));
+        foreach ([$byOutRule->singleout, $byOutRule->doubleout, $byOutRule->tripleout] as $distribution) {
+            self::assertSame(
+                PlayerProfileFieldHitsDto::FIELDS,
+                array_map(static fn(PlayerProfileFieldHitsDto $entry): string => $entry->field, $distribution)
+            );
+        }
+        self::assertSame(['S20' => 2, 'T20' => 1, 'BULL' => 1, 'BULLSEYE' => 1], $this->fieldsWithHits($stats));
+        foreach ($stats->hitDistribution as $index => $entry) {
+            self::assertSame(
+                $entry->hits,
+                $byOutRule->singleout[$index]->hits + $byOutRule->doubleout[$index]->hits + $byOutRule->tripleout[$index]->hits,
+                $entry->field
+            );
+        }
+    }
+
     public function testSingleDoubleAndTripleCountInTheirOwnFieldsAndMostHitSegmentSumsThem(): void
     {
         $throws = $this->turn(501, 'single', [
@@ -215,8 +249,18 @@ final class PlayerThrowStatisticsTest extends TestCase
      */
     private function fieldsWithHits(PlayerProfileStatsDto $stats): array
     {
+        return $this->withHits($stats->hitDistribution);
+    }
+
+    /**
+     * @param list<PlayerProfileFieldHitsDto> $distribution
+     *
+     * @return array<string, int> the board fields that were hit, in the listed order
+     */
+    private function withHits(array $distribution): array
+    {
         $hits = [];
-        foreach ($stats->hitDistribution as $entry) {
+        foreach ($distribution as $entry) {
             if ($entry->hits > 0) {
                 $hits[$entry->field] = $entry->hits;
             }

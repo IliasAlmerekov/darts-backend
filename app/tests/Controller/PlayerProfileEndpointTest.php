@@ -50,6 +50,7 @@ final class PlayerProfileEndpointTest extends WebTestCase
                 'checkoutHits' => 0,
                 'checkoutAttempts' => 0,
                 'hitDistribution' => $this->hitDistribution(),
+                'hitDistributionByOutRule' => $this->hitDistributionByOutRule(),
                 'mostHitSegment' => null,
                 'favoriteDoubles' => [],
                 'highestFinish' => null,
@@ -192,6 +193,7 @@ final class PlayerProfileEndpointTest extends WebTestCase
             'checkoutHits' => 1,
             'checkoutAttempts' => 2,
             'hitDistribution' => $this->hitDistribution(['S20' => 4, 'D20' => 1, 'T20' => 3]),
+            'hitDistributionByOutRule' => $this->hitDistributionByOutRule(doubleout: ['S20' => 4, 'D20' => 1, 'T20' => 3]),
             'mostHitSegment' => ['segment' => '20', 'hits' => 8, 'share' => 88.9],
             'favoriteDoubles' => [['double' => 'D20', 'hits' => 1, 'attempts' => 2, 'hitRate' => 50.0]],
             'highestFinish' => ['score' => 120, 'darts' => 3, 'throws' => ['T20', 'S20', 'D20']],
@@ -214,6 +216,27 @@ final class PlayerProfileEndpointTest extends WebTestCase
 
         self::assertSame($this->hitDistribution(['S20' => 1]), $stats['hitDistribution']);
         self::assertSame(['segment' => '20', 'hits' => 1, 'share' => 33.3], $stats['mostHitSegment']);
+    }
+
+    public function testHitDistributionByOutRuleCountsEachGameUnderItsOutRule(): void
+    {
+        $client = static::createClient();
+        $player = $this->createUser('player', 'ROLE_PLAYER');
+        foreach ([[\App\Enum\OutRule::Triple, [20, 20, 5]], [\App\Enum\OutRule::Single, [20, 1]]] as [$outRule, $values]) {
+            $game = $this->createGame(GameStatus::Finished, [$player]);
+            $game->setOutRule($outRule);
+            $this->recordRound($game, 1, [[$player, $values]]);
+            $this->settle($game, new DateTimeImmutable(), [[$player, 1, 0]]);
+        }
+        $client->loginUser($player);
+
+        $stats = $this->getProfile($client)['stats'];
+
+        self::assertSame(
+            $this->hitDistributionByOutRule(singleout: ['S1' => 1, 'S20' => 1], tripleout: ['S5' => 1, 'S20' => 2]),
+            $stats['hitDistributionByOutRule']
+        );
+        self::assertSame($this->hitDistribution(['S1' => 1, 'S5' => 1, 'S20' => 3]), $stats['hitDistribution']);
     }
 
     public function testThrowsOutsideFinishedGamesLeaveTheThrowStatisticsUnchanged(): void
@@ -271,6 +294,7 @@ final class PlayerProfileEndpointTest extends WebTestCase
             'checkoutHits' => 1,
             'checkoutAttempts' => 5,
             'hitDistribution' => $this->hitDistribution(['S5' => 3, 'S10' => 1, 'S20' => 1]),
+            'hitDistributionByOutRule' => $this->hitDistributionByOutRule(singleout: ['S5' => 3, 'S10' => 1, 'S20' => 1]),
             'mostHitSegment' => ['segment' => '5', 'hits' => 3, 'share' => 50.0],
             'favoriteDoubles' => [],
             'highestFinish' => ['score' => 25, 'darts' => 3, 'throws' => ['MISS', 'S5', 'S20']],
@@ -538,6 +562,22 @@ final class PlayerProfileEndpointTest extends WebTestCase
             static fn(string $field): array => ['field' => $field, 'hits' => $hits[$field] ?? 0],
             [...$fields, 'BULL', 'BULLSEYE']
         );
+    }
+
+    /**
+     * @param array<string, int> $singleout hits per board field in single-out games
+     * @param array<string, int> $doubleout hits per board field in double-out games
+     * @param array<string, int> $tripleout hits per board field in triple-out games
+     *
+     * @return array{singleout: list<array{field: string, hits: int}>, doubleout: list<array{field: string, hits: int}>, tripleout: list<array{field: string, hits: int}>}
+     */
+    private function hitDistributionByOutRule(array $singleout = [], array $doubleout = [], array $tripleout = []): array
+    {
+        return [
+            'singleout' => $this->hitDistribution($singleout),
+            'doubleout' => $this->hitDistribution($doubleout),
+            'tripleout' => $this->hitDistribution($tripleout),
+        ];
     }
 
     private function createUser(string $label, string $role): User

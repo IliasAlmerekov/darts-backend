@@ -510,13 +510,26 @@ final class OpenApiDocumentTest extends WebTestCase
         self::assertSame(
             [
                 'gamesPlayed', 'scoreAverage', 'wins', 'winRate', 'checkoutRate', 'checkoutHits', 'checkoutAttempts',
-                'hitDistribution', 'mostHitSegment', 'favoriteDoubles', 'highestFinish',
+                'hitDistribution', 'hitDistributionByOutRule', 'mostHitSegment', 'favoriteDoubles', 'highestFinish',
             ],
             array_keys($stats)
         );
         self::assertSame('#/components/schemas/PlayerProfileFieldHitsDto', $stats['hitDistribution']['items']['$ref']);
         self::assertSame(62, $stats['hitDistribution']['minItems']);
         self::assertSame(62, $stats['hitDistribution']['maxItems']);
+        self::assertSame(
+            '#/components/schemas/PlayerProfileHitDistributionByOutRuleDto',
+            $stats['hitDistributionByOutRule']['$ref']
+        );
+        $byOutRule = $schemas['PlayerProfileHitDistributionByOutRuleDto'];
+        self::assertNotEmpty($byOutRule['description'] ?? null);
+        self::assertSame(['singleout', 'doubleout', 'tripleout'], array_keys($byOutRule['properties']));
+        self::assertSame(['singleout', 'doubleout', 'tripleout'], $byOutRule['required']);
+        foreach ($byOutRule['properties'] as $outRule => $distribution) {
+            self::assertSame('#/components/schemas/PlayerProfileFieldHitsDto', $distribution['items']['$ref'], $outRule);
+            self::assertSame(62, $distribution['minItems'], $outRule);
+            self::assertSame(62, $distribution['maxItems'], $outRule);
+        }
         $this->assertNullableReference('#/components/schemas/PlayerProfileMostHitSegmentDto', $stats['mostHitSegment']);
         self::assertSame('#/components/schemas/PlayerProfileDoubleDto', $stats['favoriteDoubles']['items']['$ref']);
         $this->assertNullableReference('#/components/schemas/PlayerProfileFinishDto', $stats['highestFinish']);

@@ -8,6 +8,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 ## [Unreleased]
 
 ### Hinzugefügt
+- **Spielerprofil**: `stats.hitDistributionByOutRule` in `GET /api/player/profile` liefert die Trefferverteilung zusätzlich getrennt nach Single-Out, Double-Out und Triple-Out, je 62 Board-Felder in der Reihenfolge von `hitDistribution`. Ein Wurf zählt unter der Out-Regel, mit der sein Spiel endete; `hitDistribution` bleibt unverändert. Die OpenAPI-Doku beschreibt das Feld; das Frontend frischt seinen Contract-Dump auf (IliasAlmerekov/darts#481) (#288)
 - **Avatar**: Spieler erhalten ihr Avatarbild anhand ihrer E-Mail-Adresse über einen geschützten Endpunkt (#233).
 - **Avatar**: Das Glossar definiert den Begriff Avatar; ADR 0009 hält fest, dass das Backend Avatare per E-Mail aus einem Ordner außerhalb des Repositorys liest (`AVATAR_DIR`) und über einen eigenen Endpunkt ausliefert, statt R2, Presigned URLs, öffentlichem Speicher oder einem Feld an `User`. Nur Dokumentation, die Umsetzung folgt in #233 (#233)
 - **Wurfwertung**: JSON-Vertragsfälle und PHPUnit-Test halten die Bust- und Checkout-Regeln für das Frontend fest (#239).
