@@ -625,6 +625,8 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $bob = $this->insertUser('bob');
         $game = $this->insertGame('lobby');
         $this->insertSeat($game, $bob, 1);
+        // The service gets only the ID. This load puts a lobby Game in the identity map, so the
+        // test checks that the locking read sees the started status past that stale entity.
         $loaded = $this->entityManager->find(Game::class, $game);
         self::assertInstanceOf(Game::class, $loaded);
         // The game starts after the guest request loaded it.

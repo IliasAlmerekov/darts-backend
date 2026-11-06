@@ -17,6 +17,7 @@ use App\Tests\Support\TestSeatFactory;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
 use DateTimeImmutable;
+use Doctrine\Bundle\DoctrineBundle\DataCollector\DoctrineDataCollector;
 use Doctrine\ORM\EntityManagerInterface;
 use Monolog\Handler\TestHandler;
 use Monolog\Level;
@@ -323,7 +324,7 @@ final class LobbySeatsEndpointTest extends WebTestCase
     {
         $profile = $this->client->getProfile();
         self::assertNotFalse($profile);
-        /** @var \Doctrine\Bundle\DoctrineBundle\DataCollector\DoctrineDataCollector $dbCollector */
+        /** @var DoctrineDataCollector $dbCollector */
         $dbCollector = $profile->getCollector('db');
         $reads = [];
         foreach ($dbCollector->getQueries() as $queries) {
