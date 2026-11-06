@@ -121,21 +121,6 @@ SQL,
     /**
      * @param int $gameId
      *
-     * @return Game|null
-     */
-    #[\Override]
-    public function findOneByGameId(int $gameId): ?Game
-    {
-        return $this->createQueryBuilder('g')
-            ->andWhere('g.gameId = :gameId')
-            ->setParameter('gameId', $gameId)
-            ->getQuery()
-            ->getOneOrNullResult();
-    }
-
-    /**
-     * @param int $gameId
-     *
      * @return GameStatus|null
      */
     #[\Override]

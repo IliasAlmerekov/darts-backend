@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\RoundThrows;
-use Doctrine\ORM\QueryBuilder;
 
 /**
  * Contract for round throws repository.
@@ -101,13 +100,4 @@ interface RoundThrowsRepositoryInterface
      * @return array<int, array<string, mixed>>
      */
     public function getRoundAveragesForGame(int $gameId): array;
-
-    /**
-     *
-     * @param string      $alias
-     * @param string|null $indexBy
-     *
-     * @return QueryBuilder
-     */
-    public function createQueryBuilder(string $alias, ?string $indexBy = null): QueryBuilder;
 }

@@ -9,7 +9,6 @@ use App\Enum\GameStatus;
 use DateTimeImmutable;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\DBAL\LockMode;
-use Doctrine\ORM\QueryBuilder;
 
 /**
  * Contract for game repository.
@@ -40,24 +39,6 @@ interface GameRepositoryInterface
      * @return object|null
      */
     public function find(mixed $id, LockMode|int|null $lockMode = null, ?int $lockVersion = null): ?object;
-
-    /**
-     *
-     * @param string      $alias
-     * @param string|null $indexBy
-     *
-     * @return QueryBuilder
-     */
-    public function createQueryBuilder(string $alias, ?string $indexBy = null): QueryBuilder;
-
-    /**
-     * @psalm-suppress PossiblyUnusedMethod
-     *
-     * @param int $gameId
-     *
-     * @return Game|null
-     */
-    public function findOneByGameId(int $gameId): ?Game;
 
     /**
      * Returns the game's stored status, or null for a missing game. The scalar read skips the
