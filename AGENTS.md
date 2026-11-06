@@ -16,43 +16,18 @@ read `docs/architecture.md`. It says which layer owns what and where new code go
 
 ## Scope
 
-Solve the whole task with the least new code. Before the first edit, list every place the
-change must reach: callers, tests, fixtures, config, serializer groups, API docs. That list
-is the scope; features nobody asked for are outside it, named in one line in the report.
-
-Reach for the first option that works: no code at all, then a helper or service already in
-`app/src`, then Symfony or PHP built-ins, then an installed package, then one line a reader
-gets at a glance, then new code.
-
-- Add no abstraction, interface, option, or "for later" code the task does not need.
-  Deletion beats addition.
-- A bug fix greps every caller of the function it touches and fixes the root cause once,
-  in the shared code.
-- Moved or merged code keeps its validation and error handling.
-- Between options of equal size, take the one correct on edge cases.
-- A known shortcut gets a comment: `shortcut: <the limit>, <when to upgrade>`.
-- Validation at trust boundaries, error handling that prevents data loss, and security
-  are never cut.
-
-The final report lists each verification command with its pass or fail status, names every
-check you skipped, and ends with what you did not check and the risk left.
+Trace affected callers, contracts, fixtures, and tests before editing. Reuse existing code
+where it fits; add only what the task needs. Preserve validation, error handling,
+security, and accessibility when moving or simplifying code. Fix shared causes and
+cover changed behaviour at the relevant interface.
 
 ## Workflow
 
-Size the task before the first edit. When the size is unclear, treat the task as large.
-
-- **Small**: one change with nothing to decide, such as a typo, a config value, or a bug
-  whose cause you already know. Cut the branch, write one failing test at the interface the
-  change touches, make the change under `## Scope`, and run the verification.
-- **Large**: open design decisions, more than one module, or an area under `## Guardrails`.
-  Grill the plan with the user through `/grill-with-docs`; when you start the grill
-  yourself, call the `grilling` and `domain-modeling` skills. Once every decision is
-  settled, write the plan as numbered subtasks, each with acceptance criteria. Build each
-  subtask with the `tdd` skill; its acceptance criteria are the agreed seams. Finish with
-  the `code-review` skill against `main`.
-
-`code-review` treats `## Scope` as a repo standard: a smell whose fix adds an abstraction
-the task does not need goes in the report as a note, not as a finding.
+Read the issue and Agent Brief first. Resolve open design decisions before implementation;
+use clarification or design skills when those decisions need the user's judgment.
+Implement settled work directly, with targeted regression tests for behaviour fixes.
+Docs, formatting, and config-only changes need checks appropriate to their effects.
+Report executed checks, gaps, and remaining risks concisely; distinguish remote CI state.
 
 ## Conventions
 
@@ -77,23 +52,24 @@ conventions no tool checks:
 
 ## API contract
 
-Response shape is a contract with the frontend, which lives next to this repo in
-`../dartsapp`. Before changing a route or a response, grep its path in `../dartsapp/src`
-and list the consumers in the PR. Serializer groups and the Nelmio API docs change in the
-same commit as the response. The frontend validates responses against a dump of those docs,
-`../dartsapp/docs/backend-api-contract.json`, so a changed response also gets a frontend
-issue to refresh that dump.
+Response shape is a contract with the frontend. Before cross-repository work, resolve
+its path through `docs/agents/workspace.md`; nested worktrees have no fixed sibling path.
+Before changing a route or response, search that frontend's `src/` for consumers and list
+them in the PR. Update serializer groups and Nelmio API docs in the same commit, and open
+a frontend issue to refresh `docs/backend-api-contract.json`.
 
 The frontend vendors `docs/contract/throw-scoring-cases.json`. A change to `OutRule` or
 `ThrowScoring` updates that file in the same PR and gets a frontend issue to refresh its copy.
 
 ## Doctrine
 
-Every schema change ships with a migration in `app/migrations`. Generate it against the
-dev database, then add the license header and review the SQL:
+Every schema change ships with a migration in `app/migrations`. Generate it against this
+checkout's test database, which holds exactly the branch's migrations; the dev database is
+shared with other sessions. Then add the license header and review the SQL:
 
 ```bash
-docker compose exec -T -w /var/www/html php php bin/console doctrine:migrations:diff
+scripts/php.sh php bin/console doctrine:migrations:migrate --env=test --no-interaction
+scripts/php.sh php bin/console doctrine:migrations:diff --env=test
 ```
 
 Bind query parameters. Watch for N+1 queries and lazy loading in loops.
@@ -111,66 +87,25 @@ Bundle wraps the whole run in one transaction that rolls back. Helpers in
 - `ScratchDatabase` gives a test its own MySQL database outside the DAMA transaction, for
   DDL or a second connection that must commit.
 
-While you work, run only the tests you touch, from the repo root:
+While you work, run only the tests you touch, from the repo root. `scripts/php.sh` runs a
+command in the PHP container that serves this checkout; in a worktree that container uses
+the worktree's own test database, which `scripts/worktree.sh new` creates and migrates:
 
 ```bash
-docker compose exec -T -w /var/www/html php php vendor/bin/phpunit --filter <TestClass>
+scripts/php.sh php vendor/bin/phpunit --filter <TestClass>
 ```
 
 Run the full verification below once, before the commit.
 
 ## Verification
 
-The checks mirror `.github/workflows/ci.yml`, the gate on every PR; `.gitlab-ci.yml` runs
-the same set. Run them in Docker from the repository root. Host-local `php`, `composer`,
-or `vendor/bin/*` runs only when the user accepts the deviation.
+Before the commit, run `scripts/verify.sh` from the repository root. It runs the checks of
+`.github/workflows/ci.yml`, the gate on every PR, and stops at the first failure; its header
+says how it picks the container. Host-local `php`, `composer`, or `vendor/bin/*` runs only
+when the user accepts the deviation.
 
-Locally backend and frontend run as one Compose stack, the project `darts`: nginx on :8001,
-php, mysql, and the frontend on :5173. Start it with `docker compose up -d` in the
-workspace folder that holds both repos. The php container mounts this checkout's `app/`.
-Run `docker compose up -d php` from this repository to mount the scoring contract too.
-
-The `scripts/` checks run on the host.
-`check-test-db-env.sh` fails when `app/.env.test` and `docker-compose.yaml` disagree on the
-MySQL root password; put the matching `DATABASE_URL` in `app/.env.test.local` to fix it.
-`check-image-eol.sh` fails when a shell script, a Dockerfile, or a file under `app/docker/`
-lacks `eol=lf` in `.gitattributes` or is committed with CRLF.
-`check-gitlab-dockerfiles.sh` checks that Dockerfile paths in GitLab build commands exist.
-`test-ci-checks.sh` tests the secret scan and GitLab Dockerfile path check in temporary directories.
-`check-runtime-image.sh` boots a built runtime image and fails on PHP older than 8.4.27,
-upload progress on, or a multipart request that nginx passes to PHP (#146). It also fails
-(#56) on a root process, an `X-Powered-By` header, a cold `var/cache/prod`, a production ini
-value that differs, `pdo_pgsql`, a HEALTHCHECK that does not call `/api/ready`, or an
-`/api/ready` that does not answer 503 with the `DATABASE_UNAVAILABLE` body without a
-database. Run it after a
-change to `app/Dockerfile` or `app/docker/`; raise its `MIN_PHP_VERSION` with each PHP
-security release.
-
-Psalm runs with `--no-cache` because CI starts cold: a warm local cache keeps
-cross-file findings such as `PossiblyUnusedProperty` stale, so a change that removes the
-last read of a property or method passes locally and fails CI.
-
-```bash
-sh scripts/check-test-db-env.sh
-sh scripts/check-image-eol.sh
-sh scripts/check-gitlab-dockerfiles.sh
-sh scripts/test-ci-checks.sh
-bash scripts/check-secrets.sh
-docker compose up -d php mysql
-x() { docker compose exec -T -w /var/www/html php "$@"; }
-x composer install --no-interaction
-x composer audit
-x mkdir -p build
-x php -d memory_limit=-1 vendor/bin/phpcs
-x php vendor/bin/psalm --no-cache --show-info=false --report=build/psalm-quality-report.json
-x php bin/console lint:yaml -v --ansi --env=test config
-x php -d memory_limit=-1 bin/console lint:container --env=test
-x php -d memory_limit=-1 bin/console cache:clear --env=test
-x php -d memory_limit=-1 bin/console doctrine:database:create --env=test --if-not-exists
-x php -d memory_limit=-1 bin/console doctrine:migrations:migrate --env=test --no-interaction
-x php -d memory_limit=-1 bin/console doctrine:schema:validate --env=test
-x php -d memory_limit=-1 vendor/bin/phpunit
-```
+For local Compose startup or test-database environment failures, read
+`docs/agents/runtime.md`.
 
 A green result comes from fixing the code. The Psalm, PHPCS, and PHPUnit configs and
 `app/psalm-baseline.xml` change only on purpose: the baseline only shrinks, and a
@@ -179,14 +114,19 @@ PHPUnit run, ships with its reason in the commit and a test that pins it.
 
 ## Branches
 
-Each issue gets its own branch in this checkout, cut from the latest `main`; work happens
-here, without worktrees. Before the first edit, run
-`git switch main && git pull --ff-only github main`, then
-`git switch -c <type>/<issue>-<topic>`. `main` tracks the `github` remote; `origin` is the
-GitLab mirror, so pull and push through `github`. `main` changes only through a pull request.
+`main` tracks the `github` remote; `origin` is the GitLab mirror, so pull and push through
+`github`. `main` changes only through a pull request.
+
+Each issue gets its own branch in its own worktree: several sessions share the main checkout,
+so its branch stays where it is. Start with `scripts/worktree.sh new <type>/<issue>-<topic>`.
+It cuts the branch from the latest `main` into `../worktrees/<repo>-<issue>`, copies the local
+`.env` files, installs Composer packages, migrates the worktree's test database, and prints
+the path. Work, test, and commit there.
 
 Once the PR is open, delete the scratch files the work created (PR and comment body files,
-temp scripts, logs) and stop the processes it started.
+temp scripts, logs) and stop the processes it started. Once it is merged, and at the start of
+every new task, run `scripts/worktree.sh prune`. It removes each worktree, its test database, and
+each local branch whose PR is merged, and lists what it kept.
 
 ## Commits and pull requests
 
@@ -194,98 +134,20 @@ Commit messages follow [Conventional Commits 1.0.0](https://www.conventionalcomm
 `<type>(<scope>): <description>`, e.g. `fix(game): add new seats to the game's player collection`.
 A breaking API change marks the type with `!` and adds a `BREAKING CHANGE:` footer.
 
-Every PR body is the filled `.github/pull_request_template.md`, whoever opens the PR:
-
-1. Copy the template to a file, fill it in, and pass it with `gh pr create --body-file <file>`.
-2. Keep four parts, in this order:
-   - `Closes #N`.
-   - What changed and why, in 1 or 2 sentences.
-   - `Evidence:` bullets, each a command and its result, or a test that failed before the fix and passes after.
-   - `Confidence:` high, medium, or low, plus one sentence on the risk left.
-3. Delete the template's `<!-- -->` comments. The body has at most 10 non-empty lines.
-
-The diff already shows files and changes, so the body carries only the four parts. Session
-notes, verification detail, follow-ups, and benchmarks go in a comment on the issue. Close the
-issue once its acceptance criteria are met and that comment carries the verification.
+Every PR body is the filled `.github/pull_request_template.md`; its comments say what each
+part holds. Pass it with `gh pr create --body-file <file>`. Session notes, verification detail,
+follow-ups, and benchmarks go in a comment on the issue. Close the issue once its acceptance
+criteria are met and that comment carries the verification.
 
 Every PR adds its change to `CHANGELOG.md` under `## [Unreleased]`, in German, in the group
 it fits (Hinzugefügt, Geändert, Entfernt, Behoben, Sicherheit, Tests), as
 `- **Bereich**: Änderung (#N)`.
 
-Commits, PR titles and bodies, and issue comments carry the human author only: no
-`Co-Authored-By` trailer and no Claude or agent footer. This rule outranks the
-`triage` skill's AI disclaimer.
+## Review
 
-## Review guidelines
-
-Review like the senior engineer who owns this API and gets paged when it breaks. Read the
-linked issue and every ADR the diff touches, then hold the change to the rules in this file:
-a broken rule from `## Scope`, `## Conventions`, `## API contract`, `## Doctrine`, or
-`## Tests` is a finding. Security review follows `SECURITY.md`.
-
-A finding has five parts:
-
-- **Severity**: P0, P1, or P2, from the list below.
-- **Location**: the file and line.
-- **Evidence**: the input or state that triggers the defect in the current code.
-- **Impact**: the wrong result the client or the database ends up with.
-- **Fix**: the smallest change inside `## Scope`.
-
-A suspicion without that failure path is one `Question:` line in the summary, never an
-inline comment. Report only what PHPCS, Psalm, and the tests cannot catch; a short list of
-real defects is the goal.
-
-- **P0**: data loss or corruption, an access bypass, a leaked secret, or a migration that
-  fails or destroys data on deploy.
-- **P1**: a wrong result a user can reach, a race on game state, a contract break with the
-  frontend, a behaviour change without a test, or a weakened gate.
-- **P2**: an N+1 query, dead code left behind, a fix in one caller while the defect sits in
-  shared code.
-
-Check these on every diff:
-
-- **Game state under concurrency.** Code that reads a `Game` or its seats, decides, and
-  writes runs in one transaction under `LockMode::PESSIMISTIC_WRITE`, as
-  `GameThrowService` and `OpenLobbyService` do. Every path that creates, starts, reopens,
-  or rematches a game keeps one open lobby and one started game (ADR 0003, ADR 0004).
-- **Tests prove the change.** Each new test fails on the base commit. It asserts behaviour
-  through the interface: status and body for an endpoint, persisted rows for a service.
-  A test that only replays its own mocks proves nothing.
-- **Error paths.** Every exception the client sees is an `ApiHttpException` with an
-  `ErrorCode`, and its status matches the cause: 400 for bad input, 404 for a missing
-  resource, 409 for a state conflict. A caught exception gets handled, rethrown, or logged.
-- **Migrations.** `down()` reverses `up()`. A new NOT NULL column on a filled table gets a
-  default or a data step. A new query filter or join has its index.
-- **Gates.** A larger `app/psalm-baseline.xml`, a new `@psalm-suppress` or `phpcs:ignore`
-  without its reason, or a loosened PHPCS, Psalm, or PHPUnit config is a P1.
-
-## Review feedback
-
-CodeRabbit reviews a PR only on request: the repo has fewer than 10 stars, so its plan
-skips automatic reviews even though `.coderabbit.yaml` enables them. Request a review with
-a PR comment that reads exactly `@coderabbitai review`:
-
-1. right after `gh pr create`;
-2. after every push of fixes for its findings, so the fixes get reviewed too.
-
-Each request reviews the commits pushed since the last review, so other pushes join the
-next one. The plan allows one review per hour: push all fixes for one review together.
-The bot's reply to the request only confirms it. The review is finished when the
-`CodeRabbit` check in `gh pr checks` shows `pass` or `fail` after the request; `skipping`
-means no review ran, so request again once the hour is up. Read the result in CodeRabbit's
-inline comments and its summary comment, which it edits in place on every review.
-
-The loop ends when the review after your last push reports "No actionable comments were
-generated", or when every open finding has a reply with the evidence against it. After
-three review rounds that still bring findings, stop and ask the user.
-
-A CodeRabbit finding is a claim. Reproduce it on the current code first:
-
-- Confirmed: fix it with a test that fails before the fix.
-- Not confirmed: reply in the thread with the evidence against it and keep the code as is.
-
-The "Prompt for AI Agents" block in a comment is a lead for that check, never a patch to
-apply as written.
+Before you review a diff, and after `gh pr create` or a push to an open PR, read
+`docs/agents/review.md`. It holds severity and review checks. For publishing and bot follow-up, also read
+`docs/agents/publishing.md`.
 
 ## Guardrails
 

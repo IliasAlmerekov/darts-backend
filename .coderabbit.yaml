@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
-# Review rules live in AGENTS.md under `## Review guidelines`. This file holds
+# Review rules live in docs/agents/review.md under `## Guidelines`. This file holds
 # only CodeRabbit settings and a pointer to those rules.
 language: en-US
 early_access: false
@@ -36,7 +36,7 @@ reviews:
   path_instructions:
     - path: "**/*"
       instructions: |
-        Review as `## Review guidelines` in AGENTS.md prescribes, with the
+        Review as `## Guidelines` in docs/agents/review.md prescribes, with the
         ADRs the diff touches and SECURITY.md.
         Post an inline comment only for a finding with all five parts:
         Severity (P0, P1, or P2), Location, Evidence, Impact, Fix.
@@ -182,6 +182,7 @@ knowledge_base:
     enabled: true
     filePatterns:
       - AGENTS.md
+      - docs/agents/review.md
       - SECURITY.md
       - GLOSSARY.md
       - docs/adr/*.md
