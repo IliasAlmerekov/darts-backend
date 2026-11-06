@@ -15,8 +15,6 @@ use App\Entity\Game;
 use App\Exception\Game\ConflictingOutRulesException;
 use App\Exception\Game\GameRoomFullException;
 use App\Exception\Game\PlayerNotFoundException;
-use App\Repository\GameRepositoryInterface;
-use App\Repository\GamePlayersRepositoryInterface;
 use App\Service\Persistence\RetryingTransactionInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
 use App\Service\Security\GameAccessServiceInterface;
@@ -29,15 +27,13 @@ use Override;
 final readonly class GameRoomService implements GameRoomServiceInterface
 {
     /**
-     * @param GameRepositoryInterface          $gameRepository
-     * @param GamePlayersRepositoryInterface   $gamePlayersRepository
      * @param PlayerManagementServiceInterface $playerManagementService
      * @param GameAccessServiceInterface       $gameAccessService
      * @param OpenLobbyServiceInterface        $openLobbyService
      * @param RetryingTransactionInterface     $transaction
      * @param GameSettingsServiceInterface     $gameSettingsService
      */
-    public function __construct(private GameRepositoryInterface $gameRepository, private GamePlayersRepositoryInterface $gamePlayersRepository, private PlayerManagementServiceInterface $playerManagementService, private GameAccessServiceInterface $gameAccessService, private OpenLobbyServiceInterface $openLobbyService, private RetryingTransactionInterface $transaction, private GameSettingsServiceInterface $gameSettingsService)
+    public function __construct(private PlayerManagementServiceInterface $playerManagementService, private GameAccessServiceInterface $gameAccessService, private OpenLobbyServiceInterface $openLobbyService, private RetryingTransactionInterface $transaction, private GameSettingsServiceInterface $gameSettingsService)
     {
     }
 
@@ -74,30 +70,6 @@ final readonly class GameRoomService implements GameRoomServiceInterface
 
             return $game;
         });
-    }
-
-    /**
-     * @param int $id
-     *
-     * @return Game|null
-     */
-    #[Override]
-    public function findGameById(int $id): ?Game
-    {
-        $game = $this->gameRepository->find($id);
-
-        return $game instanceof Game ? $game : null;
-    }
-
-    /**
-     * @param int $gameId
-     *
-     * @return array<int, array<string, mixed>>
-     */
-    #[Override]
-    public function getPlayersWithUserInfo(int $gameId): array
-    {
-        return $this->gamePlayersRepository->findPlayersWithUserInfo($gameId);
     }
 
     /**

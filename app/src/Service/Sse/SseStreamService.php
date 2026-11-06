@@ -10,8 +10,8 @@ declare(strict_types=1);
 namespace App\Service\Sse;
 
 use App\Enum\GameStatus;
+use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
-use App\Service\Game\GameRoomServiceInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Override;
 
@@ -28,14 +28,14 @@ final readonly class SseStreamService implements SseStreamServiceInterface
     private const LOOP_IDLE_MICROSECONDS = 50_000;
 
     /**
-     * @param GameRoomServiceInterface $gameRoomService
-     * @param GameRepositoryInterface  $gameRepository
-     * @param float                    $maxLifetimeSeconds Each open stream holds a php-fpm worker and a DB
-     *                                                     connection; EventSource reconnects after the cap.
+     * @param GamePlayersRepositoryInterface $gamePlayersRepository
+     * @param GameRepositoryInterface        $gameRepository
+     * @param float                          $maxLifetimeSeconds    Each open stream holds a php-fpm worker and a DB
+     *                                                              connection; EventSource reconnects after the cap.
      *
      */
     public function __construct(
-        private GameRoomServiceInterface $gameRoomService,
+        private GamePlayersRepositoryInterface $gamePlayersRepository,
         private GameRepositoryInterface $gameRepository,
         private float $maxLifetimeSeconds = 300.0,
     ) {
@@ -70,7 +70,7 @@ final readonly class SseStreamService implements SseStreamServiceInterface
                         break;
                     }
 
-                    $players = $this->gameRoomService->getPlayersWithUserInfo($gameId);
+                    $players = $this->gamePlayersRepository->findPlayersWithUserInfo($gameId);
                     $payload = json_encode([
                         'players' => $players,
                         'count' => count($players),

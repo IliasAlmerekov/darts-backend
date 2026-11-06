@@ -38,22 +38,4 @@ interface GameRoomServiceInterface
      * @throws ConflictingOutRulesException When the lobby would end up with double out and triple out
      */
     public function openRoom(RoomCreateRequest $request): Game;
-
-    /**
-     * Find a game by its ID.
-     *
-     * @param int $id Game ID
-     *
-     * @return Game|null Game entity or null if not found
-     */
-    public function findGameById(int $id): ?Game;
-
-    /**
-     * Get players with user information for a specific game.
-     *
-     * @param int $gameId Game ID
-     *
-     * @return array<int, array<string, mixed>> Array of player data with user information
-     */
-    public function getPlayersWithUserInfo(int $gameId): array;
 }

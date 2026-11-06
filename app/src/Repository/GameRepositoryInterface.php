@@ -8,7 +8,6 @@ use App\Entity\Game;
 use App\Enum\GameStatus;
 use DateTimeImmutable;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
-use Doctrine\DBAL\LockMode;
 
 /**
  * Contract for game repository.
@@ -30,15 +29,6 @@ interface GameRepositoryInterface
      * }>
      */
     public function findFinishedOverview(int $limit, int $offset): array;
-
-    /**
-     * @param mixed             $id
-     * @param LockMode|int|null $lockMode
-     * @param int|null          $lockVersion
-     *
-     * @return object|null
-     */
-    public function find(mixed $id, LockMode|int|null $lockMode = null, ?int $lockVersion = null): ?object;
 
     /**
      * Returns the game's stored status, or null for a missing game. The scalar read skips the

@@ -625,6 +625,8 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $bob = $this->insertUser('bob');
         $game = $this->insertGame('lobby');
         $this->insertSeat($game, $bob, 1);
+        // The service gets only the ID. This load puts a lobby Game in the identity map, so the
+        // test checks that the locking read sees the started status past that stale entity.
         $loaded = $this->entityManager->find(Game::class, $game);
         self::assertInstanceOf(Game::class, $loaded);
         // The game starts after the guest request loaded it.
@@ -636,7 +638,7 @@ final class ConcurrentSeatingTest extends KernelTestCase
         );
 
         try {
-            $service->createGuestPlayer($loaded, 'Alex');
+            $service->createGuestPlayer($game, 'Alex');
             self::fail('A guest was seated in a started game.');
         } catch (SeatsNotEditableException) {
         }
@@ -752,14 +754,12 @@ final class ConcurrentSeatingTest extends KernelTestCase
         $testEntityManager = static::getContainer()->get(EntityManagerInterface::class);
         $this->entityManager = new EntityManager($this->request, $testEntityManager->getConfiguration());
         $gamePlayersRepository = new GamePlayersRepository($this->registry());
-        $game = $this->entityManager->find(Game::class, $gameId);
-        self::assertInstanceOf(Game::class, $game);
         $service = new GuestPlayerService(
             $gamePlayersRepository,
             new PlayerManagementService($gamePlayersRepository, $this->entityManager, new GameRepository($this->registry()), $this->createStub(UserRepositoryInterface::class)),
         );
 
-        return $service->createGuestPlayer($game, $name);
+        return $service->createGuestPlayer($gameId, $name);
     }
 
     private function throwService(): GameThrowService

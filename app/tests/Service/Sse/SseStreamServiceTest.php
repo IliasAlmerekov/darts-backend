@@ -54,8 +54,8 @@ function usleep(int $microseconds): int
 namespace App\Tests\Service\Sse;
 
 use App\Enum\GameStatus;
+use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
-use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Sse\SseStreamService;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\Stub;
@@ -66,7 +66,7 @@ use PHPUnit\Framework\TestCase;
  */
 final class SseStreamServiceTest extends TestCase
 {
-    private GameRoomServiceInterface&Stub $gameRoomService;
+    private GamePlayersRepositoryInterface&Stub $gamePlayersRepository;
     private GameRepositoryInterface&Stub $gameRepository;
     private SseStreamService $service;
 
@@ -79,9 +79,9 @@ final class SseStreamServiceTest extends TestCase
         $GLOBALS['__sse_microtime_step'] = 0.5;
         $GLOBALS['__sse_usleep_calls'] = [];
 
-        $this->gameRoomService = $this->createStub(GameRoomServiceInterface::class);
+        $this->gamePlayersRepository = $this->createStub(GamePlayersRepositoryInterface::class);
         $this->gameRepository = $this->createStub(GameRepositoryInterface::class);
-        $this->service = new SseStreamService($this->gameRoomService, $this->gameRepository);
+        $this->service = new SseStreamService($this->gamePlayersRepository, $this->gameRepository);
     }
 
     public function testLobbyStreamSendsPlayersWhenAParticipantJoinsOrLeaves(): void
@@ -90,7 +90,7 @@ final class SseStreamServiceTest extends TestCase
         $this->gameRepository->method('findStatus')->willReturn(GameStatus::Lobby);
         $one = [['id' => 1, 'name' => 'u1', 'position' => 1]];
         $two = [...$one, ['id' => 2, 'name' => 'u2', 'position' => 2]];
-        $this->gameRoomService->method('getPlayersWithUserInfo')
+        $this->gamePlayersRepository->method('findPlayersWithUserInfo')
             ->willReturnOnConsecutiveCalls($one, $one, $two, $one);
 
         $response = $this->service->createPlayerStream(42);
@@ -126,7 +126,7 @@ final class SseStreamServiceTest extends TestCase
     {
         $this->gameRepository->method('findStatus')
             ->willReturnOnConsecutiveCalls(GameStatus::Lobby, GameStatus::Lobby, $status);
-        $this->gameRoomService->method('getPlayersWithUserInfo')->willReturn([]);
+        $this->gamePlayersRepository->method('findPlayersWithUserInfo')->willReturn([]);
 
         $output = $this->runStream($this->service->createPlayerStream(7)->getCallback());
 
@@ -140,8 +140,8 @@ final class SseStreamServiceTest extends TestCase
     public function testStreamEndsAfterTheLifetimeCapWhileTheGameStaysInTheLobby(): void
     {
         $this->gameRepository->method('findStatus')->willReturn(GameStatus::Lobby);
-        $this->gameRoomService->method('getPlayersWithUserInfo')->willReturn([]);
-        $service = new SseStreamService($this->gameRoomService, $this->gameRepository, maxLifetimeSeconds: 2.0);
+        $this->gamePlayersRepository->method('findPlayersWithUserInfo')->willReturn([]);
+        $service = new SseStreamService($this->gamePlayersRepository, $this->gameRepository, maxLifetimeSeconds: 2.0);
 
         // The client never disconnects, so only the cap ends the loop. The clock starts at
         // 1000.0 and moves 0.5 s per read: idle loops at 1000.5, 1001.0 and 1001.5, then
@@ -155,7 +155,7 @@ final class SseStreamServiceTest extends TestCase
     public function testStreamOnAGameOutsideTheLobbySendsNoEvent(): void
     {
         $this->gameRepository->method('findStatus')->willReturn(GameStatus::Finished);
-        $this->gameRoomService->method('getPlayersWithUserInfo')->willReturn([['id' => 1, 'name' => 'u1', 'position' => 1]]);
+        $this->gamePlayersRepository->method('findPlayersWithUserInfo')->willReturn([['id' => 1, 'name' => 'u1', 'position' => 1]]);
 
         $output = $this->runStream($this->service->createPlayerStream(7)->getCallback());
 

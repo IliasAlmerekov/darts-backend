@@ -25,6 +25,7 @@ use App\Exception\Game\PlayerNotFoundInGameException;
 use App\Exception\Persistence\ConcurrentChangeException;
 use App\Exception\Request\PlayerIdRequiredException;
 use App\Http\Attribute\ApiResponse;
+use App\Repository\GameRepositoryInterface;
 use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Game\RematchServiceInterface;
 use App\Service\Player\GuestPlayerServiceInterface;
@@ -55,6 +56,7 @@ final class GameRoomController extends AbstractController
      * @param RematchServiceInterface          $rematchService
      * @param GuestPlayerServiceInterface      $guestPlayerService
      * @param SseStreamServiceInterface        $sseStreamService
+     * @param GameRepositoryInterface          $gameRepository
      *
      * @return void
      */
@@ -64,6 +66,7 @@ final class GameRoomController extends AbstractController
         private readonly RematchServiceInterface $rematchService,
         private readonly GuestPlayerServiceInterface $guestPlayerService,
         private readonly SseStreamServiceInterface $sseStreamService,
+        private readonly GameRepositoryInterface $gameRepository,
     ) {
     }
 
@@ -192,12 +195,7 @@ final class GameRoomController extends AbstractController
     #[Route(path: '/api/room/{id}/guest', name: 'room_player_guest_add', methods: ['POST'], format: 'json')]
     public function addGuestPlayer(int $id, #[MapRequestPayload] GuestPlayerRequest $dto): GuestPlayerResponseDto
     {
-        $game = $this->gameRoomService->findGameById($id);
-        if (!$game) {
-            throw new GameNotFoundException();
-        }
-
-        $player = $this->guestPlayerService->createGuestPlayer($game, (string) $dto->username);
+        $player = $this->guestPlayerService->createGuestPlayer($id, (string) $dto->username);
 
         return new GuestPlayerResponseDto(new GuestPlayerDto(
             id: $player['playerId'],
@@ -231,11 +229,6 @@ final class GameRoomController extends AbstractController
     #[Route(path: '/api/room/{id}/positions', name: 'room_update_player_positions', methods: ['POST'], format: 'json')]
     public function updatePlayerOrder(int $id, #[MapRequestPayload] UpdatePlayerOrderRequest $dto): SuccessResponseDto
     {
-        $game = $this->gameRoomService->findGameById($id);
-        if (!$game) {
-            throw new GameNotFoundException();
-        }
-
         $this->playerManagementService->updatePlayerPositions($id, $dto->positions);
 
         return new SuccessResponseDto();
@@ -264,11 +257,8 @@ final class GameRoomController extends AbstractController
             $request->getSession()->save();
         }
 
-        $game = $this->gameRoomService->findGameById($id);
-        if (!$game) {
-            throw new GameNotFoundException();
-        }
-        if (GameStatus::Lobby !== $game->getStatus()) {
+        $status = $this->gameRepository->findStatus($id) ?? throw new GameNotFoundException();
+        if (GameStatus::Lobby !== $status) {
             return new Response(null, Response::HTTP_NO_CONTENT);
         }
 

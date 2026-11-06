@@ -14,6 +14,7 @@ use App\Dto\RematchResponseDto;
 use App\Dto\RoomCreateResponseDto;
 use App\Entity\Game;
 use App\Dto\RoomCreateRequest;
+use App\Repository\GameRepositoryInterface;
 use App\Service\Game\GameRoomServiceInterface;
 use App\Service\Player\PlayerManagementServiceInterface;
 use App\Service\Player\GuestPlayerServiceInterface;
@@ -42,6 +43,7 @@ class GameRoomControllerTest extends TestCase
             $this->rematchService,
             $this->createMock(GuestPlayerServiceInterface::class),
             $this->createMock(SseStreamServiceInterface::class),
+            $this->createMock(GameRepositoryInterface::class),
         );
         $this->controller->setContainer($this->createMock(ContainerInterface::class));
     }

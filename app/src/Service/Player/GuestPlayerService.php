@@ -9,9 +9,7 @@ declare(strict_types=1);
 
 namespace App\Service\Player;
 
-use App\Entity\Game;
 use App\Entity\User;
-use App\Exception\Game\GameIdMissingException;
 use App\Exception\Request\UsernameAlreadyTakenException;
 use App\Repository\GamePlayersRepositoryInterface;
 use Override;
@@ -35,22 +33,17 @@ final readonly class GuestPlayerService implements GuestPlayerServiceInterface
     }
 
     /**
-     * @param Game   $game
+     * @param int    $gameId
      * @param string $username
      *
      * @return array{playerId:int,name:string,position:int|null,placement:int|null,isGuest:bool}
      */
     #[Override]
-    public function createGuestPlayer(Game $game, string $username): array
+    public function createGuestPlayer(int $gameId, string $username): array
     {
         $normalized = trim($username);
         if ('' === $normalized) {
             throw new \InvalidArgumentException('Username cannot be empty');
-        }
-
-        $gameId = $game->getGameId();
-        if (null === $gameId) {
-            throw new GameIdMissingException();
         }
 
         // The seat module checks the name under the game lock, so a parallel join or guest

@@ -9,10 +9,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Player;
 
-use App\Entity\Game;
 use App\Entity\GamePlayers;
 use App\Entity\User;
-use App\Exception\Game\GameIdMissingException;
 use App\Exception\Request\UsernameAlreadyTakenException;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Service\Player\GuestPlayerService;
@@ -36,7 +34,6 @@ final class GuestPlayerServiceTest extends TestCase
 
     public function testCreateGuestPlayerSeatsANewGuestUser(): void
     {
-        $game = (new Game())->setGameId(10);
         $this->gamePlayersRepository
             ->expects(self::once())
             ->method('existsNameInGame')
@@ -44,7 +41,7 @@ final class GuestPlayerServiceTest extends TestCase
             ->willReturn(false);
         $this->seatTheCreatedPlayer(10);
 
-        $result = $this->service->createGuestPlayer($game, 'Alex');
+        $result = $this->service->createGuestPlayer(10, 'Alex');
 
         self::assertSame(55, $result['playerId']);
         self::assertSame('Alex', $result['name']);
@@ -58,7 +55,7 @@ final class GuestPlayerServiceTest extends TestCase
         $this->gamePlayersRepository->expects(self::once())->method('existsNameInGame')->willReturn(false);
         $seat = $this->seatTheCreatedPlayer(10);
 
-        $this->service->createGuestPlayer((new Game())->setGameId(10), 'Alex');
+        $this->service->createGuestPlayer(10, 'Alex');
 
         $guest = $seat->getPlayer();
         self::assertInstanceOf(User::class, $guest);
@@ -78,7 +75,7 @@ final class GuestPlayerServiceTest extends TestCase
         $this->seatTheCreatedPlayer(10);
 
         try {
-            $this->service->createGuestPlayer((new Game())->setGameId(10), 'Alex');
+            $this->service->createGuestPlayer(10, 'Alex');
             self::fail('Expected exception was not thrown.');
         } catch (UsernameAlreadyTakenException $exception) {
             self::assertSame('Alex', $exception->getUsername());
@@ -96,21 +93,11 @@ final class GuestPlayerServiceTest extends TestCase
         $this->seatTheCreatedPlayer(10);
 
         try {
-            $this->service->createGuestPlayer((new Game())->setGameId(10), ' Alex ');
+            $this->service->createGuestPlayer(10, ' Alex ');
             self::fail('Expected exception was not thrown.');
         } catch (UsernameAlreadyTakenException $exception) {
             self::assertSame('Alex', $exception->getUsername());
         }
-    }
-
-    public function testCreateGuestPlayerThrowsBeforeWritesWhenGameIdMissing(): void
-    {
-        $this->gamePlayersRepository->expects(self::never())->method('existsNameInGame');
-        $this->playerManagementService->expects(self::never())->method('addNewPlayer');
-
-        $this->expectException(GameIdMissingException::class);
-
-        $this->service->createGuestPlayer(new Game(), 'Alex');
     }
 
     /**
