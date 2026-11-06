@@ -114,7 +114,7 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
      * @param int $gameId
      * @param int $roundNumber
      *
-     * @return array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}>
+     * @return array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool,nonBustPoints:int}>
      */
     #[\Override]
     public function findCurrentRoundStateSnapshot(int $gameId, int $roundNumber): array
@@ -128,6 +128,7 @@ final class RoundThrowsRepository extends ServiceEntityRepository implements Rou
 SELECT
     round_state.playerId AS playerId,
     round_state.throwsCount AS throwsCount,
+    round_state.nonBustPoints AS nonBustPoints,
     latest.throw_number AS lastThrowNumber,
     latest.value AS lastThrowValue,
     latest.is_bust AS lastThrowBust
@@ -135,6 +136,7 @@ FROM (
     SELECT
         rt.player_id AS playerId,
         COUNT(rt.throw_id) AS throwsCount,
+        SUM(CASE WHEN rt.is_bust = 0 THEN COALESCE(rt.value, 0) ELSE 0 END) AS nonBustPoints,
         MAX(rt.throw_id) AS lastThrowId
     FROM round_throws rt
     INNER JOIN %s r ON r.round_id = rt.round_id
@@ -297,7 +299,7 @@ SQL,
     /**
      * @param array<int, array<string, mixed>> $rows
      *
-     * @return array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}>
+     * @return array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool,nonBustPoints:int}>
      */
     private function normalizeRoundStateSnapshotRows(array $rows): array
     {
@@ -317,6 +319,7 @@ SQL,
                 'lastThrowNumber' => null !== $lastThrowNumber ? (int) $lastThrowNumber : null,
                 'lastThrowValue' => null !== $lastThrowValue ? (int) $lastThrowValue : null,
                 'lastThrowBust' => (bool) ($this->resolveSnapshotRowValue($row, 'lastThrowBust') ?? false),
+                'nonBustPoints' => (int) ($this->resolveSnapshotRowValue($row, 'nonBustPoints') ?? 0),
             ];
         }
 

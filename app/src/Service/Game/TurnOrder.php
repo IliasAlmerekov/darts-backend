@@ -43,7 +43,7 @@ final class TurnOrder
      * @param array<int, array<string, int|bool|null>> $roundStateSnapshot
      * @param int                                      $playerId
      *
-     * @return array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}
+     * @return array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool,nonBustPoints:int}
      */
     public static function roundState(array $roundStateSnapshot, int $playerId): array
     {
@@ -54,6 +54,7 @@ final class TurnOrder
                 'lastThrowNumber' => null,
                 'lastThrowValue' => null,
                 'lastThrowBust' => false,
+                'nonBustPoints' => 0,
             ];
         }
 
@@ -62,6 +63,7 @@ final class TurnOrder
             'lastThrowNumber' => isset($playerRoundState['lastThrowNumber']) ? (int) $playerRoundState['lastThrowNumber'] : null,
             'lastThrowValue' => isset($playerRoundState['lastThrowValue']) ? (int) $playerRoundState['lastThrowValue'] : null,
             'lastThrowBust' => true === ($playerRoundState['lastThrowBust'] ?? false),
+            'nonBustPoints' => (int) ($playerRoundState['nonBustPoints'] ?? 0),
         ];
     }
     /**
@@ -115,21 +117,23 @@ final class TurnOrder
     }
 
     /**
-     * @param array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}> $snapshot
-     * @param int                                                                                                    $playerId
-     * @param int                                                                                                    $throwNumber
-     * @param int                                                                                                    $value
-     * @param bool                                                                                                   $isBust
+     * @param array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool,nonBustPoints:int}> $snapshot
+     * @param int                                                                                                                      $playerId
+     * @param int                                                                                                                      $throwNumber
+     * @param int                                                                                                                      $value
+     * @param bool                                                                                                                     $isBust
      *
-     * @return array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}>
+     * @return array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool,nonBustPoints:int}>
      */
     public static function recordThrow(array $snapshot, int $playerId, int $throwNumber, int $value, bool $isBust): array
     {
+        $roundState = self::roundState($snapshot, $playerId);
         $snapshot[$playerId] = [
-            'throwsCount' => self::roundState($snapshot, $playerId)['throwsCount'] + 1,
+            'throwsCount' => $roundState['throwsCount'] + 1,
             'lastThrowNumber' => $throwNumber,
             'lastThrowValue' => $value,
             'lastThrowBust' => $isBust,
+            'nonBustPoints' => $roundState['nonBustPoints'] + ($isBust ? 0 : $value),
         ];
 
         return $snapshot;

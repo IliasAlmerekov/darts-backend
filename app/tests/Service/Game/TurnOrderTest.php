@@ -44,7 +44,7 @@ final class TurnOrderTest extends TestCase
     public function testRoundStateOfAPlayerWithoutThrowsIsEmpty(): void
     {
         self::assertSame(
-            ['throwsCount' => 0, 'lastThrowNumber' => null, 'lastThrowValue' => null, 'lastThrowBust' => false],
+            ['throwsCount' => 0, 'lastThrowNumber' => null, 'lastThrowValue' => null, 'lastThrowBust' => false, 'nonBustPoints' => 0],
             TurnOrder::roundState([], 7),
         );
     }
@@ -52,12 +52,12 @@ final class TurnOrderTest extends TestCase
     public function testRoundStateReadsThePlayersEntry(): void
     {
         $snapshot = [
-            7 => ['throwsCount' => 2, 'lastThrowNumber' => 2, 'lastThrowValue' => 60, 'lastThrowBust' => true],
-            8 => ['throwsCount' => 1, 'lastThrowNumber' => 1, 'lastThrowValue' => 5, 'lastThrowBust' => false],
+            7 => ['throwsCount' => 2, 'lastThrowNumber' => 2, 'lastThrowValue' => 60, 'lastThrowBust' => true, 'nonBustPoints' => 20],
+            8 => ['throwsCount' => 1, 'lastThrowNumber' => 1, 'lastThrowValue' => 5, 'lastThrowBust' => false, 'nonBustPoints' => 5],
         ];
 
         self::assertSame(
-            ['throwsCount' => 2, 'lastThrowNumber' => 2, 'lastThrowValue' => 60, 'lastThrowBust' => true],
+            ['throwsCount' => 2, 'lastThrowNumber' => 2, 'lastThrowValue' => 60, 'lastThrowBust' => true, 'nonBustPoints' => 20],
             TurnOrder::roundState($snapshot, 7),
         );
     }
@@ -82,9 +82,9 @@ final class TurnOrderTest extends TestCase
         $original = [];
         $first = TurnOrder::recordThrow($original, 7, 1, 20, false);
         self::assertSame([], $original);
-        self::assertSame(['throwsCount' => 1, 'lastThrowNumber' => 1, 'lastThrowValue' => 20, 'lastThrowBust' => false], $first[7]);
+        self::assertSame(['throwsCount' => 1, 'lastThrowNumber' => 1, 'lastThrowValue' => 20, 'lastThrowBust' => false, 'nonBustPoints' => 20], $first[7]);
         $second = TurnOrder::recordThrow($first, 7, 2, 40, true);
-        self::assertSame(['throwsCount' => 2, 'lastThrowNumber' => 2, 'lastThrowValue' => 40, 'lastThrowBust' => true], $second[7]);
+        self::assertSame(['throwsCount' => 2, 'lastThrowNumber' => 2, 'lastThrowValue' => 40, 'lastThrowBust' => true, 'nonBustPoints' => 20], $second[7]);
     }
 
     public function testEmptyGameHasNoCompleteRound(): void

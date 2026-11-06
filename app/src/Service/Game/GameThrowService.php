@@ -139,7 +139,8 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         $roundStateSnapshot = $this->loadCurrentRoundStateSnapshot($game, $round);
         $this->assertActivePlayer($game, $requestedPlayerId, $roundStateSnapshot);
 
-        $playerThrowsThisRound = TurnOrder::roundState($roundStateSnapshot, $requestedPlayerId)['throwsCount'];
+        $roundState = TurnOrder::roundState($roundStateSnapshot, $requestedPlayerId);
+        $playerThrowsThisRound = $roundState['throwsCount'];
         if ($playerThrowsThisRound >= 3) {
             throw new PlayerAlreadyThrewThreeTimesException();
         }
@@ -149,17 +150,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         $isDouble = $dto->isDouble ?? false;
         $isTriple = $dto->isTriple ?? false;
         $currentScore = $player->getScore() ?? $game->getStartScore();
-        $previousThrowsInRound = $this->roundThrowsRepository->findBy([
-            'round' => $round,
-            'player' => $player->getPlayer(),
-        ]);
-        $pointsScoredInRound = 0;
-        foreach ($previousThrowsInRound as $previousThrow) {
-            if (!$previousThrow->isBust()) {
-                $pointsScoredInRound += $previousThrow->getValue() ?? 0;
-            }
-        }
-        $scoring = ThrowScoring::score($currentScore, $pointsScoredInRound, $baseValue, $isDouble, $isTriple, $game->outRule());
+        $scoring = ThrowScoring::score($currentScore, $roundState['nonBustPoints'], $baseValue, $isDouble, $isTriple, $game->outRule());
         $finalValue = $scoring->value;
         $newScore = $scoring->score;
         $isBust = $scoring->bust;
@@ -264,7 +255,7 @@ final readonly class GameThrowService implements GameThrowServiceInterface
      * @param Game  $game
      * @param Round $round
      *
-     * @return array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}>
+     * @return array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool,nonBustPoints:int}>
      */
     private function loadCurrentRoundStateSnapshot(Game $game, Round $round): array
     {
