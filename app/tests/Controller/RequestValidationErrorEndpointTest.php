@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller;
 
+use App\Entity\Game;
 use App\Entity\User;
 use App\Tests\Support\TestUserFactory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -83,6 +84,34 @@ final class RequestValidationErrorEndpointTest extends WebTestCase
         $this->post($uri, $body);
 
         $this->assertValidationFailed($violations);
+    }
+
+    /**
+     * @return iterable<string, array{string, string, array<string, mixed>}>
+     */
+    public static function listsOverTheSeatLimit(): iterable
+    {
+        $ids = range(1, Game::MAX_PARTICIPANTS + 1);
+
+        yield 'playerIds' => ['/api/room/create', 'playerIds', ['playerIds' => $ids]];
+        yield 'excludePlayerIds' => ['/api/room/create', 'excludePlayerIds', ['excludePlayerIds' => $ids]];
+        yield 'positions' => ['/api/room/1/positions', 'positions', ['positions' => array_map(
+            static fn (int $id): array => ['playerId' => $id, 'position' => $id],
+            $ids,
+        )]];
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    #[DataProvider('listsOverTheSeatLimit')]
+    public function testAListOverTheSeatLimitIsOutOfRange(string $uri, string $field, array $payload): void
+    {
+        $this->post($uri, json_encode($payload, JSON_THROW_ON_ERROR));
+
+        $this->assertValidationFailed([
+            ['field' => $field, 'code' => 'OUT_OF_RANGE', 'message' => 'This collection should contain 10 elements or less.'],
+        ]);
     }
 
     public function testInvalidJsonAnswers400WithAnEnglishMessage(): void

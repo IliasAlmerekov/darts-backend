@@ -37,6 +37,7 @@ final class RoomCreateRequest
          * @var list<int>|null
          */
         #[Assert\Type('array')]
+        #[Assert\Count(max: Game::MAX_PARTICIPANTS)]
         #[Assert\All([
             new Assert\Type('integer'),
             new Assert\Positive(),
@@ -47,6 +48,7 @@ final class RoomCreateRequest
          * @var list<int>|null
          */
         #[Assert\Type('array')]
+        #[Assert\Count(max: Game::MAX_PARTICIPANTS)]
         #[Assert\All([
             new Assert\Type('integer'),
             new Assert\Positive(),

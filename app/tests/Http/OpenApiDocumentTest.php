@@ -11,7 +11,9 @@ namespace App\Tests\Http;
 
 use App\Dto\PlayerProfileDoubleDto;
 use App\Dto\PlayerProfileFieldHitsDto;
+use App\Exception\Persistence\ConcurrentChangeException;
 use App\Tests\Support\DevFunctionalKernel;
+use PHPUnit\Framework\Attributes\DataProvider;
 use ReflectionMethod;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
@@ -610,6 +612,33 @@ final class OpenApiDocumentTest extends WebTestCase
         $responses = $this->document()['paths']['/api/room/create']['post']['responses'];
 
         self::assertStringContainsString('PLAYER_NOT_FOUND', $responses['404']['description'] ?? '');
+    }
+
+    public function testRoomCreateNoLongerDocumentsAFullRoomButKeepsTheConcurrentChange(): void
+    {
+        $conflict = $this->document()['paths']['/api/room/create']['post']['responses']['409']['description'] ?? '';
+
+        self::assertStringNotContainsString('GAME_ROOM_FULL', $conflict);
+        self::assertStringContainsString(ConcurrentChangeException::OPENAPI_DESCRIPTION, $conflict);
+    }
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function boundedRequestLists(): iterable
+    {
+        yield 'playerIds' => ['RoomCreateRequest', 'playerIds'];
+        yield 'excludePlayerIds' => ['RoomCreateRequest', 'excludePlayerIds'];
+        yield 'positions' => ['UpdatePlayerOrderRequest', 'positions'];
+    }
+
+    #[DataProvider('boundedRequestLists')]
+    public function testRequestSchemaShowsTheSeatLimitOnTheList(string $schema, string $field): void
+    {
+        $property = $this->document()['components']['schemas'][$schema]['properties'][$field];
+
+        self::assertSame(10, $property['maxItems'] ?? null);
+        self::assertArrayNotHasKey('minItems', $property);
     }
 
     public function testRoomCreateDocumentsTheGameIdAsANonNullableInteger(): void

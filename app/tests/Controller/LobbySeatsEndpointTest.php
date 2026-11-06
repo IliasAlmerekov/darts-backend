@@ -12,11 +12,15 @@ namespace App\Tests\Controller;
 use App\Entity\Game;
 use App\Entity\User;
 use App\Enum\GameStatus;
+use App\Exception\Game\GameRoomFullException;
 use App\Tests\Support\TestSeatFactory;
 use App\Tests\Support\TestUserFactory;
 use DateTime;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
+use Monolog\Handler\TestHandler;
+use Monolog\Level;
+use Monolog\Logger;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Request;
@@ -25,6 +29,7 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * Seats change only in the lobby: remove participant, add guest and reorder answer 409 outside it (#38).
  * Removal takes the playerId from the query, then the JSON body (#235); without either it answers 400 (#261).
+ * A reorder lists at most Game::MAX_PARTICIPANTS entries (#267).
  */
 final class LobbySeatsEndpointTest extends WebTestCase
 {
@@ -104,20 +109,52 @@ final class LobbySeatsEndpointTest extends WebTestCase
         self::assertSame([[(int) $this->first->getId(), 1], [(int) $this->second->getId(), 2]], $this->storedSeats($gameId));
     }
 
+    public function testReorderWithOneEntryPerSeatOfAFullLobbyPassesValidation(): void
+    {
+        $players = $this->createPlayers(Game::MAX_PARTICIPANTS);
+        $gameId = $this->createGame(GameStatus::Lobby, $players);
+        $positions = array_map(
+            static fn (User $player, int $index): array => ['playerId' => (int) $player->getId(), 'position' => Game::MAX_PARTICIPANTS - $index],
+            $players,
+            array_keys($players),
+        );
+
+        $this->request(Request::METHOD_POST, sprintf('/api/room/%d/positions', $gameId), ['positions' => $positions]);
+
+        self::assertResponseIsSuccessful((string) $this->client->getResponse()->getContent());
+        self::assertSame((int) $players[0]->getId(), $this->storedSeats($gameId)[Game::MAX_PARTICIPANTS - 1][0]);
+    }
+
+    public function testReorderWithMoreEntriesThanAGameSeatsIsRejectedAndKeepsThePositions(): void
+    {
+        $gameId = $this->createGame(GameStatus::Lobby, [$this->first, $this->second]);
+        $positions = array_map(
+            static fn (int $index): array => ['playerId' => $index, 'position' => $index],
+            range(1, Game::MAX_PARTICIPANTS + 1),
+        );
+
+        $this->request(Request::METHOD_POST, sprintf('/api/room/%d/positions', $gameId), ['positions' => $positions]);
+
+        $this->assertError(Response::HTTP_UNPROCESSABLE_ENTITY, 'REQUEST_VALIDATION_FAILED');
+        self::assertSame([[(int) $this->first->getId(), 1], [(int) $this->second->getId(), 2]], $this->storedSeats($gameId));
+    }
+
     public function testAddGuestToFullLobbyIsRejected(): void
     {
-        $players = [];
-        for ($index = 1; $index <= Game::MAX_PARTICIPANTS; $index++) {
-            $players[] = TestUserFactory::create($this->entityManager, 'seats', sprintf('full%d', $index), ['ROLE_PLAYER']);
-        }
-        $this->entityManager->flush();
-        $gameId = $this->createGame(GameStatus::Lobby, $players);
+        $handler = new TestHandler();
+        $logger = static::getContainer()->get('monolog.logger.request');
+        self::assertInstanceOf(Logger::class, $logger);
+        $logger->pushHandler($handler);
+        $gameId = $this->createGame(GameStatus::Lobby, $this->createPlayers(Game::MAX_PARTICIPANTS));
         $usersBefore = $this->userCount();
 
         $this->assertConflict(Request::METHOD_POST, sprintf('/api/room/%d/guest', $gameId), 'GAME_ROOM_FULL', ['username' => 'Alex']);
 
         self::assertCount(Game::MAX_PARTICIPANTS, $this->storedSeats($gameId));
         self::assertSame($usersBefore, $this->userCount());
+        $records = array_values(array_filter($handler->getRecords(), static fn ($record): bool => ($record->context['exception'] ?? null) instanceof GameRoomFullException));
+        self::assertCount(1, $records);
+        self::assertSame(Level::Warning, $records[0]->level);
     }
 
     public function testAdminRemovesTheBodyPlayerWhenTheQueryHasNone(): void
@@ -165,6 +202,20 @@ final class LobbySeatsEndpointTest extends WebTestCase
         $this->request(Request::METHOD_DELETE, sprintf('/api/room/%d?playerId=%d', 999999, (int) $this->first->getId()));
 
         $this->assertError(Response::HTTP_NOT_FOUND, 'GAME_NOT_FOUND');
+    }
+
+    /**
+     * @return list<User>
+     */
+    private function createPlayers(int $count): array
+    {
+        $players = array_map(
+            fn (int $index): User => TestUserFactory::create($this->entityManager, 'seats', sprintf('player%d', $index), ['ROLE_PLAYER']),
+            range(1, $count),
+        );
+        $this->entityManager->flush();
+
+        return $players;
     }
 
     /**
