@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Dto;
 
+use App\Entity\Game;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -22,6 +23,7 @@ final class UpdatePlayerOrderRequest
      */
     public function __construct(
         #[Assert\NotNull]
+        #[Assert\Count(max: Game::MAX_PARTICIPANTS)]
         #[Assert\All([
             new Assert\Collection([
                 'playerId' => [new Assert\NotNull(), new Assert\Type('integer'), new Assert\Positive()],

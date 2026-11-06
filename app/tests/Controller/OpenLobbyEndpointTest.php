@@ -130,45 +130,75 @@ final class OpenLobbyEndpointTest extends WebTestCase
         self::assertSame($gameCount, $this->countGames());
     }
 
-    public function testRoomCreateWithOpenLobbyIgnoresMorePlayersThanAGameSeats(): void
+    public function testRoomCreateWithOpenLobbyRejectsMorePlayersThanAGameSeatsAndKeepsTheLobby(): void
     {
-        $lobby = $this->createGame(GameStatus::Lobby, []);
+        $bob = $this->createPlayer('bob');
+        $lobby = $this->createGame(GameStatus::Lobby, [$bob]);
+        $lobby->setStartScore(301);
+        $this->entityManager->flush();
+        $gameCount = $this->countGames();
 
-        $response = $this->postJson('/api/room/create', ['playerIds' => $this->createPlayerIds(Game::MAX_PARTICIPANTS + 1)]);
+        $response = $this->postJson('/api/room/create', [
+            'playerIds' => $this->createPlayerIds(Game::MAX_PARTICIPANTS + 1),
+            'startScore' => 501,
+        ]);
 
-        self::assertResponseIsSuccessful();
-        self::assertSame(['success' => true, 'gameId' => $lobby->getGameId()], $response);
-        self::assertSame([], $this->seatedPlayerIds($this->reload($lobby)));
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame('REQUEST_VALIDATION_FAILED', $response['error'] ?? null);
+        self::assertSame($gameCount, $this->countGames());
+        $reloaded = $this->reload($lobby);
+        self::assertSame(301, $reloaded->getStartScore());
+        self::assertSame([$bob->getId()], $this->seatedPlayerIds($reloaded));
     }
 
     public function testRoomCreateWithMorePlayersThanAGameSeatsIsRejectedAndOpensNoLobby(): void
     {
-        $handler = new \Monolog\Handler\TestHandler();
-        $logger = static::getContainer()->get('monolog.logger.request');
-        self::assertInstanceOf(\Monolog\Logger::class, $logger);
-        $logger->pushHandler($handler);
         $gameCount = $this->countGames();
 
         $response = $this->postJson('/api/room/create', ['playerIds' => $this->createPlayerIds(Game::MAX_PARTICIPANTS + 1)]);
 
-        self::assertResponseStatusCodeSame(Response::HTTP_CONFLICT);
-        self::assertSame('GAME_ROOM_FULL', $response['error'] ?? null);
-        $records = array_values(array_filter($handler->getRecords(), static fn ($record): bool => ($record->context['exception'] ?? null) instanceof \App\Exception\Game\GameRoomFullException));
-        self::assertCount(1, $records);
-        self::assertSame(\Monolog\Level::Warning, $records[0]->level);
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame('REQUEST_VALIDATION_FAILED', $response['error'] ?? null);
         self::assertSame($gameCount, $this->countGames());
     }
 
-    public function testRoomCreateCountsTheSeatLimitAfterExcludingPlayers(): void
+    public function testRoomCreateCountsTheLimitOnTheListAsSentBeforeExcludingPlayers(): void
     {
         $playerIds = $this->createPlayerIds(Game::MAX_PARTICIPANTS + 1);
+        $gameCount = $this->countGames();
 
         $response = $this->postJson('/api/room/create', ['playerIds' => $playerIds, 'excludePlayerIds' => [$playerIds[0]]]);
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        self::assertSame('REQUEST_VALIDATION_FAILED', $response['error'] ?? null);
+        self::assertSame($gameCount, $this->countGames());
+    }
+
+    public function testRoomCreateWithExactlyAsManyPlayersAsAGameSeatsOpensAFullLobby(): void
+    {
+        $playerIds = $this->createPlayerIds(Game::MAX_PARTICIPANTS);
+
+        $response = $this->postJson('/api/room/create', ['playerIds' => $playerIds]);
 
         self::assertResponseIsSuccessful();
         $created = $this->entityManager->find(Game::class, $response['gameId']);
         self::assertInstanceOf(Game::class, $created);
-        self::assertSame(array_slice($playerIds, 1), $this->seatedPlayerIds($created));
+        self::assertSame($playerIds, $this->seatedPlayerIds($created));
+    }
+
+    public function testRoomCreateWithExactlyAsManyExcludedPlayersAsAGameSeatsPassesValidation(): void
+    {
+        $playerIds = $this->createPlayerIds(Game::MAX_PARTICIPANTS + 1);
+
+        $response = $this->postJson('/api/room/create', [
+            'playerIds' => [$playerIds[0]],
+            'excludePlayerIds' => array_slice($playerIds, 1),
+        ]);
+
+        self::assertResponseIsSuccessful();
+        $created = $this->entityManager->find(Game::class, $response['gameId']);
+        self::assertInstanceOf(Game::class, $created);
+        self::assertSame([$playerIds[0]], $this->seatedPlayerIds($created));
     }
 
     public function testRematchWithOpenLobbyReturnsItWithMissingPlayersAndOldSettings(): void

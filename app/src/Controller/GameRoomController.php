@@ -78,7 +78,7 @@ final class GameRoomController extends AbstractController
      */
     #[OA\Post(
         summary: 'Spielraum erstellen oder die offene Lobby zurückgeben',
-        description: 'Es ist höchstens ein Spiel in der Lobby. Ist ein Spiel in der Lobby, liefert der Endpoint dessen `gameId` und legt kein Spiel an. Die Lobby übernimmt `startScore`, `doubleOut` und `tripleOut` aus dem Request und behält ihre Spieler; `playerIds` und `excludePlayerIds` werden dann ignoriert. Ohne offene Lobby wird eine neue Lobby mit den Spielern aus `playerIds` ohne `excludePlayerIds` angelegt. `previousGameId` ist veraltet und wird immer ignoriert.'
+        description: 'Es ist höchstens ein Spiel in der Lobby. Ist ein Spiel in der Lobby, liefert der Endpoint dessen `gameId` und legt kein Spiel an. Die Lobby übernimmt `startScore`, `doubleOut` und `tripleOut` aus dem Request und behält ihre Spieler; der Inhalt von `playerIds` und `excludePlayerIds` wird dann ignoriert. Die Längengrenze beider Listen wird zuerst geprüft und gilt auch bei einem Spiel in der Lobby: Eine längere Liste ergibt 422, und die Lobby bleibt unverändert. Ohne offene Lobby wird eine neue Lobby mit den Spielern aus `playerIds` ohne `excludePlayerIds` angelegt. `previousGameId` ist veraltet und wird immer ignoriert.'
     )]
     #[OA\RequestBody(
         required: false,
@@ -94,7 +94,7 @@ final class GameRoomController extends AbstractController
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht, oder das Spiel hätte danach `doubleOut` und `tripleOut` zugleich (`GAME_CONFLICTING_OUT_RULES`). Das Spiel bleibt unverändert.', content: new OA\JsonContent(anyOf: [new OA\Schema(ref: '#/components/schemas/RequestValidationFailed'), new OA\Schema(ref: '#/components/schemas/ApiError')]))]
     #[OA\Response(response: Response::HTTP_FORBIDDEN, description: 'Angemeldet ohne `ROLE_ADMIN` (z. B. ein Spieler) (`ACCESS_DENIED`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[OA\Response(response: Response::HTTP_NOT_FOUND, description: 'Eine ID in `playerIds` gehört zu keinem Benutzer (`PLAYER_NOT_FOUND`). Es wird keine Lobby angelegt.')]
-    #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Die neue Lobby hätte mehr als 10 Spieler (`GAME_ROOM_FULL`). Es wird keine Lobby angelegt. Eine offene Lobby ignoriert `playerIds`. '.ConcurrentChangeException::OPENAPI_DESCRIPTION)]
+    #[OA\Response(response: Response::HTTP_CONFLICT, description: ConcurrentChangeException::OPENAPI_DESCRIPTION)]
     #[Route(path: '/api/room/create', name: 'room_create', methods: ['POST'], format: 'json')]
     public function roomCreateApi(#[MapRequestPayload] RoomCreateRequest $dto): RoomCreateResponseDto
     {
