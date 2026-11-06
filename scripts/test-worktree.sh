@@ -33,9 +33,17 @@ if [ -f "${file%.json}.hook" ]; then bash "${file%.json}.hook"; fi
 [ -f "$file" ] || file=/dev/null
 { [ "$file" = /dev/null ] && echo '[]' || cat "$file"; } | jq -r "$query"
 EOF
-# docker logs its arguments and the worktrees that still exist at that moment.
-printf '#!/bin/sh\necho "$* | worktrees: $(ls "%s/ws/worktrees" | tr "\\n" " ")" >> "%s/docker.log"\n' \
-  "$tmp" "$tmp" > "$tmp/bin/docker"
+# docker logs commands and simulates the selected Compose project.
+cat > "$tmp/bin/docker" <<'EOF'
+#!/usr/bin/env bash
+echo "$* | worktrees: $(ls "$TEST_ROOT/ws/worktrees" | tr "\n" " ")" >> "$TEST_ROOT/docker.log"
+case "$*" in
+  "compose ps -q mysql"|"compose -p testproject ps -q mysql") echo mysql-id ;;
+  "inspect "*) echo testproject ;;
+  "exec "*) [ ! -f "$TEST_ROOT/fail-drop" ] ;;
+esac
+EOF
+export TEST_ROOT="$tmp"
 printf '#!/bin/sh\nexit 1\n' > "$tmp/bin/npm"
 chmod +x "$tmp/bin/"*
 export PATH="$tmp/bin:$PATH" PRS="$tmp/prs"
@@ -56,15 +64,21 @@ cd "$tmp/ws/app"
 mkdir -p scripts app
 cp "$root/scripts/worktree.sh" scripts/
 printf 'DATABASE_URL="mysql://root:pw@mysql:3306/shop_db?serverVersion=8.0.32"\n' > app/.env.test
+cat > scripts/php.sh <<'EOF'
+#!/usr/bin/env bash
+if [ "${1:-}" = php ] && [ "${2:-}" = -r ]; then
+  issue=${PWD##*-}
+  printf '%s_test_wt%s' "${TEST_DB_BASE:-shop_db}" "$issue"
+fi
+EOF
+chmod +x scripts/php.sh
 git add -A
 git commit -qm init
 git remote add github "$tmp/origin.git"
 git remote set-url --push github https://github.com/acme/app.git
 git push -q "$tmp/origin.git" main
 git fetch -q github
-# Untracked, so only the main checkout counts as a backend: worktrees skip the PHP setup,
-# and prune drops their test databases.
-touch scripts/php.sh
+
 
 wt() { scripts/worktree.sh "$@"; }
 
@@ -76,6 +90,7 @@ dir=$(wt new feat/1-fresh 2>/dev/null)
 [ "$dir" = "$tmp/ws/worktrees/app-1" ] || fail "new printed '$dir'"
 [ "$(git -C "$dir" rev-parse HEAD)" = "$newer" ] || fail "new did not start from the remote main"
 git worktree remove "$dir" && git branch -D -q feat/1-fresh
+rm -f .git/worktree-test-databases/*
 
 # new: a failed setup removes the worktree and branch again.
 (cd "$tmp/other" && touch package-lock.json && git add -A && git commit -qm lock && git push -q origin main)
@@ -127,5 +142,32 @@ grep -q 'DROP DATABASE IF EXISTS `shop_db_test_wt10`' "$tmp/docker.log" ||
   fail "prune dropped the test database of app-10 before removing the worktree"
 [ "$(grep -c 'DROP DATABASE' "$tmp/docker.log")" = 2 ] ||
   fail "prune dropped a database of a kept worktree: $(cat "$tmp/docker.log")"
+
+# The effective database is recorded before removal and survives a failed drop.
+tip=$(mk feat/20-retry 20); pr feat/20-retry MERGED "$tip"
+touch "$tmp/fail-drop"
+if TEST_DB_BASE=override wt prune >"$tmp/prune-output" 2>&1; then fail "failed drop was masked"; fi
+[ ! -d "$tmp/ws/worktrees/app-20" ] || fail "failed drop kept the removed worktree"
+grep -q 'override_test_wt20' "$tmp/docker.log" || fail "effective database was not used"
+rm "$tmp/fail-drop"
+TEST_DB_BASE=changed wt prune >/dev/null 2>&1 || fail "retry failed"
+[ "$(grep -c 'override_test_wt20' "$tmp/docker.log")" = 2 ] || fail "retry did not retain the original database"
+! grep -q 'changed_test_wt20' "$tmp/docker.log" || fail "retry used changed environment"
+
+# A second registered checkout with the same suffix protects the shared database.
+tip=$(mk feat/21-shared 21); pr feat/21-shared MERGED "$tip"
+git worktree add -q --detach "$tmp/ws/other-21" main
+wt prune >/dev/null 2>&1 || fail "shared suffix prune failed"
+! grep -q 'shop_db_test_wt21' "$tmp/docker.log" || fail "dropped database shared by a live worktree"
+git worktree remove "$tmp/ws/other-21"
+wt prune >/dev/null 2>&1 || fail "shared database retry failed"
+grep -q 'shop_db_test_wt21' "$tmp/docker.log" || fail "shared database was not eventually dropped"
+
+# A branch checked out while gh runs must not be deleted.
+git branch feat/22-race main
+pr feat/22-race MERGED "$(git rev-parse feat/22-race)"
+echo "git worktree add -q '$tmp/ws/race-22' feat/22-race" > "$tmp/prs/feat_22-race.hook"
+wt prune >/dev/null 2>&1 || fail "checkout race prune failed"
+branch_kept feat/22-race
 
 echo "worktree.sh tests passed"

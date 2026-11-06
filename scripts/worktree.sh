@@ -43,18 +43,65 @@ pr_verdict() {
 # Deletes the branch only if its tip is still the commit that was checked, so a commit
 # made while prune runs survives.
 delete_branch() {
+  [ -z "$(git for-each-ref --format='%(worktreepath)' "refs/heads/$1")" ] || return 1
   git update-ref -d "refs/heads/$1" "$2"
 }
 
-# The backend gives each worktree the test database <name>_test_wt<issue> (scripts/php.sh).
-drop_test_db() {
-  local issue=$1 base
-  [ -f "$main_dir/scripts/php.sh" ] || return 0
-  base=$(sed -nE 's#^DATABASE_URL="?[^"]*/([^/?"]+)[?"].*#\1#p' "$main_dir/app/.env.test" | tail -1)
-  [ -n "$base" ] || { echo "no DATABASE_URL in app/.env.test" >&2; return 1; }
-  docker exec darts-mysql-1 sh -c \
-    "mysql -uroot -p\"\$MYSQL_ROOT_PASSWORD\" -e 'DROP DATABASE IF EXISTS \`${base}_test_wt${issue}\`'" \
-    </dev/null 2>&1 | grep -v 'Using a password' >&2 || true
+# Persist cleanup before removing a checkout, so a failed drop can be retried.
+records=$common_dir/worktree-test-databases
+record_for() { printf '%s/%s' "$records" "$(printf %s "$1" | git hash-object --stdin)"; }
+record_db() {
+  local dir=$1 issue db mysql project record
+  [ -f "$dir/scripts/php.sh" ] || return 0
+  issue=$(sed -nE 's#.*-([0-9]+)$#\1#p' <<<"$dir")
+  [ -n "$issue" ] || return 1
+  record=$(record_for "$dir")
+  [ ! -f "$record" ] || return 0
+  db=$(cd "$dir" && bash scripts/php.sh php -r '
+    require "vendor/autoload.php";
+    $_SERVER["APP_ENV"] = $_ENV["APP_ENV"] = "test";
+    (new Symfony\Component\Dotenv\Dotenv())->bootEnv(".env", "test");
+    $kernel = new App\Kernel("test", false);
+    $kernel->boot();
+    echo $kernel->getContainer()->get("doctrine")->getConnection()->getParams()["dbname"];
+  ') || return 1
+  [[ "$db" =~ ^[a-zA-Z0-9_]+_test_wt${issue}$ ]] || { echo "invalid isolated test database name for $dir" >&2; return 1; }
+  mysql=$(cd "$dir" && docker compose ps -q mysql) || return 1
+  [ -n "$mysql" ] || return 1
+  project=$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project"}}' "$mysql") || return 1
+  [[ "$project" =~ ^[a-zA-Z0-9_-]+$ ]] || return 1
+  mkdir -p "$records"
+  (umask 077; printf '%s\n%s\n%s\n' "$dir" "$db" "$project" > "$record.tmp" && mv "$record.tmp" "$record")
+}
+
+cleanup_record() {
+  local record=$1 dir db project mysql other
+  { IFS= read -r dir; IFS= read -r db; IFS= read -r project; } < "$record"
+  # A live checkout with the same issue suffix can use the same database.
+  while IFS= read -r other; do
+    case "$other" in
+      "worktree "*) other=${other#worktree }; [ "$other" = "$dir" ] && return 0
+        [[ "$other" =~ -([0-9]+)$ ]] && [[ "$db" = *_test_wt${BASH_REMATCH[1]} ]] && return 0 ;;
+    esac
+  done < <(git worktree list --porcelain)
+  mysql=$(docker compose -p "$project" ps -q mysql) || return 1
+  [ -n "$mysql" ] || { echo "cannot find mysql for $project; cleanup retained for $dir" >&2; return 1; }
+  if ! docker exec "$mysql" sh -c \
+    "mysql -uroot -p\"\$MYSQL_ROOT_PASSWORD\" -e 'DROP DATABASE IF EXISTS \`$db\`'" </dev/null; then
+    echo "database cleanup failed for $dir; retry with worktree.sh prune" >&2
+    return 1
+  fi
+  rm -f "$record"
+}
+
+retry_cleanup() {
+  local record status=0
+  [ -d "$records" ] || return 0
+  for record in "$records"/*; do
+    [ -f "$record" ] && [[ ${record##*/} =~ ^[0-9a-f]{40}$ ]] || continue
+    cleanup_record "$record" || status=1
+  done
+  return "$status"
 }
 
 setup() {
@@ -69,6 +116,7 @@ setup() {
     (
       cd "$dir"
       scripts/php.sh composer install --no-interaction --no-progress &&
+        record_db "$dir" &&
         scripts/php.sh php bin/console doctrine:database:create --env=test --if-not-exists &&
         scripts/php.sh php bin/console doctrine:migrations:migrate --env=test --no-interaction
     ) || return 1
@@ -81,19 +129,21 @@ new() {
   [ -n "$issue" ] || die "branch must look like <type>/<issue>-<topic>, got: $branch"
   dir=$wt_root/$repo-$issue
   [ ! -e "$dir" ] || die "$dir already exists"
+  [ ! -f "$(record_for "$dir")" ] || die "pending database cleanup for $dir; run prune first"
   git fetch -q "$remote" main
   git worktree add --no-track -b "$branch" "$dir" "$remote/main" >&2
   if ! setup "$dir" >&2; then
     git worktree remove --force "$dir"
     git branch -D "$branch" >/dev/null
-    drop_test_db "$issue"
+    [ ! -f "$(record_for "$dir")" ] || cleanup_record "$(record_for "$dir")" || true
     die "setup failed; removed $dir and branch $branch, fix the cause and run new again"
   fi
   echo "$dir"
 }
 
 prune() {
-  local dir="" branch line tip verdict issue
+  local dir="" branch line tip verdict issue status=0
+  retry_cleanup || status=1
   git fetch -q --prune "$remote"
   while read -r line; do
     case $line in
@@ -107,11 +157,13 @@ prune() {
           echo "keep $dir ($branch): ${verdict}"
         elif [ -n "$(git -C "$dir" status --porcelain)" ]; then
           echo "keep $dir ($branch): uncommitted changes"
+        elif ! record_db "$dir"; then
+          echo "keep $dir ($branch): cannot record test database" >&2
+          status=1
         elif ! git worktree remove "$dir"; then
           echo "keep $dir ($branch): git worktree remove failed"
         else
-          issue=$(sed -nE 's#.*-([0-9]+)$#\1#p' <<<"$dir")
-          if [ -n "$issue" ]; then drop_test_db "$issue"; fi
+          [ ! -f "$(record_for "$dir")" ] || cleanup_record "$(record_for "$dir")" || status=1
           if delete_branch "$branch" "$tip"; then
             echo "removed $dir and branch $branch"
           else
@@ -132,6 +184,7 @@ prune() {
         echo "removed branch $branch"
       fi
     done
+  return "$status"
 }
 
 case ${1:-} in

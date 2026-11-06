@@ -16,18 +16,22 @@ if [ "$(git rev-parse --git-dir)" = "$(git rev-parse --git-common-dir)" ]; then
   exec docker compose exec -T -w /var/www/html php "$@"
 fi
 
-if [ "$(docker inspect -f '{{.State.Running}}' darts-mysql-1 2>/dev/null)" != true ]; then
-  echo "darts-mysql-1 is not running: run docker compose up -d in the workspace folder" >&2
+mysql=$(docker compose ps -q mysql)
+[ -n "$mysql" ] && [ "$(docker inspect -f '{{.State.Running}}' "$mysql" 2>/dev/null)" = true ] || {
+  echo "Compose mysql is not running: run docker compose up -d in the workspace folder" >&2
   exit 1
-fi
-image=$(docker compose config --format json | jq -r .services.php.image)
+}
+project=$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project"}}' "$mysql")
+network=$(docker network ls -q --filter "label=com.docker.compose.project=$project" --filter 'label=com.docker.compose.network=default')
+[ -n "$network" ] || { echo "Compose network for $project not found" >&2; exit 1; }
+image=$(docker compose config --images php)
 [[ $(basename "$PWD") =~ -([0-9]+)$ ]] || {
   echo "worktree folder must end in -<issue>, as scripts/worktree.sh new names it" >&2
   exit 1
 }
 token=_wt${BASH_REMATCH[1]}
 mkdir -p "$HOME/.cache/composer"
-exec docker run --rm -i --network darts_default -u "$(id -u):$(id -g)" \
+exec docker run --rm -i --network "$network" -u "$(id -u):$(id -g)" \
   -e COMPOSER_HOME=/tmp/composer -e TEST_TOKEN="$token" \
   -v "$HOME/.cache/composer:/tmp/composer/cache" \
   -v "$PWD/app:/var/www/html" -v "$PWD/docs/contract:/var/www/docs/contract:ro" \

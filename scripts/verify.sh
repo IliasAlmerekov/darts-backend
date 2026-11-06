@@ -16,6 +16,7 @@ sh scripts/check-gitlab-dockerfiles.sh
 sh scripts/test-ci-checks.sh
 bash scripts/check-secrets.sh
 bash scripts/test-worktree.sh
+bash scripts/test-workflow.sh
 
 x() { bash scripts/php.sh "$@"; }
 

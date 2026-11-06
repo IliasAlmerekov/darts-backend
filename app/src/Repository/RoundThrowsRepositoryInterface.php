@@ -18,16 +18,6 @@ use Doctrine\ORM\QueryBuilder;
 interface RoundThrowsRepositoryInterface
 {
     /**
-     * @param array<string, mixed>       $criteria
-     * @param array<string, string>|null $orderBy
-     * @param int|null                   $limit
-     * @param int|null                   $offset
-     *
-     * @return RoundThrows[]|array<object>
-     */
-    public function findBy(array $criteria, ?array $orderBy = null, ?int $limit = null, ?int $offset = null): array;
-
-    /**
      * @psalm-suppress PossiblyUnusedMethod
      *
      * @param array<string, mixed>       $criteria
@@ -82,7 +72,7 @@ interface RoundThrowsRepositoryInterface
      * @param int $gameId
      * @param int $roundNumber
      *
-     * @return array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}>
+     * @return array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool,nonBustPoints:int}>
      */
     public function findCurrentRoundStateSnapshot(int $gameId, int $roundNumber): array;
 
