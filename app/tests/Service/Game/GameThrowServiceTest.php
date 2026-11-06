@@ -2022,8 +2022,7 @@ final class GameThrowServiceTest extends TestCase
             $rounds = $this->createMock(RoundRepositoryInterface::class);
             $rounds->method('findOneBy')->willReturn($round);
             $throws = $this->createMock(RoundThrowsRepositoryInterface::class);
-            $throws->method('findCurrentRoundStateSnapshot')->willReturn($earlierPoints ? [1 => ['throwsCount' => 1, 'lastThrowNumber' => 1, 'lastThrowValue' => $earlierPoints, 'lastThrowBust' => false]] : []);
-            $throws->method('findBy')->willReturn($earlierPoints ? [(new RoundThrows())->setValue($earlierPoints)->setIsBust(false)] : []);
+            $throws->method('findCurrentRoundStateSnapshot')->willReturn($earlierPoints ? [1 => ['throwsCount' => 1, 'lastThrowNumber' => 1, 'lastThrowValue' => $earlierPoints, 'lastThrowBust' => false, 'nonBustPoints' => $earlierPoints]] : []);
             $persisted = null;
             $em = $this->createMock(EntityManagerInterface::class);
             $em->method('wrapInTransaction')->willReturnCallback(static fn (\Closure $fn) => $fn());

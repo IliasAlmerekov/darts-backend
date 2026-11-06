@@ -30,7 +30,7 @@ use Override;
 /**
  * This class is responsible for creating GameResponseDto objects from Game entities.
  *
- * @phpstan-type RoundStateSnapshot array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}>
+ * @phpstan-type RoundStateSnapshot array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool,nonBustPoints:int}>
  *
  * @psalm-suppress UnusedClass Reason: service is auto-wired by the container and used through DI.
  */
