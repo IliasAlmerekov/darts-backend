@@ -2,14 +2,23 @@
 # Runs the checks of .github/workflows/ci.yml locally and stops at the first failure.
 # Works from the main checkout and from a linked worktree: scripts/php.sh picks the PHP
 # container that serves this checkout. Needs the `darts` Compose stack.
-# The runtime image is built and checked only when the branch changes app/Dockerfile or
-# app/docker/.
+# Unlike CI, the runtime image is built and checked only when app/Dockerfile or app/docker/
+# differs from main (committed, uncommitted or untracked), or main cannot be resolved.
 #
 # Usage: scripts/verify.sh
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 step() { printf '\n== %s\n' "$*"; }
+
+remote=$(git remote -v | awk '/github\.com/ && /\(push\)/ { print $1; exit }')
+image_paths=(app/Dockerfile app/docker)
+image_changed=yes
+if base=$(git merge-base HEAD "$remote/main" 2>/dev/null) &&
+  git diff --quiet "$base" -- "${image_paths[@]}" &&
+  [ -z "$(git ls-files --others --exclude-standard -- "${image_paths[@]}")" ]; then
+  image_changed=no
+fi
 
 step host checks
 sh scripts/check-test-db-env.sh
@@ -45,12 +54,11 @@ x php -d memory_limit=-1 bin/console doctrine:schema:validate --env=test
 step phpunit
 x php -d memory_limit=-1 vendor/bin/phpunit
 
-remote=$(git remote -v | awk '/github\.com/ && /\(push\)/ { print $1; exit }')
-base=$(git merge-base HEAD "$remote/main")
-if git diff --name-only "$base" -- app/Dockerfile app/docker | grep -q .; then
+if [ "$image_changed" = yes ]; then
   step runtime image
   docker build --pull -f app/Dockerfile --target runtime -t darts-backend:verify .
   sh scripts/check-runtime-image.sh darts-backend:verify
+  docker image rm darts-backend:verify >/dev/null
 fi
 
 step all checks passed

@@ -3,11 +3,14 @@
 #
 #   scripts/worktree.sh new <type>/<issue>-<topic>
 #       Cuts the branch from the latest main into ../worktrees/<repo>-<issue>, copies the
-#       local env files from the main checkout and installs npm packages. Prints the path.
+#       local env files from the main checkout and installs dependencies: npm packages, or
+#       for the backend Composer packages plus a migrated test database of its own.
+#       Prints the path.
 #   scripts/worktree.sh prune
 #       Removes every worktree and local branch whose tip is the head commit of a merged
 #       pull request from this repository. Keeps a worktree with uncommitted changes, a
 #       branch with commits after the merge, and anything whose PR is open, closed or missing.
+#       The backend worktree's test database is dropped with it.
 set -euo pipefail
 
 die() { echo "worktree.sh: $*" >&2; exit 1; }
@@ -47,7 +50,21 @@ new() {
   if [ -f "$dir/package-lock.json" ]; then
     (cd "$dir" && npm ci --no-audit --no-fund >&2)
   fi
+  if [ -f "$dir/scripts/php.sh" ]; then
+    (
+      cd "$dir"
+      scripts/php.sh composer install --no-interaction --no-progress
+      scripts/php.sh php bin/console doctrine:database:create --env=test --if-not-exists
+      scripts/php.sh php bin/console doctrine:migrations:migrate --env=test --no-interaction
+    ) >&2
+  fi
   echo "$dir"
+}
+
+# The backend worktree's own test database (see scripts/php.sh) goes with the worktree.
+drop_test_db() {
+  [ -f "$1/scripts/php.sh" ] && [ -d "$1/app/vendor" ] || return 0
+  (cd "$1" && scripts/php.sh php bin/console doctrine:database:drop --env=test --force --if-exists >&2)
 }
 
 prune() {
@@ -63,11 +80,11 @@ prune() {
           echo "keep $dir ($branch): no merged PR at this commit"
         elif [ -n "$(git -C "$dir" status --porcelain)" ]; then
           echo "keep $dir ($branch): uncommitted changes"
-        elif git worktree remove "$dir"; then
+        elif drop_test_db "$dir" && git worktree remove "$dir"; then
           git branch -D "$branch" >/dev/null
           echo "removed $dir and branch $branch"
         else
-          echo "keep $dir ($branch): git worktree remove failed"
+          echo "keep $dir ($branch): dropping its test database or removing it failed"
         fi
         ;;
     esac

@@ -89,11 +89,13 @@ The frontend vendors `docs/contract/throw-scoring-cases.json`. A change to `OutR
 
 ## Doctrine
 
-Every schema change ships with a migration in `app/migrations`. Generate it against the
-dev database, then add the license header and review the SQL:
+Every schema change ships with a migration in `app/migrations`. Generate it against this
+checkout's test database, which holds exactly the branch's migrations; the dev database is
+shared with other sessions. Then add the license header and review the SQL:
 
 ```bash
-scripts/php.sh php bin/console doctrine:migrations:diff
+scripts/php.sh php bin/console doctrine:migrations:migrate --env=test --no-interaction
+scripts/php.sh php bin/console doctrine:migrations:diff --env=test
 ```
 
 Bind query parameters. Watch for N+1 queries and lazy loading in loops.
@@ -112,7 +114,8 @@ Bundle wraps the whole run in one transaction that rolls back. Helpers in
   DDL or a second connection that must commit.
 
 While you work, run only the tests you touch, from the repo root. `scripts/php.sh` runs a
-command in the PHP container that serves this checkout, a worktree included:
+command in the PHP container that serves this checkout; in a worktree that container uses
+the worktree's own test database, which `scripts/worktree.sh new` creates and migrates:
 
 ```bash
 scripts/php.sh php vendor/bin/phpunit --filter <TestClass>
@@ -148,12 +151,13 @@ PHPUnit run, ships with its reason in the commit and a test that pins it.
 Each issue gets its own branch in its own worktree: several sessions share the main checkout,
 so its branch stays where it is. Start with `scripts/worktree.sh new <type>/<issue>-<topic>`.
 It cuts the branch from the latest `main` into `../worktrees/<repo>-<issue>`, copies the local
-`.env` files, and prints the path. Work, test, and commit there.
+`.env` files, installs Composer packages, migrates the worktree's test database, and prints
+the path. Work, test, and commit there.
 
 Once the PR is open, delete the scratch files the work created (PR and comment body files,
 temp scripts, logs) and stop the processes it started. Once it is merged, and at the start of
-every new task, run `scripts/worktree.sh prune`. It removes each worktree and local branch whose
-PR is merged and lists what it kept.
+every new task, run `scripts/worktree.sh prune`. It removes each worktree, its test database, and
+each local branch whose PR is merged, and lists what it kept.
 
 ## Commits and pull requests
 

@@ -21,7 +21,11 @@ if [ "$(docker inspect -f '{{.State.Running}}' darts-mysql-1 2>/dev/null)" != tr
   exit 1
 fi
 image=$(docker compose config --format json | jq -r .services.php.image)
-token=_wt$(basename "$PWD" | sed -E 's/.*-([0-9]+)$/\1/')
+[[ $(basename "$PWD") =~ -([0-9]+)$ ]] || {
+  echo "worktree folder must end in -<issue>, as scripts/worktree.sh new names it" >&2
+  exit 1
+}
+token=_wt${BASH_REMATCH[1]}
 mkdir -p "$HOME/.cache/composer"
 exec docker run --rm -i --network darts_default -u "$(id -u):$(id -g)" \
   -e COMPOSER_HOME=/tmp/composer -e TEST_TOKEN="$token" \
