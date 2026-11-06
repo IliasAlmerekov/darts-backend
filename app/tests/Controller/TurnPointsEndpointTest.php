@@ -32,7 +32,8 @@ final class TurnPointsEndpointTest extends WebTestCase
     public function testSecondDartOfATurnReadsTheRoundsThrowsForTheSnapshotAndTheAckOnly(): void
     {
         $this->createGameWithActiveScore(301);
-        // The first request reboots the kernel, so the profile below holds only its own queries.
+        // The first throw puts the player on their second dart. The next request reboots the
+        // kernel, so the profile below holds only its own queries.
         $this->throwDart(20);
         $this->client->enableProfiler();
 
