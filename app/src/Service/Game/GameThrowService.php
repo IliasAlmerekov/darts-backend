@@ -157,6 +157,8 @@ final readonly class GameThrowService implements GameThrowServiceInterface
         $roundThrow = new RoundThrows();
         $roundThrow->setGame($game);
         $roundThrow->setRound($round);
+        // Not addRoundThrow(): its contains() loads the round's throws, and a new throw cannot be among them.
+        $round->getRoundThrows()->add($roundThrow);
         $roundThrow->setPlayer($player->getPlayer());
         $roundThrow->setThrowNumber($throwNumber);
         $roundThrow->setValue($finalValue);
