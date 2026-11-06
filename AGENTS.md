@@ -181,7 +181,7 @@ Commits, PR titles and bodies, and issue comments carry the human author only: n
 
 Before you review a diff, and after `gh pr create` or a push to an open PR, read
 `docs/agents/review.md`. It holds the severities, the checks for every diff, and the
-`@coderabbitai review` request loop.
+CodeRabbit and Greptile review loops.
 
 ## Guardrails
 

@@ -1,7 +1,7 @@
 # Review
 
-Rules for reviewing a diff in this repo and for the CodeRabbit loop on a pull request.
-`.coderabbit.yaml` points CodeRabbit at the guidelines below.
+Rules for reviewing a diff in this repo and for the CodeRabbit and Greptile loops on a pull
+request. `.coderabbit.yaml` and `.greptile/` point both bots at the guidelines below.
 
 ## Guidelines
 
@@ -46,7 +46,15 @@ Check these on every diff:
 - **Gates.** A larger `app/psalm-baseline.xml`, a new `@psalm-suppress` or `phpcs:ignore`
   without its reason, or a loosened PHPCS, Psalm, or PHPUnit config is a P1.
 
-## CodeRabbit
+## Review bots
+
+CodeRabbit and Greptile both review every PR against `## Guidelines` above: CodeRabbit
+through `.coderabbit.yaml`, Greptile through `.greptile/rules.md` and `.greptile/files.json`.
+Run both loops below. A loop also ends when every open finding of that bot has a reply with
+the evidence against it. Each bot counts its own rounds: when a bot's third review round
+still brings findings, stop and ask the user.
+
+### CodeRabbit
 
 CodeRabbit reviews a PR only on request: the repo has fewer than 10 stars, so its plan
 skips automatic reviews even though `.coderabbit.yaml` enables them. Request a review with
@@ -62,11 +70,20 @@ The bot's reply to the request only confirms it. The review is finished when the
 means no review ran, so request again once the hour is up. Read the result in CodeRabbit's
 inline comments and its summary comment, which it edits in place on every review.
 
-The loop ends when the review after your last push reports "No actionable comments were
-generated", or when every open finding has a reply with the evidence against it. After
-three review rounds that still bring findings, stop and ask the user.
+Its loop ends when the review after your last push reports "No actionable comments were
+generated".
 
-A CodeRabbit finding is a claim. Reproduce it on the current code first:
+### Greptile
+
+Greptile reviews a PR on its own when it opens. After every push of fixes for its findings,
+comment `@greptileai` on the PR to review the new commits. The review is finished when
+Greptile's check in `gh pr checks` shows `pass` or `fail`. Its loop ends when the review
+after your last push brings no new findings. Reply to a finding you refute with `@greptileai`
+and the evidence, so Greptile learns from it.
+
+### Every finding
+
+A bot finding is a claim. Reproduce it on the current code first:
 
 - Confirmed: fix it with a test that fails before the fix.
 - Not confirmed: reply in the thread with the evidence against it and keep the code as is.
