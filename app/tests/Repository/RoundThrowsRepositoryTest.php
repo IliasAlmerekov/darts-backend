@@ -103,14 +103,43 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
                 'lastThrowNumber' => 2,
                 'lastThrowValue' => 40,
                 'lastThrowBust' => true,
+                'nonBustPoints' => 20,
             ],
             $playerB->getId() => [
                 'throwsCount' => 1,
                 'lastThrowNumber' => 1,
                 'lastThrowValue' => 50,
                 'lastThrowBust' => false,
+                'nonBustPoints' => 50,
             ],
         ], $snapshot);
+    }
+
+    public function testFindCurrentRoundStateSnapshotSumsEachPlayersNonBustPointsOfTheRound(): void
+    {
+        $game = $this->createGame(GameStatus::Started);
+        $round1 = $this->createRound($game, 1, finished: true);
+        $round2 = $this->createRound($game, 2);
+
+        $twoDarts = $this->createUser('points-two-darts');
+        $earlierBust = $this->createUser('points-earlier-bust');
+        $onlyBust = $this->createUser('points-only-bust');
+
+        $this->createThrow($game, $round1, $twoDarts, 1, 60, 60);
+        $this->createThrow($game, $round2, $twoDarts, 1, 20, 80);
+        $this->createThrow($game, $round2, $twoDarts, 2, 5, 85);
+        $this->createThrow($game, $round2, $earlierBust, 1, 7, 7);
+        $this->createThrow($game, $round2, $earlierBust, 2, 40, 7, isBust: true);
+        $this->createThrow($game, $round2, $onlyBust, 1, 40, 0, isBust: true);
+        $this->em->flush();
+
+        $snapshot = $this->repo->findCurrentRoundStateSnapshot($game->getGameId(), 2);
+
+        self::assertSame([
+            $twoDarts->getId() => 25,
+            $earlierBust->getId() => 7,
+            $onlyBust->getId() => 0,
+        ], array_map(static fn (array $state): int => $state['nonBustPoints'], $snapshot));
     }
 
     public function testNormalizeRoundStateSnapshotRowsAcceptsLowercaseAndSnakeCaseKeys(): void
@@ -118,7 +147,7 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
         $method = new \ReflectionMethod($this->repo, 'normalizeRoundStateSnapshotRows');
         $method->setAccessible(true);
 
-        /** @var array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}> $snapshot */
+        /** @var array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool,nonBustPoints:int}> $snapshot */
         $snapshot = $method->invoke($this->repo, [
             [
                 'playerid' => '31',
@@ -126,6 +155,7 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
                 'lastthrownumber' => '3',
                 'lastthrowvalue' => '25',
                 'lastthrowbust' => false,
+                'nonbustpoints' => '45',
             ],
             [
                 'player_id' => '32',
@@ -133,6 +163,7 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
                 'last_throw_number' => null,
                 'last_throw_value' => null,
                 'last_throw_bust' => false,
+                'non_bust_points' => '0',
             ],
         ]);
 
@@ -142,12 +173,14 @@ final class RoundThrowsRepositoryTest extends KernelTestCase
                 'lastThrowNumber' => 3,
                 'lastThrowValue' => 25,
                 'lastThrowBust' => false,
+                'nonBustPoints' => 45,
             ],
             32 => [
                 'throwsCount' => 0,
                 'lastThrowNumber' => null,
                 'lastThrowValue' => null,
                 'lastThrowBust' => false,
+                'nonBustPoints' => 0,
             ],
         ], $snapshot);
     }

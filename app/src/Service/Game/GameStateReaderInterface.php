@@ -18,7 +18,7 @@ use App\Dto\UndoAckDto;
 /**
  * Builds the game state view: the game response DTO, the active player, and the state version.
  *
- * @phpstan-type RoundStateSnapshot array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool}>
+ * @phpstan-type RoundStateSnapshot array<int, array{throwsCount:int,lastThrowNumber:int|null,lastThrowValue:int|null,lastThrowBust:bool,nonBustPoints:int}>
  */
 interface GameStateReaderInterface
 {
