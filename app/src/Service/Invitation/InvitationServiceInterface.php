@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Invitation;
 
+use App\Dto\InvitationResponseDto;
 use App\Entity\Game;
 use App\Entity\Invitation;
 use App\Entity\User;
@@ -31,11 +32,11 @@ interface InvitationServiceInterface
      *
      * @param Game $game
      *
-     * @return array<string, mixed>
+     * @return InvitationResponseDto
      *
      * @throws GameNotFoundException when the game has no id
      */
-    public function getInvitationPayload(Game $game): array;
+    public function getInvitationPayload(Game $game): InvitationResponseDto;
 
     /**
      * Seats the player in the invited game, unless they already have a seat there.

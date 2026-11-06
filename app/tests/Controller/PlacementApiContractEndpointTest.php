@@ -90,16 +90,12 @@ final class PlacementApiContractEndpointTest extends WebTestCase
         $doc = json_decode($tester->getDisplay(), true, 512, JSON_THROW_ON_ERROR);
         self::assertIsArray($doc);
 
-        foreach (['PlayerResponseDto', 'ScoreboardPlayerDeltaDto', 'GameSummaryFinishedPlayerDto'] as $schema) {
+        foreach (['PlayerResponseDto', 'ScoreboardPlayerDeltaDto', 'GameSummaryFinishedPlayerDto', 'GuestPlayerDto'] as $schema) {
             $properties = $doc['components']['schemas'][$schema]['properties'] ?? [];
             self::assertArrayHasKey('position', $properties, $schema);
             self::assertArrayHasKey('placement', $properties, $schema);
             self::assertTrue($properties['placement']['nullable'] ?? false, $schema);
         }
-
-        $guestPlayer = $doc['paths']['/api/room/{id}/guest']['post']['responses']['200']['content']['application/json']['schema']['properties']['player']['properties'] ?? [];
-        self::assertArrayHasKey('position', $guestPlayer);
-        self::assertArrayHasKey('placement', $guestPlayer);
     }
 
     /**

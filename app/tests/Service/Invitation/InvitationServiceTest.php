@@ -150,15 +150,15 @@ final class InvitationServiceTest extends TestCase
 
         $payload = $this->service->getInvitationPayload($game);
 
-        self::assertTrue($payload['success']);
-        self::assertSame(30, $payload['gameId']);
-        self::assertSame('/api/invite/join/abc', $payload['invitationLink']);
+        self::assertTrue($payload->success);
+        self::assertSame(30, $payload->gameId);
+        self::assertSame('/api/invite/join/abc', $payload->invitationLink);
         self::assertSame([
             [
                 'id' => $user->getId(),
                 'username' => $user->getDisplayName(),
             ],
-        ], $payload['users']);
+        ], $payload->users);
     }
 
     public function testGetInvitationPayloadPropagatesParticipantListFailure(): void

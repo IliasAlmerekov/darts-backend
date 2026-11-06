@@ -9,12 +9,15 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Dto\GuestPlayerDto;
 use App\Dto\GuestPlayerRequest;
+use App\Dto\GuestPlayerResponseDto;
 use App\Dto\PlayerIdPayload;
 use App\Dto\RematchResponseDto;
 use App\Dto\RoomCreateRequest;
 use App\Dto\RoomCreateResponseDto;
 use App\Dto\SuccessMessageDto;
+use App\Dto\SuccessResponseDto;
 use App\Dto\UpdatePlayerOrderRequest;
 use App\Enum\GameStatus;
 use App\Exception\Game\GameNotFoundException;
@@ -154,31 +157,14 @@ final class GameRoomController extends AbstractController
      * @param int                $id
      * @param GuestPlayerRequest $dto
      *
-     * @return Response
+     * @return GuestPlayerResponseDto
      */
     #[OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
     #[OA\RequestBody(required: true, content: new OA\JsonContent(ref: new Model(type: GuestPlayerRequest::class)))]
     #[OA\Response(
         response: Response::HTTP_OK,
         description: 'Gast-Spieler wurde dem Spiel hinzugefügt.',
-        content: new OA\JsonContent(
-            type: 'object',
-            required: ['success', 'player'],
-            properties: [
-                new OA\Property(property: 'success', type: 'boolean', example: true),
-                new OA\Property(
-                    property: 'player',
-                    type: 'object',
-                    properties: [
-                        new OA\Property(property: 'id', type: 'integer', example: 123),
-                        new OA\Property(property: 'name', type: 'string', example: 'Alex'),
-                        new OA\Property(property: 'position', type: 'integer', nullable: true, example: 2),
-                        new OA\Property(property: 'placement', type: 'integer', nullable: true, example: null),
-                        new OA\Property(property: 'isGuest', type: 'boolean', example: true),
-                    ]
-                ),
-            ]
-        )
+        content: new OA\JsonContent(ref: new Model(type: GuestPlayerResponseDto::class))
     )]
     #[OA\Response(
         response: Response::HTTP_CONFLICT,
@@ -204,7 +190,7 @@ final class GameRoomController extends AbstractController
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht. Das wird vor dem Status geprüft, also auch außerhalb der Lobby mit 422 statt 409 beantwortet.', content: new OA\JsonContent(ref: '#/components/schemas/RequestValidationFailed'))]
     #[OA\Response(response: Response::HTTP_NOT_FOUND, description: GameNotFoundException::OPENAPI_DESCRIPTION, content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[Route(path: '/api/room/{id}/guest', name: 'room_player_guest_add', methods: ['POST'], format: 'json')]
-    public function addGuestPlayer(int $id, #[MapRequestPayload] GuestPlayerRequest $dto): Response
+    public function addGuestPlayer(int $id, #[MapRequestPayload] GuestPlayerRequest $dto): GuestPlayerResponseDto
     {
         $game = $this->gameRoomService->findGameById($id);
         if (!$game) {
@@ -213,16 +199,13 @@ final class GameRoomController extends AbstractController
 
         $player = $this->guestPlayerService->createGuestPlayer($game, (string) $dto->username);
 
-        return $this->json([
-            'success' => true,
-            'player' => [
-                'id' => $player['playerId'],
-                'name' => $player['name'],
-                'position' => $player['position'],
-                'placement' => $player['placement'],
-                'isGuest' => $player['isGuest'],
-            ],
-        ]);
+        return new GuestPlayerResponseDto(new GuestPlayerDto(
+            id: $player['playerId'],
+            name: $player['name'],
+            position: $player['position'],
+            placement: $player['placement'],
+            isGuest: $player['isGuest'],
+        ));
     }
 
     /**
@@ -231,18 +214,14 @@ final class GameRoomController extends AbstractController
      * @param int                      $id
      * @param UpdatePlayerOrderRequest $dto
      *
-     * @return array{success:bool,message?:string}
+     * @return SuccessResponseDto
      */
     #[OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer', example: 123))]
     #[OA\RequestBody(required: true, content: new OA\JsonContent(ref: new Model(type: UpdatePlayerOrderRequest::class)))]
     #[OA\Response(
         response: Response::HTTP_OK,
         description: 'Spielerpositionen wurden aktualisiert.',
-        content: new OA\JsonContent(
-            required: ['success'],
-            properties: [new OA\Property(property: 'success', type: 'boolean', example: true)],
-            type: 'object'
-        )
+        content: new OA\JsonContent(ref: new Model(type: SuccessResponseDto::class))
     )]
     #[OA\Response(response: Response::HTTP_CONFLICT, description: 'Das Spiel ist nicht mehr in der Lobby (`GAME_SEATS_NOT_EDITABLE`), auch bei leerem `positions`. Die Positionen bleiben unverändert. '.ConcurrentChangeException::OPENAPI_DESCRIPTION)]
     #[ApiResponse]
@@ -250,7 +229,7 @@ final class GameRoomController extends AbstractController
     #[OA\Response(response: Response::HTTP_UNPROCESSABLE_ENTITY, description: 'Der Request-Body ist ungültig und besteht die Validierung nicht. Das wird vor dem Status geprüft, also auch außerhalb der Lobby mit 422 statt 409 beantwortet.', content: new OA\JsonContent(ref: '#/components/schemas/RequestValidationFailed'))]
     #[OA\Response(response: Response::HTTP_NOT_FOUND, description: GameNotFoundException::OPENAPI_DESCRIPTION, content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[Route(path: '/api/room/{id}/positions', name: 'room_update_player_positions', methods: ['POST'], format: 'json')]
-    public function updatePlayerOrder(int $id, #[MapRequestPayload] UpdatePlayerOrderRequest $dto): array
+    public function updatePlayerOrder(int $id, #[MapRequestPayload] UpdatePlayerOrderRequest $dto): SuccessResponseDto
     {
         $game = $this->gameRoomService->findGameById($id);
         if (!$game) {
@@ -259,7 +238,7 @@ final class GameRoomController extends AbstractController
 
         $this->playerManagementService->updatePlayerPositions($id, $dto->positions);
 
-        return ['success' => true];
+        return new SuccessResponseDto();
     }
 
     /**

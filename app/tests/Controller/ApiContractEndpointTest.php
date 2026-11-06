@@ -17,8 +17,10 @@ use App\Tests\Support\TestUserFactory;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -86,6 +88,106 @@ final class ApiContractEndpointTest extends WebTestCase
         self::assertTrue($body['success']);
         self::assertIsInt($body['gameId']);
         self::assertStringStartsWith('/api/invite/join/', $body['invitationLink']);
+    }
+
+    public function testGuestBodyKeepsItsKeysOrderAndNullPlacement(): void
+    {
+        $client = static::createClient();
+        [$admin, $player] = $this->users();
+        $gameId = $this->createGame($player, GameStatus::Lobby);
+        $client->loginUser($admin);
+
+        $body = $this->requestJson($client, Request::METHOD_POST, sprintf('/api/room/%d/guest', $gameId), (string) json_encode(['username' => 'Alex']));
+
+        self::assertIsArray($body['player'] ?? null);
+        self::assertIsInt($body['player']['id'] ?? null);
+        self::assertSame([
+            'success' => true,
+            'player' => [
+                'id' => $body['player']['id'],
+                'name' => 'Alex',
+                'position' => 2,
+                'placement' => null,
+                'isGuest' => true,
+            ],
+        ], $body);
+    }
+
+    public function testGuestNameWithApostropheParsesToTheSameValue(): void
+    {
+        $client = static::createClient();
+        [$admin, $player] = $this->users();
+        $gameId = $this->createGame($player, GameStatus::Lobby);
+        $client->loginUser($admin);
+
+        $body = $this->requestJson($client, Request::METHOD_POST, sprintf('/api/room/%d/guest', $gameId), (string) json_encode(['username' => "O'Brien"]));
+
+        self::assertIsArray($body['player'] ?? null);
+        self::assertSame("O'Brien", $body['player']['name'] ?? null);
+    }
+
+    public function testPositionsBodyIsOnlySuccess(): void
+    {
+        $client = static::createClient();
+        [$admin, $player] = $this->users();
+        $gameId = $this->createGame($player, GameStatus::Lobby);
+        $client->loginUser($admin);
+
+        $this->requestJson($client, Request::METHOD_POST, sprintf('/api/room/%d/positions', $gameId), (string) json_encode([
+            'positions' => [['playerId' => (int) $player->getId(), 'position' => 1]],
+        ]));
+
+        self::assertSame('{"success":true}', $client->getResponse()->getContent());
+    }
+
+    public function testInvitationBodyKeepsItsKeysOrderAndValues(): void
+    {
+        $client = static::createClient();
+        [$admin, $player] = $this->users();
+        $gameId = $this->createGame($player, GameStatus::Lobby);
+        $client->loginUser($admin);
+
+        $body = $this->requestJson($client, Request::METHOD_POST, sprintf('/api/invite/create/%d', $gameId));
+
+        self::assertIsString($body['invitationLink'] ?? null);
+        self::assertStringStartsWith('/api/invite/join/', $body['invitationLink']);
+        self::assertSame([
+            'success' => true,
+            'gameId' => $gameId,
+            'invitationLink' => $body['invitationLink'],
+            'users' => [['id' => $player->getId(), 'username' => $player->getDisplayName()]],
+        ], $body);
+    }
+
+    public function testGuestPositionsAndInvitationDocsReferenceTheirResponseDtos(): void
+    {
+        $application = new Application(static::bootKernel());
+        $tester = new CommandTester($application->find('nelmio:apidoc:dump'));
+        $tester->execute(['--format' => 'json']);
+        $doc = json_decode($tester->getDisplay(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($doc);
+
+        foreach ([
+            '/api/room/{id}/guest' => 'GuestPlayerResponseDto',
+            '/api/room/{id}/positions' => 'SuccessResponseDto',
+            '/api/invite/create/{id}' => 'InvitationResponseDto',
+        ] as $path => $schema) {
+            self::assertSame(
+                '#/components/schemas/'.$schema,
+                $doc['paths'][$path]['post']['responses']['200']['content']['application/json']['schema']['$ref'] ?? null,
+                $path,
+            );
+        }
+
+        $guest = $doc['components']['schemas']['GuestPlayerResponseDto'];
+        self::assertSame('#/components/schemas/GuestPlayerDto', $guest['properties']['player']['$ref']);
+        self::assertSame(['id', 'name', 'isGuest'], $doc['components']['schemas']['GuestPlayerDto']['required']);
+
+        $invitation = $doc['components']['schemas']['InvitationResponseDto'];
+        self::assertSame(['success', 'gameId', 'invitationLink'], $invitation['required']);
+        self::assertArrayNotHasKey('nullable', $invitation['properties']['gameId']);
+        self::assertArrayNotHasKey('nullable', $invitation['properties']['invitationLink']);
+        self::assertTrue($invitation['properties']['users']['items']['properties']['username']['nullable']);
     }
 
     #[DataProvider('finishedRoutes')]
