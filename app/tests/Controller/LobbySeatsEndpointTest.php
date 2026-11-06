@@ -314,9 +314,9 @@ final class LobbySeatsEndpointTest extends WebTestCase
     }
 
     /**
-     * Returns the SQL of the last request's queries that load a game row. Doctrine's refresh
-     * of the generated open_lobby column after an update selects only that column and is no
-     * read of the game.
+     * Returns the SQL of the last request's queries that read the game table, whole rows and
+     * single columns such as the status. Doctrine's refresh of the generated open_lobby
+     * column after an update selects only that column and is no read of the game.
      *
      * @return list<string>
      */
@@ -330,7 +330,9 @@ final class LobbySeatsEndpointTest extends WebTestCase
         foreach ($dbCollector->getQueries() as $queries) {
             foreach ($queries as $query) {
                 $sql = (string) $query['sql'];
-                if (1 === preg_match('/\bFROM game\b/i', $sql) && str_contains($sql, 'start_score')) {
+                $isRead = 1 === preg_match('/\bFROM game\b/i', $sql);
+                $isGeneratedColumnRefresh = 1 === preg_match('/^\s*SELECT\s+[\w.]*open_lobby\s+FROM game\b/i', $sql);
+                if ($isRead && !$isGeneratedColumnRefresh) {
                     $reads[] = $sql;
                 }
             }
