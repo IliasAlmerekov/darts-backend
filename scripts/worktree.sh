@@ -62,9 +62,10 @@ new() {
 }
 
 # The backend worktree's own test database (see scripts/php.sh) goes with the worktree.
+# stdin is closed so `docker run -i` cannot drain the worktree list that prune reads.
 drop_test_db() {
   [ -f "$1/scripts/php.sh" ] && [ -d "$1/app/vendor" ] || return 0
-  (cd "$1" && scripts/php.sh php bin/console doctrine:database:drop --env=test --force --if-exists >&2)
+  (cd "$1" && scripts/php.sh php bin/console doctrine:database:drop --env=test --force --if-exists </dev/null >&2)
 }
 
 prune() {

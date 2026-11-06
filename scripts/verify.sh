@@ -56,9 +56,12 @@ x php -d memory_limit=-1 vendor/bin/phpunit
 
 if [ "$image_changed" = yes ]; then
   step runtime image
-  docker build --pull -f app/Dockerfile --target runtime -t darts-backend:verify .
-  sh scripts/check-runtime-image.sh darts-backend:verify
-  docker image rm darts-backend:verify >/dev/null
+  tag=darts-backend:verify-$(basename "$PWD")
+  docker build --pull -f app/Dockerfile --target runtime -t "$tag" .
+  status=0
+  sh scripts/check-runtime-image.sh "$tag" || status=$?
+  docker image rm "$tag" >/dev/null
+  [ "$status" -eq 0 ] || exit "$status"
 fi
 
 step all checks passed
