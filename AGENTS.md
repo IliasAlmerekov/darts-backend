@@ -16,43 +16,18 @@ read `docs/architecture.md`. It says which layer owns what and where new code go
 
 ## Scope
 
-Solve the whole task with the least new code. Before the first edit, list every place the
-change must reach: callers, tests, fixtures, config, serializer groups, API docs. That list
-is the scope; features nobody asked for are outside it, named in one line in the report.
-
-Reach for the first option that works: no code at all, then a helper or service already in
-`app/src`, then Symfony or PHP built-ins, then an installed package, then one line a reader
-gets at a glance, then new code.
-
-- Add no abstraction, interface, option, or "for later" code the task does not need.
-  Deletion beats addition.
-- A bug fix greps every caller of the function it touches and fixes the root cause once,
-  in the shared code.
-- Moved or merged code keeps its validation and error handling.
-- Between options of equal size, take the one correct on edge cases.
-- A known shortcut gets a comment: `shortcut: <the limit>, <when to upgrade>`.
-- Validation at trust boundaries, error handling that prevents data loss, and security
-  are never cut.
-
-The final report lists each verification command with its pass or fail status, names every
-check you skipped, and ends with what you did not check and the risk left.
+Trace affected callers, contracts, fixtures, and tests before editing. Reuse existing code
+where it fits; add only what the task needs. Preserve validation, error handling,
+security, and accessibility when moving or simplifying code. Fix shared causes and
+cover changed behaviour at the relevant interface.
 
 ## Workflow
 
-Size the task before the first edit. When the size is unclear, treat the task as large.
-
-- **Small**: one change with nothing to decide, such as a typo, a config value, or a bug
-  whose cause you already know. Cut the branch, write one failing test at the interface the
-  change touches, make the change under `## Scope`, and run the verification.
-- **Large**: open design decisions, more than one module, or an area under `## Guardrails`.
-  Grill the plan with the user through `/grill-with-docs`; when you start the grill
-  yourself, call the `grilling` and `domain-modeling` skills. Once every decision is
-  settled, write the plan as numbered subtasks, each with acceptance criteria. Build each
-  subtask with the `tdd` skill; its acceptance criteria are the agreed seams. Finish with
-  the `code-review` skill against `main`.
-
-`code-review` treats `## Scope` as a repo standard: a smell whose fix adds an abstraction
-the task does not need goes in the report as a note, not as a finding.
+Read the issue and Agent Brief first. Resolve open design decisions before implementation;
+use clarification or design skills when those decisions need the user's judgment.
+Implement settled work directly, with targeted regression tests for behaviour fixes.
+Docs, formatting, and config-only changes need checks appropriate to their effects.
+Report executed checks, gaps, and remaining risks concisely; distinguish remote CI state.
 
 ## Conventions
 
@@ -77,12 +52,11 @@ conventions no tool checks:
 
 ## API contract
 
-Response shape is a contract with the frontend, which lives next to this repo in
-`../dartsapp`. Before changing a route or a response, grep its path in `../dartsapp/src`
-and list the consumers in the PR. Serializer groups and the Nelmio API docs change in the
-same commit as the response. The frontend validates responses against a dump of those docs,
-`../dartsapp/docs/backend-api-contract.json`, so a changed response also gets a frontend
-issue to refresh that dump.
+Response shape is a contract with the frontend. Before cross-repository work, resolve
+its path through `docs/agents/workspace.md`; nested worktrees have no fixed sibling path.
+Before changing a route or response, search that frontend's `src/` for consumers and list
+them in the PR. Update serializer groups and Nelmio API docs in the same commit, and open
+a frontend issue to refresh `docs/backend-api-contract.json`.
 
 The frontend vendors `docs/contract/throw-scoring-cases.json`. A change to `OutRule` or
 `ThrowScoring` updates that file in the same PR and gets a frontend issue to refresh its copy.
@@ -130,13 +104,8 @@ Before the commit, run `scripts/verify.sh` from the repository root. It runs the
 says how it picks the container. Host-local `php`, `composer`, or `vendor/bin/*` runs only
 when the user accepts the deviation.
 
-Locally backend and frontend run as one Compose stack, the project `darts`: nginx on :8001,
-php, mysql, and the frontend on :5173. Start it with `docker compose up -d` in the
-workspace folder that holds both repos. The php container mounts the main checkout's `app/`.
-
-When `check-test-db-env.sh` fails, put the `DATABASE_URL` with the root password from
-`docker-compose.yaml` in `app/.env.test.local`. Raise `MIN_PHP_VERSION` in
-`scripts/check-runtime-image.sh` with each PHP security release.
+For local Compose startup or test-database environment failures, read
+`docs/agents/runtime.md`.
 
 A green result comes from fixing the code. The Psalm, PHPCS, and PHPUnit configs and
 `app/psalm-baseline.xml` change only on purpose: the baseline only shrinks, and a
@@ -174,14 +143,11 @@ Every PR adds its change to `CHANGELOG.md` under `## [Unreleased]`, in German, i
 it fits (Hinzugefügt, Geändert, Entfernt, Behoben, Sicherheit, Tests), as
 `- **Bereich**: Änderung (#N)`.
 
-Commits, PR titles and bodies, and issue comments carry the human author only: no
-`Co-Authored-By` trailer, no agent footer, no `triage` skill AI disclaimer.
-
 ## Review
 
 Before you review a diff, and after `gh pr create` or a push to an open PR, read
-`docs/agents/review.md`. It holds the severities, the checks for every diff, and the
-CodeRabbit and Greptile review loops.
+`docs/agents/review.md`. It holds severity and review checks. For publishing and bot follow-up, also read
+`docs/agents/publishing.md`.
 
 ## Guardrails
 
