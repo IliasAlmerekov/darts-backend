@@ -39,18 +39,6 @@ final class GameRepositoryTest extends KernelTestCase
         $this->entityManager->close();
     }
 
-    public function testFindOneByGameId(): void
-    {
-        $game = $this->createGame(GameStatus::Started);
-        $this->entityManager->flush();
-
-        $found = $this->repository->findOneByGameId($game->getGameId());
-
-        self::assertNotNull($found);
-        self::assertSame($game->getGameId(), $found->getGameId());
-        self::assertSame(GameStatus::Started, $found->getStatus());
-    }
-
     public function testFindStatusReadsTheStoredStatusPastTheIdentityMap(): void
     {
         $game = $this->createGame(GameStatus::Lobby);

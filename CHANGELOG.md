@@ -90,6 +90,7 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/spec/v
 - **Verschiedene Services**: Integration von `GameAccessService` in `GameAbortService`, `GameFinishService`, `GameRoomService`, `GameSettingsService`, `GameStartService`, `GameThrowService`, `RematchService` und `InvitationService` für Zugriffskontrollen vor Spielaktionen.
 
 ### Entfernt
+- **Repositories**: `GameRepositoryInterface` und `RoundThrowsRepositoryInterface` deklarieren `createQueryBuilder()` nicht mehr, damit Abfragen hinter benannten Repository-Methoden bleiben. `findOneByGameId()` entfällt samt Test, weil Produktivcode es nicht aufrief. Keine HTTP-Antwort ändert sich (#268)
 - **Würfe**: `GameThrowServiceInterface` verliert `recordThrowByGameId()` und `undoLastThrow()`, die nur Tests aufriefen; deren Tests laufen jetzt über `recordThrowAck()` und `undoThrowAck()`. Keine HTTP-Antwort ändert sich (#269)
 - **Spieleinstellungen**: `OutRule::fromFlags()` und `Game::ALLOWED_START_SCORES` halten die Out-Regel aus `doubleOut`/`tripleOut` und die erlaubten Startpunkte an einer Stelle; `GameStartService`, `GameSettingsService` und die drei Request-DTOs nutzen sie. Die Prüfungen in `GameSettingsService`, die die DTO-Validierung schon macht, entfallen samt `InvalidStartScoreException`, `InvalidOutModeException` und den nie gesendeten Fehlercodes `GAME_INVALID_START_SCORE` und `GAME_INVALID_OUT_MODE`. Keine HTTP-Antwort ändert sich (#271)
 
