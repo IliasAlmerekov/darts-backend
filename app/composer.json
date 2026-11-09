@@ -35,7 +35,7 @@
         "symfony/uid": "8.1.*",
         "symfony/validator": "8.1.*",
         "symfony/yaml": "8.1.*",
-        "zircote/swagger-php": "^6.1"
+        "zircote/swagger-php": "^7.3"
     },
     "config": {
         "allow-plugins": {
