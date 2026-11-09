@@ -185,13 +185,12 @@ final class PlayerAvatarEndpointTest extends WebTestCase
         }
     }
 
-    public function testPlayerCannotReadAnotherPlayersAvatarEvenWithEtag(): void
+    public function testPlayerReadsAnotherPlayersAvatarWithConditionalResponse(): void
     {
         $client = static::createClient();
         $em = static::getContainer()->get(EntityManagerInterface::class);
         $player = TestUserFactory::create($em, 'avatar', 'player', ['ROLE_PLAYER']);
         $other = TestUserFactory::create($em, 'avatar', 'other', ['ROLE_PLAYER']);
-        $admin = TestUserFactory::create($em, 'avatar', 'admin', ['ROLE_ADMIN']);
         $em->flush();
         $dir = sys_get_temp_dir().'/darts-avatar-'.bin2hex(random_bytes(8));
         mkdir($dir);
@@ -200,22 +199,80 @@ final class PlayerAvatarEndpointTest extends WebTestCase
         $image = imagecreatetruecolor(2, 2);
         self::assertNotFalse($image);
         imagepng($image, $path);
+        $client->loginUser($player);
         try {
             $url = '/api/player/'.$other->getId().'/avatar';
-            $client->loginUser($admin);
             $client->request('GET', $url);
             self::assertResponseStatusCodeSame(200);
+            self::assertSame(file_get_contents($path), $client->getResponse()->getContent());
+            self::assertSame('image/png', $client->getResponse()->headers->get('Content-Type'));
+            self::assertSame('no-cache, private', $client->getResponse()->headers->get('Cache-Control'));
             $etag = $client->getResponse()->headers->get('ETag');
+            self::assertNotNull($etag);
+            $client->request('GET', $url, server: ['HTTP_IF_NONE_MATCH' => $etag]);
+            self::assertResponseStatusCodeSame(304);
+        } finally {
+            unlink($path);
+            rmdir($dir);
+        }
+    }
+
+    /**
+     * A guest and the admin account have no Public profile, so a player gets the same 404 for
+     * their avatar as for an unknown id, even when a file exists for them.
+     */
+    public function testPlayerGetsTheSame404ForGuestAdminAccountAndUnknownAvatars(): void
+    {
+        $client = static::createClient();
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $player = TestUserFactory::create($em, 'avatar', 'player', ['ROLE_PLAYER']);
+        $guest = TestUserFactory::create($em, 'avatar', 'guest', ['ROLE_GUEST'])->setIsGuest(true);
+        $admin = TestUserFactory::create($em, 'avatar', 'admin', ['ROLE_ADMIN']);
+        $em->flush();
+        $dir = sys_get_temp_dir().'/darts-avatar-'.bin2hex(random_bytes(8));
+        mkdir($dir);
+        $_ENV['AVATAR_DIR'] = $_SERVER['AVATAR_DIR'] = $dir;
+        $paths = [];
+        $image = imagecreatetruecolor(2, 2);
+        self::assertNotFalse($image);
+        foreach ([$guest, $admin] as $target) {
+            $paths[] = $path = $dir.'/'.strtolower((string) $target->getEmail()).'.png';
+            imagepng($image, $path);
+        }
+        $client->loginUser($player);
+        try {
             $client->request('GET', '/api/player/999999999/avatar');
             self::assertResponseStatusCodeSame(404);
             $missingBody = $client->getResponse()->getContent();
-            $client->loginUser($player);
-            $client->request('GET', $url);
-            self::assertResponseStatusCodeSame(404);
-            self::assertSame($missingBody, $client->getResponse()->getContent());
-            $client->request('GET', $url, server: ['HTTP_IF_NONE_MATCH' => $etag]);
-            self::assertResponseStatusCodeSame(404);
-            self::assertSame($missingBody, $client->getResponse()->getContent());
+            foreach ([$guest, $admin] as $target) {
+                $client->request('GET', '/api/player/'.$target->getId().'/avatar');
+                self::assertResponseStatusCodeSame(404);
+                self::assertSame($missingBody, $client->getResponse()->getContent());
+            }
+        } finally {
+            array_map(unlink(...), $paths);
+            rmdir($dir);
+        }
+    }
+
+    public function testAdminReadsTheAdminAccountsOwnAvatar(): void
+    {
+        $client = static::createClient();
+        $em = static::getContainer()->get(EntityManagerInterface::class);
+        $admin = TestUserFactory::create($em, 'avatar', 'admin', ['ROLE_ADMIN']);
+        $em->flush();
+        $dir = sys_get_temp_dir().'/darts-avatar-'.bin2hex(random_bytes(8));
+        mkdir($dir);
+        $_ENV['AVATAR_DIR'] = $_SERVER['AVATAR_DIR'] = $dir;
+        $path = $dir.'/'.strtolower((string) $admin->getEmail()).'.png';
+        $image = imagecreatetruecolor(2, 2);
+        self::assertNotFalse($image);
+        imagepng($image, $path);
+        $client->loginUser($admin);
+        try {
+            $client->request('GET', '/api/player/'.$admin->getId().'/avatar');
+            self::assertResponseStatusCodeSame(200);
+            self::assertSame(file_get_contents($path), $client->getResponse()->getContent());
         } finally {
             unlink($path);
             rmdir($dir);

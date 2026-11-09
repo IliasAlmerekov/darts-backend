@@ -12,20 +12,23 @@ namespace App\Service\Player;
 use App\Dto\PlayerProfileGameDto;
 use App\Dto\PlayerProfileParticipantDto;
 use App\Dto\PlayerProfileResponseDto;
+use App\Dto\PlayerProfileStatsDto;
+use App\Dto\PlayerPublicProfileResponseDto;
 use App\Entity\User;
 use App\Repository\GamePlayersRepositoryInterface;
 use App\Repository\GameRepositoryInterface;
 use App\Repository\PlayerStatisticsRepositoryInterface;
 use App\Service\Game\GameStatisticsServiceInterface;
 use App\Service\Game\ParticipantResult;
+use App\Service\Game\PlayerDisplayName;
 use DateTimeInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Override;
 
 /**
- * Builds a player's own Profile: their statistics and their most recent finished games.
- * The games, their seats, the throw totals and the throws behind the statistics load in a
- * fixed number of queries.
+ * Builds a player's own Profile: their statistics and their most recent finished games, and
+ * the Public profile other players see: their name and the same statistics. The games, their
+ * seats, the throw totals and the throws behind the statistics load in a fixed number of queries.
  *
  * @psalm-suppress UnusedClass Reason: service is auto-wired and used via interface.
  */
@@ -61,19 +64,45 @@ final readonly class PlayerProfileService implements PlayerProfileServiceInterfa
 
         // One transaction, so MySQL's repeatable read serves every query from one snapshot and a
         // game finishing between them cannot make wins exceed gamesPlayed.
-        return $this->entityManager->wrapInTransaction(function () use ($player, $playerId): PlayerProfileResponseDto {
-            $stats = $this->gameStatisticsService->getPlayerStatsForPlayer($playerId);
+        return $this->entityManager->wrapInTransaction(fn(): PlayerProfileResponseDto => new PlayerProfileResponseDto(
+            stats: $this->buildStats($playerId),
+            recentGames: $this->buildRecentGames($playerId),
+            registeredAt: $player->getRegisteredAt()?->format(DateTimeInterface::ATOM),
+        ));
+    }
 
-            return new PlayerProfileResponseDto(
-                stats: PlayerThrowStatistics::build(
-                    $stats?->gamesPlayed ?? 0,
-                    $stats?->scoreAverage,
-                    $this->playerStatisticsRepository->findThrowsInCountedGamesForPlayer($playerId),
-                ),
-                recentGames: $this->buildRecentGames($playerId),
-                registeredAt: $player->getRegisteredAt()?->format(DateTimeInterface::ATOM),
-            );
-        });
+    /**
+     * @param User $player
+     *
+     * @return PlayerPublicProfileResponseDto
+     */
+    #[Override]
+    public function getPublicProfile(User $player): PlayerPublicProfileResponseDto
+    {
+        $playerId = (int) $player->getId();
+
+        return new PlayerPublicProfileResponseDto(
+            playerId: $playerId,
+            displayName: PlayerDisplayName::forUser($player),
+            // One snapshot for the statistics queries, as in getProfile().
+            stats: $this->entityManager->wrapInTransaction(fn(): PlayerProfileStatsDto => $this->buildStats($playerId)),
+        );
+    }
+
+    /**
+     * @param int $playerId
+     *
+     * @return PlayerProfileStatsDto
+     */
+    private function buildStats(int $playerId): PlayerProfileStatsDto
+    {
+        $stats = $this->gameStatisticsService->getPlayerStatsForPlayer($playerId);
+
+        return PlayerThrowStatistics::build(
+            $stats?->gamesPlayed ?? 0,
+            $stats?->scoreAverage,
+            $this->playerStatisticsRepository->findThrowsInCountedGamesForPlayer($playerId),
+        );
     }
 
     /**

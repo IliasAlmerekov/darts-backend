@@ -200,6 +200,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     }
 
     /**
+     * A registered player: has a Public profile, unlike a guest or the admin account.
+     *
+     * @return bool
+     */
+    public function isRegisteredPlayer(): bool
+    {
+        return !$this->isGuest
+            && in_array('ROLE_PLAYER', $this->roles, true)
+            && !in_array('ROLE_ADMIN', $this->roles, true);
+    }
+
+    /**
      * @param bool $isGuest
      *
      * @return static

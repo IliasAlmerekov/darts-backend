@@ -27,11 +27,13 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * GET /api/player/profile: the logged-in player's statistics and their 10 most recent finished games.
+ * GET /api/player/{id}/profile: another player's Public profile, their name and the same statistics.
  */
 final class PlayerProfileEndpointTest extends WebTestCase
 {
     private const string USER_PREFIX = 'profile';
     private const string URI = '/api/player/profile';
+    private const string PUBLIC_URI = '/api/player/%d/profile';
 
     public function testPlayerWithoutFinishedGameGetsEmptyProfile(): void
     {
@@ -433,6 +435,160 @@ final class PlayerProfileEndpointTest extends WebTestCase
         $client->request(Request::METHOD_GET, self::URI);
 
         self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+    }
+
+    /**
+     * The Public profile carries the same statistics the player sees on their own Profile.
+     */
+    public function testPlayerReadsAnotherPlayersPublicProfile(): void
+    {
+        $client = static::createClient();
+        $admin = $this->createUser('admin', 'ROLE_ADMIN');
+        $player = $this->createUser('player', 'ROLE_PLAYER')->setDisplayName('Ilias');
+        $other = $this->createUser('other', 'ROLE_PLAYER');
+        $viewer = $this->createUser('viewer', 'ROLE_PLAYER');
+        $this->playGame($client, $admin, 160, 'double', $player, $other, [
+            [['S20', 'MISS', 'S20'], ['S1', 'S1', 'S1']],
+            [['T20', 'S20', 'T20'], ['S1', 'S1', 'S1']],
+            [['T20', 'S20', 'D20']],
+        ]);
+        $client->loginUser($viewer);
+
+        self::assertSame([
+            'playerId' => $player->getId(),
+            'displayName' => 'Ilias',
+            'stats' => [
+                'gamesPlayed' => 1,
+                'scoreAverage' => 53.333333333333336,
+                'wins' => 1,
+                'winRate' => 100.0,
+                'checkoutRate' => 50.0,
+                'checkoutHits' => 1,
+                'checkoutAttempts' => 2,
+                'hitDistribution' => $this->hitDistribution(['S20' => 4, 'D20' => 1, 'T20' => 3]),
+                'hitDistributionByOutRule' => $this->hitDistributionByOutRule(doubleout: ['S20' => 4, 'D20' => 1, 'T20' => 3]),
+                'mostHitSegment' => ['segment' => '20', 'hits' => 8, 'share' => 88.9],
+                'favoriteDoubles' => [['double' => 'D20', 'hits' => 1, 'attempts' => 2, 'hitRate' => 50.0]],
+                'highestFinish' => ['score' => 120, 'darts' => 3, 'throws' => ['T20', 'S20', 'D20']],
+            ],
+        ], $this->getPublicProfile($client, $player));
+    }
+
+    public function testPlayerReadsTheirOwnPublicProfile(): void
+    {
+        $client = static::createClient();
+        $player = $this->createUser('player', 'ROLE_PLAYER')->setDisplayName('Ilias');
+        static::getContainer()->get(EntityManagerInterface::class)->flush();
+        $client->loginUser($player);
+
+        $profile = $this->getPublicProfile($client, $player);
+
+        self::assertSame([$player->getId(), 'Ilias'], [$profile['playerId'], $profile['displayName']]);
+    }
+
+    public function testPublicProfileOfAPlayerWithoutGamesHasEmptyStatsAndTheUsernameAsName(): void
+    {
+        $client = static::createClient();
+        $player = $this->createUser('player', 'ROLE_PLAYER')->setDisplayName('');
+        $viewer = $this->createUser('viewer', 'ROLE_PLAYER');
+        static::getContainer()->get(EntityManagerInterface::class)->flush();
+        $client->loginUser($viewer);
+
+        self::assertSame([
+            'playerId' => $player->getId(),
+            'displayName' => $player->getUsername(),
+            'stats' => [
+                'gamesPlayed' => 0,
+                'scoreAverage' => null,
+                'wins' => 0,
+                'winRate' => null,
+                'checkoutRate' => null,
+                'checkoutHits' => 0,
+                'checkoutAttempts' => 0,
+                'hitDistribution' => $this->hitDistribution(),
+                'hitDistributionByOutRule' => $this->hitDistributionByOutRule(),
+                'mostHitSegment' => null,
+                'favoriteDoubles' => [],
+                'highestFinish' => null,
+            ],
+        ], $this->getPublicProfile($client, $player));
+    }
+
+    public function testPublicProfileLeavesOutEmailRecentGamesAndRegistrationDate(): void
+    {
+        $client = static::createClient();
+        $player = $this->createUser('player', 'ROLE_PLAYER')->setRegisteredAt(new DateTimeImmutable('2026-03-02 08:15:00'));
+        $other = $this->createUser('other', 'ROLE_PLAYER');
+        $viewer = $this->createUser('viewer', 'ROLE_PLAYER');
+        $this->createPlayedGame($player, $other);
+        $client->loginUser($viewer);
+
+        $profile = $this->getPublicProfile($client, $player);
+
+        self::assertSame(1, $profile['stats']['gamesPlayed']);
+        foreach (['email', 'recentGames', 'registeredAt'] as $privateField) {
+            self::assertArrayNotHasKey($privateField, $profile);
+        }
+        self::assertStringNotContainsString((string) $player->getEmail(), (string) $client->getResponse()->getContent());
+    }
+
+    /**
+     * A guest, the admin account and an unknown id answer alike, so the caller cannot tell them apart.
+     */
+    public function testGuestAdminAccountAndUnknownIdShareOnePublicProfile404(): void
+    {
+        $client = static::createClient();
+        $guest = $this->createUser('guest', 'ROLE_GUEST')->setIsGuest(true);
+        $admin = $this->createUser('admin', 'ROLE_ADMIN');
+        $viewer = $this->createUser('viewer', 'ROLE_PLAYER');
+        static::getContainer()->get(EntityManagerInterface::class)->flush();
+        $client->loginUser($viewer);
+
+        $bodies = [];
+        foreach ([(int) $guest->getId(), (int) $admin->getId(), 999999999] as $id) {
+            $client->request(Request::METHOD_GET, sprintf(self::PUBLIC_URI, $id));
+            self::assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND, (string) $id);
+            $bodies[] = $client->getResponse()->getContent();
+        }
+
+        self::assertStringContainsString('PLAYER_NOT_FOUND', (string) $bodies[0]);
+        self::assertSame([$bodies[0], $bodies[0]], [$bodies[1], $bodies[2]]);
+    }
+
+    public function testAnonymousGets401ForAPublicProfile(): void
+    {
+        $client = static::createClient();
+        $player = $this->createUser('player', 'ROLE_PLAYER');
+
+        $client->request(Request::METHOD_GET, sprintf(self::PUBLIC_URI, $player->getId()));
+
+        self::assertResponseStatusCodeSame(Response::HTTP_UNAUTHORIZED);
+    }
+
+    public function testAdminGets403ForAPublicProfile(): void
+    {
+        $client = static::createClient();
+        $player = $this->createUser('player', 'ROLE_PLAYER');
+        $client->loginUser($this->createUser('admin', 'ROLE_ADMIN'));
+
+        $client->request(Request::METHOD_GET, sprintf(self::PUBLIC_URI, $player->getId()));
+
+        self::assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+        self::assertStringContainsString('ACCESS_DENIED', (string) $client->getResponse()->getContent());
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function getPublicProfile(KernelBrowser $client, User $player): array
+    {
+        $client->request(Request::METHOD_GET, sprintf(self::PUBLIC_URI, $player->getId()));
+        self::assertResponseStatusCodeSame(Response::HTTP_OK, (string) $client->getResponse()->getContent());
+
+        $body = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+
+        return $body;
     }
 
     /**

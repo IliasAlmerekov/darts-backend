@@ -564,6 +564,26 @@ final class OpenApiDocumentTest extends WebTestCase
         );
     }
 
+    public function testPublicProfileDocumentsSchemaAnd401And403And404(): void
+    {
+        $document = $this->document();
+
+        $operation = $document['paths']['/api/player/{id}/profile']['get'];
+        self::assertSame(['Player'], $operation['tags']);
+        foreach (['200', '401', '403', '404'] as $status) {
+            self::assertArrayHasKey($status, $operation['responses'], $status);
+        }
+        self::assertStringContainsString('PLAYER_NOT_FOUND', $operation['responses']['404']['description']);
+        self::assertSame(
+            '#/components/schemas/PlayerPublicProfileResponseDto',
+            $operation['responses']['200']['content']['application/json']['schema']['$ref']
+        );
+
+        $properties = $document['components']['schemas']['PlayerPublicProfileResponseDto']['properties'];
+        self::assertSame(['playerId', 'displayName', 'stats'], array_keys($properties));
+        self::assertSame('#/components/schemas/PlayerProfileStatsDto', $properties['stats']['$ref']);
+    }
+
     public function testStartGameRequestDocumentsOnlyCamelCaseSettingKeys(): void
     {
         $properties = array_keys($this->document()['components']['schemas']['StartGameRequest']['properties']);
