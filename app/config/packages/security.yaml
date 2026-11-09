@@ -67,6 +67,8 @@ security:
         - { path: ^/api/player/current-game$, roles: ROLE_PLAYER }
         - { path: ^/api/player/games/\d+/seat$, roles: ROLE_PLAYER }
         - { path: ^/api/player/profile$, roles: ROLE_PLAYER }
+        # Public profile of another player, read-only (docs/adr/0010-players-read-public-profiles.md).
+        - { path: ^/api/player/\d+/profile$, roles: ROLE_PLAYER }
         - { path: ^/api/player/\d+/avatar$, roles: [ROLE_PLAYER, ROLE_ADMIN] }
         # Swagger UI and its JSON exist in dev only (config/routes/nelmio_api_doc*.yaml).
         - { path: ^/api/doc(\.json)?$, roles: PUBLIC_ACCESS }

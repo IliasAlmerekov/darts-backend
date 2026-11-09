@@ -25,11 +25,11 @@ use Symfony\Component\HttpKernel\EventListener\AbstractSessionListener;
 #[OA\Tag(name: 'Player')]
 final class PlayerAvatarController extends AbstractController
 {
-    #[OA\Response(response: 200, description: 'Avatar image. Cache-Control is private, no-cache; ETag identifies the bytes.', content: [new OA\MediaType(mediaType: 'image/png'), new OA\MediaType(mediaType: 'image/jpeg')])]
+    #[OA\Response(response: 200, description: 'Avatar image. Every player may read the avatar of every registered player, the admin that of every non-guest. Cache-Control is private, no-cache; ETag identifies the bytes.', content: [new OA\MediaType(mediaType: 'image/png'), new OA\MediaType(mediaType: 'image/jpeg')])]
     #[OA\Parameter(name: 'If-None-Match', in: 'header', required: false, schema: new OA\Schema(type: 'string'))]
     #[OA\Response(response: 304, description: 'Avatar unchanged.')]
     #[OA\Response(response: 401, description: 'Authentication required.')]
-    #[OA\Response(response: 404, description: 'Avatar not found.', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
+    #[OA\Response(response: 404, description: 'Avatar not found: unknown id, guest, no image, or for a player caller the admin account; all with the same body (`PLAYER_NOT_FOUND`).', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[OA\Response(response: 503, description: 'Avatar directory unavailable.', content: new OA\JsonContent(ref: '#/components/schemas/ApiError'))]
     #[Route('/api/player/{id}/avatar', name: 'app_player_avatar', requirements: ['id' => '\d+'], methods: ['GET'])]
     /**
@@ -42,10 +42,11 @@ final class PlayerAvatarController extends AbstractController
      */
     public function avatar(int $id, Request $request, UserRepositoryInterface $users, AvatarStoreInterface $avatars): Response
     {
-        $caller = $this->getUser();
+        // Every player sees every registered player's avatar; the admin sees every non-guest's
+        // (docs/adr/0010-players-read-public-profiles.md).
         $player = $users->find($id);
-        if (!$caller instanceof User || !$player instanceof User || $player->isGuest()
-            || (!$this->isGranted('ROLE_ADMIN') && $caller->getId() !== $id)) {
+        if (!$this->getUser() instanceof User || !$player instanceof User || $player->isGuest()
+            || (!$this->isGranted('ROLE_ADMIN') && !$player->isRegisteredPlayer())) {
             throw new ApiHttpException(ErrorCode::PlayerNotFound, Response::HTTP_NOT_FOUND, 'Avatar not found.');
         }
         $avatar = $avatars->find($player->getEmail() ?? '');

@@ -57,6 +57,7 @@ final class ApiAccessMatrixTest extends WebTestCase
     private const string FIXTURE_GAME = 'game';
     private const string FIXTURE_MISSING_GAME = 'missing_game';
     private const string FIXTURE_INVITATION = 'invitation';
+    private const string FIXTURE_REGISTERED_PLAYER = 'registered_player';
 
     private const string BODY_JSON = 'json';
     private const string BODY_LOGIN_FORM = 'login_form';
@@ -104,6 +105,7 @@ final class ApiAccessMatrixTest extends WebTestCase
             // Players
             self::entry('app_player_current_game', Request::METHOD_GET, self::ACCESS_PLAYER, expected: Response::HTTP_OK),
             self::entry('app_player_profile', Request::METHOD_GET, self::ACCESS_PLAYER, expected: Response::HTTP_OK),
+            self::entry('app_player_public_profile', Request::METHOD_GET, self::ACCESS_PLAYER, ['id' => self::FIXTURE_REGISTERED_PLAYER], expected: Response::HTTP_OK),
             self::entry('app_player_avatar', Request::METHOD_GET, self::ACCESS_PLAYER_ADMIN, ['id' => self::FIXTURE_MISSING_GAME], expected: Response::HTTP_NOT_FOUND),
             self::entry('app_player_game_seat', Request::METHOD_GET, self::ACCESS_PLAYER, $game, expected: Response::HTTP_OK),
 
@@ -330,6 +332,7 @@ final class ApiAccessMatrixTest extends WebTestCase
                 self::FIXTURE_GAME => $fixtures['gameId'],
                 self::FIXTURE_MISSING_GAME => $fixtures['gameId'] + 1_000_000,
                 self::FIXTURE_INVITATION => $fixtures['invitationUuid'],
+                self::FIXTURE_REGISTERED_PLAYER => $fixtures['playerIds']['opponent'],
                 default => throw new \LogicException(sprintf('Unknown fixture "%s".', $fixtureKey)),
             };
         }
