@@ -22,7 +22,7 @@ Every player gets the picture that matches their email. Registration does not co
 - The extension decides the `Content-Type`. The backend checks the file's bytes; when they do not match the extension, the backend logs it and treats the file as no avatar.
 - When both `.png` and `.jpg` exist, `.png` wins.
 - An email with a `/`, a `\` or a leading `.` never maps to a file.
-- A player sees their own avatar and the admin sees every player's. When players may open each other's profiles (#252), the avatar follows the same rule.
+- Every player sees every registered player's avatar, as part of their Public profile (ADR 0010), and the admin sees every player's.
 - The endpoint answers `404` for a guest, a player without a file, a file whose bytes do not match its extension, and an avatar the caller may not see. All of these get the same error body, so the caller cannot tell which case applies.
 - A missing or unreadable `AVATAR_DIR` answers `503` with its own error code and the error body of ADR 0006, and the backend logs it. A broken mount therefore does not look like "nobody has an avatar".
 - Responses carry `Cache-Control: private, no-cache` and an `ETag` built from a hash of the file's bytes. The browser keeps the picture but asks the backend before each use, so the access rule runs every time and an unchanged picture costs a `304` without a body. A longer `max-age` was rejected: the browser cache is not split by who is logged in, so a player could get an avatar cached for the admin on the same browser.

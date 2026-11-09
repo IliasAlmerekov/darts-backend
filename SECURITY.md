@@ -17,7 +17,9 @@ Review every diff as an attacker would. Three attackers matter:
 
 - an anonymous client on the internet, who reaches only the public routes;
 - a logged-in player (`ROLE_PLAYER`), who must see only their own profile and current game
-  and must never reach a game, room, or statistics endpoint (ADR 0001);
+  and must never reach a game, room, or statistics endpoint (ADR 0001). The one exception
+  is another registered player's Public profile, read-only through
+  `GET /api/player/{id}/profile` and `GET /api/player/{id}/avatar` (ADR 0010);
 - a hostile website open in the browser of the admin tablet or of a player, which sends
   requests that carry their cookies.
 
@@ -54,7 +56,12 @@ A renamed or moved route that lands under a public prefix is the same P0.
 
 A player endpoint takes the user from the security token (`$this->getUser()`). An endpoint
 that reads a user, game, or seat id from the path, query, or body and returns or changes
-another player's data is a P0.
+another player's data is a P0. The exception is the Public profile (ADR 0010): the two
+read-only routes `GET /api/player/{id}/profile` and `GET /api/player/{id}/avatar` return a
+registered player's name, Profile statistics and avatar to every player, and answer a
+guest, the admin account and an unknown id with the same `404`. Adding a field to them
+beyond the Public profile, or any other id-based access to another player's data, stays a
+P0.
 
 ### CSRF and CORS
 

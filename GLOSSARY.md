@@ -11,7 +11,7 @@ The single account logged in on the shared tablet. Every game action happens und
 _Avoid_: Host, moderator, operator
 
 **Player**:
-A person who registered once from their own phone after scanning an invitation. A player sees only their own profile and statistics, never another player's. In a game they took part in, they also see every participant's display name and placement.
+A person who registered once from their own phone after scanning an invitation. A player sees their own Profile and statistics and every other player's Public profile, and changes none of another player's data. In a game they took part in, they also see every participant's display name and placement.
 _Avoid_: User (for this meaning), member
 
 **Guest**:
@@ -39,7 +39,7 @@ The name shown for a participant in a game: a player's display name, else their 
 _Avoid_: Nickname, username (for guests)
 
 **Avatar**:
-The picture of a player's character, taken from the company's set of employee pictures by the player's email. A player whose email has no picture has no avatar; a guest never has one. A player sees their own avatar, the admin sees every player's.
+The picture of a player's character, taken from the company's set of employee pictures by the player's email. A player whose email has no picture has no avatar; a guest never has one. Every player sees every player's avatar, and so does the admin.
 _Avoid_: Character picture, profile picture, photo
 
 ### Game flow
@@ -103,6 +103,10 @@ _Avoid_: Bust status, bust flag
 **Profile**:
 The page a player lands on when they open the app without an invitation and without a current game. It shows their own recent finished games and statistics.
 _Avoid_: Dashboard, home page
+
+**Public profile**:
+The read-only page of a player that every other player can open. It shows the player's name, avatar and the statistics of their Profile, but not their recent games or registration date. A guest and the admin have none.
+_Avoid_: Other profile, player page
 
 **Registration date**:
 The moment a player registered. Players who registered before the app stored it count from their first game; a player without a game has none. Guests and the admin never have one.
