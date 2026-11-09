@@ -206,9 +206,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     public function isRegisteredPlayer(): bool
     {
+        $roles = $this->getStoredRoles();
+
         return !$this->isGuest
-            && in_array('ROLE_PLAYER', $this->roles, true)
-            && !in_array('ROLE_ADMIN', $this->roles, true);
+            && in_array('ROLE_PLAYER', $roles, true)
+            && !in_array('ROLE_ADMIN', $roles, true);
     }
 
     /**

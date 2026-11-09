@@ -41,7 +41,7 @@ final class PayloadCodeKernel extends BaseKernel
                 ->setAutoconfigured(true)
                 ->setAutowired(true)
                 ->addTag('controller.service_arguments');
-            $container->register(NextToReadyController::class)
+            $container->register(FirewallOnlyController::class)
                 ->setAutoconfigured(true)
                 ->setAutowired(true)
                 ->addTag('controller.service_arguments');
@@ -68,11 +68,11 @@ final class PayloadCodeKernel extends BaseKernel
             ->methods(['POST'])
             ->format('json');
         $routes->add('test_next_to_ready', self::NEXT_TO_READY_PATH)
-            ->controller(NextToReadyController::class)
+            ->controller(FirewallOnlyController::class)
             ->methods(['GET'])
             ->format('json');
         $routes->add('test_next_to_public_profile', self::NEXT_TO_PUBLIC_PROFILE_PATH)
-            ->controller(NextToReadyController::class)
+            ->controller(FirewallOnlyController::class)
             ->methods(['GET'])
             ->format('json');
     }

@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller;
 
+use App\Entity\User;
 use App\Tests\Support\TestUserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -192,29 +193,20 @@ final class PlayerAvatarEndpointTest extends WebTestCase
         $player = TestUserFactory::create($em, 'avatar', 'player', ['ROLE_PLAYER']);
         $other = TestUserFactory::create($em, 'avatar', 'other', ['ROLE_PLAYER']);
         $em->flush();
-        $dir = sys_get_temp_dir().'/darts-avatar-'.bin2hex(random_bytes(8));
-        mkdir($dir);
-        $_ENV['AVATAR_DIR'] = $_SERVER['AVATAR_DIR'] = $dir;
-        $path = $dir.'/'.strtolower((string) $other->getEmail()).'.png';
-        $image = imagecreatetruecolor(2, 2);
-        self::assertNotFalse($image);
-        imagepng($image, $path);
         $client->loginUser($player);
-        try {
+
+        $this->withPngAvatars([$other], function (array $paths) use ($client, $other): void {
             $url = '/api/player/'.$other->getId().'/avatar';
             $client->request('GET', $url);
             self::assertResponseStatusCodeSame(200);
-            self::assertSame(file_get_contents($path), $client->getResponse()->getContent());
+            self::assertSame(file_get_contents($paths[0]), $client->getResponse()->getContent());
             self::assertSame('image/png', $client->getResponse()->headers->get('Content-Type'));
             self::assertSame('no-cache, private', $client->getResponse()->headers->get('Cache-Control'));
             $etag = $client->getResponse()->headers->get('ETag');
             self::assertNotNull($etag);
             $client->request('GET', $url, server: ['HTTP_IF_NONE_MATCH' => $etag]);
             self::assertResponseStatusCodeSame(304);
-        } finally {
-            unlink($path);
-            rmdir($dir);
-        }
+        });
     }
 
     /**
@@ -229,18 +221,9 @@ final class PlayerAvatarEndpointTest extends WebTestCase
         $guest = TestUserFactory::create($em, 'avatar', 'guest', ['ROLE_GUEST'])->setIsGuest(true);
         $admin = TestUserFactory::create($em, 'avatar', 'admin', ['ROLE_ADMIN']);
         $em->flush();
-        $dir = sys_get_temp_dir().'/darts-avatar-'.bin2hex(random_bytes(8));
-        mkdir($dir);
-        $_ENV['AVATAR_DIR'] = $_SERVER['AVATAR_DIR'] = $dir;
-        $paths = [];
-        $image = imagecreatetruecolor(2, 2);
-        self::assertNotFalse($image);
-        foreach ([$guest, $admin] as $target) {
-            $paths[] = $path = $dir.'/'.strtolower((string) $target->getEmail()).'.png';
-            imagepng($image, $path);
-        }
         $client->loginUser($player);
-        try {
+
+        $this->withPngAvatars([$guest, $admin], function () use ($client, $guest, $admin): void {
             $client->request('GET', '/api/player/999999999/avatar');
             self::assertResponseStatusCodeSame(404);
             $missingBody = $client->getResponse()->getContent();
@@ -249,10 +232,7 @@ final class PlayerAvatarEndpointTest extends WebTestCase
                 self::assertResponseStatusCodeSame(404);
                 self::assertSame($missingBody, $client->getResponse()->getContent());
             }
-        } finally {
-            array_map(unlink(...), $paths);
-            rmdir($dir);
-        }
+        });
     }
 
     public function testAdminReadsTheAdminAccountsOwnAvatar(): void
@@ -261,22 +241,13 @@ final class PlayerAvatarEndpointTest extends WebTestCase
         $em = static::getContainer()->get(EntityManagerInterface::class);
         $admin = TestUserFactory::create($em, 'avatar', 'admin', ['ROLE_ADMIN']);
         $em->flush();
-        $dir = sys_get_temp_dir().'/darts-avatar-'.bin2hex(random_bytes(8));
-        mkdir($dir);
-        $_ENV['AVATAR_DIR'] = $_SERVER['AVATAR_DIR'] = $dir;
-        $path = $dir.'/'.strtolower((string) $admin->getEmail()).'.png';
-        $image = imagecreatetruecolor(2, 2);
-        self::assertNotFalse($image);
-        imagepng($image, $path);
         $client->loginUser($admin);
-        try {
+
+        $this->withPngAvatars([$admin], function (array $paths) use ($client, $admin): void {
             $client->request('GET', '/api/player/'.$admin->getId().'/avatar');
             self::assertResponseStatusCodeSame(200);
-            self::assertSame(file_get_contents($path), $client->getResponse()->getContent());
-        } finally {
-            unlink($path);
-            rmdir($dir);
-        }
+            self::assertSame(file_get_contents($paths[0]), $client->getResponse()->getContent());
+        });
     }
 
     public function testPngWinsAndUnsafeEmailCannotEscapeDirectory(): void
@@ -327,22 +298,39 @@ final class PlayerAvatarEndpointTest extends WebTestCase
         $em = static::getContainer()->get(EntityManagerInterface::class);
         $player = TestUserFactory::create($em, 'avatar', 'player', ['ROLE_PLAYER']);
         $em->flush();
+        $client->loginUser($player);
+
+        $this->withPngAvatars([$player], function (array $paths) use ($client, $player): void {
+            $client->request('GET', '/api/player/'.$player->getId().'/avatar');
+            self::assertResponseStatusCodeSame(200);
+            self::assertSame(file_get_contents($paths[0]), $client->getResponse()->getContent());
+            self::assertSame('image/png', $client->getResponse()->headers->get('Content-Type'));
+        });
+    }
+
+    /**
+     * Points AVATAR_DIR at a new temporary folder with a 2x2 PNG for each user, runs the check,
+     * then removes the folder. tearDown() restores AVATAR_DIR.
+     *
+     * @param list<User>                  $users
+     * @param callable(list<string>): void $check gets the PNG paths in the order of $users
+     */
+    private function withPngAvatars(array $users, callable $check): void
+    {
         $dir = sys_get_temp_dir().'/darts-avatar-'.bin2hex(random_bytes(8));
         mkdir($dir);
         $_ENV['AVATAR_DIR'] = $_SERVER['AVATAR_DIR'] = $dir;
         $image = imagecreatetruecolor(2, 2);
         self::assertNotFalse($image);
-        $path = $dir.'/'.strtolower((string) $player->getEmail()).'.png';
-        imagepng($image, $path);
-        $png = file_get_contents($path);
-        $client->loginUser($player);
+        $paths = [];
+        foreach ($users as $user) {
+            $paths[] = $path = $dir.'/'.strtolower((string) $user->getEmail()).'.png';
+            imagepng($image, $path);
+        }
         try {
-            $client->request('GET', '/api/player/'.$player->getId().'/avatar');
-            self::assertResponseStatusCodeSame(200);
-            self::assertSame($png, $client->getResponse()->getContent());
-            self::assertSame('image/png', $client->getResponse()->headers->get('Content-Type'));
+            $check($paths);
         } finally {
-            unlink($path);
+            array_map(unlink(...), $paths);
             rmdir($dir);
         }
     }

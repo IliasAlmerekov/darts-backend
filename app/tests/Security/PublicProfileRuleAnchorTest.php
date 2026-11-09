@@ -40,5 +40,6 @@ final class PublicProfileRuleAnchorTest extends WebTestCase
         $client->request('GET', PayloadCodeKernel::NEXT_TO_PUBLIC_PROFILE_PATH);
 
         self::assertSame(Response::HTTP_FORBIDDEN, $client->getResponse()->getStatusCode());
+        self::assertStringContainsString('ACCESS_DENIED', (string) $client->getResponse()->getContent());
     }
 }

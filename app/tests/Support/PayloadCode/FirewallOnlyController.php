@@ -15,7 +15,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
  * Answers 200 for a path next to /api/ready or the Public profile, so only the firewall can
  * turn it away.
  */
-final class NextToReadyController
+final class FirewallOnlyController
 {
     public function __invoke(): JsonResponse
     {
